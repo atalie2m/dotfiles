@@ -12,7 +12,7 @@ with lib;
 
     packages = mkOption {
       type = types.listOf types.package;
-      default = [ pkgs.brewCasks.latest pkgs.brewCasks.rio ];
+      default = import ./cask-apps.nix { inherit pkgs; };
       description = "List of packages to install via brew-nix";
     };
 
