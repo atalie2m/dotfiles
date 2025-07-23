@@ -1,0 +1,2 @@
+flake.nix filter=hostname
+.git-filters/* filter=hostname
