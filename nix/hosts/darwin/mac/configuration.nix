@@ -1,7 +1,10 @@
-{ nix-darwin, self }:
+{ nix-darwin, self, brew-nix }:
 
 nix-darwin.lib.darwinSystem {
   modules = [
+    # Import brew-nix module
+    brew-nix.darwinModules.default
+
     # Nix configuration
     ({ pkgs, lib, ... }: {
       nix.settings.experimental-features = "nix-command flakes";
@@ -28,7 +31,21 @@ nix-darwin.lib.darwinSystem {
         };
       };
     })
+
+    # Brew configuration using brew-nix
+    ({ pkgs, ... }: {
+      # Enable brew-nix
+      brew-nix.enable = true;
+
+      # Install packages using brew-nix
+      environment.systemPackages = [
+        pkgs.brewCasks.latest
+      ];
+
+      # Keep traditional homebrew disabled since we're using brew-nix
+      homebrew.enable = false;
+    })
   ];
 
-  specialArgs = { inherit self; };
+  specialArgs = { inherit self brew-nix; };
 }

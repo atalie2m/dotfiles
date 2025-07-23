@@ -1,9 +1,9 @@
-inputs@{ self, nix-darwin, nixpkgs, home-manager }:
+inputs@{ self, nix-darwin, nixpkgs, home-manager, brew-nix, brew-api }:
 let
   system = "aarch64-darwin";
 
   configuration = import ./nix/hosts/darwin/mac/configuration.nix {
-    inherit nix-darwin self;
+    inherit nix-darwin self brew-nix;
   };
 
   homeConfiguration = import ./nix/modules/home/home-configuration.nix {
