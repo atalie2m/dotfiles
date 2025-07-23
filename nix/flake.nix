@@ -20,7 +20,10 @@
   in
   {
     darwinConfigurations."{{LOCAL_HOSTNAME}}" = nix-darwin.lib.darwinSystem {
-      modules = [ configuration ];
+      modules = [
+        configuration
+        ./nix-darwin.nix
+      ];
     };
   };
 }
