@@ -13,16 +13,12 @@
   let
     system = "aarch64-darwin";
 
-    configuration = nix-darwin.lib.darwinSystem {
-      modules = import ./nix;
-      specialArgs = { inherit self; };
+    configuration = import ./nix/hosts/mac/darwin-configuration.nix {
+      inherit nix-darwin self;
     };
 
-    homeConfiguration = home-manager.lib.homeManagerConfiguration {
-      pkgs = nixpkgs.legacyPackages.${system};
-      modules = [
-        ./nix/home-manager.nix
-      ];
+    homeConfiguration = import ./nix/modules/home/home-configuration.nix {
+      inherit nixpkgs home-manager system;
     };
   in
   {
