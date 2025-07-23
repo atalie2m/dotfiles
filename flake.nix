@@ -7,10 +7,18 @@
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs }: {
-    darwinConfigurations."{{LOCAL_HOSTNAME}}" = nix-darwin.lib.darwinSystem {
+  outputs = inputs@{ self, nix-darwin, nixpkgs }:
+  let
+    system = "aarch64-darwin";
+    configuration = nix-darwin.lib.darwinSystem {
       modules = import ./nix;
       specialArgs = { inherit self; };
     };
+  in
+  {
+    darwinConfigurations."{{LOCAL_HOSTNAME}}" = configuration;
+
+    # Expose system for easier access
+    packages.${system}.default = configuration.system;
   };
 }
