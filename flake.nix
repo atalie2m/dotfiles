@@ -13,7 +13,7 @@
   let
     system = "aarch64-darwin";
 
-    configuration = import ./nix/hosts/mac/darwin-configuration.nix {
+    configuration = import ./nix/hosts/darwin/mac/darwin-configuration.nix {
       inherit nix-darwin self;
     };
 
