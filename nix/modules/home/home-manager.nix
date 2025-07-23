@@ -1,6 +1,10 @@
 { config, pkgs, ... }:
 
 {
+  imports = [
+    ./programs
+  ];
+
   home = {
     username = "{{USER_NAME}}";
     homeDirectory = "/Users/{{USER_NAME}}";
