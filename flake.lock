@@ -3,7 +3,6 @@
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
-          "nixFlake",
           "nixpkgs"
         ]
       },
@@ -21,21 +20,6 @@
         "repo": "nix-darwin",
         "type": "github"
       }
-    },
-    "nixFlake": {
-      "inputs": {
-        "nix-darwin": "nix-darwin",
-        "nixpkgs": "nixpkgs"
-      },
-      "locked": {
-        "path": "./nix",
-        "type": "path"
-      },
-      "original": {
-        "path": "./nix",
-        "type": "path"
-      },
-      "parent": []
     },
     "nixpkgs": {
       "locked": {
@@ -55,7 +39,8 @@
     },
     "root": {
       "inputs": {
-        "nixFlake": "nixFlake"
+        "nix-darwin": "nix-darwin",
+        "nixpkgs": "nixpkgs"
       }
     }
   },

@@ -1,14 +1,16 @@
-# This is a routing flake that delegates to the actual flake in the nix/ directory
-# This ensures CI and other tools can find a flake.nix at the repository root
-# The primary flake remains nix/flake.nix
 {
-  description = "Router to nix/flake.nix";
+  description = "Atalie's nix-darwin system flake";
 
   inputs = {
-    nixFlake = {
-      url = "path:./nix";
-    };
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.05-darwin";
+    nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-25.05";
+    nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { nixFlake, ... }: nixFlake;
+  outputs = inputs@{ self, nix-darwin, nixpkgs }: {
+    darwinConfigurations."{{LOCAL_HOSTNAME}}" = nix-darwin.lib.darwinSystem {
+      modules = import ./nix;
+      specialArgs = { inherit self; };
+    };
+  };
 }
