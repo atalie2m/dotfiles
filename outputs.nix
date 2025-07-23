@@ -4,6 +4,7 @@ let
 
   configuration = import ./nix/hosts/darwin/mac/configuration.nix {
     inherit nix-darwin self brew-nix;
+    brewNixModule = ./nix/modules/homebrew/brew-nix;
   };
 
   homeConfiguration = import ./nix/modules/home/home-configuration.nix {

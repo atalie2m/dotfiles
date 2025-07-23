@@ -1,9 +1,12 @@
-{ nix-darwin, self, brew-nix }:
+{ nix-darwin, self, brew-nix, brewNixModule }:
 
 nix-darwin.lib.darwinSystem {
   modules = [
     # Import brew-nix module
     brew-nix.darwinModules.default
+
+    # Import my custom brew-nix configuration module
+    brewNixModule
 
     # Nix configuration
     ({ pkgs, lib, ... }: {
@@ -30,20 +33,6 @@ nix-darwin.lib.darwinSystem {
           };
         };
       };
-    })
-
-    # Brew configuration using brew-nix
-    ({ pkgs, ... }: {
-      # Enable brew-nix
-      brew-nix.enable = true;
-
-      # Install packages using brew-nix
-      environment.systemPackages = [
-        pkgs.brewCasks.latest
-      ];
-
-      # Keep traditional homebrew disabled since we're using brew-nix
-      homebrew.enable = false;
     })
   ];
 
