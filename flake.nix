@@ -7,14 +7,16 @@
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager/release-25.05";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
-    brew-nix.url = "github:BatteredBunny/brew-nix";
-    brew-nix.inputs.nixpkgs.follows = "nixpkgs";
-    brew-nix.inputs.nix-darwin.follows = "nix-darwin";
     brew-api = {
       url = "github:BatteredBunny/brew-api";
       flake = false;
     };
-    brew-nix.inputs.brew-api.follows = "brew-api";
+    brew-nix = {
+      url = "github:BatteredBunny/brew-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nix-darwin.follows = "nix-darwin";
+      inputs.brew-api.follows = "brew-api";
+    };
   };
 
   outputs = inputs: import ./outputs.nix inputs;
