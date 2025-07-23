@@ -15,25 +15,25 @@ Automatically handles system information abstraction in configurations using Git
 ### System Information Detection
 
 **clean.sh** handles multiple system information formats:
-- `ComputerName`: `Jhon's Mac` → `{{COMPUTER_NAME}}` → `Jhon's Mac`
-- `ComputerName (serialized)`: `Jhon's Mac` → `{{SERIALIZED_COMPUTER_NAME}}` → `Jhon's-Mac`
-- `LocalHostName`: `Jhons-Mac` → `{{LOCAL_HOSTNAME}}` → `Jhons-Mac`
-- `UserName`: `jhon` → `{{USER_NAME}}` → `jhon`
+- `ComputerName`: `John's Mac` → `{{COMPUTER_NAME}}` → `John's Mac`
+- `ComputerName (serialized)`: `John's Mac` → `{{SERIALIZED_COMPUTER_NAME}}` → `Johns-Mac`
+- `LocalHostName`: `Johns-Mac` → `{{LOCAL_HOSTNAME}}` → `Johns-Mac`
+- `UserName`: `john` → `{{USER_NAME}}` → `john`
 
 **smudge.sh** replaces each placeholder with its corresponding value.
 
 ### Workflow
 
 ```bash
-# Working directory: darwinConfigurations."Jhons-Mac"
-# Working directory: primaryUser = "jhon";
+# Working directory: darwinConfigurations."Johns-Mac"
+# Working directory: primaryUser = "john";
 git add flake.nix nix/nix-darwin.nix
 # Repository: darwinConfigurations."{{LOCAL_HOSTNAME}}"
 # Repository: primaryUser = "{{USER_NAME}}";
 
 git checkout HEAD -- flake.nix nix/nix-darwin.nix
-# Working directory: darwinConfigurations."Jhons-Mac"
-# Working directory: primaryUser = "jhon";
+# Working directory: darwinConfigurations."Johns-Mac"
+# Working directory: primaryUser = "john";
 ```
 
 ### Configuration
