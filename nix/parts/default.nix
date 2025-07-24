@@ -15,9 +15,17 @@ let
       system = hostConfig.system;
       modules = [
         inputs.brew-nix.darwinModules.default
+        inputs.home-manager.darwinModules.home-manager
         ../modules/darwin
         ../hosts/darwin/mac
         { networking.hostName = hostName; }
+        {
+          home-manager = {
+            useGlobalPkgs = true;
+            useUserPackages = true;
+            users.${hostConfig.username} = import ../modules/home/home-manager.nix;
+          };
+        }
       ];
       specialArgs = {
         inherit self hostName;

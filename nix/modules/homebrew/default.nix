@@ -1,31 +1,8 @@
-{ config, pkgs, lib, ... }:
-
-with lib;
+{ config, pkgs, ... }:
 
 {
-  options.homebrew.brew-nix = {
-    enable = mkOption {
-      type = types.bool;
-      default = true;
-      description = "Whether to enable brew-nix package manager";
-    };
+  brew-nix.enable = true;
 
-    packages = mkOption {
-      type = types.listOf types.package;
-      default = [ ];
-      description = "List of packages to install via brew-nix";
-    };
-
-    disableTraditionalHomebrew = mkOption {
-      type = types.bool;
-      default = true;
-      description = "Whether to disable traditional homebrew when using brew-nix";
-    };
-  };
-
-  config = mkIf config.homebrew.brew-nix.enable {
-    brew-nix.enable = true;
-
-    environment.systemPackages = config.homebrew.brew-nix.packages;
-  };
+  # Import cask applications and add them to system packagesSS
+  environment.systemPackages = import ./brew-nix/cask-apps.nix { inherit pkgs; };
 }
