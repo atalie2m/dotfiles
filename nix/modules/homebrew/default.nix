@@ -1,12 +1,18 @@
-{ config, pkgs, ... }:
+{ config, pkgs, brew-nix, ... }:
 
 {
-  # Enable brew-nix
-  brew-nix.enable = true;
+  # 1. overlay を明示的に追加
+  nixpkgs.overlays = [ brew-nix.overlays.default ];
 
-  # Install applications using brew-nix
+  # 2. Enable brew-nix
+  brew-nix = {
+    enable = true;
+    linkApplications = true;
+  };
+
+  # 3. Install applications using brew-nix
   environment.systemPackages = with pkgs; [
-    brewCasks.rio
-    brewCasks.keyclu
+    brewCasks.rio    # Rio terminal
+    brewCasks.keycue # KeyCue (corrected from keyclu)
   ];
 }
