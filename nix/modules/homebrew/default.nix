@@ -7,7 +7,6 @@
   # 2. Enable brew-nix
   brew-nix = {
     enable = true;
-    linkApplications = true;
   };
 
   # 3. Install applications using brew-nix
