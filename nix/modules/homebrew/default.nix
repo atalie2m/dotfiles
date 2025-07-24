@@ -1,8 +1,13 @@
 { config, pkgs, ... }:
 
 {
+  # Enable brew-nix
   brew-nix.enable = true;
 
-  # Import cask applications and add them to system packagesSS
-  environment.systemPackages = import ./brew-nix/cask-apps.nix { inherit pkgs; };
+  # Install applications via brew-nix
+  environment.systemPackages = [
+    pkgs.brewCasks.latest
+    pkgs.brewCasks.rio
+    pkgs.brewCasks.keyclu
+  ];
 }

@@ -1,10 +1,6 @@
 { self, username, ... }:
 
 {
-  imports = [
-    ../../../modules/homebrew
-  ];
-
   # Enable Home Manager integration
   users.users.${username} = {
     name = username;

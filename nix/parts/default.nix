@@ -17,6 +17,7 @@ let
         inputs.brew-nix.darwinModules.default
         inputs.home-manager.darwinModules.home-manager
         ../modules/darwin
+        ../modules/homebrew
         ../hosts/darwin/mac
         { networking.hostName = hostName; }
         {
