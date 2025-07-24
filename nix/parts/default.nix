@@ -1,5 +1,47 @@
-{ inputs, config, self, ... }:
+{ inputs, config, self, lib, ... }:
 
+let
+  # Use a configuration-based approach with multiple possible hostnames
+  configurations = {
+    "{{LOCAL_HOSTNAME}}" = {
+      system = "aarch64-darwin";
+      username = "{{USER_NAME}}";
+    };
+  };
+
+  # Create configurations for all possible hosts
+  mkDarwinConfigurations = lib.mapAttrs (hostName: hostConfig:
+    inputs.nix-darwin.lib.darwinSystem {
+      system = hostConfig.system;
+      modules = [
+        inputs.brew-nix.darwinModules.default
+        ../modules/darwin
+        ../hosts/darwin/mac
+        { networking.hostName = hostName; }
+      ];
+      specialArgs = {
+        inherit self hostName;
+        inherit (inputs) brew-nix;
+        username = hostConfig.username;
+      };
+    }
+  ) configurations;
+
+  mkHomeConfigurations = lib.mapAttrs (hostName: hostConfig:
+    inputs.home-manager.lib.homeManagerConfiguration {
+      pkgs = inputs.nixpkgs.legacyPackages.${hostConfig.system};
+      modules = [
+        ../modules/home/home-manager.nix
+        {
+          home = {
+            username = hostConfig.username;
+            homeDirectory = "/Users/${hostConfig.username}";
+          };
+        }
+      ];
+    }
+  ) configurations;
+in
 {
   perSystem = { config, self', inputs', pkgs, system, ... }: {
     apps.default = {
@@ -9,26 +51,11 @@
   };
 
   flake = {
-    # System configurations
-    darwinConfigurations."{{LOCAL_HOSTNAME}}" =
-      inputs.nix-darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
-        modules = [
-          inputs.brew-nix.darwinModules.default
-          ../modules/darwin
-          ../hosts/darwin/mac
-        ];
-        specialArgs = { inherit self; inherit (inputs) brew-nix; };
-      };
+    # System configurations - automatically generated for all hosts
+    darwinConfigurations = mkDarwinConfigurations;
 
-    # Home Manager configurations
-    homeConfigurations."{{LOCAL_HOSTNAME}}" =
-      inputs.home-manager.lib.homeManagerConfiguration {
-        pkgs = inputs.nixpkgs.legacyPackages.aarch64-darwin;
-        modules = [
-          ../modules/home/home-manager.nix
-        ];
-      };
+    # Home Manager configurations - automatically generated for all hosts
+    homeConfigurations = mkHomeConfigurations;
 
     # Module exports for reusability
     nixosModules = {
