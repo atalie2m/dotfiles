@@ -1,4 +1,4 @@
-{ ... }:
+_:
 
 {
   # Generic Darwin system configuration that applies to all Darwin hosts

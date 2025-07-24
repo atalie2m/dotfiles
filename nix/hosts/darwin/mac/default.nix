@@ -7,12 +7,12 @@
 
   # Nix configuration
   nix.settings.experimental-features = "nix-command flakes";
-  system.configurationRevision = self.rev or self.dirtyRev or null;
-  system.stateVersion = 6;
   nixpkgs.hostPlatform = "aarch64-darwin";
 
   # Mac-specific system configuration
   system = {
+    configurationRevision = self.rev or self.dirtyRev or null;
+    stateVersion = 6;
     primaryUser = "{{USER_NAME}}";
     defaults = {
       NSGlobalDomain = {
