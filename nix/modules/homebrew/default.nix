@@ -27,10 +27,5 @@ with lib;
     brew-nix.enable = true;
 
     environment.systemPackages = config.homebrew.brew-nix.packages;
-
-    homebrew = {
-      enable = mkIf config.homebrew.brew-nix.disableTraditionalHomebrew false;
-      brew-nix.packages = mkDefault (import ./brew-nix/cask-apps.nix { inherit pkgs; });
-    };
   };
 }
