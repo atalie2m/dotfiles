@@ -1,0 +1,14 @@
+# Apply system-info filter to all text files that might contain system information
+*.nix filter=system-info
+*.txt filter=system-info
+*.yaml filter=system-info
+*.yml filter=system-info
+*.json filter=system-info
+*.toml filter=system-info
+*.sh filter=system-info
+
+# Exclude documentation files to keep examples stable
+# README.md - keep examples as-is for documentation purposes
+
+# Always apply to git-filters directory itself
+.git-filters/* filter=system-info
