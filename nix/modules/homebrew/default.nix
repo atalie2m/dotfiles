@@ -12,7 +12,7 @@ with lib;
 
     packages = mkOption {
       type = types.listOf types.package;
-      default = import ./cask-apps.nix { inherit pkgs; };
+      default = [ ];
       description = "List of packages to install via brew-nix";
     };
 
@@ -21,14 +21,15 @@ with lib;
       default = true;
       description = "Whether to disable traditional homebrew when using brew-nix";
     };
-  };  config = mkIf config.homebrew.brew-nix.enable {
-    # Enable brew-nix
+  };
+
+  config = mkIf config.homebrew.brew-nix.enable {
     brew-nix.enable = true;
 
-    # Install packages using brew-nix
     environment.systemPackages = config.homebrew.brew-nix.packages;
 
-    # Optionally disable traditional homebrew
     homebrew.enable = mkIf config.homebrew.brew-nix.disableTraditionalHomebrew false;
+
+    homebrew.brew-nix.packages = mkDefault (import ./brew-nix/cask-apps.nix { inherit pkgs; });
   };
 }

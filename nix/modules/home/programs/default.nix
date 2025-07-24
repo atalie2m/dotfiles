@@ -1,8 +1,11 @@
 { config, pkgs, ... }:
 
 {
-  imports = [
-    ./git.nix
-    ./gpg.nix
-  ];
+  programs.git = {
+    enable = true;
+  };
+
+  programs.gpg = {
+    enable = true;
+  };
 }
