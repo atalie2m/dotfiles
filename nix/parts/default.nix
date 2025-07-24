@@ -1,6 +1,13 @@
 { inputs, config, ... }:
 
 {
+  perSystem = { config, self', inputs', pkgs, system, ... }: {
+    apps.default = {
+      type = "app";
+      program = "${inputs.nix-darwin.packages.${system}.darwin-rebuild}/bin/darwin-rebuild";
+    };
+  };
+
   flake = {
     # System configurations
     darwinConfigurations."{{LOCAL_HOSTNAME}}" =
