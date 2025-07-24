@@ -1,4 +1,4 @@
-{ inputs, config, ... }:
+{ inputs, config, self, ... }:
 
 {
   perSystem = { config, self', inputs', pkgs, system, ... }: {
@@ -18,7 +18,7 @@
           ../modules/darwin
           ../hosts/darwin/mac
         ];
-        specialArgs = { inherit (inputs) self brew-nix; };
+        specialArgs = { inherit self; inherit (inputs) brew-nix; };
       };
 
     # Home Manager configurations
