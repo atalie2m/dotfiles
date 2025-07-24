@@ -12,7 +12,7 @@ let
   # Create configurations for all possible hosts
   mkDarwinConfigurations = lib.mapAttrs (hostName: hostConfig:
     inputs.nix-darwin.lib.darwinSystem {
-      system = hostConfig.system;
+      inherit (hostConfig) system;
       modules = [
         inputs.brew-nix.darwinModules.default
         inputs.home-manager.darwinModules.home-manager
@@ -30,7 +30,7 @@ let
       specialArgs = {
         inherit self hostName;
         inherit (inputs) brew-nix;
-        username = hostConfig.username;
+        inherit (hostConfig) username;
       };
     }
   ) configurations;
@@ -42,7 +42,7 @@ let
         ../modules/home/home-manager.nix
         {
           home = {
-            username = hostConfig.username;
+            inherit (hostConfig) username;
             homeDirectory = "/Users/${hostConfig.username}";
           };
         }
