@@ -1,11 +1,13 @@
 { config, pkgs, ... }:
 
 {
-  programs.git = {
-    enable = true;
-  };
+  programs = {
+    git = {
+      enable = true;
+    };
 
-  programs.gpg = {
-    enable = true;
+    gpg = {
+      enable = true;
+    };
   };
 }

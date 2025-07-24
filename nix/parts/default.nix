@@ -1,8 +1,8 @@
 { inputs, config, ... }:
 
 {
-  # System configurations
   flake = {
+    # System configurations
     darwinConfigurations."{{LOCAL_HOSTNAME}}" =
       inputs.nix-darwin.lib.darwinSystem {
         system = "aarch64-darwin";
@@ -43,7 +43,6 @@
 
   # Development environment
   perSystem = { pkgs, ... }: {
-
     # Build packages and convenience scripts
     packages = {
       default = inputs.self.darwinConfigurations."{{LOCAL_HOSTNAME}}".system;
