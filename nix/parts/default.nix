@@ -40,20 +40,4 @@
       programs = ../modules/home/programs;
     };
   };
-
-  # Development environment
-  perSystem = { pkgs, ... }: {
-    # Build packages and convenience scripts
-    packages = {
-      default = inputs.self.darwinConfigurations."{{LOCAL_HOSTNAME}}".system;
-
-      build-darwin = pkgs.writeShellScriptBin "build-darwin" ''
-        darwin-rebuild switch --flake ${inputs.self}#u1s-MacBook-Air
-      '';
-
-      build-home = pkgs.writeShellScriptBin "build-home" ''
-        home-manager switch --flake ${inputs.self}#u1s-MacBook-Air
-      '';
-    };
-  };
 }
