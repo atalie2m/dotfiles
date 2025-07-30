@@ -6,6 +6,7 @@
     gnupg
     curl
     wget
+    pinentry_mac
   ];
 
   programs = {
