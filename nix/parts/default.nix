@@ -24,7 +24,13 @@ let
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
-            users.${hostConfig.username} = import ../modules/home/home-manager.nix;
+            users.${hostConfig.username} = {
+              imports = [ ../modules/home/home-manager.nix ];
+              home = {
+                username = hostConfig.username;
+                homeDirectory = "/Users/${hostConfig.username}";
+              };
+            };
           };
         }
       ];
