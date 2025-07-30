@@ -49,7 +49,7 @@ let
         ../modules/home/home-manager.nix
         {
           home = {
-            inherit (hostConfig) username;
+            username = hostConfig.username;
             homeDirectory = "/Users/${hostConfig.username}";
           };
         }
