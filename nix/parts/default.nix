@@ -16,7 +16,7 @@ let
         ../modules/homebrew
         ../modules/nixpkgs/unfree.nix
         ../modules/nixpkgs/overlays.nix
-        ../hosts/darwin/mac
+        ../hosts/darwin/standard
         { networking.hostName = hostName; }
         {
           home-manager = {
@@ -79,7 +79,7 @@ in
     darwinModules = {
       default = ../modules/darwin;
       homebrew = ../modules/homebrew;
-      mac-host = ../hosts/darwin/mac;
+      standard-host = ../hosts/darwin/standard;
     };
 
     homeManagerModules = {
