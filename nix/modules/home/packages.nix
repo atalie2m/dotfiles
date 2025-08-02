@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   home.packages = with pkgs; [
@@ -11,14 +11,4 @@
     codex
     gemini-cli
   ];
-
-  programs = {
-    git = {
-      enable = true;
-    };
-
-    gpg = {
-      enable = true;
-    };
-  };
 }

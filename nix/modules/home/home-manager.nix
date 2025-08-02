@@ -5,7 +5,9 @@ let
 in
 {
   imports = [
-    ./programs
+    ./packages.nix
+    ./programs/git.nix
+    ./programs/gpg.nix
   ];
 
   home = {
