@@ -1,4 +1,3 @@
-# Home Manager configurations
 { inputs, lib, ... }:
 
 let

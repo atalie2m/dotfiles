@@ -1,7 +1,5 @@
-# Module exports for reusability
 {
   flake = {
-    # Module exports for reusability
     nixosModules = {
       darwin = ../modules/darwin;
       home = ../modules/home;

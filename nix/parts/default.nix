@@ -1,4 +1,4 @@
-# Flake parts - modular flake configuration
+# Flake parts
 {
   imports = [
     ../hosts/darwin/configurations.nix
