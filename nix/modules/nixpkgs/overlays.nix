@@ -9,8 +9,6 @@
           url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
           hash = "sha256-sAILRsi8ZViMfcpqykfnFQzHTJHRwRSZz45otMqa4U0=";
         };
-        # npmDepsHashも変更が必要かもしれません
-        # npmDepsHash = "sha256-....";
       });
     })
   ];
