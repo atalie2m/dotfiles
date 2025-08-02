@@ -1,13 +1,9 @@
 { inputs, config, self, lib, ... }:
 
 let
-  # Use a configuration-based approach with multiple possible hostnames
-  configurations = {
-    "{{LOCAL_HOSTNAME}}" = {
-      system = "aarch64-darwin";
-      username = "{{USER_NAME}}";
-    };
-  };
+  # Import centralized environment configuration
+  env = import ../env.nix;
+  configurations = env.hosts;
 
   # Create configurations for all possible hosts
   mkDarwinConfigurations = lib.mapAttrs (hostName: hostConfig:

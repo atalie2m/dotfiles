@@ -1,12 +1,15 @@
 { config, pkgs, ... }:
 
+let
+  env = import ../../env.nix;
+in
 {
   imports = [
     ./programs
   ];
 
   home = {
-    stateVersion = "25.05";
+    stateVersion = env.defaults.stateVersion.home;
   };
 
   programs.home-manager.enable = true;

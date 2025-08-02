@@ -1,10 +1,13 @@
 { self, username, ... }:
 
+let
+  env = import ../../../env.nix;
+in
 {
   # Enable Home Manager integration
   users.users.${username} = {
     name = username;
-    home = "/Users/${username}";
+    home = env.defaults.homeDirectory username;
   };
 
   # Nix configuration
@@ -14,7 +17,7 @@
   # Mac-specific system configuration
   system = {
     configurationRevision = self.rev or self.dirtyRev or null;
-    stateVersion = 6;
+    stateVersion = env.defaults.stateVersion.darwin;
     primaryUser = username;
 
     defaults = {
