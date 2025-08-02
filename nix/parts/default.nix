@@ -18,6 +18,7 @@ let
         inputs.home-manager.darwinModules.home-manager
         ../modules/darwin
         ../modules/homebrew
+        ../modules/nixpkgs/unfree.nix
         ../hosts/darwin/mac
         { networking.hostName = hostName; }
         {

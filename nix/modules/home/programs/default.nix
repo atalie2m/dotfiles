@@ -7,6 +7,9 @@
     curl
     wget
     pinentry_mac
+    claude-code
+    codex
+    gemini-cli
   ];
 
   programs = {
