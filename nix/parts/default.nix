@@ -27,7 +27,7 @@ let
             users.${hostConfig.username} = {
               imports = [ ../modules/home/home-manager.nix ];
               home = {
-                username = hostConfig.username;
+                inherit (hostConfig) username;
                 homeDirectory = "/Users/${hostConfig.username}";
               };
             };
@@ -49,7 +49,7 @@ let
         ../modules/home/home-manager.nix
         {
           home = {
-            username = hostConfig.username;
+            inherit (hostConfig) username;
             homeDirectory = "/Users/${hostConfig.username}";
           };
         }
