@@ -1,7 +1,7 @@
 # Flake parts - modular flake configuration
 {
   imports = [
-    ./darwin.nix
+    ../hosts/darwin/configurations.nix
     ./home.nix
     ./modules.nix
   ];
