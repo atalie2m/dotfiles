@@ -19,6 +19,7 @@ let
         ../modules/darwin
         ../modules/homebrew
         ../modules/nixpkgs/unfree.nix
+        ../modules/nixpkgs/overlays.nix
         ../hosts/darwin/mac
         { networking.hostName = hostName; }
         {
