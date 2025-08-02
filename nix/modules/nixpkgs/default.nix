@@ -2,7 +2,7 @@
 { inputs, system }:
 
 let
-  lib = inputs.nixpkgs.lib;
+  inherit (inputs.nixpkgs) lib;
   
   # Evaluate the unfree module to extract the config
   unfreeModule = import ./unfree.nix { inherit lib; };

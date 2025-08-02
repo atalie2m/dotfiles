@@ -9,7 +9,7 @@ let
   # Create Home Manager configurations for all hosts
   mkHomeConfigurations = lib.mapAttrs (hostName: hostConfig:
     inputs.home-manager.lib.homeManagerConfiguration {
-      pkgs = import ../modules/nixpkgs { inherit inputs; system = hostConfig.system; };
+      pkgs = import ../modules/nixpkgs { inherit inputs; inherit (hostConfig) system; };
       modules = [
         ../modules/home/home-manager.nix
         {
