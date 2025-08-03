@@ -2,7 +2,8 @@
 # Git clean filter
 
 # Load common system variables
-source "$(dirname "$0")/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 # Replace all system information with their respective placeholders
 perl -pe "s/\Q\"$COMPUTER_NAME\"\E/\"{{COMPUTER_NAME}}\"/g; \
