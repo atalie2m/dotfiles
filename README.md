@@ -77,6 +77,39 @@ git config filter.system-info.smudge './.git-filters/smudge.sh'
 
 **Note**: Git filter configuration is stored locally and needs to be set up on each machine/clone.
 
+## Karabiner-Elements Setup
+
+This repository includes custom keyboard layouts for Karabiner-Elements in the `keyboards/karabiner/complex_modifications/` directory.
+
+### Manual Setup
+
+To use the keyboard configurations from this dotfiles repository:
+
+1. Create the Karabiner-Elements configuration directory:
+   ```bash
+   mkdir -p ~/.config/karabiner/assets/complex_modifications
+   ```
+
+2. Create symbolic links to the JSON files in your dotfiles:
+   ```bash
+   # Link JSON files from the main directory
+   ln -sf "/path/to/your/dotfiles/keyboards/karabiner/complex_modifications/vylet-alt-layout.json" ~/.config/karabiner/assets/complex_modifications/
+   
+   # Link JSON files from subdirectories (e.g., shingeta)
+   ln -sf "/path/to/your/dotfiles/keyboards/karabiner/complex_modifications/shingeta/shingeta_en.json" ~/.config/karabiner/assets/complex_modifications/
+   ln -sf "/path/to/your/dotfiles/keyboards/karabiner/complex_modifications/shingeta/shingeta_jp.json" ~/.config/karabiner/assets/complex_modifications/
+   ```
+
+3. Restart Karabiner-Elements or go to Settings > Complex Modifications to see the new configurations.
+
+**Note**: Karabiner-Elements only reads JSON files directly from the `complex_modifications` directory and does not recursively search subdirectories. The symbolic links allow you to keep your configurations organized in your dotfiles while making them available to Karabiner-Elements.
+
+### Available Configurations
+
+- **vylet-alt-layout.json**: Vylet alternative keyboard layout
+- **shingeta_en.json**: 新下駄配列 (Shingeta layout) for English typing games
+- **shingeta_jp.json**: 新下駄配列 (Shingeta layout) for Japanese input
+
 ## Build darwin flake using:
 ```bash
 # Build the configuration
