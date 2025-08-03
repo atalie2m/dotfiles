@@ -1,9 +1,4 @@
-{ pkgs, ... }:
-
-let
-  common = import ./common.nix { inherit pkgs; };
-in
-{
+{ pkgs, ... }: {
   programs.zsh = {
     enable = true;
     dotDir = ".nix";
@@ -15,7 +10,12 @@ in
       ignoreSpace = true;
     };
 
-    inherit (common) shellAliases;
+    shellAliases = {
+      # file and directory operations
+      ll = "ls -la";
+      la = "ls -A";
+      l = "ls -CF";
+    };
 
     # Custom functions
     initContent = ''
@@ -33,6 +33,16 @@ in
       # search for processes by name
       psgrep() {
         ps aux | grep -i "$1" | grep -v grep
+      }
+
+      # Simple override for nix develop to always use zsh
+      nix() {
+        if [[ "$1" == "develop" ]]; then
+          shift
+          command nix develop "$@" --command ${pkgs.zsh}/bin/zsh
+        else
+          command nix "$@"
+        fi
       }
     '';
 

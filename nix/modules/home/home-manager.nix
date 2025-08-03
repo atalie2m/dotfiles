@@ -8,8 +8,7 @@ in
     ./packages.nix
     ./programs/git.nix
     ./programs/gpg.nix
-    ./programs/shell/bash.nix
-    ./programs/shell/zsh.nix
+    ./programs/zsh.nix
     ./programs/starship.nix
     ./programs/terminals.nix
     ./fonts.nix

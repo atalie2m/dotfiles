@@ -2,8 +2,7 @@ _: {
   # Starship prompt configuration
   programs.starship = {
     enable = true;
-    enableBashIntegration = true;  # Ensure bash integration is enabled
-    enableZshIntegration = true;   # Keep zsh integration enabled
+    enableZshIntegration = true;  # Ensure zsh integration is enabled
     # Tokyo Night preset - a beautiful powerline-style theme
     settings = {
       format =
