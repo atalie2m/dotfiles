@@ -13,6 +13,7 @@ _: {
         "$git_branch" +
         "$git_status" +
         "[](fg:#394260 bg:#212736)" +
+        "$nix_shell" +
         "$nodejs" +
         "$rust" +
         "$golang" +
@@ -68,6 +69,17 @@ _: {
         symbol = "";
         style = "bg:#212736";
         format = "[[ $symbol ($version) ](fg:#769ff0 bg:#212736)]($style)";
+      };
+
+      nix_shell = {
+        symbol = "❄️";
+        style = "bg:#212736";
+        format = "[[ $symbol($name) ](fg:#769ff0 bg:#212736)]($style)";
+        disabled = false;
+        heuristic = true;
+        impure_msg = "impure";
+        pure_msg = "pure";
+        unknown_msg = "nix";
       };
 
       time = {
