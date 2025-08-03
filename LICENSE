@@ -2,6 +2,24 @@ MIT License
 
 Copyright (c) 2025 atalie2m
 
+This project includes keyboard layout and input method configurations based on:
+
+1. KE-complex_modifications:
+   - Source: https://github.com/pqrs-org/KE-complex_modifications
+   - License: Unlicense
+
+2. Shingeta Layout (新下駄配列):
+   - Original layout created by kouy (https://kouy.exblog.jp/13627994/)
+   - Karabiner-Elements configuration by funatsufumiya
+   - Source: https://github.com/funatsufumiya/karabiner-elements-shingeta
+   - License: MIT License (Copyright (c) 2017 GETTO Systems)
+
+3. Vylet Keyboard Layout:
+   - Original layout created by MightyAcas
+   - Source: https://github.com/MightyAcas/vylet
+   - All rights for the Vylet keyboard layout belong to MightyAcas
+
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
