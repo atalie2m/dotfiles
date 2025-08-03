@@ -1,4 +1,5 @@
 _: {
+  # Starship prompt configuration
   programs.starship = {
     enable = true;
     enableBashIntegration = true;  # Ensure bash integration is enabled
