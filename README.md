@@ -3,6 +3,19 @@
 ## Prerequisites
 - Nix(Lix or Determinate's vanilla)
 
+## Terminal Compatibility
+
+**For macOS users**: Please use a 24-bit True Color compatible terminal instead of the default Terminal.app. The Starship prompt configuration in this repository uses True Color (#RRGGBB) values that are only properly displayed in terminals with full color support.
+
+**Recommended terminals:**
+- VS Code integrated terminal
+- iTerm2
+- Rio
+- Kitty
+- Alacritty
+
+**Why this matters**: macOS Terminal.app only supports 256-color palette, which causes the Starship prompt colors to be approximated and appear different from the intended design. True Color terminals can display the full 16.7 million color spectrum, ensuring consistent visual appearance.
+
 ## Git Smudge/Clean Filters
 
 Automatically handles system information abstraction in configurations using Git filters.
