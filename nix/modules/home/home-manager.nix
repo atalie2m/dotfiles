@@ -1,14 +1,17 @@
 { config, pkgs, ... }:
 
+let
+  env = import ../../env.nix;
+in
 {
   imports = [
-    ./programs
+    ./packages.nix
+    ./programs/git.nix
+    ./programs/gpg.nix
   ];
 
   home = {
-    username = "{{USER_NAME}}";
-    homeDirectory = "/Users/{{USER_NAME}}";
-    stateVersion = "25.05";
+    stateVersion = env.defaults.stateVersion.home;
   };
 
   programs.home-manager.enable = true;
