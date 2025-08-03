@@ -27,7 +27,6 @@ let
         set font size of protoSettings to targetSize
         set default settings to protoSettings
         set startup settings to protoSettings
-        display notification "`Atalie's dotfiles - Standard` configured: " & targetFont & " " & targetSize & "pt"
       on error
         display dialog "Failed to set font '" & targetFont & "'. Font may not be installed." buttons {"OK"} default button "OK" with icon caution
       end try
