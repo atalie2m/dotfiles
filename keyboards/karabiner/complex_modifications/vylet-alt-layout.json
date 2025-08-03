@@ -1,0 +1,460 @@
+{
+  "_comment": [
+    "Vylet Alt Keyboard Layout - Karabiner-Elements Implementation",
+    "",
+    "Original Vylet keyboard layout created by MightyAcas",
+    "GitHub: https://github.com/MightyAcas/vylet",
+    "",
+    "This file is an implementation of the Vylet layout for Karabiner-Elements.",
+    "The original Vylet layout design, concept, and all intellectual property",
+    "rights belong to MightyAcas. This implementation is created for reference",
+    "and personal use based on the publicly available specifications.",
+    "",
+    "License: All rights for the Vylet keyboard layout belong to MightyAcas.",
+    "Please refer to the original repository for licensing information.",
+    "",
+    "Layout mapping:",
+    "QWERTY: q w e r t y u i o p",
+    "Vylet:  w c m p b x l o u j",
+    "QWERTY: a s d f g h j k l ;",
+    "Vylet:  r s t h f y n a e i",
+    "QWERTY: z x c v b n m , . /",
+    "Vylet:  q v g d k z * ' ; ."
+  ],
+  "title": "Vylet Alt Keyboard Layout",
+  "description": "Vylet keyboard layout created by MightyAcas (https://github.com/MightyAcas/vylet). This Karabiner-Elements implementation is based on the original work. All rights and license for the Vylet layout belong to MightyAcas.",
+  "rules": [
+    {
+      "description": "Vylet Alt Layout - Base Key Remapping",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": { "key_code": "q" },
+          "to": [{ "key_code": "w" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "w" },
+          "to": [{ "key_code": "c" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "e" },
+          "to": [{ "key_code": "m" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "r" },
+          "to": [{ "key_code": "p" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "t" },
+          "to": [{ "key_code": "b" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "y" },
+          "to": [{ "key_code": "x" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "u" },
+          "to": [{ "key_code": "l" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "i" },
+          "to": [{ "key_code": "o" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "o" },
+          "to": [{ "key_code": "u" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "p" },
+          "to": [{ "key_code": "j" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "open_bracket" },
+          "to": [{ "key_code": "hyphen" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "a" },
+          "to": [{ "key_code": "r" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "s" },
+          "to": [{ "key_code": "s" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "d" },
+          "to": [{ "key_code": "t" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "f" },
+          "to": [{ "key_code": "h" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "g" },
+          "to": [{ "key_code": "f" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "h" },
+          "to": [{ "key_code": "y" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "j" },
+          "to": [{ "key_code": "n" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "k" },
+          "to": [{ "key_code": "a" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "l" },
+          "to": [{ "key_code": "e" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "semicolon" },
+          "to": [{ "key_code": "i" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "quote" },
+          "to": [{ "key_code": "comma" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "z" },
+          "to": [{ "key_code": "q" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "x" },
+          "to": [{ "key_code": "v" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "c" },
+          "to": [{ "key_code": "g" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "v" },
+          "to": [{ "key_code": "d" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "b" },
+          "to": [{ "key_code": "k" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "n" },
+          "to": [{ "key_code": "z" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "m" },
+          "to": [{ "key_code": "8", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "comma" },
+          "to": [{ "key_code": "quote" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "period" },
+          "to": [{ "key_code": "semicolon" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "slash" },
+          "to": [{ "key_code": "period" }]
+        }
+      ]
+    },
+    {
+      "description": "Vylet Magic Key (*) Transformations",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "c",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "c" },
+            { "key_code": "k" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "quote",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "quote" },
+            { "key_code": "l" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "l",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "l" },
+            { "key_code": "l" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "g",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "g" },
+            { "key_code": "h" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "p",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "p" },
+            { "key_code": "t" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "r",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "r" },
+            { "key_code": "k" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "s",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "s" },
+            { "key_code": "c" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "w",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "w" },
+            { "key_code": "r" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "f",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "f" },
+            { "key_code": "t" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "m",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "m" },
+            { "key_code": "b" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "b",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "b" },
+            { "key_code": "t" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "a",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "a" },
+            { "key_code": "x" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "e",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "e" },
+            { "key_code": "x" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "i",
+            "modifiers": { "mandatory": ["right_shift"] }
+          },
+          "to": [
+            { "key_code": "i" },
+            { "key_code": "x" }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "magic_key_pressed",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "8", "modifiers": { "mandatory": ["shift"] } },
+          "to": [
+            { "set_variable": { "name": "magic_key_pressed", "value": 1 } }
+          ],
+          "to_after_key_up": [
+            { "set_variable": { "name": "magic_key_pressed", "value": 0 } }
+          ]
+        }
+      ]
+    }
+  ]
+}
