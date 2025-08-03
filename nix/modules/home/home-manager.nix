@@ -9,6 +9,7 @@ in
     ./programs/git.nix
     ./programs/gpg.nix
     ./programs/zsh.nix
+    ./fonts.nix
   ];
 
   home = {
