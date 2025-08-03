@@ -1,7 +1,7 @@
 { self, username, ... }:
 
 let
-  env = import ../../env.nix;
+  env = import ../env.nix;
 in
 {
   # Essential user configuration

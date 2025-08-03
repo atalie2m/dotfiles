@@ -3,7 +3,7 @@
 
 let
   # Import centralized environment configuration
-  env = import ../../env.nix;
+  env = import ../env.nix;
   configurations = env.hosts;
 
   # Create Darwin configurations for all hosts
@@ -13,19 +13,19 @@ let
       modules = [
         inputs.brew-nix.darwinModules.default
         inputs.home-manager.darwinModules.home-manager
-        ../../modules/darwin
-        ../../modules/homebrew
-        ../../modules/nixpkgs/unfree.nix
-        ../../modules/nixpkgs/overlays.nix
-        ./default.nix              # Base Darwin settings
-        ./profiles/standard.nix    # Standard profile
+        ../modules/darwin
+        ../modules/homebrew
+        ../modules/nixpkgs/unfree.nix
+        ../modules/nixpkgs/overlays.nix
+        ../hosts/darwin.nix        # Base Darwin settings
+        ../../profiles/standard/darwin/standard.nix  # Standard profile
         { networking.hostName = hostName; }
         {
           home-manager = {
             useGlobalPkgs = true;
             useUserPackages = true;
             users.${hostConfig.username} = {
-              imports = [ ../../modules/home/home-manager.nix ];
+              imports = [ ../modules/home/home-manager.nix ];
               home = {
                 inherit (hostConfig) username;
                 homeDirectory = "/Users/${hostConfig.username}";

@@ -8,8 +8,8 @@
     darwinModules = {
       default = ../modules/darwin;
       homebrew = ../modules/homebrew;
-      darwin-base = ../hosts/darwin;
-      standard-host = ../hosts/darwin/profiles/standard.nix;
+      darwin-base = ../hosts;
+      standard-host = ../../profiles/standard/darwin/standard.nix;
     };
 
     homeManagerModules = {
