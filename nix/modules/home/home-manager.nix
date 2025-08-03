@@ -8,6 +8,7 @@ in
     ./packages.nix
     ./programs/git.nix
     ./programs/gpg.nix
+    ./programs/zsh.nix
   ];
 
   home = {
