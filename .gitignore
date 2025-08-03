@@ -1,0 +1,20 @@
+# Nix build results
+result
+result-*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*.rej
