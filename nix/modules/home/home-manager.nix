@@ -6,6 +6,7 @@ in
 {
   imports = [
     ./packages.nix
+    ./programs/bash.nix
     ./programs/git.nix
     ./programs/gpg.nix
     ./programs/zsh.nix
