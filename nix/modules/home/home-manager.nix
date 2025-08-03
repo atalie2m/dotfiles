@@ -10,7 +10,7 @@ in
     ./programs/gpg.nix
     ./programs/zsh.nix
     ./programs/starship.nix
-    ./programs/terminal.nix
+    ./programs/terminals.nix
     ./fonts.nix
     ./services/smart-backup.nix
   ];
@@ -24,6 +24,7 @@ in
     enable = true;
     files = [
       "$HOME/Library/Preferences/com.apple.Terminal.plist"
+      "$HOME/.config/rio/config.toml"
       # Add more files here as needed
     ];
     backupSuffix = "backup";
