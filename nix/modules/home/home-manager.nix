@@ -14,6 +14,7 @@ in
     ./programs/terminals.nix
     ./fonts.nix
     ./services/smart-backup.nix
+    ./karabiner.nix
   ];
 
   home = {

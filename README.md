@@ -111,6 +111,25 @@ This repository includes comprehensive keyboard layouts and input method configu
 
 To use the keyboard configurations from this dotfiles repository:
 
+#### Option 1: Automated Setup with Nix (Recommended)
+
+If you're using this dotfiles repository with Nix and home-manager, the Karabiner-Elements configurations are automatically set up through symbolic links.
+
+The configuration is managed in `nix/modules/home/karabiner.nix` and will automatically:
+1. Create the necessary directories
+2. Generate symbolic links for all configuration files
+3. Keep the links updated when you rebuild your configuration
+
+**Configuration Details:**
+- The dotfiles path is defined in `nix/env.nix` as `defaults.dotfilesPath`
+- All configuration files are automatically discovered and linked
+- The setup is declarative and version-controlled
+- Changes take effect after running `darwin-rebuild switch --flake .`
+
+#### Option 2: Manual Setup
+
+For manual setup or if not using Nix:
+
 1. Create the Karabiner-Elements configuration directory:
    ```bash
    mkdir -p ~/.config/karabiner/assets/complex_modifications
@@ -119,7 +138,7 @@ To use the keyboard configurations from this dotfiles repository:
 2. Create symbolic links to the JSON files in your dotfiles:
    ```bash
    # Replace /path/to/your/dotfiles with your actual dotfiles path
-   DOTFILES_PATH="/path/to/your/dotfiles"
+   DOTFILES_PATH="/Users/u1/Local/atalie2m/GitHub/dotfiles"  # or your actual path
 
    # Link all JSON files
    ln -sf "$DOTFILES_PATH/keyboards/karabiner/complex_modifications/japanese-input-toggle.json" ~/.config/karabiner/assets/complex_modifications/
