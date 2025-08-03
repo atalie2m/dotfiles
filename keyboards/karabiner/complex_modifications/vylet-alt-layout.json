@@ -34,11 +34,6 @@
         },
         {
           "type": "basic",
-          "from": { "key_code": "w" },
-          "to": [{ "key_code": "c" }]
-        },
-        {
-          "type": "basic",
           "from": { "key_code": "e" },
           "to": [{ "key_code": "m" }]
         },
@@ -56,11 +51,6 @@
           "type": "basic",
           "from": { "key_code": "y" },
           "to": [{ "key_code": "x" }]
-        },
-        {
-          "type": "basic",
-          "from": { "key_code": "u" },
-          "to": [{ "key_code": "l" }]
         },
         {
           "type": "basic",
@@ -149,11 +139,6 @@
         },
         {
           "type": "basic",
-          "from": { "key_code": "c" },
-          "to": [{ "key_code": "g" }]
-        },
-        {
-          "type": "basic",
           "from": { "key_code": "v" },
           "to": [{ "key_code": "d" }]
         },
@@ -194,11 +179,6 @@
         },
         {
           "type": "basic",
-          "from": { "key_code": "w", "modifiers": { "mandatory": ["shift"] } },
-          "to": [{ "key_code": "c", "modifiers": ["shift"] }]
-        },
-        {
-          "type": "basic",
           "from": { "key_code": "e", "modifiers": { "mandatory": ["shift"] } },
           "to": [{ "key_code": "m", "modifiers": ["shift"] }]
         },
@@ -216,11 +196,6 @@
           "type": "basic",
           "from": { "key_code": "y", "modifiers": { "mandatory": ["shift"] } },
           "to": [{ "key_code": "x", "modifiers": ["shift"] }]
-        },
-        {
-          "type": "basic",
-          "from": { "key_code": "u", "modifiers": { "mandatory": ["shift"] } },
-          "to": [{ "key_code": "l", "modifiers": ["shift"] }]
         },
         {
           "type": "basic",
@@ -294,11 +269,6 @@
         },
         {
           "type": "basic",
-          "from": { "key_code": "c", "modifiers": { "mandatory": ["shift"] } },
-          "to": [{ "key_code": "g", "modifiers": ["shift"] }]
-        },
-        {
-          "type": "basic",
           "from": { "key_code": "v", "modifiers": { "mandatory": ["shift"] } },
           "to": [{ "key_code": "d", "modifiers": ["shift"] }]
         },
@@ -350,84 +320,144 @@
       ]
     },
     {
-      "description": "Vylet Magic Key - Simple Simultaneous Press",
+      "description": "Vylet Magic Key - Variable Tracking System",
       "manipulators": [
         {
           "type": "basic",
-          "from": {
-            "simultaneous": [
-              { "key_code": "w" },
-              { "key_code": "m" }
-            ]
+          "from": { "key_code": "w" },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_c", "value": 1 } },
+            { "key_code": "c" }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_c", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_c", "value": 0 } }]
           },
-          "to": [{ "key_code": "k" }],
-          "description": "vylet c + magic = k"
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet c (QWERTY w) - 2 second retention"
         },
         {
           "type": "basic",
-          "from": {
-            "simultaneous": [
-              { "key_code": "u" },
-              { "key_code": "m" }
-            ]
+          "from": { "key_code": "u" },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_l", "value": 1 } },
+            { "key_code": "l" }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_l", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_l", "value": 0 } }]
           },
-          "to": [{ "key_code": "u" }],
-          "description": "vylet l + magic = l (double l)"
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet l (QWERTY u) - 2 second retention"
         },
         {
           "type": "basic",
-          "from": {
-            "simultaneous": [
-              { "key_code": "c" },
-              { "key_code": "m" }
-            ]
+          "from": { "key_code": "c" },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_g", "value": 1 } },
+            { "key_code": "g" }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_g", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_g", "value": 0 } }]
           },
-          "to": [{ "key_code": "h" }],
-          "description": "vylet g + magic = h"
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet g (QWERTY c) - 2 second retention"
         },
         {
           "type": "basic",
-          "from": {
-            "simultaneous": [
-              { "key_code": "r" },
-              { "key_code": "m" }
-            ]
+          "from": { "key_code": "w", "modifiers": { "mandatory": ["shift"] } },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_c", "value": 1 } },
+            { "key_code": "c", "modifiers": ["shift"] }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_c", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_c", "value": 0 } }]
           },
-          "to": [{ "key_code": "t" }],
-          "description": "vylet p + magic = t"
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet C (QWERTY W) - 2 second retention"
         },
         {
           "type": "basic",
-          "from": {
-            "simultaneous": [
-              { "key_code": "a" },
-              { "key_code": "m" }
-            ]
+          "from": { "key_code": "u", "modifiers": { "mandatory": ["shift"] } },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_l", "value": 1 } },
+            { "key_code": "l", "modifiers": ["shift"] }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_l", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_l", "value": 0 } }]
           },
-          "to": [{ "key_code": "k" }],
-          "description": "vylet r + magic = k"
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet L (QWERTY U) - 2 second retention"
         },
         {
           "type": "basic",
-          "from": {
-            "simultaneous": [
-              { "key_code": "s" },
-              { "key_code": "m" }
-            ]
+          "from": { "key_code": "c", "modifiers": { "mandatory": ["shift"] } },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_g", "value": 1 } },
+            { "key_code": "g", "modifiers": ["shift"] }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_g", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_g", "value": 0 } }]
           },
-          "to": [{ "key_code": "w" }],
-          "description": "vylet s + magic = c (mapped to w)"
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet G (QWERTY C) - 2 second retention"
+        }
+      ]
+    },
+    {
+      "description": "Vylet Magic Key - Sequential Leader Key System",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": { "key_code": "m" },
+          "conditions": [{ "type": "variable_if", "name": "prev_vylet_c", "value": 1 }],
+          "to": [
+            { "key_code": "k" },
+            { "set_variable": { "name": "prev_vylet_c", "value": 0 } }
+          ],
+          "description": "c + magic ⇒ k"
         },
         {
           "type": "basic",
-          "from": {
-            "simultaneous": [
-              { "key_code": "comma" },
-              { "key_code": "m" }
-            ]
-          },
-          "to": [{ "key_code": "u" }],
-          "description": "vylet ' + magic = l (mapped to u)"
+          "from": { "key_code": "m" },
+          "conditions": [{ "type": "variable_if", "name": "prev_vylet_l", "value": 1 }],
+          "to": [
+            { "key_code": "l" },
+            { "set_variable": { "name": "prev_vylet_l", "value": 0 } }
+          ],
+          "description": "l + magic ⇒ l (double l)"
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "m" },
+          "conditions": [{ "type": "variable_if", "name": "prev_vylet_g", "value": 1 }],
+          "to": [
+            { "key_code": "h" },
+            { "set_variable": { "name": "prev_vylet_g", "value": 0 } }
+          ],
+          "description": "g + magic ⇒ h"
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "m" },
+          "to": [],
+          "description": "Magic key alone ⇒ silent (no output)"
         }
       ]
     }
