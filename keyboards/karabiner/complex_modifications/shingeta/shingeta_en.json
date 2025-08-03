@@ -1,5 +1,33 @@
 {
+  "_comment": [
+    "新下駄配列 (Shingeta Layout) v1.1 - English/Typing Game Configuration",
+    "",
+    "Original Shingeta keyboard layout designed by kouy",
+    "Blog: https://kouy.exblog.jp/13627994/",
+    "",
+    "Karabiner-Elements implementation by funatsufumiya",
+    "GitHub: https://github.com/funatsufumiya/karabiner-elements-shingeta",
+    "",
+    "About Shingeta Layout:",
+    "新下駄配列は、kouy氏によって考案された日本語入力に特化したキーボード配列です。",
+    "This configuration is specifically designed for typing games and English input",
+    "while maintaining the Shingeta layout principles.",
+    "",
+    "Features:",
+    "- Optimized for typing games and English input",
+    "- Maintains Shingeta layout efficiency",
+    "- Compatible with various typing applications",
+    "- Ergonomic design reducing hand strain",
+    "",
+    "This configuration file is for English input and typing games (JIS keyboard).",
+    "For Japanese input, use shingeta_jp.json.",
+    "",
+    "License: MIT License",
+    "All rights for the original Shingeta layout design belong to kouy.",
+    "Karabiner-Elements implementation rights belong to funatsufumiya and GETTO Systems."
+  ],
   "title": "新下駄配列 (タイピングゲーム用) ver. 1.1 (for keyboard type: jis)",
+  "description": "新下駄配列 (Shingeta Layout) for typing games and English input. Originally designed by kouy, Karabiner-Elements implementation by funatsufumiya.",
   "rules": [
     {
       "description": "新下駄配列 (タイピングゲーム用) ver. 1.1 (for keyboard type: jis)",

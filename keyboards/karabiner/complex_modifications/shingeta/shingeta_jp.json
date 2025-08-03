@@ -1,5 +1,33 @@
 {
+  "_comment": [
+    "新下駄配列 (Shingeta Layout) v1.1 - Karabiner-Elements Configuration",
+    "",
+    "Original Shingeta keyboard layout designed by kouy",
+    "Blog: https://kouy.exblog.jp/13627994/",
+    "",
+    "Karabiner-Elements implementation by funatsufumiya",
+    "GitHub: https://github.com/funatsufumiya/karabiner-elements-shingeta",
+    "",
+    "About Shingeta Layout:",
+    "新下駄配列は、kouy氏によって考案された日本語入力に特化したキーボード配列です。",
+    "従来の配列と比較して、日本語入力時の効率性と快適性を向上させることを目的として",
+    "設計されています。",
+    "",
+    "Features:",
+    "- 日本語入力に最適化された配列",
+    "- 同時押しによる効率的な文字入力",
+    "- ひらがな、カタカナ、記号の統合的な配置",
+    "- 手の負担を軽減する人間工学的な設計",
+    "",
+    "This configuration file is for Japanese input (JIS keyboard).",
+    "For English input, use shingeta_en.json.",
+    "",
+    "License: MIT License",
+    "All rights for the original Shingeta layout design belong to kouy.",
+    "Karabiner-Elements implementation rights belong to funatsufumiya and GETTO Systems."
+  ],
   "title": "新下駄配列 ver. 1.1 (for keyboard type: jis)",
+  "description": "新下駄配列 (Shingeta Layout) designed by kouy, Karabiner-Elements implementation by funatsufumiya. Optimized Japanese keyboard layout for efficient typing.",
   "rules": [
     {
       "description": "新下駄配列 ver. 1.1 (for keyboard type: jis)",
