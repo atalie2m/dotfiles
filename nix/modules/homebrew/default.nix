@@ -10,5 +10,6 @@
   environment.systemPackages = with pkgs; [
     brewCasks.rio
     brewCasks.keyclu
+    brewCasks.latest
   ];
 }
