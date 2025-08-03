@@ -1,0 +1,465 @@
+{
+  "_comment": [
+    "Vylet Alt Keyboard Layout - Karabiner-Elements Implementation",
+    "",
+    "Original Vylet keyboard layout created by MightyAcas",
+    "GitHub: https://github.com/MightyAcas/vylet",
+    "",
+    "This file is an implementation of the Vylet layout for Karabiner-Elements.",
+    "The original Vylet layout design, concept, and all intellectual property",
+    "rights belong to MightyAcas. This implementation is created for reference",
+    "and personal use based on the publicly available specifications.",
+    "",
+    "License: All rights for the Vylet keyboard layout belong to MightyAcas.",
+    "Please refer to the original repository for licensing information.",
+    "",
+    "Layout mapping:",
+    "QWERTY: q w e r t y u i o p",
+    "Vylet:  w c m p b x l o u j",
+    "QWERTY: a s d f g h j k l ;",
+    "Vylet:  r s t h f y n a e i",
+    "QWERTY: z x c v b n m , . /",
+    "Vylet:  q v g d k z * ' ; ."
+  ],
+  "title": "Vylet Alt Keyboard Layout",
+  "description": "Vylet keyboard layout created by MightyAcas (https://github.com/MightyAcas/vylet). This Karabiner-Elements implementation is based on the original work. All rights and license for the Vylet layout belong to MightyAcas.",
+  "rules": [
+    {
+      "description": "Vylet Alt Layout - Base Key Remapping",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": { "key_code": "q" },
+          "to": [{ "key_code": "w" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "e" },
+          "to": [{ "key_code": "m" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "r" },
+          "to": [{ "key_code": "p" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "t" },
+          "to": [{ "key_code": "b" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "y" },
+          "to": [{ "key_code": "x" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "i" },
+          "to": [{ "key_code": "o" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "o" },
+          "to": [{ "key_code": "u" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "p" },
+          "to": [{ "key_code": "j" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "open_bracket" },
+          "to": [{ "key_code": "hyphen" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "a" },
+          "to": [{ "key_code": "r" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "s" },
+          "to": [{ "key_code": "s" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "d" },
+          "to": [{ "key_code": "t" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "f" },
+          "to": [{ "key_code": "h" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "g" },
+          "to": [{ "key_code": "f" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "h" },
+          "to": [{ "key_code": "y" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "j" },
+          "to": [{ "key_code": "n" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "k" },
+          "to": [{ "key_code": "a" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "l" },
+          "to": [{ "key_code": "e" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "semicolon" },
+          "to": [{ "key_code": "i" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "quote" },
+          "to": [{ "key_code": "comma" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "z" },
+          "to": [{ "key_code": "q" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "x" },
+          "to": [{ "key_code": "v" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "v" },
+          "to": [{ "key_code": "d" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "b" },
+          "to": [{ "key_code": "k" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "n" },
+          "to": [{ "key_code": "z" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "comma" },
+          "to": [{ "key_code": "quote" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "period" },
+          "to": [{ "key_code": "semicolon" }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "slash" },
+          "to": [{ "key_code": "period" }]
+        }
+      ]
+    },
+    {
+      "description": "Vylet Alt Layout - Shift State Mappings (Uppercase Letters)",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": { "key_code": "q", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "w", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "e", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "m", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "r", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "p", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "t", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "b", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "y", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "x", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "i", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "o", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "o", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "u", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "p", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "j", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "a", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "r", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "s", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "s", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "d", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "t", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "f", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "h", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "g", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "f", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "h", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "y", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "j", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "n", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "k", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "a", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "l", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "e", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "z", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "q", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "x", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "v", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "v", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "d", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "b", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "k", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "n", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "z", "modifiers": ["shift"] }]
+        }
+      ]
+    },
+    {
+      "description": "Vylet Alt Layout - Shift State Mappings (Special Characters)",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": { "key_code": "open_bracket", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "hyphen", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "semicolon", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "i", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "quote", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "comma", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "comma", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "quote", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "period", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "semicolon", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "slash", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "period", "modifiers": ["shift"] }]
+        }
+      ]
+    },
+    {
+      "description": "Vylet Magic Key - Variable Tracking System",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": { "key_code": "w" },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_c", "value": 1 } },
+            { "key_code": "c" }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_c", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_c", "value": 0 } }]
+          },
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet c (QWERTY w) - 2 second retention"
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "u" },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_l", "value": 1 } },
+            { "key_code": "l" }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_l", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_l", "value": 0 } }]
+          },
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet l (QWERTY u) - 2 second retention"
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "c" },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_g", "value": 1 } },
+            { "key_code": "g" }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_g", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_g", "value": 0 } }]
+          },
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet g (QWERTY c) - 2 second retention"
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "w", "modifiers": { "mandatory": ["shift"] } },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_c", "value": 1 } },
+            { "key_code": "c", "modifiers": ["shift"] }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_c", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_c", "value": 0 } }]
+          },
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet C (QWERTY W) - 2 second retention"
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "u", "modifiers": { "mandatory": ["shift"] } },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_l", "value": 1 } },
+            { "key_code": "l", "modifiers": ["shift"] }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_l", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_l", "value": 0 } }]
+          },
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet L (QWERTY U) - 2 second retention"
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "c", "modifiers": { "mandatory": ["shift"] } },
+          "to": [
+            { "set_variable": { "name": "prev_vylet_g", "value": 1 } },
+            { "key_code": "g", "modifiers": ["shift"] }
+          ],
+          "to_delayed_action": {
+            "to_if_invoked": [{ "set_variable": { "name": "prev_vylet_g", "value": 0 } }],
+            "to_if_canceled": [{ "set_variable": { "name": "prev_vylet_g", "value": 0 } }]
+          },
+          "parameters": {
+            "to_delayed_action_delay_milliseconds": 2000
+          },
+          "description": "Track vylet G (QWERTY C) - 2 second retention"
+        }
+      ]
+    },
+    {
+      "description": "Vylet Magic Key - Sequential Leader Key System",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": { "key_code": "m" },
+          "conditions": [{ "type": "variable_if", "name": "prev_vylet_c", "value": 1 }],
+          "to": [
+            { "key_code": "k" },
+            { "set_variable": { "name": "prev_vylet_c", "value": 0 } }
+          ],
+          "description": "c + magic ⇒ k"
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "m" },
+          "conditions": [{ "type": "variable_if", "name": "prev_vylet_l", "value": 1 }],
+          "to": [
+            { "key_code": "l" },
+            { "set_variable": { "name": "prev_vylet_l", "value": 0 } }
+          ],
+          "description": "l + magic ⇒ l (double l)"
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "m" },
+          "conditions": [{ "type": "variable_if", "name": "prev_vylet_g", "value": 1 }],
+          "to": [
+            { "key_code": "h" },
+            { "set_variable": { "name": "prev_vylet_g", "value": 0 } }
+          ],
+          "description": "g + magic ⇒ h"
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "m" },
+          "to": [],
+          "description": "Magic key alone ⇒ silent (no output)"
+        }
+      ]
+    }
+  ]
+}
