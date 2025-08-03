@@ -6,7 +6,10 @@ in
   # Configure bash for nix develop environments
   programs.bash = {
     enable = true;
-    shellAliases = common.shellAliases;
+    shellAliases = common.shellAliases // {
+      # Bash-specific hidden command
+      helloworld = "echo '👋 Hello from Bash! You are running in a Bash shell.'";
+    };
 
     initExtra = ''
       # Only load bash customizations in nix develop environments

@@ -14,8 +14,11 @@ in
       ignoreSpace = true;
     };
 
-    # Use common shell aliases
-    shellAliases = common.shellAliases;
+    # Use common shell aliases with zsh-specific additions
+    shellAliases = common.shellAliases // {
+      # Zsh-specific hidden command
+      helloworld = "echo '👋 Hello from Zsh! You are running in a Zsh shell.'";
+    };
 
     # Custom functions
     initContent = ''
