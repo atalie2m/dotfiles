@@ -9,6 +9,7 @@ in
     ./programs/git.nix
     ./programs/gpg.nix
     ./programs/zsh.nix
+    ./programs/starship.nix
     ./programs/terminal.nix
     ./fonts.nix
     ./services/smart-backup.nix
