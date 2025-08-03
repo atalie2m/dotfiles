@@ -27,7 +27,9 @@ in
     files = [
       "$HOME/Library/Preferences/com.apple.Terminal.plist"
       "$HOME/.config/rio/config.toml"
-      # Add more files here as needed
+    ];
+    managedFiles = [
+      "$HOME/.config/karabiner/karabiner.json"
     ];
     backupSuffix = "backup";
     timestampFormat = "%Y%m%d-%H%M%S";

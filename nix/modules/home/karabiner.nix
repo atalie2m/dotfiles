@@ -1,75 +1,101 @@
 { config, lib, pkgs, ... }:
 
 let
-  # Use relative path from the current file location instead of absolute path
-  dotfilesRoot = ../../../.;  # Go up to the dotfiles root from nix/modules/home/
-  
-  # Karabiner-Elements configuration files list
-  karabinerConfigs = [
-    {
-      name = "japanese-input-toggle.json";
-      source = dotfilesRoot + "/keyboards/karabiner/complex_modifications/japanese-input-toggle.json";
-      description = "Japanese input method switching configurations";
-    }
-    {
-      name = "spacebar-to-shift.json";
-      source = dotfilesRoot + "/keyboards/karabiner/complex_modifications/spacebar-to-shift.json";
-      description = "Space-and-Shift (SandS) functionality";
-    }
-    {
-      name = "vylet-alt-layout.json";
-      source = dotfilesRoot + "/keyboards/karabiner/complex_modifications/vylet-alt-layout.json";
-      description = "Vylet alternative keyboard layout";
-    }
-    {
-      name = "shingeta_en.json";
-      source = dotfilesRoot + "/keyboards/karabiner/complex_modifications/shingeta/shingeta_en.json";
-      description = "Shingeta layout for English typing games";
-    }
-    {
-      name = "shingeta_jp.json";
-      source = dotfilesRoot + "/keyboards/karabiner/complex_modifications/shingeta/shingeta_jp.json";
-      description = "Shingeta layout for Japanese input";
-    }
+  # Path to the root of your dotfiles repo
+  dotfilesRoot = ../../../.;
+
+  #
+  # 1. Complex-modification rule files
+  #
+  ruleDir = "${dotfilesRoot}/keyboards/karabiner/complex_modifications";
+
+  # List every JSON file you care about once; easier to reorder / comment out
+  ruleFiles = {
+    japaneseToggle = "${ruleDir}/japanese-input-toggle.json";
+    spaceShift     = "${ruleDir}/spacebar-to-shift.json";
+    vyletAlt       = "${ruleDir}/vylet-alt-layout.json";
+    shingetaEn     = "${ruleDir}/shingeta/shingeta_en.json";
+    shingetaJp     = "${ruleDir}/shingeta/shingeta_jp.json";
+  };
+
+  #
+  # 2. Helper functions to selectively import rules
+  #
+  # Import all rules from a file
+  allRulesFrom = path: (lib.importJSON path).rules;
+
+  # Import only specific rules by description from a file
+  specificRulesFrom = path: descriptions:
+    lib.filter (rule: lib.elem (rule.description or "") descriptions)
+               (allRulesFrom path);
+
+  #
+  # 3. Build rule sets for each profile by selective import
+  #
+  # Standard profile: import only specific rules from specific files
+  standardRules = lib.concatLists [
+    (specificRulesFrom ruleFiles.japaneseToggle [
+      "コマンドキーを単体で押したときに、英数・かなキーを送信する。（左コマンドキーは英数、右コマンドキーはかな） (rev 3)"
+    ])
+    (allRulesFrom ruleFiles.spaceShift)  # Import all rules from spacebar-to-shift
   ];
 
-  # Filter existing files and create debug information
-  existingConfigs = builtins.filter (config: builtins.pathExists config.source) karabinerConfigs;
-  missingConfigs = builtins.filter (config: !(builtins.pathExists config.source)) karabinerConfigs;
+  # Atalie's profile: import specific rules from japanese-input-toggle, all from others
+  ataliesRules = lib.concatLists [
+    (specificRulesFrom ruleFiles.japaneseToggle [
+      "コマンドキーを単体で押したときに、英数・かなキーを送信する。（左コマンドキーは英数、右コマンドキーはかな） (rev 3)"
+    ])
+    (allRulesFrom ruleFiles.spaceShift)   # All predefined
+    (allRulesFrom ruleFiles.vyletAlt)     # All predefined
+    (allRulesFrom ruleFiles.shingetaJp)   # All predefined (excluding shingetaEn)
+  ];
 
-  # Helper function to create symbolic links
-  mkKarabinerLinks = configs: lib.listToAttrs (map (config: {
-    name = ".config/karabiner/assets/complex_modifications/${config.name}";
-    value = {
-      source = config.source;
+  #
+  # 4. Full Karabiner config
+  #
+  karabinerJson = pkgs.writeText "karabiner.json" (builtins.toJSON {
+    global = {
+      check_for_updates_on_startup = false;
+      show_in_menu_bar             = true;
     };
-  }) configs);
 
-  # Debug information
-  debugInfo = ''
-    Karabiner-Elements Configuration Debug Information:
-    
-    Dotfiles Root Path: ${toString dotfilesRoot}
-    
-    Existing files (${toString (builtins.length existingConfigs)}):
-    ${lib.concatMapStringsSep "\n" (config: "  ✓ ${config.name} -> ${toString config.source}") existingConfigs}
-    
-    Missing files (${toString (builtins.length missingConfigs)}):
-    ${lib.concatMapStringsSep "\n" (config: "  ✗ ${config.name} -> ${toString config.source}") missingConfigs}
-    
-    Total configurations: ${toString (builtins.length karabinerConfigs)}
-    Successfully linked: ${toString (builtins.length existingConfigs)}
-  '';
+    profiles = [
+      {
+        name = "Atalie's";
+        selected = true;
+        complex_modifications.rules = ataliesRules;
+      }
+      {
+        name = "Standard";
+        selected = false;
+        complex_modifications.rules = standardRules;
+      }
+    ];
+  });
+
+  #
+  # 5. Symlink the entire modifications directory
+  #
+  complexModsSymlink = {
+    source = ruleDir;
+    recursive = true;    # keep file names intact
+  };
 
 in
-# Output debug information
-lib.trace debugInfo
 {
-  # Create symbolic links for Karabiner-Elements configuration files
-  home.file = (mkKarabinerLinks existingConfigs) // {
-    # Also create a debug file in the home directory
-    ".karabiner-debug.txt" = {
-      text = debugInfo;
-    };
-  };
+  # Install everything
+  xdg.configFile."karabiner/karabiner.json".source = karabinerJson;
+  xdg.configFile."karabiner/assets/complex_modifications" = complexModsSymlink;
+
+  #
+  # Optional: write a small debug text next to the config
+  #
+  home.file.".karabiner-debug.txt".text = ''
+    Karabiner-Elements Nix module diagnostics
+
+    dotfilesRoot:  ${dotfilesRoot}
+
+    Rule files considered:
+    ${lib.concatMapStringsSep "\n" (name: "  • " + ruleFiles.${name}) (builtins.attrNames ruleFiles)}
+  '';
 }
