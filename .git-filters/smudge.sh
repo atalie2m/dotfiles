@@ -2,7 +2,8 @@
 # Git smudge filter
 
 # Load common system variables
-source "$(dirname "$0")/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 # Replace placeholders with actual system information
 perl -pe "s/\Q\"{{COMPUTER_NAME}}\"\E/\"$COMPUTER_NAME\"/g; \
