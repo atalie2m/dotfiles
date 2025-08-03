@@ -6,10 +6,10 @@ in
 {
   imports = [
     ./packages.nix
-    ./programs/bash.nix
+    ./shells/bash.nix
     ./programs/git.nix
     ./programs/gpg.nix
-    ./programs/zsh.nix
+    ./shells/zsh.nix
     ./programs/starship.nix
     ./programs/terminals.nix
     ./fonts.nix
