@@ -18,7 +18,7 @@ _: {
     };
 
     # Custom functions
-    initExtra = ''
+    initContent = ''
       # Load local ~/.zshrc
       # This might break the benefits of Nix, but I rather fancy it.
       if [[ -f ~/.zshrc ]]; then
