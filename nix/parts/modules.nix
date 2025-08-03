@@ -9,7 +9,7 @@
       default = ../modules/darwin;
       homebrew = ../modules/homebrew;
       darwin-base = ../hosts;
-      standard-host = ../../profiles/standard/darwin/standard.nix;
+      standard-host = ../profiles/standard/darwin/standard.nix;
     };
 
     homeManagerModules = {

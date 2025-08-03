@@ -18,7 +18,7 @@ let
         ../modules/nixpkgs/unfree.nix
         ../modules/nixpkgs/overlays.nix
         ../hosts/darwin.nix        # Base Darwin settings
-        ../../profiles/standard/darwin/standard.nix  # Standard profile
+        ../profiles/standard/darwin/standard.nix  # Standard profile
         { networking.hostName = hostName; }
         {
           home-manager = {
