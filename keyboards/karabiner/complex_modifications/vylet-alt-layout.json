@@ -169,11 +169,6 @@
         },
         {
           "type": "basic",
-          "from": { "key_code": "m" },
-          "to": [{ "key_code": "8", "modifiers": ["shift"] }]
-        },
-        {
-          "type": "basic",
           "from": { "key_code": "comma" },
           "to": [{ "key_code": "quote" }]
         },
@@ -339,11 +334,6 @@
         },
         {
           "type": "basic",
-          "from": { "key_code": "m", "modifiers": { "mandatory": ["shift"] } },
-          "to": [{ "key_code": "8", "modifiers": ["shift"] }]
-        },
-        {
-          "type": "basic",
           "from": { "key_code": "comma", "modifiers": { "mandatory": ["shift"] } },
           "to": [{ "key_code": "quote", "modifiers": ["shift"] }]
         },
@@ -360,269 +350,84 @@
       ]
     },
     {
-      "description": "Vylet Magic Key (*) Transformations",
+      "description": "Vylet Magic Key - Simple Simultaneous Press",
       "manipulators": [
         {
           "type": "basic",
           "from": {
-            "key_code": "c",
-            "modifiers": { "mandatory": ["right_shift"] }
+            "simultaneous": [
+              { "key_code": "w" },
+              { "key_code": "m" }
+            ]
           },
-          "to": [
-            { "key_code": "c" },
-            { "key_code": "k" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
+          "to": [{ "key_code": "k" }],
+          "description": "vylet c + magic = k"
         },
         {
           "type": "basic",
           "from": {
-            "key_code": "quote",
-            "modifiers": { "mandatory": ["right_shift"] }
+            "simultaneous": [
+              { "key_code": "u" },
+              { "key_code": "m" }
+            ]
           },
-          "to": [
-            { "key_code": "quote" },
-            { "key_code": "l" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
+          "to": [{ "key_code": "u" }],
+          "description": "vylet l + magic = l (double l)"
         },
         {
           "type": "basic",
           "from": {
-            "key_code": "l",
-            "modifiers": { "mandatory": ["right_shift"] }
+            "simultaneous": [
+              { "key_code": "c" },
+              { "key_code": "m" }
+            ]
           },
-          "to": [
-            { "key_code": "l" },
-            { "key_code": "l" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
+          "to": [{ "key_code": "h" }],
+          "description": "vylet g + magic = h"
         },
         {
           "type": "basic",
           "from": {
-            "key_code": "g",
-            "modifiers": { "mandatory": ["right_shift"] }
+            "simultaneous": [
+              { "key_code": "r" },
+              { "key_code": "m" }
+            ]
           },
-          "to": [
-            { "key_code": "g" },
-            { "key_code": "h" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
+          "to": [{ "key_code": "t" }],
+          "description": "vylet p + magic = t"
         },
         {
           "type": "basic",
           "from": {
-            "key_code": "p",
-            "modifiers": { "mandatory": ["right_shift"] }
+            "simultaneous": [
+              { "key_code": "a" },
+              { "key_code": "m" }
+            ]
           },
-          "to": [
-            { "key_code": "p" },
-            { "key_code": "t" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
+          "to": [{ "key_code": "k" }],
+          "description": "vylet r + magic = k"
         },
         {
           "type": "basic",
           "from": {
-            "key_code": "r",
-            "modifiers": { "mandatory": ["right_shift"] }
+            "simultaneous": [
+              { "key_code": "s" },
+              { "key_code": "m" }
+            ]
           },
-          "to": [
-            { "key_code": "r" },
-            { "key_code": "k" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
+          "to": [{ "key_code": "w" }],
+          "description": "vylet s + magic = c (mapped to w)"
         },
         {
           "type": "basic",
           "from": {
-            "key_code": "s",
-            "modifiers": { "mandatory": ["right_shift"] }
+            "simultaneous": [
+              { "key_code": "comma" },
+              { "key_code": "m" }
+            ]
           },
-          "to": [
-            { "key_code": "s" },
-            { "key_code": "c" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "type": "basic",
-          "from": {
-            "key_code": "w",
-            "modifiers": { "mandatory": ["right_shift"] }
-          },
-          "to": [
-            { "key_code": "w" },
-            { "key_code": "r" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "type": "basic",
-          "from": {
-            "key_code": "f",
-            "modifiers": { "mandatory": ["right_shift"] }
-          },
-          "to": [
-            { "key_code": "f" },
-            { "key_code": "t" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "type": "basic",
-          "from": {
-            "key_code": "m",
-            "modifiers": { "mandatory": ["right_shift"] }
-          },
-          "to": [
-            { "key_code": "m" },
-            { "key_code": "b" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "type": "basic",
-          "from": {
-            "key_code": "b",
-            "modifiers": { "mandatory": ["right_shift"] }
-          },
-          "to": [
-            { "key_code": "b" },
-            { "key_code": "t" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "type": "basic",
-          "from": {
-            "key_code": "a",
-            "modifiers": { "mandatory": ["right_shift"] }
-          },
-          "to": [
-            { "key_code": "a" },
-            { "key_code": "x" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "type": "basic",
-          "from": {
-            "key_code": "e",
-            "modifiers": { "mandatory": ["right_shift"] }
-          },
-          "to": [
-            { "key_code": "e" },
-            { "key_code": "x" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "type": "basic",
-          "from": {
-            "key_code": "i",
-            "modifiers": { "mandatory": ["right_shift"] }
-          },
-          "to": [
-            { "key_code": "i" },
-            { "key_code": "x" }
-          ],
-          "conditions": [
-            {
-              "type": "variable_if",
-              "name": "magic_key_pressed",
-              "value": 1
-            }
-          ]
-        },
-        {
-          "type": "basic",
-          "from": { "key_code": "8", "modifiers": { "mandatory": ["shift"] } },
-          "to": [
-            { "set_variable": { "name": "magic_key_pressed", "value": 1 } }
-          ],
-          "to_after_key_up": [
-            { "set_variable": { "name": "magic_key_pressed", "value": 0 } }
-          ]
+          "to": [{ "key_code": "u" }],
+          "description": "vylet ' + magic = l (mapped to u)"
         }
       ]
     }
