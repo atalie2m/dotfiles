@@ -61,14 +61,22 @@ let
 
     profiles = [
       {
-        name = "Atalie's";
-        selected = true;
+        name = "A2m";
+        selected = false;
         complex_modifications.rules = ataliesRules;
+        virtual_hid_keyboard = {
+          keyboard_type = "ansi";
+          country_code  = 0;
+        };
       }
       {
-        name = "Standard";
-        selected = false;
+        name = "Std";
+        selected = true;
         complex_modifications.rules = standardRules;
+        virtual_hid_keyboard = {
+          keyboard_type = "ansi";
+          country_code  = 0;
+        };
       }
     ];
   });
