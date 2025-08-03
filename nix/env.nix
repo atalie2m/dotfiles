@@ -1,8 +1,14 @@
 {
   hosts = {
-    "{{LOCAL_HOSTNAME}}" = {
+    standard = {
       system = "aarch64-darwin";
       username = "{{USER_NAME}}";
+      profile = "standard";
+    };
+    commercial = {
+      system = "aarch64-darwin";
+      username = "{{USER_NAME}}";
+      profile = "commercial";
     };
   };
 

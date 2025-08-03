@@ -166,9 +166,11 @@ See the LICENSE file for complete attribution information.
 
 ## Build darwin flake using:
 ```bash
-# Build the configuration
-darwin-rebuild build --flake .
+# Build the standard profile
+darwin-rebuild build --flake .#standard
 
-# Switch to the new configuration
-sudo darwin-rebuild switch --flake .
+# Switch to the standard profile
+sudo darwin-rebuild switch --flake .#standard
 ```
+Replace `standard` with `commercial` for the commercial profile.
+
