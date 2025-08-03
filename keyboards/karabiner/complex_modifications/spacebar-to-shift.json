@@ -1,0 +1,20 @@
+{
+  "title": "Change spacebar to left_shift (Post spacebar if pressed alone)",
+  "description": "Converts spacebar to left_shift when held down, but still outputs space when pressed alone. Based on KE-complex_modifications (https://github.com/pqrs-org/KE-complex_modifications) released under the Unlicense.",
+  "rules": [
+    {
+      "description": "Change spacebar to left_shift. (Post spacebar if pressed alone)",
+      "manipulators": [
+        {
+          "from": {
+            "key_code": "spacebar",
+            "modifiers": { "optional": ["any"] }
+          },
+          "to": [{ "key_code": "left_shift" }],
+          "to_if_alone": [{ "key_code": "spacebar" }],
+          "type": "basic"
+        }
+      ]
+    }
+  ]
+}
