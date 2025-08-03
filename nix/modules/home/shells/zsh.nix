@@ -1,4 +1,8 @@
-{ pkgs, ... }: {
+{ pkgs, ... }:
+let
+  common = import ./common.nix { inherit pkgs; };
+in
+{
   programs.zsh = {
     enable = true;
     dotDir = ".nix";
@@ -10,12 +14,8 @@
       ignoreSpace = true;
     };
 
-    shellAliases = {
-      # file and directory operations
-      ll = "ls -la";
-      la = "ls -A";
-      l = "ls -CF";
-    };
+    # Use common shell aliases
+    shellAliases = common.shellAliases;
 
     # Custom functions
     initContent = ''
@@ -25,15 +25,8 @@
         source ~/.zshrc
       fi
 
-      # Ensure starship is initialized in nix develop environments
-      if command -v starship >/dev/null 2>&1; then
-        eval "$(starship init zsh)"
-      fi
-
-      # search for processes by name
-      psgrep() {
-        ps aux | grep -i "$1" | grep -v grep
-      }
+      # Load common shell initialization
+      ${common.commonShellInit}
     '';
 
     autosuggestion.enable = true;
