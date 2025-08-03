@@ -190,6 +190,176 @@
       ]
     },
     {
+      "description": "Vylet Alt Layout - Shift State Mappings (Uppercase Letters)",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": { "key_code": "q", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "w", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "w", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "c", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "e", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "m", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "r", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "p", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "t", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "b", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "y", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "x", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "u", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "l", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "i", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "o", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "o", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "u", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "p", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "j", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "a", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "r", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "s", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "s", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "d", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "t", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "f", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "h", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "g", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "f", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "h", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "y", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "j", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "n", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "k", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "a", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "l", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "e", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "z", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "q", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "x", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "v", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "c", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "g", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "v", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "d", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "b", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "k", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "n", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "z", "modifiers": ["shift"] }]
+        }
+      ]
+    },
+    {
+      "description": "Vylet Alt Layout - Shift State Mappings (Special Characters)",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": { "key_code": "open_bracket", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "hyphen", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "semicolon", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "i", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "quote", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "comma", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "m", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "8", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "comma", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "quote", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "period", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "semicolon", "modifiers": ["shift"] }]
+        },
+        {
+          "type": "basic",
+          "from": { "key_code": "slash", "modifiers": { "mandatory": ["shift"] } },
+          "to": [{ "key_code": "period", "modifiers": ["shift"] }]
+        }
+      ]
+    },
+    {
       "description": "Vylet Magic Key (*) Transformations",
       "manipulators": [
         {
