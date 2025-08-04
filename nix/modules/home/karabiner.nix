@@ -65,8 +65,7 @@ let
         selected = false;
         complex_modifications.rules = ataliesRules;
         virtual_hid_keyboard = {
-          keyboard_type = "ansi";
-          country_code  = 0;
+          keyboard_type_v2 = "ansi";
         };
       }
       {
@@ -74,8 +73,7 @@ let
         selected = true;
         complex_modifications.rules = standardRules;
         virtual_hid_keyboard = {
-          keyboard_type = "ansi";
-          country_code  = 0;
+          keyboard_type_v2 = "ansi";
         };
       }
     ];
