@@ -3,6 +3,16 @@
 ## Prerequisites
 - Nix(Lix or Determinate's vanilla)
 
+## Profiles
+
+This flake uses [Denix](https://github.com/yunfachi/denix) to build macOS configurations.
+Two profiles are available:
+
+- **standard** – shows hidden files and extensions while autohiding the Dock
+- **commercial** – hides hidden files and extensions and keeps the Dock visible
+
+Select the profile per host in `nix/env.nix`.
+
 ## Terminal Compatibility
 
 **For macOS users**: Please use a 24-bit True Color compatible terminal instead of the default Terminal.app. The Starship prompt configuration in this repository uses True Color (#RRGGBB) values that are only properly displayed in terminals with full color support.

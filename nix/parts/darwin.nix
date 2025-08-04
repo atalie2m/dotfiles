@@ -6,6 +6,8 @@ let
   env = import ../env.nix;
   configurations = env.hosts;
 
+  # Profile modules will be imported within the modules list to get access to specialArgs
+
   # Create Darwin configurations for all hosts
   mkDarwinConfigurations = lib.mapAttrs (hostName: hostConfig:
     inputs.nix-darwin.lib.darwinSystem {
@@ -18,7 +20,7 @@ let
         ../modules/nixpkgs/unfree.nix
         ../modules/nixpkgs/overlays.nix
         ../hosts/darwin.nix        # Base Darwin settings
-        ../profiles/standard/darwin/standard.nix  # Standard profile
+        ../profiles/${hostConfig.profile}/darwin/${hostConfig.profile}.nix
         { networking.hostName = hostName; }
         {
           home-manager = {
@@ -38,6 +40,7 @@ let
         inherit self hostName;
         inherit (inputs) brew-nix;
         inherit (hostConfig) username;
+        delib = inputs.denix.lib;
       };
     }
   ) configurations;

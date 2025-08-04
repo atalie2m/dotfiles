@@ -15,6 +15,15 @@
     home-manager.url = "github:nix-community/home-manager/release-25.05";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
+    denix = {
+      url = "github:yunfachi/denix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        nix-darwin.follows = "nix-darwin";
+        home-manager.follows = "home-manager";
+      };
+    };
+
     brew-api = {
       url = "github:BatteredBunny/brew-api";
       flake = false;
