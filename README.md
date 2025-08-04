@@ -164,11 +164,18 @@ These configurations are based on or include work from:
 
 See the LICENSE file for complete attribution information.
 
-## Build darwin flake using:
-```bash
-# Build the configuration
-darwin-rebuild build --flake .
+# Usage
 
-# Switch to the new configuration
+## Initial Setup
+```bash
+sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- switch --flake .
+```
+
+## Subsequent Updates
+```bash
+# nix-darwin configuration
 sudo darwin-rebuild switch --flake .
+
+# home-manager configuration (replace <HOSTNAME> with your actual hostname)
+nix run home-manager/release-25.05 -- switch --flake .#<HOSTNAME>
 ```
