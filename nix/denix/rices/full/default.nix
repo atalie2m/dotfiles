@@ -7,6 +7,12 @@ delib.rice {
   darwin = { name, cfg, myconfig, ... }: {
     imports = [
       ../../../modules/homebrew/default.nix
+      ../../../modules/home/shells/bash.nix
+      ../../../modules/home/programs/git.nix
+      ../../../modules/home/programs/gpg.nix
+      ../../../modules/home/shells/zsh.nix
+      ../../../modules/home/programs/starship.nix
+      ../../../modules/home/karabiner.nix
     ];
   };
 }
