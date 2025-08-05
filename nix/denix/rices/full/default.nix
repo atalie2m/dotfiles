@@ -5,9 +5,8 @@ delib.rice {
   inherits = [ "minimum" ];
 
   darwin = { name, cfg, myconfig, ... }: {
-    imports = [ 
+    imports = [
       ../../../modules/homebrew/default.nix
-      ../../../modules/darwin/fonts.nix
     ];
   };
 }
