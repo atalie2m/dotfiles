@@ -12,6 +12,10 @@ delib.host {
   };
 
   darwin = { name, cfg, myconfig, ... }: {
+    imports = [
+      ../../../modules/nixpkgs/unfree.nix
+    ];
+    
     system.stateVersion = 5;
     nixpkgs.hostPlatform = "aarch64-darwin";
     

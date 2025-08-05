@@ -4,8 +4,11 @@ delib.rice {
   name = "full";
   inherits = [ "minimum" ];
 
-  darwin = { ... }: {
-    # Temporarily disabled to isolate recursion issue
-    # imports = [ ../../modules/brew-nix.nix ];
+  darwin = { name, cfg, myconfig, ... }: {
+    imports = [ 
+      # Disabled brew-nix due to module not being available in denix context
+      # ../../../modules/homebrew/default.nix
+      ../../../modules/darwin/fonts.nix
+    ];
   };
 }
