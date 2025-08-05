@@ -1,11 +1,9 @@
-{ config, pkgs, brew-nix, ... }:
+{ config, pkgs, inputs, ... }:
 
 {
-  nixpkgs.overlays = [ brew-nix.overlays.default ];
+  nixpkgs.overlays = [ inputs.brew-nix.overlays.default ];
 
-  brew-nix = {
-    enable = true;
-  };
+  brew-nix.enable = true;
 
   environment.systemPackages = with pkgs; [
     brewCasks.rio

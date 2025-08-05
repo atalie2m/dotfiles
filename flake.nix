@@ -38,12 +38,24 @@
     };
   };
 
-  outputs = inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [
-        ./nix/parts
-      ];
-
-      systems = [ "aarch64-darwin" ];
-    };
+  outputs = { denix, ... } @ inputs: let
+    mkConfigurations = moduleSystem:
+      denix.lib.configurations {
+        inherit moduleSystem;
+        homeManagerUser = "{{USER_NAME}}";
+        paths = [
+          ./nix/denix/hosts
+          ./nix/denix/modules
+          ./nix/denix/rices
+        ];
+        extensions = with denix.lib.extensions; [
+          args
+          (base.withConfig { args.enable = true; })
+        ];
+        specialArgs = { inherit inputs; };
+      };
+  in {
+    homeConfigurations = mkConfigurations "home";
+    darwinConfigurations = mkConfigurations "darwin";
+  };
 }
