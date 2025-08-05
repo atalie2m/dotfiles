@@ -1,5 +1,7 @@
 { delib, ... }:
-
+let
+  modules = import ../modules.nix { inherit delib; };
+in
 delib.host {
   name = "common";
   rice = "full";
@@ -11,13 +13,13 @@ delib.host {
   };
 
   darwin = { name, cfg, myconfig, ... }: {
-    imports = [
-      ../../../modules/nixpkgs/unfree.nix
+    imports = with delib.modules; [
+      nixpkgsUnfree
     ];
-    
-    system.stateVersion = 5; 
+
+    system.stateVersion = 5;
     nixpkgs.hostPlatform = "aarch64-darwin";
-    
+
     users.users.u1 = {
       name = "{{USER_NAME}}";
       home = "/Users/{{USER_NAME}}";
