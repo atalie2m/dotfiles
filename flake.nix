@@ -53,6 +53,9 @@
           (base.withConfig { args.enable = true; })
         ];
         specialArgs = { inherit inputs; };
+        extraModules = if moduleSystem == "darwin" then [
+          inputs.brew-nix.darwinModules.default
+        ] else [];
       };
   in {
     homeConfigurations = mkConfigurations "home";
