@@ -30,6 +30,7 @@ in
     ];
     managedFiles = [
       "$HOME/.config/karabiner/karabiner.json"
+      "$HOME/.nix/.zshrc"
     ];
     backupSuffix = "backup";
     timestampFormat = "%Y%m%d-%H%M%S";
