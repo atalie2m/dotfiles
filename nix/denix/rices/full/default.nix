@@ -4,20 +4,13 @@ delib.rice {
   name = "full";
   inherits = [ "minimum" ];
 
-  darwin = { name, cfg, myconfig, ... }: {
-    imports = [
-      ../../../modules/homebrew/default.nix
-    ];
-  };
-
-  home = { name, cfg, myconfig, ... }: {
-    imports = [
-      ../../../modules/home/shells/bash.nix
-      ../../../modules/home/programs/git.nix
-      ../../../modules/home/programs/gpg.nix
-      ../../../modules/home/shells/zsh.nix
-      ../../../modules/home/programs/starship.nix
-      ../../../modules/home/karabiner.nix
-    ];
+  myconfig = {
+    homebrew.enable = true;
+    bash.enable = true;
+    git.enable = true;
+    gpg.enable = true;
+    zsh.enable = true;
+    starship.enable = true;
+    karabiner.enable = true;
   };
 }
