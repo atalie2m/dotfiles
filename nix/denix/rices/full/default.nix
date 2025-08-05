@@ -1,13 +1,13 @@
 { delib, ... }:
-let
-  modules = import ../../modules.nix { inherit delib; };
-in
+
 delib.rice {
   name = "full";
   inherits = [ "minimum" ];
 
-  darwin.imports = with delib.modules; [
-    homebrew
-    darwinFonts
-  ];
+  darwin = { name, cfg, myconfig, ... }: {
+    imports = [ 
+      ../../../modules/homebrew/default.nix
+      ../../../modules/darwin/fonts.nix
+    ];
+  };
 }
