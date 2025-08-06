@@ -43,22 +43,6 @@ delib.rice {
     homebrew.native = {
       enable = true;
       enableBrewNix = true;
-
-      # Example configurations (commented for now)
-      # casks = [
-      #   "google-chrome"
-      #   "visual-studio-code"
-      #   "docker"
-      # ];
-      #
-      # brews = [
-      #   "mas"  # Mac App Store CLI
-      # ];
-      #
-      # masApps = {
-      #   "1Password 7 - Password Manager" = 1333542190;
-      #   "Xcode" = 497799835;
-      # };
     };
   };
 }
