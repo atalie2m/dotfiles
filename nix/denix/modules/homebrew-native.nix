@@ -57,17 +57,8 @@ delib.module {
     homebrew = {
       enable = true;
 
-      # Homebrew formulae
-      brews = cfg.brews;
-
-      # GUI applications via cask
-      casks = cfg.casks;
-
-      # Mac App Store apps
-      masApps = cfg.masApps;
-
-      # Additional taps
-      taps = cfg.taps;
+      # Homebrew formulae, casks, Mac App Store apps, and taps
+      inherit (cfg) brews casks masApps taps;
 
       # Cleanup and maintenance
       onActivation = {

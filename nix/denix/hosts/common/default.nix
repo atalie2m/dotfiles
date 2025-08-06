@@ -14,9 +14,9 @@ delib.host {
   };
 
   darwin = { name, cfg, myconfig, ... }: let
-    user = env.username;
-    homeDir = env.homeDirectory;
-    platform = env.platform;
+    inherit (env) username homeDirectory platform;
+    user = username;
+    homeDir = homeDirectory;
   in {
     system.stateVersion = env.stateVersion.darwin;
     nixpkgs.hostPlatform = platform;

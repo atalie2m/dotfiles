@@ -97,13 +97,13 @@ delib.module {
 
       autosuggestion.enable = cfg.zsh.enableAutosuggestions;
       syntaxHighlighting.enable = cfg.zsh.enableSyntaxHighlighting;
-      enableCompletion = cfg.zsh.enableCompletion;
+      inherit (cfg.zsh) enableCompletion;
     };
 
     # Bash configuration
     programs.bash = lib.mkIf cfg.bash.enable {
       enable = true;
-      enableCompletion = cfg.bash.enableCompletion;
+      inherit (cfg.bash) enableCompletion;
 
       # Source Nix-managed bashrc located under ~/.nix
       initExtra = ''

@@ -21,13 +21,8 @@ delib.module {
 
     services.gpg-agent = {
       enable = true;
-      enableSshSupport = cfg.agent.enableSshSupport;
-      enableExtraSocket = cfg.agent.enableExtraSocket;
+      inherit (cfg.agent) enableSshSupport enableExtraSocket defaultCacheTtl defaultCacheTtlSsh maxCacheTtl;
       pinentry.package = pkgs.pinentry_mac;
-
-      defaultCacheTtl = cfg.agent.defaultCacheTtl;
-      defaultCacheTtlSsh = cfg.agent.defaultCacheTtlSsh;
-      maxCacheTtl = cfg.agent.maxCacheTtl;
 
       enableBashIntegration = true;
       enableZshIntegration = true;

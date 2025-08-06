@@ -12,26 +12,28 @@ delib.module {
   };
 
   darwin.ifEnabled = { cfg, ... }: {
-    nix.settings = {
-      # Enable experimental features
-      experimental-features = [
-        "nix-command"
-        "flakes"
-      ] ++ cfg.extraExperimentalFeatures;
+    nix = {
+      settings = {
+        # Enable experimental features
+        experimental-features = [
+          "nix-command"
+          "flakes"
+        ] ++ cfg.extraExperimentalFeatures;
+        
+        # Trusted users for Nix daemon
+        trusted-users = [ "@admin" ];
+      };
       
-      # Trusted users for Nix daemon
-      trusted-users = [ "@admin" ];
+      # Enable garbage collection and optimization
+      gc = {
+        automatic = true;
+        interval = { Weekday = 0; Hour = 2; Minute = 0; }; # Sunday at 2 AM
+        options = "--delete-older-than 30d";
+      };
+      
+      # Auto-optimize store (modern way)
+      optimise.automatic = true;
     };
-    
-    # Enable garbage collection and optimization
-    nix.gc = {
-      automatic = true;
-      interval = { Weekday = 0; Hour = 2; Minute = 0; }; # Sunday at 2 AM
-      options = "--delete-older-than 30d";
-    };
-    
-    # Auto-optimize store (modern way)
-    nix.optimise.automatic = true;
   };
 
   home.ifEnabled = { cfg, ... }: {

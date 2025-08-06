@@ -10,7 +10,7 @@ delib.module {
   };
 
   # Apply the overlay at both home and darwin levels
-  home.ifEnabled = { ... }: {
+  home.ifEnabled = _: {
     nixpkgs.overlays = [
       (final: prev: {
         claude-code = prev.claude-code.overrideAttrs (old: rec {
@@ -24,7 +24,7 @@ delib.module {
     ];
   };
 
-  darwin.ifEnabled = { ... }: {
+  darwin.ifEnabled = _: {
     nixpkgs.overlays = [
       (final: prev: {
         claude-code = prev.claude-code.overrideAttrs (old: rec {

@@ -41,7 +41,7 @@ delib.module {
         gpg.format = lib.mkIf cfg.enableSigning "openpgp";
       } // cfg.extraConfig;
       
-      aliases = cfg.aliases;
+      inherit (cfg) aliases;
     };
   };
 }
