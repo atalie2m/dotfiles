@@ -81,8 +81,7 @@ git checkout HEAD -- flake.nix nix/nix-darwin.nix
 
 Git setup (run once per repository):
 ```bash
-git config filter.system-info.clean './.git-filters/clean.sh'
-git config filter.system-info.smudge './.git-filters/smudge.sh'
+./.git-filters/setup.sh
 ```
 
 **Note**: Git filter configuration is stored locally and needs to be set up on each machine/clone.
