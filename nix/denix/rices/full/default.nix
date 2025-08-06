@@ -40,9 +40,9 @@ delib.rice {
     };
 
     # Native homebrew integration
-    homebrew.native = {
-      enable = true;
-      enableBrewNix = true;
-    };
+    homebrew.native.enable = true;
+    
+    # Brew-nix integration for GUI applications
+    brew-nix.enable = true;
   };
 }

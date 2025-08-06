@@ -19,40 +19,12 @@ delib.module {
     # Additional Homebrew taps
     taps = listOfOption str [];
 
-    # Brew-nix integration
-    enableBrewNix = boolOption true;
-    brewNixCasks = listOfOption str [
-      "rio"
-      "keyclu"
-      "latest"
-      "alacritty"
-      "wezterm"  # Note: WezTerm has unusual packaging structure in brew-nix.
-                 # App is installed as WezTerm-macos-VERSION/WezTerm.app instead of direct WezTerm.app,
-                 # making it invisible to Launchpad/Spotlight. CLI works fine via 'wezterm' command.
-                 # Can be opened manually: open "/run/current-system/Applications/WezTerm-macos-*/WezTerm.app"
-                 # Unlike Rectangle which installs as direct Rectangle.app and appears normally in Launchpad.
-      "xcodes-app"
-    ];
-
     # Cleanup settings
     enableCleanup = boolOption true;
     enableAutoUpdate = boolOption true;
   };
 
   darwin.ifEnabled = { cfg, myconfig, ... }: {
-    # Nixpkgs overlays for brew-nix (if enabled)
-    nixpkgs.overlays = lib.mkIf cfg.enableBrewNix [
-      inputs.brew-nix.overlays.default
-    ];
-
-    # Enable brew-nix
-    brew-nix.enable = cfg.enableBrewNix;
-
-    # System packages from brew-nix casks
-    environment.systemPackages = lib.mkIf cfg.enableBrewNix (
-      map (cask: pkgs.brewCasks.${cask}) cfg.brewNixCasks
-    );
-
     # Standard nix-darwin homebrew configuration
     homebrew = {
       enable = true;
