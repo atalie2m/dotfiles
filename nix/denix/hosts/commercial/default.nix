@@ -11,8 +11,7 @@ delib.host {
 
   home = { name, cfg, myconfig, ... }: {
     home = {
-      username = env.username;
-      homeDirectory = env.homeDirectory;
+      inherit (env) username homeDirectory;
       stateVersion = env.stateVersion.home;
     };
   };
