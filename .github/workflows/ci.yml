@@ -16,19 +16,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Git filters
-        run: |
-          # Configure git filters for CI environment
-          chmod +x .git-filters/*.sh
-          git config filter.system-info.clean './.git-filters/clean.sh'
-          git config filter.system-info.smudge './.git-filters/smudge.sh'
-          git config filter.system-info.required true
-          
-          # Apply smudge filter to replace placeholders with actual system values
-          git ls-files -z | xargs -0 git checkout --
-          
-          echo "Git filter 'system-info' configured for CI."
-
       - name: Install Nix
         uses: cachix/install-nix-action@v26
         with:
