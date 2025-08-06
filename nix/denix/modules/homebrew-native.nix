@@ -31,7 +31,7 @@ delib.module {
                  # making it invisible to Launchpad/Spotlight. CLI works fine via 'wezterm' command.
                  # Can be opened manually: open "/run/current-system/Applications/WezTerm-macos-*/WezTerm.app"
                  # Unlike Rectangle which installs as direct Rectangle.app and appears normally in Launchpad.
-      "rectangle"
+      "xcodes-app"
     ];
 
     # Cleanup settings
