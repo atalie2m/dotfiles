@@ -9,5 +9,6 @@ delib.rice {
     fonts.enable = true;
     packages.enable = true;
     smartBackup.enable = true;
+    git.enable = true;
   };
 }
