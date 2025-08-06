@@ -17,7 +17,7 @@ delib.module {
 
 
     ] ++ (lib.optionals cfg.includeAITools [
-      codex-cli
+      codex
       gemini-cli
       claude-code
 

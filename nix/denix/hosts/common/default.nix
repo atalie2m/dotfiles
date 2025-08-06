@@ -10,16 +10,20 @@ delib.host {
     home.stateVersion = "25.05";
   };
 
-  darwin = { name, cfg, myconfig, ... }: {
+  darwin = { name, cfg, myconfig, ... }: let
+    user = myconfig.constants.username;
+    homeDir = myconfig.constants.homeDirectory;
+    platform = "${myconfig.constants.architecture}-darwin";
+  in {
     system.stateVersion = 5;
-    nixpkgs.hostPlatform = "aarch64-darwin";
-    
-    # Set primary user for homebrew
-    system.primaryUser = "{{USER_NAME}}";
+    nixpkgs.hostPlatform = platform;
 
-    users.users.u1 = {
-      name = "{{USER_NAME}}";
-      home = "/Users/{{USER_NAME}}";
+    # Set primary user for homebrew
+    system.primaryUser = user;
+
+    users.users.${user} = {
+      name = user;
+      home = homeDir;
     };
   };
 }
