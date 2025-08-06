@@ -6,9 +6,14 @@ if [[ -z "$SCRIPT_DIR" ]]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
 
-# Get some values from macOS
-COMPUTER_NAME=$(scutil --get ComputerName)
-LOCAL_HOSTNAME=$(scutil --get LocalHostName)
+# Get some values from the system
+if command -v scutil >/dev/null 2>&1; then
+    COMPUTER_NAME=$(scutil --get ComputerName)
+    LOCAL_HOSTNAME=$(scutil --get LocalHostName)
+else
+    COMPUTER_NAME=$(hostname)
+    LOCAL_HOSTNAME=$(hostname -s)
+fi
 USER_NAME=$(whoami)
 
 # Generate serialized version (spaces to hyphens, keep apostrophes)
