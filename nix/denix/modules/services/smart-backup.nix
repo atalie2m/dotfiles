@@ -7,6 +7,6 @@ delib.module {
     enable = boolOption false;
   };
 
-  home.always.imports = [ ../../modules/home/services/smart-backup.nix ];
+  home.always.imports = [ ../../../modules/home/services/smart-backup.nix ];
   home.ifEnabled.services.smartBackup.enable = true;
 }

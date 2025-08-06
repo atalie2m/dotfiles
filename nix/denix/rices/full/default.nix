@@ -1,11 +1,24 @@
 { delib, ... }:
 
+# Full rice: Complete development and productivity environment
 delib.rice {
   name = "full";
   inherits = [ "minimum" ];
 
   myconfig = {
-    git.enable = true;
+    # Override system overview for full profile
+    system.overview = {
+      enable = true;
+      profile = "full";
+      features = {
+        developmentTools = true;
+        productivitySuite = true;
+        guiApplications = true;
+        cloudSync = false;
+      };
+    };
+    
+    # Additional programs beyond minimum
     gpg.enable = true;
     karabiner.enable = true;
 
@@ -17,31 +30,34 @@ delib.rice {
       starship.enable = true;
       defaultShell = "zsh";
     };
+    
+    # Enhanced package sets
+    packages = {
+      core.enable = true;
+      development.enable = true;
+      productivity.enable = true;
+    };
 
     # Native homebrew integration
     homebrew.native = {
       enable = true;
-
-      # Keep existing brew-nix casks
       enableBrewNix = true;
-
-      # Standard homebrew casks
-#      casks = [
-#        "google-chrome"
-#        "visual-studio-code"
-#        "docker"
-#      ];
-
-      # CLI tools via homebrew (if not available in nixpkgs)
- #     brews = [
- #       "mas"  # Mac App Store CLI
- #     ];
-
-      # Mac App Store apps
-#      masApps = {
-#        "1Password 7 - Password Manager" = 1333542190;
-#        "Xcode" = 497799835;
-#      };
+      
+      # Example configurations (commented for now)
+      # casks = [
+      #   "google-chrome"
+      #   "visual-studio-code"
+      #   "docker"
+      # ];
+      #
+      # brews = [
+      #   "mas"  # Mac App Store CLI
+      # ];
+      #
+      # masApps = {
+      #   "1Password 7 - Password Manager" = 1333542190;
+      #   "Xcode" = 497799835;
+      # };
     };
   };
 }

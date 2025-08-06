@@ -16,5 +16,9 @@ delib.module {
     
     # Repository information
     dotfilesPath = readOnly (strOption "/Users/{{USER_NAME}}/Local/atalie2m/GitHub/dotfiles");
+    
+    # System information
+    systemType = readOnly (strOption "darwin");
+    architecture = readOnly (strOption "aarch64");
   };
 }
