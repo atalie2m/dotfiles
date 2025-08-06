@@ -6,7 +6,7 @@ delib.module {
 
   options.shells = with delib.options; {
     enable = boolOption false;
-    
+
     zsh = {
       enable = boolOption false;
       enableAutosuggestions = boolOption true;
@@ -14,17 +14,17 @@ delib.module {
       enableCompletion = boolOption true;
       historySize = intOption 10000;
     };
-    
+
     bash = {
       enable = boolOption false;
       enableCompletion = boolOption true;
       historySize = intOption 10000;
     };
-    
+
     starship = {
       enable = boolOption false;
     };
-    
+
     defaultShell = strOption "zsh";
     extraAliases = attrsOption {};
   };
@@ -66,72 +66,103 @@ delib.module {
         fi
       fi
     '';
-    
+
     allAliases = commonAliases // cfg.extraAliases;
   in {
     # Zsh configuration
     programs.zsh = lib.mkIf cfg.zsh.enable {
       enable = true;
       dotDir = ".nix";
-      
+
       history = {
         size = cfg.zsh.historySize;
         save = cfg.zsh.historySize;
         ignoreDups = true;
         ignoreSpace = true;
       };
-      
+
       shellAliases = allAliases // {
         # Zsh-specific alias
         helloworld = "echo '👋 Hello from Zsh! You are running in a Zsh shell.'";
       };
-      
+
       initContent = ''
         ${commonShellInit}
-        
+
         # Load local ~/.zshrc if it exists
         if [[ -f ~/.zshrc ]]; then
           source ~/.zshrc
         fi
       '';
-      
+
       autosuggestion.enable = cfg.zsh.enableAutosuggestions;
       syntaxHighlighting.enable = cfg.zsh.enableSyntaxHighlighting;
       enableCompletion = cfg.zsh.enableCompletion;
     };
 
-    # Bash configuration  
+    # Bash configuration
     programs.bash = lib.mkIf cfg.bash.enable {
       enable = true;
-      
-      historyControl = [ "ignoredups" "ignorespace" ];
-      historySize = cfg.bash.historySize;
-      historyFileSize = cfg.bash.historySize * 2;
-      
-      shellAliases = allAliases // {
-        # Bash-specific alias
-        helloworld = "echo '👋 Hello from Bash! You are running in a Bash shell.'";
-      };
-      
+      enableCompletion = cfg.bash.enableCompletion;
+
+      # Source Nix-managed bashrc located under ~/.nix
       initExtra = ''
-        ${commonShellInit}
-        
-        # Load local ~/.bashrc if it exists
-        if [[ -f ~/.bashrc ]]; then
-          source ~/.bashrc
+        if [[ -f "$HOME/.nix/.bashrc" ]]; then
+          source "$HOME/.nix/.bashrc"
         fi
       '';
-      
-      enableCompletion = cfg.bash.enableCompletion;
+    };
+
+    # Nix-managed bash configuration stored in ~/.nix/.bashrc
+    home.file.".nix/.bashrc" = lib.mkIf cfg.bash.enable {
+      text = ''
+        # History configuration
+        HISTCONTROL=ignoredups:ignorespace
+        HISTSIZE=${toString cfg.bash.historySize}
+        HISTFILESIZE=$(( ${toString cfg.bash.historySize} * 2 ))
+
+        # Common shell initialization
+        ${commonShellInit}
+
+        # Shell aliases (shared and Bash specific)
+        ${lib.concatStringsSep "" (lib.mapAttrsToList (name: value: ''alias ${name}="${value}"\n'') allAliases)}
+        alias helloworld="echo '👋 Hello from Bash! You are running in a Bash shell.'"
+
+        # Initialize Starship prompt if available
+        if command -v starship >/dev/null 2>&1; then
+          eval "$(starship init bash)"
+        fi
+
+        # Load user-specific Bash customizations if present
+        if [[ -f "$HOME/.bashrc.local" ]]; then
+          source "$HOME/.bashrc.local"
+        fi
+      '';
+    };
+
+    # Wrapper ~/.bashrc to load the Nix-managed configuration and optional local overrides
+    home.file.".bashrc" = lib.mkIf cfg.bash.enable {
+      text = ''
+        # Source Nix-managed bash configuration
+        if [ -f "$HOME/.nix/.bashrc" ]; then
+          source "$HOME/.nix/.bashrc"
+        fi
+
+        # Source user overrides
+        if [ -f "$HOME/.bashrc.local" ]; then
+          source "$HOME/.bashrc.local"
+        fi
+      '';
     };
 
     # Starship prompt configuration - use custom starship.toml file
     programs.starship = lib.mkIf cfg.starship.enable {
       enable = true;
       enableZshIntegration = cfg.zsh.enable;
-      enableBashIntegration = cfg.bash.enable;
+      # Bash integration handled manually in ~/.nix/.bashrc
+      enableBashIntegration = false;
     };
-    
+
     # Link the custom starship configuration file
     xdg.configFile."starship.toml" = lib.mkIf cfg.starship.enable {
       source = ../../../../apps/starship.toml;
