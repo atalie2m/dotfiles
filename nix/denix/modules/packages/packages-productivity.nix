@@ -13,15 +13,14 @@ delib.module {
   home.ifEnabled = { cfg, myconfig, ... }: {
     home.packages = with pkgs; [
       # Terminal enhancements
-      starship  # shell prompt
-      
-      # AI and productivity tools (if available in nixpkgs)
-      
+      starship
+
+
     ] ++ (lib.optionals cfg.includeAITools [
-      # AI tools (if available)
-      # codex  # might not be in nixpkgs
-      # gemini-cli  # might not be in nixpkgs
-      
+      codex-cli
+      gemini-cli
+      claude-code
+
     ]) ++ cfg.extraPackages;
   };
 }

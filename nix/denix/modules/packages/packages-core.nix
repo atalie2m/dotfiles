@@ -15,22 +15,22 @@ delib.module {
       curl
       wget
       jq
-      
+
       # File and text processing
-      ripgrep  # better grep
-      fd       # better find
-      bat      # better cat
-      eza      # better ls (maintained fork of exa)
-      
+      ripgrep
+      fd
+      bat
+      eza
+
       # System tools
       htop
       tree
       unzip
       zip
-      
+
       # Network tools
       nmap
-      
+
     ] ++ cfg.extraPackages;
   };
 }

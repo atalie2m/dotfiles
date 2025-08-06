@@ -17,24 +17,18 @@ delib.module {
       gh
       git
       git-lfs
-      
+
       # Security and encryption
       gnupg
       pinentry_mac
-      
-      # AI coding assistants - check if available in nixpkgs
-      # claude-code
-      
     ] ++ (lib.optionals cfg.includeLanguageTools [
-      # Language tools
       nodejs
       python3
       go
-      
+
     ]) ++ (lib.optionals cfg.includeVersionControl [
-      # Additional version control
       mercurial
-      
+
     ]) ++ cfg.extraPackages;
   };
 }
