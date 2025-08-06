@@ -125,39 +125,16 @@ delib.module {
       enableCompletion = cfg.bash.enableCompletion;
     };
 
-    # Starship prompt configuration
+    # Starship prompt configuration - use custom starship.toml file
     programs.starship = lib.mkIf cfg.starship.enable {
       enable = true;
       enableZshIntegration = cfg.zsh.enable;
       enableBashIntegration = cfg.bash.enable;
-      
-      settings = lib.mkDefault {
-        # Custom starship configuration
-        format = "$all$character";
-        
-        character = {
-          success_symbol = "[➜](bold green)";
-          error_symbol = "[➜](bold red)";
-        };
-        
-        git_branch = {
-          format = "[$branch]($style)";
-          style = "bright-black";
-        };
-        
-        git_status = {
-          format = "[[($all_status$ahead_behind )]($style)]";
-          style = "cyan";
-        };
-        
-        nix_shell = {
-          disabled = false;
-          impure_msg = "[impure shell](bold red)";
-          pure_msg = "[pure shell](bold green)";
-          unknown_msg = "[unknown shell](bold yellow)";
-          format = "via [☃️ $state( \($name\))](bold blue) ";
-        };
-      };
+    };
+    
+    # Link the custom starship configuration file
+    xdg.configFile."starship.toml" = lib.mkIf cfg.starship.enable {
+      source = ../../../../apps/starship.toml;
     };
 
     # Session variables

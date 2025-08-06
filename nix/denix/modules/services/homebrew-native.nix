@@ -26,6 +26,7 @@ delib.module {
       "keyclu"
       "latest"
       "alacritty"
+      "wezterm"
     ];
 
     # Cleanup settings
