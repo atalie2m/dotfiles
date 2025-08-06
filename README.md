@@ -125,7 +125,7 @@ To use the keyboard configurations from this dotfiles repository:
 
 If you're using this dotfiles repository with Nix and home-manager, the Karabiner-Elements configurations are automatically set up through symbolic links.
 
-The configuration is managed in `nix/modules/home/karabiner.nix` and will automatically:
+The configuration is managed in `nix/denix/modules/karabiner.nix` and will automatically:
 1. Create the necessary directories
 2. Generate symbolic links for all configuration files
 3. Keep the links updated when you rebuild your configuration

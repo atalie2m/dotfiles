@@ -30,8 +30,8 @@ This is a **Nix flake-based dotfiles repository** using nix-darwin and Home Mana
 - **nix/parts/default.nix**: Flake parts configuration that auto-generates darwin/home configurations from env.nix
 
 ### Key Components
-- **System Layer**: nix-darwin configurations in `nix/modules/darwin/` and `nix/hosts/darwin/standard/`
-- **User Layer**: Home Manager configurations in `nix/modules/home/`
+- **System Layer**: nix-darwin configurations via Denix hosts in `nix/denix/hosts/`
+- **User Layer**: Home Manager configurations via Denix modules in `nix/denix/modules/`
 - **Package Management**: Nix packages + Homebrew integration via brew-nix
 - **Multi-Host Support**: Automatically generates configurations for all hosts defined in env.nix
 
@@ -42,10 +42,9 @@ Uses custom Git filters (`.git-filters/`) to abstract system-specific informatio
 - Handles: ComputerName, LocalHostName, UserName, and home directory paths
 
 ### Module Organization
-- `nix/modules/darwin/`: System-level macOS settings
-- `nix/modules/home/`: User-level configurations via Home Manager
-- `nix/modules/homebrew/`: Homebrew package management integration
-- `nix/modules/nixpkgs/`: Package overlays and unfree package configuration
+- `nix/denix/hosts/`: Host definitions and system-level settings
+- `nix/denix/modules/`: Modular user and system configuration
+- `nix/denix/rices/`: Reusable configuration bundles
 
 ### Configuration Flow
 1. **env.nix** defines hosts and their properties
