@@ -1,22 +1,13 @@
 #!/bin/bash
-# Git clean filter: Replace system-specific values with placeholders
-# This script is run when files are staged (git add)
+# Git clean filter
 
-set -euo pipefail
-
-# Source common variables
+# Load common system variables
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Read input from stdin
-input=$(cat)
-
-# Replace actual values with placeholders
-output="$input"
-output=$(echo "$output" | sed "s|$COMPUTER_NAME|{{COMPUTER_NAME}}|g")
-output=$(echo "$output" | sed "s|$SERIALIZED_COMPUTER_NAME|{{SERIALIZED_COMPUTER_NAME}}|g")
-output=$(echo "$output" | sed "s|$LOCAL_HOSTNAME|{{LOCAL_HOSTNAME}}|g")
-output=$(echo "$output" | sed "s|$USER_NAME|{{USER_NAME}}|g")
-
-# Output the cleaned content
-echo "$output"
+# Replace all system information with their respective placeholders
+perl -0 -pe "s|\"\Q$COMPUTER_NAME\E\"|\"{{COMPUTER_NAME}}\"|g; \
+          s|\"\Q$SERIALIZED_COMPUTER_NAME\E\"|\"{{SERIALIZED_COMPUTER_NAME}}\"|g; \
+          s|\"\Q$LOCAL_HOSTNAME\E\"|\"{{LOCAL_HOSTNAME}}\"|g; \
+          s|\"\Q$USER_NAME\E\"|\"{{USER_NAME}}\"|g; \
+          s|\Q/Users/$USER_NAME\E|/Users/{{USER_NAME}}|g"
