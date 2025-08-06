@@ -1,29 +1,22 @@
 #!/bin/bash
-# Git clean filter
+# Git clean filter: Replace system-specific values with placeholders
+# This script is run when files are staged (git add)
 
-# Load common system variables
+set -euo pipefail
+
+# Source common variables
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Replace all system information with their respective placeholders
-<<<<<<< HEAD
-<<<<<<< HEAD
-perl -0 -pe "s|\"\Q$COMPUTER_NAME\E\"|\"u1’s MacBook Air\"|g; \
-          s|\"\Q$SERIALIZED_COMPUTER_NAME\E\"|\"u1’s-MacBook-Air\"|g; \
-          s|\"\Q$LOCAL_HOSTNAME\E\"|\"u1s-MacBookAir\"|g; \
-          s|\"\Q$USER_NAME\E\"|\"u1\"|g; \
-          s|\Q/Users/$USER_NAME\E|/Users/u1|g"
-=======
-perl -0 -pe "s|\"\Q$COMPUTER_NAME\E\"|\"u1’s MacBook Air\"|g; \
-          s|\"\Q$SERIALIZED_COMPUTER_NAME\E\"|\"u1’s-MacBook-Air\"|g; \
-          s|\"\Q$LOCAL_HOSTNAME\E\"|\"u1s-MacBookAir\"|g; \
-          s|\"\Q$USER_NAME\E\"|\"u1\"|g; \
-          s|\Q/Users/$USER_NAME\E|/Users/u1|g"
->>>>>>> parent of b86a51d (feat: implement CI setup script for Git filters and streamline filter application process)
-=======
-perl -0 -pe "s|\"\Q$COMPUTER_NAME\E\"|\"{{COMPUTER_NAME}}\"|g; \
-          s|\"\Q$SERIALIZED_COMPUTER_NAME\E\"|\"{{SERIALIZED_COMPUTER_NAME}}\"|g; \
-          s|\"\Q$LOCAL_HOSTNAME\E\"|\"{{LOCAL_HOSTNAME}}\"|g; \
-          s|\"\Q$USER_NAME\E\"|\"{{USER_NAME}}\"|g; \
-          s|\Q/Users/$USER_NAME\E|/Users/{{USER_NAME}}|g"
->>>>>>> parent of b86a51d (feat: implement CI setup script for Git filters and streamline filter application process)
+# Read input from stdin
+input=$(cat)
+
+# Replace actual values with placeholders
+output="$input"
+output=$(echo "$output" | sed "s|$COMPUTER_NAME|{{COMPUTER_NAME}}|g")
+output=$(echo "$output" | sed "s|$SERIALIZED_COMPUTER_NAME|{{SERIALIZED_COMPUTER_NAME}}|g")
+output=$(echo "$output" | sed "s|$LOCAL_HOSTNAME|{{LOCAL_HOSTNAME}}|g")
+output=$(echo "$output" | sed "s|$USER_NAME|{{USER_NAME}}|g")
+
+# Output the cleaned content
+echo "$output"
