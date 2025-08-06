@@ -53,9 +53,18 @@ jobs:
           echo "Testing smudge script directly:"
           echo 'username = "{{USER_NAME}}";' | ./.git-filters/smudge.sh
           
-          # Apply smudge filter to existing files  
-          echo "Applying git filters to tracked files..."
-          git ls-files -z | xargs -0 git checkout -- 2>&1 || echo "git checkout completed with warnings"
+          # Apply smudge filter directly to files that need it
+          echo "Applying git filters to files with placeholders..."
+          
+          # Find all files with .gitattributes filter applied and containing placeholders
+          for file in $(git ls-files | grep -E '\.(nix|sh|yml|yaml|json|toml|txt)$'); do
+            if [[ -f "$file" ]] && grep -q "{{.*}}" "$file" 2>/dev/null; then
+              echo "Processing: $file"
+              ./.git-filters/smudge.sh < "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+            fi
+          done
+          
+          echo "Direct filter application completed"
           
           # Verify env.nix was processed correctly
           echo "env.nix username after filter:"
