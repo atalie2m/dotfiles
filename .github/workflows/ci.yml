@@ -18,59 +18,15 @@ jobs:
 
       - name: Set up Git filters for CI
         run: |
-          echo "=== CI Environment Setup ==="
-          echo "macOS version:" 
-          sw_vers
-          echo
-          echo "Available commands:"
-          command -v scutil && echo "scutil: $(which scutil)" || echo "scutil: MISSING"
-          command -v hostname && echo "hostname: $(which hostname)" || echo "hostname: MISSING" 
-          command -v whoami && echo "whoami: $(which whoami)" || echo "whoami: MISSING"
-          command -v perl && echo "perl: $(which perl)" || echo "perl: MISSING"
-          echo
+          echo "=== CI Environment Info ==="
+          echo "macOS version: $(sw_vers -productVersion)"
           echo "Current user: $(whoami)"
           echo "Hostname: $(hostname)"
-          if command -v scutil >/dev/null 2>&1; then
-            echo "ComputerName: $(scutil --get ComputerName 2>/dev/null || echo 'N/A')"
-            echo "LocalHostName: $(scutil --get LocalHostName 2>/dev/null || echo 'N/A')"
-          fi
           echo
           
-          echo "=== Setting up Git filters ==="
-          # Make filter scripts executable
-          chmod +x .git-filters/*.sh
-          
-          # Show original env.nix content
-          echo "Original env.nix username line:"
-          grep "username" nix/env.nix | head -1
-          
-          # Configure git filters
-          git config filter.system-info.clean './.git-filters/clean.sh'
-          git config filter.system-info.smudge './.git-filters/smudge.sh' 
-          git config filter.system-info.required true
-          
-          # Test the smudge script directly
-          echo "Testing smudge script directly:"
-          echo 'username = "{{USER_NAME}}";' | ./.git-filters/smudge.sh
-          
-          # Apply smudge filter directly to files that need it
-          echo "Applying git filters to files with placeholders..."
-          
-          # Find all files with .gitattributes filter applied and containing placeholders
-          for file in $(git ls-files | grep -E '\.(nix|sh|yml|yaml|json|toml|txt)$'); do
-            if [[ -f "$file" ]] && grep -q "{{.*}}" "$file" 2>/dev/null; then
-              echo "Processing: $file"
-              ./.git-filters/smudge.sh < "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-            fi
-          done
-          
-          echo "Direct filter application completed"
-          
-          # Verify env.nix was processed correctly
-          echo "env.nix username after filter:"
-          grep "username" nix/env.nix | head -1
-          
-          echo "Git filters setup completed"
+          # Run the dedicated CI setup script
+          chmod +x .git-filters/setup-ci.sh
+          ./.git-filters/setup-ci.sh
 
       - name: Install Nix
         uses: cachix/install-nix-action@v26
@@ -86,11 +42,15 @@ jobs:
       - name: Check if git filters worked
         id: check_filters
         run: |
+          echo "Checking git filter results..."
+          echo "Current env.nix username line:"
+          grep "username" nix/env.nix | head -1
+          
           if grep -q "{{USER_NAME}}" nix/env.nix; then
-            echo "Git filters failed - placeholders still present"
+            echo "❌ Git filters failed - placeholders still present"
             echo "filters_success=false" >> $GITHUB_OUTPUT
           else
-            echo "Git filters successful - placeholders replaced"  
+            echo "✅ Git filters successful - placeholders replaced"  
             echo "filters_success=true" >> $GITHUB_OUTPUT
           fi
 
