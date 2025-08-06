@@ -8,16 +8,19 @@ delib.host {
 
   home = { name, cfg, myconfig, ... }: {
     home.stateVersion = "25.05";
-    # Note: Removing claude-code package would need to be handled differently in denix
   };
 
-  darwin = { name, cfg, myconfig, ... }: {
+  darwin = { name, cfg, myconfig, ... }: let
+    user = myconfig.constants.username;
+    homeDir = myconfig.constants.homeDirectory;
+    platform = "${myconfig.constants.architecture}-darwin";
+  in {
     system.stateVersion = 5;
-    nixpkgs.hostPlatform = "aarch64-darwin";
+    nixpkgs.hostPlatform = platform;
 
-    users.users.u1 = {
-      name = "{{USER_NAME}}";
-      home = "/Users/{{USER_NAME}}";
+    users.users.${user} = {
+      name = user;
+      home = homeDir;
     };
   };
 }
