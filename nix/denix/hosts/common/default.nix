@@ -10,7 +10,11 @@ delib.host {
   homeManagerSystem = env.platform;
 
   home = { name, cfg, myconfig, ... }: {
-    home.stateVersion = env.stateVersion.home;
+    home = {
+      username = env.username;
+      homeDirectory = env.homeDirectory;
+      stateVersion = env.stateVersion.home;
+    };
   };
 
   darwin = { name, cfg, myconfig, ... }: let
