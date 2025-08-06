@@ -51,8 +51,8 @@ Automatically handles system information abstraction in configurations using Git
 # Working directory: darwinConfigurations."Johns-Mac"
 # Working directory: primaryUser = "john";
 git add flake.nix nix/nix-darwin.nix
-# Repository: darwinConfigurations."u1s-MacBookAir"
-# Repository: primaryUser = "u1";
+# Repository: darwinConfigurations."{{LOCAL_HOSTNAME}}"
+# Repository: primaryUser = "{{USER_NAME}}";
 
 git checkout HEAD -- flake.nix nix/nix-darwin.nix
 # Working directory: darwinConfigurations."Johns-Mac"
