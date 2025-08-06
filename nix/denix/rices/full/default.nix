@@ -17,7 +17,7 @@ delib.rice {
         cloudSync = false;
       };
     };
-    
+
     # Additional programs beyond minimum
     gpg.enable = true;
     karabiner.enable = true;
@@ -30,19 +30,20 @@ delib.rice {
       starship.enable = true;
       defaultShell = "zsh";
     };
-    
+
     # Enhanced package sets
     packages = {
       core.enable = true;
       development.enable = true;
       productivity.enable = true;
+      claude-code-overlay.enable = true;  # Enable claude-code overlay
     };
 
     # Native homebrew integration
     homebrew.native = {
       enable = true;
       enableBrewNix = true;
-      
+
       # Example configurations (commented for now)
       # casks = [
       #   "google-chrome"

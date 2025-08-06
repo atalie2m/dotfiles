@@ -32,6 +32,7 @@ delib.rice {
     # Essential packages only
     packages = {
       core.enable = true;
+      claude-code-overlay.enable = true;  # Enable claude-code overlay for all profiles
     };
   };
 }
