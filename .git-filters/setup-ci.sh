@@ -22,7 +22,7 @@ echo "✅ Configured git filters"
 
 # Test the smudge filter using bash explicitly
 echo "🧪 Testing smudge filter:"
-echo 'username = "{{USER_NAME}}";' | bash "$SCRIPT_DIR/smudge.sh"
+echo 'username = "u1";' | bash "$SCRIPT_DIR/smudge.sh"
 
 # Apply smudge filter directly to all files that need it
 echo "🔄 Applying filters to files with placeholders..."
