@@ -1,21 +1,24 @@
 { delib, ... }:
 
+let
+  env = import ../../../env.nix;
+in
 delib.host {
   name = "common";
   rice = "full";
   type = "desktop";
-  homeManagerSystem = "aarch64-darwin";
+  homeManagerSystem = env.platform;
 
   home = { name, cfg, myconfig, ... }: {
-    home.stateVersion = "25.05";
+    home.stateVersion = env.stateVersion.home;
   };
 
   darwin = { name, cfg, myconfig, ... }: let
-    user = myconfig.constants.username;
-    homeDir = myconfig.constants.homeDirectory;
-    platform = "${myconfig.constants.architecture}-darwin";
+    user = env.username;
+    homeDir = env.homeDirectory;
+    platform = env.platform;
   in {
-    system.stateVersion = 5;
+    system.stateVersion = env.stateVersion.darwin;
     nixpkgs.hostPlatform = platform;
 
     # Set primary user for homebrew

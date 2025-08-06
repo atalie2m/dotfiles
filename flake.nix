@@ -39,10 +39,11 @@
   };
 
   outputs = { denix, ... } @ inputs: let
+    env = import ./nix/env.nix;
     mkConfigurations = moduleSystem:
       denix.lib.configurations {
         inherit moduleSystem;
-        homeManagerUser = "{{USER_NAME}}";
+        homeManagerUser = env.username;
         paths = [
           ./nix/denix/hosts
           ./nix/denix/modules
