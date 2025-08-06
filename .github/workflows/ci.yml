@@ -22,10 +22,19 @@ jobs:
           nix_path: nixpkgs=channel:nixpkgs-25.05-darwin
 
       - name: Run Statix Check
-        run: nix run github:nerdypepper/statix -- check .#common
+        run: nix run github:nerdypepper/statix -- check .
 
       - name: Run Nix Flake Check
         run: nix flake check
 
-      - name: Build home-manager configuration for macOS
-        run: nix build .#homeConfigurations."u1s-MacBook-Air".activationPackage
+      - name: Build darwin configuration (common)
+        run: nix build .#darwinConfigurations.common.system
+
+      - name: Build darwin configuration (commercial)  
+        run: nix build .#darwinConfigurations.commercial.system
+
+      - name: Build minimum configuration (common-minimum)
+        run: nix build .#darwinConfigurations.common-minimum.system
+
+      - name: Build full configuration (common-full)
+        run: nix build .#darwinConfigurations.common-full.system
