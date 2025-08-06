@@ -11,21 +11,24 @@ delib.rice {
       profile = "minimal";
       features = {
         developmentTools = false;
-        productivitySuite = false; 
+        productivitySuite = false;
         guiApplications = false;
         cloudSync = false;
       };
     };
-    
+
     # Essential system configuration
     nixpkgs.unfree.enable = true;
     terminal.enable = true;
     fonts.enable = true;
     smartBackup.enable = true;
-    
+
+    # Enable modern Nix features
+    system.nix.enable = true;
+
     # Core tools
     git.enable = true;
-    
+
     # Essential packages only
     packages = {
       core.enable = true;
