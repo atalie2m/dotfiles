@@ -6,11 +6,17 @@ delib.rice {
 
   myconfig = {
     homebrew.enable = true;
-    bash.enable = true;
     git.enable = true;
     gpg.enable = true;
-    zsh.enable = true;
-    starship.enable = true;
     karabiner.enable = true;
+    
+    # Unified shell configuration
+    shells = {
+      enable = true;
+      zsh.enable = true;
+      bash.enable = true; 
+      starship.enable = true;
+      defaultShell = "zsh";
+    };
   };
 }
