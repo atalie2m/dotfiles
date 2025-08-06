@@ -1,4 +1,4 @@
-{ delib, ... }:
+{ delib, pkgs, ... }:
 
 # Fonts configuration shared across platforms
 
@@ -9,6 +9,16 @@ delib.module {
     enable = boolOption false;
   };
 
-  home.always.imports = [ ../../modules/home/fonts.nix ];
-  darwin.always.imports = [ ../../modules/darwin/fonts.nix ];
+  home.ifEnabled = { cfg, ... }: {
+    fonts.fontconfig.enable = true;
+  };
+
+  darwin.ifEnabled = { cfg, ... }: {
+    fonts.packages = with pkgs; [
+      nerd-fonts.jetbrains-mono
+      nerd-fonts._0xproto
+      roboto
+      roboto-mono
+    ];
+  };
 }
