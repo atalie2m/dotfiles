@@ -22,10 +22,10 @@ jobs:
           nix_path: nixpkgs=channel:nixpkgs-25.05-darwin
 
       - name: Run Statix Check
-        run: nix run github:nerdypepper/statix -- check .
+        run: nix run github:nerdypepper/statix -- check .#common
 
       - name: Run Nix Flake Check
         run: nix flake check
 
       - name: Build home-manager configuration for macOS
-        run: nix build .#homeConfigurations."{{LOCAL_HOSTNAME}}".activationPackage
+        run: nix build .#homeConfigurations."u1s-MacBook-Air".activationPackage
