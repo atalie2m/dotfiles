@@ -12,6 +12,32 @@ delib.module {
     settingsDefault = builtins.readFile ../../../../apps/vscode/_default/settings.json;
     settingsWeb     = builtins.readFile ../../../../apps/vscode/web/settings.json;
     settingsWriting = builtins.readFile ../../../../apps/vscode/writing/settings.json;
+
+    # Load lockfile with sha256 for marketplace extensions if present
+    readLock = path:
+      if builtins.pathExists path
+      then builtins.fromJSON (builtins.readFile path)
+      else [];
+
+    # Convert extensions-min.json (id, version) + lock (sha256) to marketplace spec
+    mkMarketplaceList = profile: let
+      minPath  = ../../../../apps/vscode/${profile}/extensions-min.json;
+      lockPath = ../../../../apps/vscode/${profile}/extensions.lock.json;
+      minList  = if builtins.pathExists minPath then builtins.fromJSON (builtins.readFile minPath) else [];
+      lockList = readLock lockPath;
+      lockById = builtins.listToAttrs (map (e: { name = e.id; value = e; }) lockList);
+    in
+      builtins.filter (x: x != null)
+        (map (e: let
+          parts = lib.splitString "." e.id;
+          publisher = builtins.elemAt parts 0;
+          name = builtins.elemAt parts 1;
+          lock = lockById.${e.id} or null;
+        in if lock == null then null else {
+          inherit name publisher;
+          version = e.version;
+          sha256  = lock.sha256;
+        }) minList);
   in {
     programs.vscode = lib.mkIf cfg.enable {
       enable                = true;
@@ -26,17 +52,17 @@ delib.module {
       # Additional profiles sourced from apps/vscode/*
       profiles.web = {
         userSettings               = builtins.fromJSON settingsWeb;
-        extensions                 = [];
+        extensions                 = pkgs.vscode-utils.extensionsFromVscodeMarketplace (mkMarketplaceList "web");
       };
 
       profiles.writing = {
         userSettings               = builtins.fromJSON settingsWriting;
-        extensions                 = [];
+        extensions                 = pkgs.vscode-utils.extensionsFromVscodeMarketplace (mkMarketplaceList "writing");
       };
 
       profiles.rust = {
         userSettings               = {};
-        extensions                 = [];
+        extensions                 = pkgs.vscode-utils.extensionsFromVscodeMarketplace (mkMarketplaceList "rust");
       };
     };
 
