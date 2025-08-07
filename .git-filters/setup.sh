@@ -17,6 +17,10 @@ git config filter.system-info.smudge "$SCRIPT_DIR/smudge.sh"
 git config filter.system-info.required true
 
 # Re-checkout tracked files to apply smudge filter
-git ls-files -z | xargs -0 git checkout --
+git reset --hard
 
-echo "Git filter 'system-info' configured."
+# Populate env.nix with host-specific values
+rm -f "nix/env.nix"
+git checkout -- nix/env.nix
+
+echo "Git filter 'system-info' configured and env.nix populated."
