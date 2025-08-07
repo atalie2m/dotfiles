@@ -53,6 +53,11 @@ delib.module {
         local timestamp_format="${cfg.timestampFormat}"
         local backup_base="$original_file.$backup_suffix"
 
+        if [[ -L "$original_file" ]]; then
+          echo "Smart Backup: $original_file is a symlink, skipping removal."
+          return 0
+        fi
+
         if [[ -f "$original_file" || -d "$original_file" ]]; then
           if [[ -f "$backup_base" ]]; then
             local timestamp=$(date +"$timestamp_format")
