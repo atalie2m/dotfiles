@@ -1,0 +1,13 @@
+rodrigovallades.es7-react-js-snippets
+dbaeumer.vscode-eslint
+gonishiduka1985.extractioncssselector
+vue.volar
+bradlc.vscode-tailwindcss
+orta.vscode-twoslash-queries
+yoavbls.pretty-ts-errors
+openai.chatgpt
+ms-vscode-remote.remote-containers
+astro-build.astro-vscode
+stivo.tailwind-fold
+wix.vscode-import-cost
+yusukehirao.vscode-markuplint
