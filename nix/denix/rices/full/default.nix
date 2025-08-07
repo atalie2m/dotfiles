@@ -37,6 +37,7 @@ delib.rice {
       development.enable = true;
       productivity.enable = true;
       claude-code-overlay.enable = true;  # Enable claude-code overlay
+      codex-overlay.enable = true;  # Enable codex overlay
     };
 
     # Native homebrew integration
