@@ -14,7 +14,7 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: {
-    home.activation.smartBackup = lib.mkOrder 50 ''
+    home.activation.smartBackup = lib.mkOrder 1 ''
       echo "Smart Backup: Starting backup process..."
 
       # Smart backup function with configurable options
@@ -24,15 +24,17 @@ delib.module {
         local timestamp_format="${cfg.timestampFormat}"
         local backup_base="$original_file.$backup_suffix"
 
-        if [[ -f "$original_file" ]]; then
-          if [[ -f "$backup_base" ]]; then
+        if [[ -f "$original_file" || -d "$original_file" ]]; then
+          if [[ -f "$backup_base" || -d "$backup_base" ]]; then
             local timestamp=$(date +"$timestamp_format")
             local timestamped_backup="$backup_base-$timestamp"
             echo "Moving existing backup $backup_base to $timestamped_backup"
             mv "$backup_base" "$timestamped_backup"
           fi
           echo "Backing up $original_file to $backup_base"
-          cp "$original_file" "$backup_base"
+          cp -r "$original_file" "$backup_base"
+        else
+          echo "Smart Backup: $original_file does not exist, skipping."
         fi
       }
 
@@ -43,7 +45,7 @@ delib.module {
         local timestamp_format="${cfg.timestampFormat}"
         local backup_base="$original_file.$backup_suffix"
 
-        if [[ -f "$original_file" ]]; then
+        if [[ -f "$original_file" || -d "$original_file" ]]; then
           if [[ -f "$backup_base" ]]; then
             local timestamp=$(date +"$timestamp_format")
             local timestamped_backup="$backup_base-$timestamp"
@@ -52,6 +54,8 @@ delib.module {
           fi
           echo "Backing up and removing $original_file to $backup_base"
           mv "$original_file" "$backup_base"
+        else
+          echo "Smart Backup: $original_file does not exist, skipping."
         fi
       }
 
