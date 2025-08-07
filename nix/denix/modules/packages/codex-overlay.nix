@@ -28,6 +28,16 @@ delib.module {
             fetcherVersion = 1;
             hash = "sha256-SyKP++eeOyoVBFscYi+Q7IxCphcEeYgpuAj70+aCdNA=";
           };
+          # Override buildPhase to fix version in package.json
+          buildPhase = ''
+            runHook preBuild
+
+            # Fix version in package.json before building
+            ${prev.jq}/bin/jq '.version = "${version}"' codex-cli/package.json > temp.json && mv temp.json codex-cli/package.json
+
+            pnpm --filter @openai/codex run build
+            runHook postBuild
+          '';
           # prevent version error
           doInstallCheck = false;
         });
@@ -53,6 +63,16 @@ delib.module {
             fetcherVersion = 1;
             hash = "sha256-SyKP++eeOyoVBFscYi+Q7IxCphcEeYgpuAj70+aCdNA=";
           };
+          # Override buildPhase to fix version in package.json
+          buildPhase = ''
+            runHook preBuild
+
+            # Fix version in package.json before building
+            ${prev.jq}/bin/jq '.version = "${version}"' codex-cli/package.json > temp.json && mv temp.json codex-cli/package.json
+
+            pnpm --filter @openai/codex run build
+            runHook postBuild
+          '';
           # prevent version error
           doInstallCheck = false;
         });
