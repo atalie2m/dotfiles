@@ -13,8 +13,16 @@ delib.module {
     timestampFormat = strOption "%Y%m%d-%H%M%S";
   };
 
+  # Enable Home Manager's built-in backup of conflicting files.
+  # Use a distinct extension to avoid clobbering our own backups (".backup").
+  darwin.ifEnabled = { cfg, ... }: {
+    home-manager.backupFileExtension = "${cfg.backupSuffix}-hm";
+  };
+
   home.ifEnabled = { cfg, ... }: {
-    home.activation.smartBackup = lib.mkOrder 1 ''
+    # Keep runtime backup as well (order early-ish, exact order not critical
+    # since HM will back up conflicts during linkGeneration).
+    home.activation.smartBackup = lib.mkOrder 150 ''
       echo "Smart Backup: Starting backup process..."
 
       # Smart backup function with configurable options
