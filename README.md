@@ -81,7 +81,7 @@ git checkout HEAD -- flake.nix nix/nix-darwin.nix
 
 Git setup (run once per repository):
 ```bash
-./.git-filters/setup.sh
+./setup-env.sh
 ```
 
 **Note**: Git filter configuration is stored locally and needs to be set up on each machine/clone.
@@ -177,14 +177,14 @@ See the LICENSE file for complete attribution information.
 
 ## Initial Setup
 ```bash
-sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- switch --flake .
+sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- switch --flake .#<PROFILE_NAME>
 ```
 
 ## Subsequent Updates
 ```bash
 # nix-darwin configuration
-sudo darwin-rebuild switch --flake .
+sudo darwin-rebuild switch --flake .#<PROFILE_NAME
 
 # home-manager configuration (replace <HOSTNAME> with your actual hostname)
-nix run home-manager/release-25.05 -- switch --flake .#<HOSTNAME>
+nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME>
 ```

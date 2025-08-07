@@ -6,13 +6,17 @@ delib.module {
   options.smartBackup = with delib.options; {
     enable = boolOption false;
     files = listOfOption str [];
-    managedFiles = listOfOption str [];
+    managedFiles = listOfOption str [
+      "$HOME/.config/karabiner/karabiner.json"
+    ];
     backupSuffix = strOption "backup";
     timestampFormat = strOption "%Y%m%d-%H%M%S";
   };
 
   home.ifEnabled = { cfg, ... }: {
-    home.activation.smartBackup = lib.mkOrder 500 ''
+    home.activation.smartBackup = lib.mkOrder 50 ''
+      echo "Smart Backup: Starting backup process..."
+
       # Smart backup function with configurable options
       smart_backup() {
         local original_file="$1"
@@ -53,13 +57,17 @@ delib.module {
 
       # Backup all configured files
       ${lib.concatMapStringsSep "\n" (file: ''
-        smart_backup "${file}"
+        expanded_file=$(eval echo "${file}")
+        smart_backup "$expanded_file"
       '') cfg.files}
 
       # Backup and remove all managed files
       ${lib.concatMapStringsSep "\n" (file: ''
-        smart_backup_managed "${file}"
+        expanded_file=$(eval echo "${file}")
+        smart_backup_managed "$expanded_file"
       '') cfg.managedFiles}
+
+      echo "Smart Backup: Backup process completed."
     '';
   };
 }
