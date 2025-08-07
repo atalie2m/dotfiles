@@ -9,16 +9,33 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: let
-    settings   = builtins.readFile ../../../../apps/vscode/_default/settings.json;
+    settingsDefault = builtins.readFile ../../../../apps/vscode/_default/settings.json;
+    settingsWeb     = builtins.readFile ../../../../apps/vscode/web/settings.json;
+    settingsWriting = builtins.readFile ../../../../apps/vscode/writing/settings.json;
   in {
     programs.vscode = lib.mkIf cfg.enable {
       enable                = true;
       package               = pkgs.vscode;
-      mutableExtensionsDir  = true;
       profiles.default = {
         enableUpdateCheck          = true;
         enableExtensionUpdateCheck = true;
-        userSettings               = builtins.fromJSON settings;
+        userSettings               = builtins.fromJSON settingsDefault;
+        extensions                 = [];
+      };
+
+      # Additional profiles sourced from apps/vscode/*
+      profiles.web = {
+        userSettings               = builtins.fromJSON settingsWeb;
+        extensions                 = [];
+      };
+
+      profiles.writing = {
+        userSettings               = builtins.fromJSON settingsWriting;
+        extensions                 = [];
+      };
+
+      profiles.rust = {
+        userSettings               = {};
         extensions                 = [];
       };
     };
