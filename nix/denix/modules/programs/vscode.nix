@@ -14,13 +14,12 @@ delib.module {
     programs.vscode = lib.mkIf cfg.enable {
       enable                = true;
       package               = pkgs.vscode;
-      mutableExtensionsDir  = true;
+      mutableExtensionsDir  = false;
       profiles.Default = {
         enableUpdateCheck          = true;
         enableExtensionUpdateCheck = true;
         userSettings               = builtins.fromJSON settings;
-        # Don't specify extensions when using mutableExtensionsDir
-        # extensions                 = [];
+        extensions                 = [];
       };
     };
   };
