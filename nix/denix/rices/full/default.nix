@@ -22,6 +22,12 @@ delib.rice {
     gpg.enable = true;
     karabiner.enable = true;
 
+    # VSCode default profile via denix module
+    vscode.enable = true;
+
+    # Allow VSCode (unfree) as an allowed package for nixpkgs.unfree
+    nixpkgs.unfree.packages = [ "claude-code" "vscode" ];
+
     # Unified shell configuration
     shells = {
       enable = true;

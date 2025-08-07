@@ -1,4 +1,4 @@
-{ delib, ... }:
+{ delib, pkgs, ... }:
 
 let
   env = import ../../../env.nix;
@@ -23,6 +23,9 @@ delib.host {
   in {
     system.stateVersion = env.stateVersion.darwin;
     nixpkgs.hostPlatform = platform;
+
+    # Specify Nix CLI package for nix.conf generation
+    nix.package = pkgs.nix;
 
     # Set primary user for homebrew
     system.primaryUser = user;
