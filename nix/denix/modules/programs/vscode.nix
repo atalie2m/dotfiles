@@ -14,13 +14,17 @@ delib.module {
     programs.vscode = lib.mkIf cfg.enable {
       enable                = true;
       package               = pkgs.vscode;
-      mutableExtensionsDir  = false;
-      profiles.Default = {
+      mutableExtensionsDir  = true;
+      profiles.default = {
         enableUpdateCheck          = true;
         enableExtensionUpdateCheck = true;
         userSettings               = builtins.fromJSON settings;
         extensions                 = [];
       };
     };
+
+    # Note: We intentionally do not link classic User/settings.json; VSCode Profiles
+    # reads settings from profiles/Default/settings.json in recent versions and Home
+    # Manager manages that file directly.
   };
 }
