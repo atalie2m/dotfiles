@@ -20,7 +20,9 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: {
-    home.activation.smartBackup = lib.mkOrder 50 ''
+    # Keep runtime backup as well (order early-ish, exact order not critical
+    # since HM will back up conflicts during linkGeneration).
+    home.activation.smartBackup = lib.mkOrder 150 ''
       echo "Smart Backup: Starting backup process..."
 
       # Smart backup function with configurable options
