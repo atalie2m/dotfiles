@@ -20,8 +20,8 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: {
-    # Run early to avoid backup clobber errors with Home Manager's linkGeneration.
-    home.activation.smartBackup = lib.mkOrder 50 ''
+    # Run BEFORE Home Manager's linkGeneration to avoid backup clobber errors.
+    home.activation.smartBackup = lib.hm.dag.entryBefore [ "linkGeneration" ] ''
       echo "Smart Backup: Starting backup process..."
 
       # Rotate an existing Home Manager backup (e.g. *.backup-hm) to a timestamped name
