@@ -60,6 +60,7 @@ delib.module {
     #
     # 4. Full Karabiner config
     #
+    # Build karabiner.json in the store and link it into place
     karabinerJson = pkgs.writeText "karabiner.json" (builtins.toJSON {
       global = {
         check_for_updates_on_startup = false;
@@ -95,7 +96,7 @@ delib.module {
     };
 
   in {
-    # Install everything
+    # Install everything (symlink karabiner.json and complex_modifications)
     xdg.configFile."karabiner/karabiner.json".source = karabinerJson;
     xdg.configFile."karabiner/assets/complex_modifications" = complexModsSymlink;
 
