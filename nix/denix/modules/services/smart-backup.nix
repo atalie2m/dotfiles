@@ -20,26 +20,12 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: {
-    # Run BEFORE Home Manager's linkGeneration to avoid backup clobber errors.
-    home.activation.smartBackup = lib.hm.dag.entryBefore [ "linkGeneration" ] ''
+    # Keep runtime backup as well (order early-ish, exact order not critical
+    # since HM will back up conflicts during linkGeneration).
+    home.activation.smartBackup = lib.mkOrder 150 ''
       echo "Smart Backup: Starting backup process..."
 
-      # Rotate an existing Home Manager backup (e.g. *.backup-hm) to a timestamped name
-      rotate_hm_backup() {
-        local original_file="$1"
-        local backup_suffix="${cfg.backupSuffix}"
-        local timestamp_format="${cfg.timestampFormat}"
-        local hm_backup_file="$original_file.${cfg.backupSuffix}-hm"
-
-        if [[ -e "$hm_backup_file" ]]; then
-          local timestamp=$(date +"$timestamp_format")
-          local timestamped_backup="$hm_backup_file-$timestamp"
-          echo "Rotating existing HM backup $hm_backup_file to $timestamped_backup"
-          mv "$hm_backup_file" "$timestamped_backup"
-        fi
-      }
-
-      # Smart backup function with configurable options (keeps original)
+      # Smart backup function with configurable options
       smart_backup() {
         local original_file="$1"
         local backup_suffix="${cfg.backupSuffix}"
@@ -47,18 +33,20 @@ delib.module {
         local backup_base="$original_file.$backup_suffix"
 
         if [[ -f "$original_file" || -d "$original_file" ]]; then
-          local timestamp=$(date +"$timestamp_format")
-          local timestamped_backup="$backup_base-$timestamp"
-          echo "Backing up $original_file to $timestamped_backup"
-          if [[ -d "$original_file" ]]; then
-            cp -R "$original_file" "$timestamped_backup"
-          else
-            cp "$original_file" "$timestamped_backup"
+          if [[ -f "$backup_base" || -d "$backup_base" ]]; then
+            local timestamp=$(date +"$timestamp_format")
+            local timestamped_backup="$backup_base-$timestamp"
+            echo "Moving existing backup $backup_base to $timestamped_backup"
+            mv "$backup_base" "$timestamped_backup"
           fi
+          echo "Backing up $original_file to $backup_base"
+          cp -r "$original_file" "$backup_base"
+        else
+          echo "Smart Backup: $original_file does not exist, skipping."
         fi
       }
 
-      # Smart backup function for managed files (backup then remove original)
+      # Smart backup function for managed files (backup and remove)
       smart_backup_managed() {
         local original_file="$1"
         local backup_suffix="${cfg.backupSuffix}"
@@ -71,26 +59,26 @@ delib.module {
         fi
 
         if [[ -f "$original_file" || -d "$original_file" ]]; then
-          local timestamp=$(date +"$timestamp_format")
-          local timestamped_backup="$backup_base-$timestamp"
-          echo "Backing up and removing $original_file to $timestamped_backup"
-          mv "$original_file" "$timestamped_backup"
+          if [[ -f "$backup_base" ]]; then
+            local timestamp=$(date +"$timestamp_format")
+            local timestamped_backup="$backup_base-$timestamp"
+            echo "Moving existing backup $backup_base to $timestamped_backup"
+            mv "$backup_base" "$timestamped_backup"
+          fi
+          echo "Backing up and removing $original_file to $backup_base"
+          mv "$original_file" "$backup_base"
+        else
+          echo "Smart Backup: $original_file does not exist, skipping."
         fi
       }
 
-      # First, rotate any existing HM backups for all configured paths to avoid clobber errors
-      ${lib.concatMapStringsSep "\n" (file: ''
-        expanded_file=$(eval echo "${file}")
-        rotate_hm_backup "$expanded_file"
-      '') (cfg.files ++ cfg.managedFiles)}
-
-      # Backup all configured files (non-destructive)
+      # Backup all configured files
       ${lib.concatMapStringsSep "\n" (file: ''
         expanded_file=$(eval echo "${file}")
         smart_backup "$expanded_file"
       '') cfg.files}
 
-      # Backup and remove all managed files (destructive)
+      # Backup and remove all managed files
       ${lib.concatMapStringsSep "\n" (file: ''
         expanded_file=$(eval echo "${file}")
         smart_backup_managed "$expanded_file"
