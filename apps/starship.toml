@@ -9,7 +9,7 @@ $git_branch$git_status\
 $time\
 [](fg:color_bg1)$fill[](color_orange)\
 $username$hostname\
-[](color_orange) $character"""
+[](color_orange)$line_break$character"""
 
 # Use $fill instead of right_format so both sides share one line
 # (right_format removed)
@@ -172,7 +172,7 @@ style = "bg:color_bg1"
 format = '[[  $time ](fg:color_fg0 bg:color_bg1)]($style)'
 
 [line_break]
-disabled = true
+disabled = false
 
 [character]
 disabled = false
@@ -181,4 +181,4 @@ error_symbol = '[](bold fg:color_red)'
 vimcmd_symbol = '[](bold fg:color_green)'
 vimcmd_replace_one_symbol = '[](bold fg:color_purple)'
 vimcmd_replace_symbol = '[](bold fg:color_purple)'
-vimcmd_visual_symbol = '[](bold fg:color_yellow)'}}}}}}}}
+vimcmd_visual_symbol = '[](bold fg:color_yellow)'
