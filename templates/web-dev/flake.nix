@@ -14,13 +14,12 @@
 
       perSystem = { pkgs, system, ... }: let
         node = pkgs.nodejs_22;
-        pnpm = pkgs.nodePackages.pnpm;
       in {
         devShells.default = pkgs.mkShell {
           name = "web-dev";
           packages = [
             node
-            pnpm
+            (pkgs.nodePackages.pnpm)
             pkgs.bun
             pkgs.wrangler
             pkgs.awscli2
