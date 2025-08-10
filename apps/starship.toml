@@ -7,8 +7,8 @@ $directory\
 $git_branch$git_status\
 [](fg:color_aqua bg:color_bg1)\
 $time\
-[](fg:color_bg1)$fill[](color_orange)\
-$username$hostname\
+[](fg:color_bg1)$fill[](color_bg3)\
+$username[](fg:color_bg3 bg:color_orange)$hostname\
 [](color_orange)$line_break$character"""
 
 # Use $fill instead of right_format so both sides share one line
@@ -61,8 +61,8 @@ Pop = ""
 
 [username]
 show_always = true
-style_user = "bg:color_orange fg:color_fg0"
-style_root = "bg:color_orange fg:color_fg0"
+style_user = "bg:color_bg3 fg:color_fg0"
+style_root = "bg:color_bg3 fg:color_fg0"
 format = '[ $user ]($style)'
 
 [hostname]
@@ -172,7 +172,7 @@ style = "bg:color_bg1"
 format = '[[  $time ](fg:color_fg0 bg:color_bg1)]($style)'
 
 [line_break]
-disabled = true
+disabled = false
 
 [character]
 disabled = false
