@@ -1,0 +1,54 @@
+[
+  {
+    "id": "rodrigovallades.es7-react-js-snippets",
+    "version": "1.9.3"
+  },
+  {
+    "id": "dbaeumer.vscode-eslint",
+    "version": "3.0.10"
+  },
+  {
+    "id": "gonishiduka1985.extractioncssselector",
+    "version": "1.0.0"
+  },
+  {
+    "id": "vue.volar",
+    "version": "3.0.3"
+  },
+  {
+    "id": "bradlc.vscode-tailwindcss",
+    "version": "0.14.25"
+  },
+  {
+    "id": "orta.vscode-twoslash-queries",
+    "version": "1.5.0"
+  },
+  {
+    "id": "yoavbls.pretty-ts-errors",
+    "version": "0.6.1"
+  },
+  {
+    "id": "openai.chatgpt",
+    "version": "0.1.1741291060"
+  },
+  {
+    "id": "ms-vscode-remote.remote-containers",
+    "version": "0.422.1"
+  },
+  {
+    "id": "astro-build.astro-vscode",
+    "version": "2.15.4"
+  },
+  {
+    "id": "stivo.tailwind-fold",
+    "version": "0.2.0"
+  },
+  {
+    "id": "wix.vscode-import-cost",
+    "version": "3.3.0"
+  },
+  {
+    "id": "yusukehirao.vscode-markuplint",
+    "version": "4.8.9"
+  }
+]

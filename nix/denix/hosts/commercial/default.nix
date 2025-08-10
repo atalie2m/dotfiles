@@ -16,13 +16,16 @@ delib.host {
     };
   };
 
-  darwin = { name, cfg, myconfig, ... }: let
+  darwin = { name, cfg, myconfig, pkgs, ... }: let
     inherit (env) username homeDirectory platform;
     user = username;
     homeDir = homeDirectory;
   in {
     system.stateVersion = env.stateVersion.darwin;
     nixpkgs.hostPlatform = platform;
+
+    # Specify Nix CLI package for nix.conf generation
+    nix.package = pkgs.nix;
 
     users.users.${user} = {
       name = user;

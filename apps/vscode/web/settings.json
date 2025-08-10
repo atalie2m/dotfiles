@@ -1,0 +1,9 @@
+{
+    "git.enableCommitSigning": true,
+    "markdown.preview.fontFamily": "0xProto",
+    "terminal.integrated.fontFamily": "monospace",
+    "git.autofetch": true,
+    "workbench.colorTheme": "Abyss",
+    "editor.largeFileOptimizations": false,
+    "explorer.confirmDelete": false
+}

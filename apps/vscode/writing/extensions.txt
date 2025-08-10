@@ -1,0 +1,13 @@
+jeandeaual.lilypond-syntax
+rickaym.manim-sideview
+jeandeaual.scheme
+ms-python.debugpy
+lhl2617.lilypond-pdf-preview
+james-yu.latex-workshop
+ms-python.python
+lhl2617.lilypond-formatter
+myriad-dreamin.tinymist
+lhl2617.lilypond-snippets
+lhl2617.vslilypond
+ms-python.vscode-pylance
+marp-team.marp-vscode

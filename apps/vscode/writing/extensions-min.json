@@ -1,0 +1,54 @@
+[
+  {
+    "id": "jeandeaual.lilypond-syntax",
+    "version": "0.1.1"
+  },
+  {
+    "id": "rickaym.manim-sideview",
+    "version": "0.3.1"
+  },
+  {
+    "id": "jeandeaual.scheme",
+    "version": "0.2.0"
+  },
+  {
+    "id": "ms-python.debugpy",
+    "version": "2025.10.0"
+  },
+  {
+    "id": "lhl2617.lilypond-pdf-preview",
+    "version": "0.2.8"
+  },
+  {
+    "id": "james-yu.latex-workshop",
+    "version": "10.10.0"
+  },
+  {
+    "id": "ms-python.python",
+    "version": "2025.10.1"
+  },
+  {
+    "id": "lhl2617.lilypond-formatter",
+    "version": "0.2.3"
+  },
+  {
+    "id": "myriad-dreamin.tinymist",
+    "version": "0.13.14"
+  },
+  {
+    "id": "lhl2617.lilypond-snippets",
+    "version": "0.1.1"
+  },
+  {
+    "id": "lhl2617.vslilypond",
+    "version": "1.7.3"
+  },
+  {
+    "id": "ms-python.vscode-pylance",
+    "version": "2025.6.2"
+  },
+  {
+    "id": "marp-team.marp-vscode",
+    "version": "3.2.1"
+  }
+]

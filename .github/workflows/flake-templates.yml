@@ -1,0 +1,23 @@
+name: Flake Templates CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  templates-flake-check:
+    name: Check templates
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - .
+          - templates/web-dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v27
+      - name: nix flake check
+        run: nix flake check -L ${{ matrix.target }}
+
+
