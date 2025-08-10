@@ -61,5 +61,13 @@
   in {
     homeConfigurations = mkConfigurations "home";
     darwinConfigurations = mkConfigurations "darwin";
+
+    # Public flake templates for easy reuse
+    templates = {
+      web-dev = {
+        path = ./templates/web-dev;
+        description = "Web development template: devShell with Node 22, pnpm, bun, wrangler, awscli2, jq/yq, mkcert, just; Prettier formatting via treefmt-nix; apps.dev/apps.format and checks";
+      };
+    };
   };
 }

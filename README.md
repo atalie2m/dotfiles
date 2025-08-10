@@ -1,3 +1,16 @@
+## Flake templates
+
+This repository publishes a web development template that you can use via Nix flakes:
+
+```bash
+nix flake init -t github:atalie2m/dotfiles#web-dev
+```
+
+It provides:
+- Dev shell with Node.js 22, pnpm, bun, Cloudflare wrangler, AWS CLI v2, jq/yq, mkcert, just
+- Prettier formatting integrated via treefmt-nix and exposed as `apps.format`
+- `nix run .#dev` for development tasks and `nix flake check` hooks
+
 # dotfiles
 
 ## Prerequisites
