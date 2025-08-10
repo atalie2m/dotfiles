@@ -49,12 +49,15 @@
         };
 
         checks = {
+          # Run treefmt via pre-commit using our wrapper (so Prettier integration works)
           pre-commit = pre-commit-hooks.lib.${system}.run {
             src = ./.;
-            hooks = {
-              treefmt.enable = true;
+            hooks.treefmt = {
+              enable = true;
+              package = self.formatter.${system};
             };
           };
+          # Expose formatter as a check so `nix flake check` builds it too
           treefmt = self.formatter.${system};
         };
 
