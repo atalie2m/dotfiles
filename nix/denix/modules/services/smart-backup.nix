@@ -14,18 +14,18 @@ delib.module {
   };
 
   # Enable Home Manager's built-in backup of conflicting files.
-  # Use a distinct extension to avoid clobbering our own backups (".backup").
+  # Use a stable extension (e.g. ".backup"). We'll rotate any existing files with that
+  # extension to a timestamped variant before HM runs to avoid clobber errors.
   darwin.ifEnabled = { cfg, ... }: {
-    # Use a distinct HM backup extension to avoid colliding with any existing
-    # historical backups left behind from previous runs.
-    home-manager.backupFileExtension = "${cfg.backupSuffix}-hm2";
+    # Keep HM backup extension simple; rotate existing backups ourselves.
+    home-manager.backupFileExtension = cfg.backupSuffix;
 
     # Rotate any existing HM backups before Home Manager runs (pre-activation),
     # so HM won't attempt to overwrite an existing backup and fail.
     system.activationScripts.rotateHmBackupsPre = {
       deps = [ ];
       text = ''
-        echo "Smart Backup: Pre-activation rotation of existing *.backup-hm backups"
+        echo "Smart Backup: Pre-activation rotation of existing HM backups (*.${cfg.backupSuffix})"
         # Run as invoking user so $HOME expands correctly
         if [[ -n ''${SUDO_USER:-} ]]; then
           sudo -u "$SUDO_USER" sh -lc '
@@ -36,11 +36,17 @@ delib.module {
             )
             for f in "''${files[@]}"; do
               expanded_file=$(eval echo "$f")
-              hm_backup_file="$expanded_file.${cfg.backupSuffix}-hm"
-              if [[ -e "$hm_backup_file" ]]; then
+              candidate="$expanded_file.${cfg.backupSuffix}"
+              if [[ -e "$candidate" ]]; then
                 ts=$(date +"$timestamp_format")
-                echo "Rotating pre-existing HM backup $hm_backup_file to $hm_backup_file-$ts"
-                mv "$hm_backup_file" "$hm_backup_file-$ts"
+                echo "Rotating pre-existing HM backup $candidate to $candidate-$ts"
+                mv "$candidate" "$candidate-$ts"
+              fi
+              # Proactively back up the original file before HM force-links the new one
+              if [[ -e "$expanded_file" && ! -L "$expanded_file" ]]; then
+                ts=$(date +"$timestamp_format")
+                echo "Backing up original file $expanded_file to $expanded_file.${cfg.backupSuffix}-$ts"
+                cp -R "$expanded_file" "$expanded_file.${cfg.backupSuffix}-$ts"
               fi
             done
           '
@@ -52,17 +58,35 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: {
+    # Early rotation in Home Manager activation (low order value).
+    # Note: We also rotate in nix-darwin pre-activation above; this is an extra safeguard.
+    home.activation.rotateHmBackups = lib.mkOrder 5 ''
+      echo "Smart Backup: HM pre-rotation of existing HM backups (*.${cfg.backupSuffix})"
+      timestamp_format="${cfg.timestampFormat}"
+      files=(
+        ${lib.concatMapStringsSep "\n        " (file: "\"${file}\"") (cfg.files ++ cfg.managedFiles)}
+      )
+      for f in "''${files[@]}"; do
+        expanded_file=$(eval echo "$f")
+        candidate="$expanded_file.${cfg.backupSuffix}"
+        if [[ -e "$candidate" ]]; then
+          ts=$(date +"$timestamp_format")
+          echo "Rotating pre-existing HM backup $candidate to $candidate-$ts (HM)"
+          mv "$candidate" "$candidate-$ts"
+        fi
+      done
+    '';
+
     # Run early to try to precede Home Manager's linkGeneration.
     home.activation.smartBackup = lib.mkOrder 50 ''
         echo "Smart Backup: Starting backup process..."
 
-        # Rotate an existing Home Manager backup (e.g. *.backup-hm) to a timestamped name
+        # Rotate existing Home Manager backup (only the configured suffix) to timestamped name
         rotate_hm_backup() {
           local original_file="$1"
           local backup_suffix="${cfg.backupSuffix}"
           local timestamp_format="${cfg.timestampFormat}"
-          local hm_backup_file="$original_file.${cfg.backupSuffix}-hm"
-
+          local hm_backup_file="$original_file.$backup_suffix"
           if [[ -e "$hm_backup_file" ]]; then
             local timestamp=$(date +"$timestamp_format")
             local timestamped_backup="$hm_backup_file-$timestamp"
