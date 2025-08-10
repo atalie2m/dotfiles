@@ -23,6 +23,7 @@ delib.module {
       vyletAlt       = "${ruleDir}/vylet-alt-layout.json";  
       shingetaEn     = "${ruleDir}/shingeta/shingeta_en.json";  
       shingetaJp     = "${ruleDir}/shingeta/shingeta_jp.json";  
+      profileToggle  = "${ruleDir}/profile-toggle.json";
     };
 
     #
@@ -41,6 +42,7 @@ delib.module {
     #
     # Standard profile: import only specific rules from specific files
     standardRules = lib.concatLists [
+      (allRulesFrom ruleFiles.profileToggle)
       (specificRulesFrom ruleFiles.japaneseToggle [
         "コマンドキーを単体で押したときに、英数・かなキーを送信する。（左コマンドキーは英数、右コマンドキーはかな） (rev 3)"
       ])
@@ -49,12 +51,13 @@ delib.module {
 
     # Atalie's profile: import specific rules from japanese-input-toggle, all from others
     ataliesRules = lib.concatLists [
+      (allRulesFrom ruleFiles.profileToggle)
       (specificRulesFrom ruleFiles.japaneseToggle [
         "コマンドキーを単体で押したときに、英数・かなキーを送信する。（左コマンドキーは英数、右コマンドキーはかな） (rev 3)"
       ])
       (allRulesFrom ruleFiles.spaceShift)   # All predefined
-      (allRulesFrom ruleFiles.vyletAlt)     # All predefined
       (allRulesFrom ruleFiles.shingetaJp)   # All predefined (excluding shingetaEn)
+      (allRulesFrom ruleFiles.vyletAlt)     # All predefined
     ];
 
     #
@@ -97,7 +100,11 @@ delib.module {
 
   in {
     # Install everything (symlink karabiner.json and complex_modifications)
-    xdg.configFile."karabiner/karabiner.json".source = karabinerJson;
+    # Force the symlink to avoid HM's own backup collision; we back up ourselves pre-activation.
+    xdg.configFile."karabiner/karabiner.json" = {
+      source = karabinerJson;
+      force = true;
+    };
     xdg.configFile."karabiner/assets/complex_modifications" = complexModsSymlink;
 
     #

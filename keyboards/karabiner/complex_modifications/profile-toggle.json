@@ -1,0 +1,31 @@
+{
+  "title": "Profile Toggle",
+  "rules": [
+    {
+      "description": "Change Profile Cmd_L + Cmd_R",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "simultaneous": [
+              { "key_code": "left_command" },
+              { "key_code": "right_command" }
+            ],
+            "simultaneous_options": {
+              "detect_key_down_uninterruptedly": true,
+              "key_down_order": "insensitive",
+              "key_up_order": "insensitive"
+            }
+          },
+          "to": [
+            {
+              "shell_command": "cli='/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_cli'; if [ \"$(\"$cli\" --show-current-profile-name)\" = 'Std' ]; then \"$cli\" --select-profile 'A2m'; else \"$cli\" --select-profile 'Std'; fi"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+
