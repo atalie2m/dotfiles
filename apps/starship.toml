@@ -3,12 +3,10 @@ add_newline = false
 
 format = """[](color_yellow)\
 $directory\
-[](fg:color_yellow bg:color_aqua)\
 $git_branch$git_status\
-[](fg:color_aqua bg:color_bg1)\
 $time\
-[](fg:color_bg1)$fill[](color_bg3)\
-$username[](fg:color_bg3 bg:color_orange)$hostname\
+[](fg:color_bg1)$fill\
+$nix_shell$username[](fg:color_bg3 bg:color_orange)$hostname\
 [](color_orange)$line_break$character"""
 
 # Use $fill instead of right_format so both sides share one line
@@ -86,11 +84,11 @@ truncation_symbol = "…/"
 [git_branch]
 symbol = ""
 style = "bg:color_aqua"
-format = '[[ $symbol $branch ](fg:color_fg0 bg:color_aqua)]($style)'
+format = '[](fg:color_yellow bg:color_aqua)[[ $symbol $branch ](fg:color_fg0 bg:color_aqua)]($style)'
 
 [git_status]
 style = "bg:color_aqua"
-format = '[[ $all_status$ahead_behind ](fg:color_fg0 bg:color_aqua)]($style)'
+format = '[[ $all_status$ahead_behind ](fg:color_fg0 bg:color_aqua)]($style)[](fg:color_aqua bg:color_bg1)'
 
 [nodejs]
 symbol = ""
@@ -153,8 +151,8 @@ format = '[[ $symbol( $environment) ](fg:#83a598 bg:color_bg3)]($style)'
 
 [nix_shell]
 symbol = "❄️ "
-style = "bg:color_bg3"
-format = '[[ $symbol( $name) ](fg:#83a598 bg:color_bg3)]($style)'
+style = "bg:color_purple"
+format = '[](color_purple)[[ $symbol( $name) ](fg:#ffffff bg:color_purple)]($style)[](fg:color_purple bg:color_bg3)'
 disabled = false
 heuristic = true
 impure_msg = "impure"
@@ -164,6 +162,18 @@ unknown_msg = "nix"
 [pixi]
 style = "bg:color_bg3"
 format = '[[ $symbol( $version)( $environment) ](fg:color_fg0 bg:color_bg3)]($style)'
+
+#[custom.usercap_purple]
+#description = "Rounded cap before username when nix_shell is active"
+#when = "env | grep -q '^IN_NIX_SHELL='"
+#format = "[](color_purple)"
+#disabled = false
+
+#[custom.usercap_default]
+#description = "Rounded cap before username when nix_shell is inactive"
+#when = "! env | grep -q '^IN_NIX_SHELL='"
+#format = "[](color_bg3)"
+#disabled = false
 
 [time]
 disabled = false
