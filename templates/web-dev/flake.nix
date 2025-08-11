@@ -4,14 +4,19 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
   };
 
   outputs = { self, nixpkgs, flake-parts, treefmt-nix, pre-commit-hooks, ... }@inputs:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-
+      imports = [
+        inputs.treefmt-nix.flakeModule
+      ];
       perSystem = { pkgs, system, ... }: let
         node = pkgs.nodejs_22;
       in {
@@ -84,5 +89,3 @@
       };
     };
 }
-
-
