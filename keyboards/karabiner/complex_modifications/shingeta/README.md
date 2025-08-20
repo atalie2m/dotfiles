@@ -4,9 +4,9 @@
 
 新下駄配列（Shingeta）のKarabiner-Elements設定ファイルです。
 
-**新下駄配列考案者**: kouy さん  
+**新下駄配列考案者**: kouy 様
 **新下駄配列ブログ**: https://kouy.exblog.jp/13627994/  
-**Karabiner設定作成者**: funatsufumiya  
+**Karabiner設定作成者**: funatsufumiya 様
 **Original Repository**: https://github.com/funatsufumiya/karabiner-elements-shingeta  
 **License**: MIT License  
 
