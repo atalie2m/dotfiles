@@ -94,9 +94,15 @@ delib.module {
           # Avoid right-prompt artifacts on resize and when typing
           # - transient_rprompt hides RPROMPT while typing
           # - prompt_cr/prompt_sp improve redraw on wraps and partial lines
-          setopt transient_rprompt
-          setopt prompt_cr
-          setopt prompt_sp
+          setopt TRANSIENT_RPROMPT
+          setopt PROMPT_CR
+          setopt PROMPT_SP
+          # keep a small gap from terminal edge to avoid wrap glitches
+          ZLE_RPROMPT_INDENT=1
+          # clear end-of-line mark to prevent leftovers on reflow
+          PROMPT_EOL_MARK=""
+          # full refresh on terminal resize
+          TRAPWINCH() { zle && zle -R }
 
           # Load local ~/.zshrc if it exists
           if [[ -f ~/.zshrc ]]; then

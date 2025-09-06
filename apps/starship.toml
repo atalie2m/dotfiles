@@ -1,10 +1,13 @@
 "$schema" = 'https://starship.rs/config-schema.json'
-add_newline = false
+add_newline = true
 
 ## Catppuccin Mocha-inspired layout
 # 1行目: 左( username / path / git branch ) — $fill — 右( nix shell / hostname / time )
 # 2行目: 入力行（$character）のみ
-format = """[](fg:#e6d5f7)\
+format = """[╭─](mauve)\
+[](fg:mauve bg:#fff4b3)\
+$username\
+[](fg:#fff4b3 bg:#e6d5f7)\
 $directory\
 [](fg:#e6d5f7 bg:#d6eaff)\
 $git_branch\
@@ -12,17 +15,18 @@ $git_branch\
 $git_status\
 [](fg:#ccf2f4)\
 $fill\
-[](fg:#d7f7df)\
+[](fg:mauve)\
+$os\
+[](fg:mauve bg:#d7f7df)\
 $time\
 [](fg:#d7f7df bg:#e9f7cf)\
 $nix_shell\
-[](fg:#e9f7cf bg:#fff4b3)\
-$username\
-[](fg:#fff4b3 bg:#ffd9b3)\
+[](fg:#e9f7cf bg:#ffd9b3)\
 $hostname\
-[](fg:#ffd9b3 bg:#ffc9c9)\
-$os\
-[](fg:#ffc9c9)$line_break$character"""
+[](fg:#ffd9b3)\
+$line_break\
+[╰─](mauve)\
+$character"""
 
 # 右用の right_format は未使用（$fill で1行レイアウト）
 
@@ -63,7 +67,7 @@ style = 'bold subtext1'
 
 [os]
 disabled = false
-style = "bg:#ffc9c9 fg:#000000"
+style = "bg:mauve fg:crust"
 format = '[ $symbol ]($style)'
 
 [os.symbols]
@@ -103,7 +107,7 @@ disabled = false
 [directory]
 style = "bg:#e6d5f7 fg:#000000"
 format = '[$path]($style)[$read_only]($read_only_style)'
-truncation_length = 3
+truncation_length = 2
 truncation_symbol = "~/"
 read_only = ' 🔒'
 read_only_style = 'bg:#e6d5f7'
@@ -119,6 +123,7 @@ read_only_style = 'bg:#e6d5f7'
 symbol = ""
 style = "bg:#d6eaff fg:#000000"
 format = '[[ $symbol $branch ](fg:#000000 bg:#d6eaff)]($style)'
+truncation_length = 24
 
 [git_status]
 style = "bg:#ccf2f4 fg:#000000"
@@ -220,9 +225,10 @@ disabled = false
 
 [character]
 disabled = false
-success_symbol = '[](bold fg:#98971a)'
-error_symbol = '[](bold fg:#cc241d)'
-vimcmd_symbol = '[](bold fg:#98971a)'
-vimcmd_replace_one_symbol = '[](bold fg:#b16286)'
-vimcmd_replace_symbol = '[](bold fg:#b16286)'
-vimcmd_visual_symbol = '[](bold fg:#d79921)'
+format = "$symbol "
+success_symbol = '❯'
+error_symbol = '✘'
+vimcmd_symbol = '❮'
+vimcmd_replace_one_symbol = '❮'
+vimcmd_replace_symbol = '❮'
+vimcmd_visual_symbol = '❮'
