@@ -5,9 +5,8 @@ add_newline = true
 # 1行目: 左( username / path / git branch ) — $fill — 右( nix shell / hostname / time )
 # 2行目: 入力行（$character）のみ
 format = """[╭─](mauve)\
-[](fg:mauve bg:#fff4b3)\
 $username\
-[](fg:#fff4b3 bg:#e6d5f7)\
+[](fg:mauve bg:#e6d5f7)\
 $directory\
 [](fg:#e6d5f7 bg:#d6eaff)\
 $git_branch\
@@ -15,9 +14,9 @@ $git_branch\
 $git_status\
 [](fg:#ccf2f4)\
 $fill\
-[](fg:mauve)\
+[](fg:#cfeecf)\
 $os\
-[](fg:mauve bg:#d7f7df)\
+[](fg:#cfeecf bg:#d7f7df)\
 $time\
 [](fg:#d7f7df bg:#e9f7cf)\
 $nix_shell\
@@ -67,7 +66,7 @@ style = 'bold subtext1'
 
 [os]
 disabled = false
-style = "bg:mauve fg:crust"
+style = "bg:#cfeecf fg:#000000"
 format = '[ $symbol ]($style)'
 
 [os.symbols]
@@ -95,8 +94,8 @@ Pop = ""
 
 [username]
 show_always = true
-style_user = "bg:#fff4b3 fg:#000000"
-style_root = "bg:#fff4b3 fg:#000000 bold"
+style_user = "bg:mauve fg:crust"
+style_root = "bg:mauve fg:crust bold"
 format = '[$user]($style)'
 
 [hostname]
