@@ -31,9 +31,6 @@ delib.rice {
       ];
     };
 
-    # VSCode disabled (module moved under modules_disabled)
-    vscode.enable = false;
-
     # Allow VSCode (unfree) as an allowed package for nixpkgs.unfree
     nixpkgs.unfree.packages = [ "claude-code" "vscode" ];
 

@@ -16,15 +16,26 @@ It provides:
 ## Prerequisites
 - Nix(Lix or Determinate's vanilla)
 
-## Profiles
+## Profiles (Denix hosts/rices)
 
 This flake uses [Denix](https://github.com/yunfachi/denix) to build macOS configurations.
-Two profiles are available:
 
-- **standard** – shows hidden files and extensions while autohiding the Dock
-- **commercial** – hides hidden files and extensions and keeps the Dock visible
+- Hosts: `a2m_mac` (default rice: `full`), `mn_mac` (default rice: `mn`).
+- Rices: `full`, `minimum`, `mn`.
+  - `minimum`: minimal setup with Git and GPG only (no GUI/dev stacks).
+  - `mn`: based on `full` but excludes AI coding tools (claude-code, codex).
 
-Select the profile per host in `nix/env.nix`.
+Usage examples:
+
+```bash
+# Default rice for each host
+darwin-rebuild build --flake .#a2m_mac
+darwin-rebuild build --flake .#mn_mac
+
+# Switch rices per host
+darwin-rebuild build --flake .#a2m_mac-minimum
+darwin-rebuild build --flake .#mn_mac-minimum
+```
 
 ## Terminal Compatibility
 
@@ -196,7 +207,7 @@ sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- switch --flake .#<PR
 ## Subsequent Updates
 ```bash
 # nix-darwin configuration
-sudo darwin-rebuild switch --flake .#<PROFILE_NAME
+sudo darwin-rebuild switch --flake .#<PROFILE_NAME>
 
 # home-manager configuration (replace <HOSTNAME> with your actual hostname)
 nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME>

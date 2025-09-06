@@ -4,8 +4,8 @@ let
   env = import ../../../env.nix;
 in
 delib.host {
-  name = "common";
-  rice = "full";
+  name = "a2m_mac";
+  rice = "full"; # default rice; can switch to -minimum
   type = "desktop";
   homeManagerSystem = env.platform;
 
@@ -36,3 +36,4 @@ delib.host {
     };
   };
 }
+

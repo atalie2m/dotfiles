@@ -1,11 +1,11 @@
-{ delib, ... }:
+{ delib, pkgs, ... }:
 
 let
   env = import ../../../env.nix;
 in
 delib.host {
-  name = "commercial";
-  rice = "minimum";
+  name = "mn_mac";
+  rice = "mn"; # default rice; can switch to -minimum
   type = "desktop";
   homeManagerSystem = env.platform;
 
@@ -16,7 +16,7 @@ delib.host {
     };
   };
 
-  darwin = { name, cfg, myconfig, pkgs, ... }: let
+  darwin = { name, cfg, myconfig, ... }: let
     inherit (env) username homeDirectory platform;
     user = username;
     homeDir = homeDirectory;
@@ -24,8 +24,10 @@ delib.host {
     system.stateVersion = env.stateVersion.darwin;
     nixpkgs.hostPlatform = platform;
 
-    # Specify Nix CLI package for nix.conf generation
     nix.package = pkgs.nix;
+
+    # nix-darwin requires setting the primary user for user-scoped options (e.g., Homebrew)
+    system.primaryUser = user;
 
     users.users.${user} = {
       name = user;

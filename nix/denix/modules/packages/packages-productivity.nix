@@ -10,13 +10,15 @@ delib.module {
     extraPackages = listOfOption package [];
   };
 
-  home.ifEnabled = { cfg, myconfig, ... }: {
+  home.ifEnabled = { cfg, myconfig, ... }: let
+    aiEnabled = cfg.includeAITools && (myconfig.codingAgents.claudeCode || myconfig.codingAgents.codex);
+  in {
     home.packages = with pkgs; [
       # Terminal enhancements
       starship
 
 
-    ] ++ (lib.optionals cfg.includeAITools [
+    ] ++ (lib.optionals aiEnabled [
       codex
       gemini-cli
       claude-code

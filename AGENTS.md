@@ -4,7 +4,7 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 
 ## Project Structure & Module Organization
 - `flake.nix` — flake inputs/outputs; exposes `darwinConfigurations` and `homeConfigurations` and a `templates/web-dev` flake template.
-- `nix/denix/hosts/{common,commercial}/` — host profiles and system-level options.
+- `nix/denix/hosts/{a2m_mac,mn_mac}/` — host profiles and system-level options.
 - `nix/denix/modules/` — reusable modules (programs, packages, shells, services, etc.).
 - `nix/denix/rices/` — higher‑level bundles (e.g., `full`, `minimum`).
 - `nix/env.nix` — machine/user facts populated via Git filters; do not hardcode values elsewhere.
@@ -15,8 +15,8 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 ## Build, Test, and Development Commands
 - `./setup-env.sh` — configures Git filters and repopulates `nix/env.nix` (requires clean tree).
 - `nix flake check` — validates flake, runs basic checks.
-- `darwin-rebuild build --flake .#common` — builds the `common` host; swap to `#commercial` as needed.
-- `sudo darwin-rebuild switch --flake .#common` — applies the built configuration.
+- `darwin-rebuild build --flake .#a2m_mac` — builds the `a2m_mac` host (default rice: full); swap to `#mn_mac` as needed.
+- `sudo darwin-rebuild switch --flake .#a2m_mac` — applies the built configuration.
 - Template: `nix flake init -t github:atalie2m/dotfiles#web-dev` (see `templates/web-dev`).
 
 ## Coding Style & Naming Conventions

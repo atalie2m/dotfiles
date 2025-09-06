@@ -17,6 +17,9 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: {
+    # Ensure gpg CLI is available when the module is enabled
+    home.packages = [ pkgs.gnupg ];
+
     programs.gpg.enable = true;
 
     services.gpg-agent = {

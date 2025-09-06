@@ -27,8 +27,8 @@ Denix is a Nix library that simplifies and streamlines configuration management 
 ```
 nix/denix/
 ├── hosts/           # Host-specific configurations
-│   ├── common/      # Full development setup
-│   └── commercial/  # Minimal configuration
+│   ├── a2m_mac/     # Full development setup (default: full)
+│   └── mn_mac/      # MN profile host (default: mn)
 ├── modules/         # Reusable Denix modules
 │   ├── packages/    # Package collections
 │   ├── programs/    # Application configurations
@@ -67,8 +67,8 @@ nix/denix/
    - **smart-backup.nix**: Automated file backup with configurable options
 
 6. **Host Configurations**
-   - **common**: Full development environment (aarch64-darwin)
-   - **commercial**: Minimal setup for commercial use
+   - **a2m_mac**: Full development environment (aarch64-darwin)
+- **mn**: MN profile host (AI tools excluded by default)
 
 7. **Rice System**
    - **minimum**: Essential tools and configuration
@@ -87,18 +87,22 @@ nix/denix/
 
 ### Building Configurations
 ```bash
-# Full development environment
-darwin-rebuild build --flake .#common
-sudo darwin-rebuild switch --flake .#common
+# Full development environment (a2m_mac default rice: full)
+darwin-rebuild build --flake .#a2m_mac
+sudo darwin-rebuild switch --flake .#a2m_mac
 
-# Minimal environment  
-darwin-rebuild build --flake .#commercial
-sudo darwin-rebuild switch --flake .#commercial
+# MN host (default rice: mn; AI tools excluded)
+darwin-rebuild build --flake .#mn_mac
+sudo darwin-rebuild switch --flake .#mn_mac
+
+# Switch rices per host
+darwin-rebuild build --flake .#a2m_mac-minimum
+darwin-rebuild build --flake .#mn_mac-minimum
 ```
 
 ### Available Features
 
-#### Common Host (Full Rice)
+#### a2m_mac Host (Full Rice)
 - Development tools and packages
 - Shell configuration (zsh, bash, starship)
 - Keyboard customization (Karabiner-Elements)
@@ -106,7 +110,12 @@ sudo darwin-rebuild switch --flake .#commercial
 - Homebrew integration
 - Smart backup services
 
-#### Commercial Host (Minimum Rice)
+#### mn_mac Host (MN Rice)
+- Based on full but excludes AI coding tools (claude-code, codex)
+- Essential tools and core productivity
+- Nix experimental features
+
+#### Minimum Rice
 - Essential tools only
 - Basic shell configuration  
 - Core system functionality
@@ -150,8 +159,8 @@ sudo darwin-rebuild switch --flake .#commercial
 nix flake check
 
 # Build configurations
-darwin-rebuild build --flake .#common
-darwin-rebuild build --flake .#commercial
+darwin-rebuild build --flake .#a2m_mac
+darwin-rebuild build --flake .#mn_mac
 
 # Show available outputs
 nix flake show

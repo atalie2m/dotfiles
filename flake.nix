@@ -44,11 +44,10 @@
       denix.lib.configurations {
         inherit moduleSystem;
         homeManagerUser = env.username;
-        paths = [
-          ./nix/denix/hosts
-          ./nix/denix/modules
-          ./nix/denix/rices
-        ];
+        # Point Denix to the base directory; it discovers hosts/modules/rices
+        # under this root. Passing subdirectories can cause path resolution
+        # issues in umport.
+        paths = [ ./nix/denix ];
         extensions = with denix.lib.extensions; [
           args
           (base.withConfig { args.enable = true; })

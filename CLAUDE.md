@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     - After each step, do the following:
     - git add (be staging)
     - nix flake check
-    - darwin-rebuild build --flake .#<write the value of `derib.host.name` in this repos here, such as common>
+    - darwin-rebuild build --flake .#<write the value of `delib.host.name` in this repo here, such as a2m_mac or mn_mac>
     - Ask the user to run `sudo darwin-rebuild switch --flake .`
 ## Build and Development Commands
 
