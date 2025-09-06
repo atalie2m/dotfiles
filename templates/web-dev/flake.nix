@@ -4,22 +4,27 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
   };
 
   outputs = { self, nixpkgs, flake-parts, treefmt-nix, pre-commit-hooks, ... }@inputs:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-
-      perSystem = { pkgs, system, ... }: let
+      imports = [
+        inputs.treefmt-nix.flakeModule
+      ];
+      perSystem = { pkgs, system, config, ... }: let
         node = pkgs.nodejs_22;
       in {
         devShells.default = pkgs.mkShell {
           name = "web-dev";
           packages = [
             node
-            (pkgs.nodePackages.pnpm)
+            pkgs.nodePackages.pnpm
             pkgs.bun
             pkgs.wrangler
             pkgs.awscli2
@@ -47,18 +52,7 @@
           };
         };
 
-        checks = {
-          # Run treefmt via pre-commit using our wrapper (so Prettier integration works)
-          pre-commit = pre-commit-hooks.lib.${system}.run {
-            src = ./.;
-            hooks.treefmt = {
-              enable = true;
-              package = self.formatter.${system};
-            };
-          };
-          # Expose formatter as a check so `nix flake check` builds it too
-          treefmt = self.formatter.${system};
-        };
+        # checks are provided by treefmt-nix flakeModule; no extra checks here
 
         apps = {
           dev = {
@@ -79,10 +73,7 @@
           };
         };
 
-        # expose treefmt as formatter
-        formatter = treefmt-nix.lib.mkWrapper pkgs self.treefmt;
+        # formatter is provided by treefmt-nix flakeModule; no override here
       };
     };
 }
-
-

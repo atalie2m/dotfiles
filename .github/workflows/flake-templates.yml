@@ -12,12 +12,11 @@ jobs:
     strategy:
       matrix:
         target:
-          - .
-          - templates/web-dev
+          - ./
+          - ./templates/web-dev
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v27
       - name: nix flake check
-        run: nix flake check -L ${{ matrix.target }}
-
+        run: nix flake check -L "${{ matrix.target }}"
 

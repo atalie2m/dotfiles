@@ -14,31 +14,48 @@ delib.module {
     nixpkgs.overlays = [
       (final: prev: {
         codex = prev.codex.overrideAttrs (old: rec {
-          version = "0.16.0";
-          src = prev.fetchFromGitHub {
-            owner = "openai";
-            repo = "codex";
-            rev = "rust-v${version}";
-            hash = "sha256-Lgf+s4BGFgfBDC1ZA9Wwqvf4n4fNGEmL+Ma0Fe9F8BI=";
+          # Use the prebuilt NPM tarball published by @openai/codex
+          version = "0.30.0";
+          src = prev.fetchzip {
+            url = "https://registry.npmjs.org/@openai/codex/-/codex-${version}.tgz";
+            hash = "sha256-8+g9Isp/ZaYUgmVtLoz+JZra7PCN2bdqLx5NdfTa+sU=";
           };
-          # need update pnpmDeps
-          pnpmDeps = prev.pnpm_10.fetchDeps {
-            inherit (old) pname pnpmWorkspaces;
-            inherit version src;
-            fetcherVersion = 1;
-            hash = "sha256-SyKP++eeOyoVBFscYi+Q7IxCphcEeYgpuAj70+aCdNA=";
-          };
-          # Override buildPhase to fix version in package.json
+
+          # Avoid pnpm hooks; only keep tools needed by installPhase
+          nativeBuildInputs = with prev; [
+            nodejs_22
+            makeBinaryWrapper
+            installShellFiles
+          ];
+
+          # No build step is required for the NPM tarball
           buildPhase = ''
             runHook preBuild
-
-            # Fix version in package.json before building
-            ${prev.jq}/bin/jq '.version = "${version}"' codex-cli/package.json > temp.json && mv temp.json codex-cli/package.json
-
-            pnpm --filter @openai/codex run build
             runHook postBuild
           '';
-          # prevent version error
+
+          # Install from tarball contents and create node wrapper
+          installPhase = ''
+            runHook preInstall
+
+            dest=$out/lib/node_modules/@openai/codex
+            mkdir -p "$dest"
+            cp -r bin package.json README.md "$dest"
+
+            mkdir -p $out/bin
+            makeBinaryWrapper ${prev.nodejs_22}/bin/node $out/bin/codex --add-flags "$dest/bin/codex.js"
+
+            ${prev.lib.optionalString (prev.stdenv.buildPlatform.canExecute prev.stdenv.hostPlatform) ''
+              $out/bin/codex completion bash > codex.bash
+              $out/bin/codex completion zsh > codex.zsh
+              $out/bin/codex completion fish > codex.fish
+              installShellCompletion codex.{bash,zsh,fish}
+            ''}
+
+            runHook postInstall
+          '';
+
+          # Avoid running install checks that assume a build from sources
           doInstallCheck = false;
         });
       })
@@ -49,31 +66,48 @@ delib.module {
     nixpkgs.overlays = [
       (final: prev: {
         codex = prev.codex.overrideAttrs (old: rec {
-          version = "0.16.0";
-          src = prev.fetchFromGitHub {
-            owner = "openai";
-            repo = "codex";
-            rev = "rust-v${version}";
-            hash = "sha256-Lgf+s4BGFgfBDC1ZA9Wwqvf4n4fNGEmL+Ma0Fe9F8BI=";
+          # Use the prebuilt NPM tarball published by @openai/codex
+          version = "0.30.0";
+          src = prev.fetchzip {
+            url = "https://registry.npmjs.org/@openai/codex/-/codex-${version}.tgz";
+            hash = "sha256-8+g9Isp/ZaYUgmVtLoz+JZra7PCN2bdqLx5NdfTa+sU=";
           };
-          # need update pnpmDeps
-          pnpmDeps = prev.pnpm_10.fetchDeps {
-            inherit (old) pname pnpmWorkspaces;
-            inherit version src;
-            fetcherVersion = 1;
-            hash = "sha256-SyKP++eeOyoVBFscYi+Q7IxCphcEeYgpuAj70+aCdNA=";
-          };
-          # Override buildPhase to fix version in package.json
+
+          # Avoid pnpm hooks; only keep tools needed by installPhase
+          nativeBuildInputs = with prev; [
+            nodejs_22
+            makeBinaryWrapper
+            installShellFiles
+          ];
+
+          # No build step is required for the NPM tarball
           buildPhase = ''
             runHook preBuild
-
-            # Fix version in package.json before building
-            ${prev.jq}/bin/jq '.version = "${version}"' codex-cli/package.json > temp.json && mv temp.json codex-cli/package.json
-
-            pnpm --filter @openai/codex run build
             runHook postBuild
           '';
-          # prevent version error
+
+          # Install from tarball contents and create node wrapper
+          installPhase = ''
+            runHook preInstall
+
+            dest=$out/lib/node_modules/@openai/codex
+            mkdir -p "$dest"
+            cp -r bin package.json README.md "$dest"
+
+            mkdir -p $out/bin
+            makeBinaryWrapper ${prev.nodejs_22}/bin/node $out/bin/codex --add-flags "$dest/bin/codex.js"
+
+            ${prev.lib.optionalString (prev.stdenv.buildPlatform.canExecute prev.stdenv.hostPlatform) ''
+              $out/bin/codex completion bash > codex.bash
+              $out/bin/codex completion zsh > codex.zsh
+              $out/bin/codex completion fish > codex.fish
+              installShellCompletion codex.{bash,zsh,fish}
+            ''}
+
+            runHook postInstall
+          '';
+
+          # Avoid running install checks that assume a build from sources
           doInstallCheck = false;
         });
       })

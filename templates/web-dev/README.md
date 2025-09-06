@@ -11,9 +11,8 @@ nix develop
 ```
 
 What you get:
+
 - DevShell: Node.js 22, pnpm, bun, wrangler, awscli2, jq, yq, mkcert, just
 - Formatters: Prettier via treefmt (run: `nix run .#format`)
 - Checks: `nix flake check` runs treefmt and pre-commit hooks
 - App: `nix run .#dev`
-
-

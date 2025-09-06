@@ -72,10 +72,15 @@ jobs:
           
           echo "Git filters setup completed"
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v26
+      - name: Install Nix (Determinate Systems)
+        uses: DeterminateSystems/nix-installer-action@v19
         with:
-          nix_path: nixpkgs=channel:nixpkgs-25.05-darwin
+          planner: macos
+          nix-build-user-base: 351
+          nix-build-user-count: 6
+          extra-conf: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
 
       - name: Run Statix Check
         run: nix run github:nerdypepper/statix -- check .
