@@ -95,6 +95,7 @@ delib.module {
           if [[ -f ~/.zshrc ]]; then
             source ~/.zshrc
           fi
+          
         '';
 
         autosuggestion.enable = cfg.zsh.enableAutosuggestions;

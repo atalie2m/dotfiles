@@ -5,18 +5,11 @@ format = """[](color_yellow)\
 $directory\
 $git_branch$git_status\
 $time\
-[](fg:color_bg1)$fill\
-$nix_shell$username[](fg:color_bg3 bg:color_orange)$hostname\
-[](color_orange)$line_break$character"""
+[](fg:color_bg1)$line_break$character"""
 
-# Use $fill instead of right_format so both sides share one line
-# (right_format removed)
+right_format = """$nix_shell$username[](fg:color_bg3 bg:color_orange)$hostname[](color_orange)"""
 
 palette = 'gruvbox_dark'
-
-[fill]
-# Remove visible filler (use spaces instead of dots)
-symbol = " "
 
 [palettes.gruvbox_dark]
 color_fg0 = '#fbf1c7'
