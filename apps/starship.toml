@@ -1,8 +1,9 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 add_newline = false
 
-# Use a single-line prompt with $fill to avoid RPROMPT redraw issues on resize.
-format = """[](color_yellow)$directory$git_branch$git_status$time[](fg:color_bg1) $fill $nix_shell$username[](fg:color_bg3 bg:color_orange)$hostname[](color_orange)$line_break$character"""
+# Compact, resize-safe layout: no right prompt and no $fill.
+# 1st line: path + git; 2nd line: shell/user/host + time + prompt char.
+format = """[](color_yellow)$directory$git_branch$git_status[](fg:color_bg1)$line_break$nix_shell$username$hostname $time $character"""
 
 palette = 'gruvbox_dark'
 
@@ -59,7 +60,7 @@ disabled = false
 [directory]
 style = "fg:color_fg0 bg:color_yellow"
 format = "[ $path ]($style)"
-truncation_length = 3
+truncation_length = 2
 truncation_symbol = "…/"
 
 [directory.substitutions]
@@ -166,8 +167,8 @@ format = '[[ $symbol( $version)( $environment) ](fg:color_fg0 bg:color_bg3)]($st
 [time]
 disabled = false
 time_format = "%R"
-style = "bg:color_bg1"
-format = '[[  $time ](fg:color_fg0 bg:color_bg1)]($style)'
+style = "fg:color_fg0"
+format = '[  $time ]($style)'
 
 [line_break]
 disabled = false
