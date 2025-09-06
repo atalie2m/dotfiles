@@ -1,33 +1,67 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 add_newline = false
 
-# 左右同一行: 左( username / path / git branch ) — $fill — 右( nix shell / hostname / time )
-format = """[](color_bg3)$username[](color_bg3) \
-[](color_yellow)$directory[](color_yellow) \
-[](color_aqua)$git_branch[](color_aqua)$fill\
-[](color_bg3)$nix_shell[](color_bg3) \
-[](color_orange)$hostname[](color_orange)  $time\
-$line_break$character"""
+## Catppuccin Mocha-inspired layout
+# 1行目: 左( username / path / git branch ) — $fill — 右( nix shell / hostname / time )
+# 2行目: 入力行（$character）のみ
+format = """[╭─](mauve)\
+[ ](bg:red fg:mauve)\
+$username\
+[](bg:peach fg:red)\
+[  ](bg:peach fg:crust)\
+$directory\
+[ ](bg:peach)\
+[](bg:yellow fg:peach)\
+$git_branch\
+[](fg:yellow)\
+$fill\
+[](fg:sapphire)\
+$nix_shell\
+[](fg:red bg:sapphire)\
+$hostname\
+[](bg:red fg:lavender)\
+$time\
+[─╮](fg:mauve)\
+$line_break\
+[╰─](mauve)\
+$character"""
 
 # 右用の right_format は未使用（$fill で1行レイアウト）
 
-palette = 'gruvbox_dark'
+palette = 'catppuccin_mocha'
 
-[palettes.gruvbox_dark]
-color_fg0 = '#fbf1c7'
-color_bg1 = '#3c3836'
-color_bg3 = '#665c54'
-color_blue = '#458588'
-color_aqua = '#689d6a'
-color_green = '#98971a'
-color_orange = '#d65d0e'
-color_purple = '#b16286'
-color_red = '#cc241d'
-color_yellow = '#d79921'
+[palettes.catppuccin_mocha]
+rosewater = "#f5e0dc"
+flamingo = "#f2cdcd"
+pink = "#f5c2e7"
+mauve = "#cba6f7"
+red = "#f38ba8"
+maroon = "#eba0ac"
+peach = "#fab387"
+yellow = "#f9e2af"
+green = "#a6e3a1"
+teal = "#94e2d5"
+sky = "#89dceb"
+sapphire = "#74c7ec"
+blue = "#89b4fa"
+lavender = "#b4befe"
+text = "#cdd6f4"
+subtext1 = "#bac2de"
+subtext0 = "#a6adc8"
+overlay2 = "#9399b2"
+overlay1 = "#7f849c"
+overlay0 = "#6c7086"
+surface2 = "#585b70"
+surface1 = "#45475a"
+surface0 = "#313244"
+base = "#1e1e2e"
+mantle = "#181825"
+crust = "#11111b"
 
 # Fill module draws blanks between left and right islands
 [fill]
-symbol = " "
+symbol = ' '
+style = 'bold subtext1'
 
 [os]
 disabled = false
@@ -58,20 +92,22 @@ Pop = ""
 
 [username]
 show_always = true
-style_user = "bg:#665c54 fg:#fbf1c7"
-style_root = "bg:#665c54 fg:#fbf1c7"
-format = '[ $user ]($style)'
+style_user = "bg:red fg:crust"
+style_root = "bg:red fg:crust bold"
+format = '[$user]($style)'
 
 [hostname]
 ssh_only = false
-format = '[ $hostname ](bg:#d65d0e fg:#fbf1c7)'
+format = '[@$hostname ](bg:red fg:crust)'
 disabled = false
 
 [directory]
-style = "fg:#fbf1c7 bg:#d79921"
-format = "[ $path ]($style)"
+style = "bg:peach fg:crust"
+format = '[$path]($style)[$read_only]($read_only_style)'
 truncation_length = 3
-truncation_symbol = "…/"
+truncation_symbol = "~/"
+read_only = ' 🔒'
+read_only_style = 'bg:peach'
 
 [directory.substitutions]
 "Documents" = "󰈙 "
@@ -82,8 +118,8 @@ truncation_symbol = "…/"
 
 [git_branch]
 symbol = ""
-style = "bg:#689d6a"
-format = '[[ $symbol $branch ](fg:#fbf1c7 bg:#689d6a)]($style)'
+style = "bg:yellow"
+format = '[[ $symbol $branch ](fg:crust bg:yellow)]($style)'
 
 [git_status]
 style = "bg:#689d6a"
@@ -150,8 +186,8 @@ format = '[[ $symbol( $environment) ](fg:#83a598 bg:#665c54)]($style)'
 
 [nix_shell]
 symbol = "❄️ "
-style = "bg:#665c54"
-format = '[[ $symbol( $name) ](fg:#83a598 bg:#665c54)]($style)'
+style = "fg:crust bg:sapphire"
+format = '[$symbol( $name) ]($style)'
 disabled = false
 heuristic = true
 impure_msg = "impure"
@@ -177,8 +213,8 @@ format = '[[ $symbol( $version)( $environment) ](fg:#fbf1c7 bg:#665c54)]($style)
 [time]
 disabled = false
 time_format = "%R"
-style = "bg:#3c3836"
-format = '[[  $time ](fg:#fbf1c7 bg:#3c3836)]($style)'
+style = 'bg:lavender fg:crust'
+format = "[ $time ]($style)"
 
 [line_break]
 disabled = false
