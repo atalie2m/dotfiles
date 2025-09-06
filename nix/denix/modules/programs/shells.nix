@@ -91,6 +91,9 @@ delib.module {
         initContent = ''
           ${commonShellInit}
 
+          # Avoid right-prompt artifacts on resize and when typing
+          setopt transient_rprompt
+
           # Load local ~/.zshrc if it exists
           if [[ -f ~/.zshrc ]]; then
             source ~/.zshrc
