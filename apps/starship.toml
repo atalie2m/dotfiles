@@ -1,9 +1,15 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 add_newline = false
 
-# Compact, resize-safe layout: no right prompt and no $fill.
-# 1st line: path + git; 2nd line: shell/user/host + time + prompt char.
-format = """[](color_yellow)$directory$git_branch$git_status[](fg:color_bg1)$line_break$nix_shell$username$hostname $time $character"""
+# Two-line prompt. Use `$fill` instead of `right_format` to keep
+# the first line single-pass and avoid Zsh RPROMPT resize artifacts.
+# 1st line: path + git (left) ……… nix/user@host + time (right)
+# 2nd line: prompt character only
+format = """[](color_yellow)$directory$git_branch$git_status[](fg:color_bg1) $fill$nix_shell$username@$hostname $time$line_break$character"""
+
+# Use blanks for `$fill` so nothing is drawn between left and right.
+[fill]
+symbol = " "
 
 palette = 'gruvbox_dark'
 
@@ -48,13 +54,13 @@ Pop = ""
 
 [username]
 show_always = true
-style_user = "bg:color_bg3 fg:color_fg0"
-style_root = "bg:color_bg3 fg:color_fg0"
-format = '[ $user ]($style)'
+style_user = "fg:color_fg0"
+style_root = "fg:color_fg0"
+format = '[$user]($style)'
 
 [hostname]
 ssh_only = false
-format = '[ $hostname ](bg:color_orange fg:color_fg0)'
+format = '[$hostname](fg:color_fg0)'
 disabled = false
 
 [directory]
@@ -140,8 +146,8 @@ format = '[[ $symbol( $environment) ](fg:#83a598 bg:color_bg3)]($style)'
 
 [nix_shell]
 symbol = "❄️ "
-style = "bg:color_purple"
-format = '[](color_purple)[[ $symbol( $name) ](fg:#ffffff bg:color_purple)]($style)[](fg:color_purple bg:color_bg3)'
+style = "fg:color_purple"
+format = '[$symbol($name )]($style)'
 disabled = false
 heuristic = true
 impure_msg = "impure"
