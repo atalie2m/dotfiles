@@ -52,16 +52,7 @@
           };
         };
 
-        checks = {
-          # Run treefmt via pre-commit using our wrapper (so Prettier integration works)
-          pre-commit = pre-commit-hooks.lib.${system}.run {
-            src = ./.;
-            hooks.treefmt = {
-              enable = true;
-              package = self.formatter.${system};
-            };
-          };
-        };
+        # checks are provided by treefmt-nix flakeModule; no extra checks here
 
         apps = {
           dev = {
