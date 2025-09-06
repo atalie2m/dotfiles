@@ -21,6 +21,13 @@ delib.module {
             hash = "sha256-8+g9Isp/ZaYUgmVtLoz+JZra7PCN2bdqLx5NdfTa+sU=";
           };
 
+          # Avoid pnpm hooks; only keep tools needed by installPhase
+          nativeBuildInputs = with prev; [
+            nodejs_22
+            makeBinaryWrapper
+            installShellFiles
+          ];
+
           # No build step is required for the NPM tarball
           buildPhase = ''
             runHook preBuild
@@ -65,6 +72,13 @@ delib.module {
             url = "https://registry.npmjs.org/@openai/codex/-/codex-${version}.tgz";
             hash = "sha256-8+g9Isp/ZaYUgmVtLoz+JZra7PCN2bdqLx5NdfTa+sU=";
           };
+
+          # Avoid pnpm hooks; only keep tools needed by installPhase
+          nativeBuildInputs = with prev; [
+            nodejs_22
+            makeBinaryWrapper
+            installShellFiles
+          ];
 
           # No build step is required for the NPM tarball
           buildPhase = ''
