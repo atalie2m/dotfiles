@@ -92,7 +92,11 @@ delib.module {
           ${commonShellInit}
 
           # Avoid right-prompt artifacts on resize and when typing
+          # - transient_rprompt hides RPROMPT while typing
+          # - prompt_cr/prompt_sp improve redraw on wraps and partial lines
           setopt transient_rprompt
+          setopt prompt_cr
+          setopt prompt_sp
 
           # Load local ~/.zshrc if it exists
           if [[ -f ~/.zshrc ]]; then

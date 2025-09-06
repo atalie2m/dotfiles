@@ -1,14 +1,15 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 add_newline = false
 
-# 左: ディレクトリとGit、最後にプロンプト記号（1行運用）
-format = """[](color_yellow)\
-$directory\
-[](fg:color_yellow bg:color_aqua)$git_branch$git_status\
-[](fg:color_aqua) $character"""
+# 左右同一行: 左( username / path / git branch ) — $fill — 右( nix shell / hostname / time )
+format = """[](color_bg3)$username[](color_bg3) \
+[](color_yellow)$directory[](color_yellow) \
+[](color_aqua)$git_branch[](color_aqua)$fill\
+[](color_bg3)$nix_shell[](color_bg3) \
+[](color_orange)$hostname[](color_orange)  $time\
+$line_break$character"""
 
-# 右: 時刻＋ユーザー名・ホスト名（RPROMPT）
-right_format = """$time  [](color_bg3)$username[](fg:color_bg3 bg:color_orange)$hostname[](color_orange)"""
+# 右用の right_format は未使用（$fill で1行レイアウト）
 
 palette = 'gruvbox_dark'
 
@@ -23,6 +24,10 @@ color_orange = '#d65d0e'
 color_purple = '#b16286'
 color_red = '#cc241d'
 color_yellow = '#d79921'
+
+# Fill module draws blanks between left and right islands
+[fill]
+symbol = " "
 
 [os]
 disabled = false
