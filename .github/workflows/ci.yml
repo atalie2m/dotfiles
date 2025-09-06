@@ -72,9 +72,6 @@ jobs:
           
           echo "Git filters setup completed"
 
-      - name: Magic Nix Cache (optional)
-        uses: DeterminateSystems/magic-nix-cache@v7
-
       - name: Install Nix (Determinate Systems)
         uses: DeterminateSystems/nix-installer-action@v19
         with:
