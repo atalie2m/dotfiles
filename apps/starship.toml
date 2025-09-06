@@ -1,13 +1,8 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 add_newline = false
 
-format = """[](color_yellow)\
-$directory\
-$git_branch$git_status\
-$time\
-[](fg:color_bg1)$line_break$character"""
-
-right_format = """$nix_shell$username[](fg:color_bg3 bg:color_orange)$hostname[](color_orange)"""
+# Use a single-line prompt with $fill to avoid RPROMPT redraw issues on resize.
+format = """[](color_yellow)$directory$git_branch$git_status$time[](fg:color_bg1) $fill $nix_shell$username[](fg:color_bg3 bg:color_orange)$hostname[](color_orange)$line_break$character"""
 
 palette = 'gruvbox_dark'
 
