@@ -17,7 +17,7 @@
       imports = [
         inputs.treefmt-nix.flakeModule
       ];
-      perSystem = { pkgs, system, ... }: let
+      perSystem = { pkgs, system, config, ... }: let
         node = pkgs.nodejs_22;
       in {
         devShells.default = pkgs.mkShell {
@@ -85,7 +85,7 @@
         };
 
         # expose treefmt as formatter
-        formatter = treefmt-nix.lib.mkWrapper pkgs self.treefmt;
+        formatter = treefmt-nix.lib.mkWrapper pkgs config.treefmt;
       };
     };
 }
