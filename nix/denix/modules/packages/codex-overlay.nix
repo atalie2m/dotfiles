@@ -40,7 +40,7 @@ delib.module {
 
             dest=$out/lib/node_modules/@openai/codex
             mkdir -p "$dest"
-            cp -r bin package.json README.md LICENSE "$dest"
+            cp -r bin package.json README.md "$dest"
 
             mkdir -p $out/bin
             makeBinaryWrapper ${prev.nodejs_22}/bin/node $out/bin/codex --add-flags "$dest/bin/codex.js"
@@ -92,7 +92,7 @@ delib.module {
 
             dest=$out/lib/node_modules/@openai/codex
             mkdir -p "$dest"
-            cp -r bin package.json README.md LICENSE "$dest"
+            cp -r bin package.json README.md "$dest"
 
             mkdir -p $out/bin
             makeBinaryWrapper ${prev.nodejs_22}/bin/node $out/bin/codex --add-flags "$dest/bin/codex.js"
