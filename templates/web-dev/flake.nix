@@ -24,7 +24,7 @@
           name = "web-dev";
           packages = [
             node
-            (pkgs.nodePackages.pnpm)
+            pkgs.nodePackages.pnpm
             pkgs.bun
             pkgs.wrangler
             pkgs.awscli2
