@@ -61,8 +61,6 @@
               package = self.formatter.${system};
             };
           };
-          # Expose formatter as a check so `nix flake check` builds it too
-          treefmt = self.formatter.${system};
         };
 
         apps = {
