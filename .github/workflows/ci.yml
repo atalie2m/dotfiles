@@ -72,32 +72,15 @@ jobs:
           
           echo "Git filters setup completed"
 
-      - name: Detect preinstalled Nix (self-hosted macOS safety)
-        id: detect_nix
-        shell: bash
-        run: |
-          if command -v nix >/dev/null 2>&1; then
-            echo "has_nix=true" >> "$GITHUB_OUTPUT"
-            echo "has_nix_path=true" >> "$GITHUB_OUTPUT"
-          elif [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
-            echo "has_nix=true" >> "$GITHUB_OUTPUT"
-            echo "has_nix_path=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_nix=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Load Nix profile (preinstalled)
-        if: steps.detect_nix.outputs.has_nix == 'true' && steps.detect_nix.outputs.has_nix_path == 'false'
-        shell: bash
-        run: |
-          set -euxo pipefail
-          source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-          nix --version
+      - name: Magic Nix Cache (optional)
+        uses: DeterminateSystems/magic-nix-cache@v7
 
       - name: Install Nix (Determinate Systems)
-        if: steps.detect_nix.outputs.has_nix != 'true'
-        uses: DeterminateSystems/nix-installer-action@v14
+        uses: DeterminateSystems/nix-installer-action@v19
         with:
+          planner: macos
+          nix-build-user-base: 351
+          nix-build-user-count: 6
           extra-conf: |
             experimental-features = nix-command flakes
             accept-flake-config = true
