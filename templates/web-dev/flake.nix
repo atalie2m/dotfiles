@@ -84,8 +84,7 @@
           };
         };
 
-        # expose treefmt as formatter
-        formatter = treefmt-nix.lib.mkWrapper pkgs config.treefmt;
+        # formatter is provided by treefmt-nix flakeModule; no override here
       };
     };
 }
