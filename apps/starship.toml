@@ -4,27 +4,25 @@ add_newline = false
 ## Catppuccin Mocha-inspired layout
 # 1行目: 左( username / path / git branch ) — $fill — 右( nix shell / hostname / time )
 # 2行目: 入力行（$character）のみ
-format = """[╭─](mauve)\
-[ ](bg:red fg:mauve)\
-$username\
-[](bg:peach fg:red)\
-[  ](bg:peach fg:crust)\
+format = """[](fg:#e6d5f7)\
 $directory\
-[ ](bg:peach)\
-[](bg:yellow fg:peach)\
+[](fg:#e6d5f7 bg:#d6eaff)\
 $git_branch\
-[](fg:yellow)\
+[](fg:#d6eaff bg:#ccf2f4)\
+$git_status\
+[](fg:#ccf2f4)\
 $fill\
-[](fg:sapphire)\
-$nix_shell\
-[](fg:red bg:sapphire)\
-$hostname\
-[](bg:red fg:lavender)\
+[](fg:#d7f7df)\
 $time\
-[─╮](fg:mauve)\
-$line_break\
-[╰─](mauve)\
-$character"""
+[](fg:#d7f7df bg:#e9f7cf)\
+$nix_shell\
+[](fg:#e9f7cf bg:#fff4b3)\
+$username\
+[](fg:#fff4b3 bg:#ffd9b3)\
+$hostname\
+[](fg:#ffd9b3 bg:#ffc9c9)\
+$os\
+[](fg:#ffc9c9)$line_break$character"""
 
 # 右用の right_format は未使用（$fill で1行レイアウト）
 
@@ -65,7 +63,8 @@ style = 'bold subtext1'
 
 [os]
 disabled = false
-style = "bg:#d65d0e fg:#fbf1c7"
+style = "bg:#ffc9c9 fg:#000000"
+format = '[ $symbol ]($style)'
 
 [os.symbols]
 Windows = "󰍲"
@@ -92,22 +91,22 @@ Pop = ""
 
 [username]
 show_always = true
-style_user = "bg:red fg:crust"
-style_root = "bg:red fg:crust bold"
+style_user = "bg:#fff4b3 fg:#000000"
+style_root = "bg:#fff4b3 fg:#000000 bold"
 format = '[$user]($style)'
 
 [hostname]
 ssh_only = false
-format = '[@$hostname ](bg:red fg:crust)'
+format = '[@$hostname ](bg:#ffd9b3 fg:#000000)'
 disabled = false
 
 [directory]
-style = "bg:peach fg:crust"
+style = "bg:#e6d5f7 fg:#000000"
 format = '[$path]($style)[$read_only]($read_only_style)'
 truncation_length = 3
 truncation_symbol = "~/"
 read_only = ' 🔒'
-read_only_style = 'bg:peach'
+read_only_style = 'bg:#e6d5f7'
 
 [directory.substitutions]
 "Documents" = "󰈙 "
@@ -118,12 +117,12 @@ read_only_style = 'bg:peach'
 
 [git_branch]
 symbol = ""
-style = "bg:yellow"
-format = '[[ $symbol $branch ](fg:crust bg:yellow)]($style)'
+style = "bg:#d6eaff fg:#000000"
+format = '[[ $symbol $branch ](fg:#000000 bg:#d6eaff)]($style)'
 
 [git_status]
-style = "bg:#689d6a"
-format = '[[ $all_status$ahead_behind ](fg:#fbf1c7 bg:#689d6a)]($style)'
+style = "bg:#ccf2f4 fg:#000000"
+format = '[[ $all_status$ahead_behind ](fg:#000000 bg:#ccf2f4)]($style)'
 
 [nodejs]
 symbol = ""
@@ -186,7 +185,7 @@ format = '[[ $symbol( $environment) ](fg:#83a598 bg:#665c54)]($style)'
 
 [nix_shell]
 symbol = "❄️ "
-style = "fg:crust bg:sapphire"
+style = "fg:#000000 bg:#e9f7cf"
 format = '[$symbol( $name) ]($style)'
 disabled = false
 heuristic = true
@@ -213,7 +212,7 @@ format = '[[ $symbol( $version)( $environment) ](fg:#fbf1c7 bg:#665c54)]($style)
 [time]
 disabled = false
 time_format = "%R"
-style = 'bg:lavender fg:crust'
+style = 'bg:#d7f7df fg:#000000'
 format = "[ $time ]($style)"
 
 [line_break]
