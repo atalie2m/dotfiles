@@ -1,19 +1,14 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 add_newline = false
 
-format = """[](fg:#d79921)\
+# 左: ディレクトリとGit、最後にプロンプト記号（1行運用）
+format = """[](color_yellow)\
 $directory\
-[](fg:#d79921 bg:#689d6a)\
-$git_branch$git_status\
-[](fg:#689d6a bg:#3c3836)\
-$time\
-[](fg:#3c3836)$fill[](fg:#665c54)\
-$username[](fg:#665c54 bg:#d65d0e)$hostname\
-[](fg:#d65d0e)$line_break$character"""
+[](fg:color_yellow bg:color_aqua)$git_branch$git_status\
+[](fg:color_aqua) $character"""
 
-# Use blanks for `$fill` so nothing is drawn between left and right.
-[fill]
-symbol = " "
+# 右: 時刻＋ユーザー名・ホスト名（RPROMPT）
+right_format = """$time  [](color_bg3)$username[](fg:color_bg3 bg:color_orange)$hostname[](color_orange)"""
 
 palette = 'gruvbox_dark'
 
