@@ -27,12 +27,11 @@ delib.rice {
       enable = true;
       managedFiles = [
         "$HOME/.config/karabiner/karabiner.json"
-        "$HOME/.vscode/extensions"
       ];
     };
 
-    # Allow VSCode (unfree) as an allowed package for nixpkgs.unfree
-    nixpkgs.unfree.packages = [ "claude-code" "vscode" ];
+    # Allow unfree as an allowed package for nixpkgs.unfree
+    nixpkgs.unfree.packages = [ "claude-code" ];
 
     # Unified shell configuration
     shells = {
