@@ -38,6 +38,11 @@
     };
   };
 
+  # Ensure experimental features are available when operating on this flake
+  nixConfig = {
+    extra-experimental-features = [ "nix-command" "flakes" ];
+  };
+
   outputs = { denix, ... } @ inputs: let
     env = import ./nix/env.nix;
     mkConfigurations = moduleSystem:
