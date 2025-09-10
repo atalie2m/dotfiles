@@ -19,6 +19,9 @@ delib.module {
           "nix-command"
           "flakes"
         ] ++ cfg.extraExperimentalFeatures;
+
+        # Trust flake-provided nixConfig (e.g., extra-experimental-features)
+        accept-flake-config = true;
         
         # Trusted users for Nix daemon
         trusted-users = [ "@admin" ];
@@ -43,6 +46,9 @@ delib.module {
         "nix-command"
         "flakes"
       ] ++ cfg.extraExperimentalFeatures;
+
+      # Trust flake-provided nixConfig in user sessions
+      accept-flake-config = true;
     };
   };
 }
