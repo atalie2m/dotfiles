@@ -64,6 +64,7 @@
           (base.withConfig { args.enable = true; })
         ];
         specialArgs = { inherit inputs; };
+        # Import external modules; sops-nix not imported globally (CLI-only by default)
         extraModules = if moduleSystem == "darwin" then [
           inputs.brew-nix.darwinModules.default
         ] else [];

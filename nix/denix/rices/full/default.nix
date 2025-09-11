@@ -21,8 +21,8 @@ delib.rice {
     # Additional programs beyond minimum
     gpg.enable = true;
     karabiner.enable = true;
-    # Only install sops/age CLIs; no sops-nix integration by default
-    sops.cliOnly = true;
+    # Install sops/age CLIs only; no sops-nix integration
+    sops.enable = true;
 
     # Smart backup service for managing configuration conflicts
     smartBackup = {
