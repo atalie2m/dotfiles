@@ -36,6 +36,12 @@
         brew-api.follows = "brew-api";
       };
     };
+
+    # Secrets management
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # Ensure experimental features are available when operating on this flake
