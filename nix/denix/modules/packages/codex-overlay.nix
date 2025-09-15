@@ -15,10 +15,10 @@ delib.module {
       (final: prev: {
         codex = prev.codex.overrideAttrs (old: rec {
           # Use the prebuilt NPM tarball published by @openai/codex
-          version = "0.34.0";
+          version = "0.36.0";
           src = prev.fetchzip {
             url = "https://registry.npmjs.org/@openai/codex/-/codex-${version}.tgz";
-            hash = "sha256-DsCxuzjaADQ5k1uFguSQHQQvSDC0FP8CneoClIW2rlk=";
+            hash = "sha256-z525yrJsuCYA2XCcwYioU/dRrzPi7cvjHE1PoK75+ts=";
           };
 
           # Avoid pnpm hooks; only keep tools needed by installPhase
@@ -67,10 +67,10 @@ delib.module {
       (final: prev: {
         codex = prev.codex.overrideAttrs (old: rec {
           # Use the prebuilt NPM tarball published by @openai/codex
-          version = "0.34.0";
+          version = "0.36.0";
           src = prev.fetchzip {
             url = "https://registry.npmjs.org/@openai/codex/-/codex-${version}.tgz";
-            hash = "sha256-DsCxuzjaADQ5k1uFguSQHQQvSDC0FP8CneoClIW2rlk=";
+            hash = "sha256-z525yrJsuCYA2XCcwYioU/dRrzPi7cvjHE1PoK75+ts=";
           };
 
           # Avoid pnpm hooks; only keep tools needed by installPhase
