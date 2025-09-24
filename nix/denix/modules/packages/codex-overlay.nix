@@ -18,7 +18,7 @@ delib.module {
           version = "0.40.0";
           src = prev.fetchzip {
             url = "https://registry.npmjs.org/@openai/codex/-/codex-${version}.tgz";
-            hash = "sha256-UUxF9dwNi1INpHaiEkJVQ0d+MdHBqsss9rJ1zuXOJb4=";
+            hash = "sha256-CQXgPru4Iqd0698RNilJ2IEwzI8By9QWH4IHt0T44uc=";
           };
 
           # Avoid pnpm hooks; only keep tools needed by installPhase
@@ -70,7 +70,7 @@ delib.module {
           version = "0.40.0";
           src = prev.fetchzip {
             url = "https://registry.npmjs.org/@openai/codex/-/codex-${version}.tgz";
-            hash = "sha256-UUxF9dwNi1INpHaiEkJVQ0d+MdHBqsss9rJ1zuXOJb4=";
+            hash = "sha256-CQXgPru4Iqd0698RNilJ2IEwzI8By9QWH4IHt0T44uc=";
           };
 
           # Avoid pnpm hooks; only keep tools needed by installPhase
