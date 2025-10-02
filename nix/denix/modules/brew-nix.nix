@@ -11,6 +11,7 @@ delib.module {
       "keyclu"
       "latest"
       "alacritty"
+      "ghostty"
       "wezterm"  # Note: WezTerm has unusual packaging structure in brew-nix.
                  # App is installed as WezTerm-macos-VERSION/WezTerm.app instead of direct WezTerm.app,
                  # making it invisible to Launchpad/Spotlight. CLI works fine via 'wezterm' command.
