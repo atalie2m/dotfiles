@@ -11,17 +11,17 @@ delib.module {
     packages = listOfOption str [ "claude-code" ];
   };
 
-  home.ifEnabled = { cfg, ... }:
-    if cfg.allowAll then {
-      nixpkgs.config.allowUnfree = true;
-    } else {
-      nixpkgs.config.allowUnfreePredicate = pkg: lib.elem (lib.getName pkg) cfg.packages;
-    };
+  home.ifEnabled = { cfg, ... }: {
+    nixpkgs.config.allowUnfreePredicate =
+      if cfg.allowAll
+      then (_: true)
+      else (pkg: lib.elem (lib.getName pkg) cfg.packages);
+  };
 
-  darwin.ifEnabled = { cfg, ... }:
-    if cfg.allowAll then {
-      nixpkgs.config.allowUnfree = true;
-    } else {
-      nixpkgs.config.allowUnfreePredicate = pkg: lib.elem (lib.getName pkg) cfg.packages;
-    };
+  darwin.ifEnabled = { cfg, ... }: {
+    nixpkgs.config.allowUnfreePredicate =
+      if cfg.allowAll
+      then (_: true)
+      else (pkg: lib.elem (lib.getName pkg) cfg.packages);
+  };
 }
