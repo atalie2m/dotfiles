@@ -6,6 +6,7 @@ delib.module {
 
   options.shells = with delib.options; {
     enable = boolOption false;
+    manageSystemShells = boolOption false;
 
     zsh = {
       enable = boolOption false;
@@ -202,7 +203,7 @@ delib.module {
 
   # Darwin-specific shell configuration
   darwin.ifEnabled = { cfg, ... }: {
-    programs.zsh.enable = cfg.zsh.enable;
-    programs.bash.enable = cfg.bash.enable;
+    programs.zsh.enable = lib.mkForce (cfg.manageSystemShells && cfg.zsh.enable);
+    programs.bash.enable = lib.mkForce (cfg.manageSystemShells && cfg.bash.enable);
   };
 }
