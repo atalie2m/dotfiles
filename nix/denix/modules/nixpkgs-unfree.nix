@@ -7,14 +7,21 @@ delib.module {
 
   options.nixpkgs.unfree = with delib.options; {
     enable = boolOption false;
+    allowAll = boolOption false;
     packages = listOfOption str [ "claude-code" ];
   };
 
-  home.ifEnabled = { cfg, ... }: {
-    nixpkgs.config.allowUnfreePredicate = pkg: lib.elem (lib.getName pkg) cfg.packages;
-  };
+  home.ifEnabled = { cfg, ... }:
+    if cfg.allowAll then {
+      nixpkgs.config.allowUnfree = true;
+    } else {
+      nixpkgs.config.allowUnfreePredicate = pkg: lib.elem (lib.getName pkg) cfg.packages;
+    };
 
-  darwin.ifEnabled = { cfg, ... }: {
-    nixpkgs.config.allowUnfreePredicate = pkg: lib.elem (lib.getName pkg) cfg.packages;
-  };
+  darwin.ifEnabled = { cfg, ... }:
+    if cfg.allowAll then {
+      nixpkgs.config.allowUnfree = true;
+    } else {
+      nixpkgs.config.allowUnfreePredicate = pkg: lib.elem (lib.getName pkg) cfg.packages;
+    };
 }

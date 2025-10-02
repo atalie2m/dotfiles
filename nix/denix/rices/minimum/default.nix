@@ -18,7 +18,10 @@ delib.rice {
     };
 
     # Essential system configuration
-    nixpkgs.unfree.enable = true;
+    nixpkgs.unfree = {
+      enable = true;
+      allowAll = true;
+    };
     terminal.enable = true;
     fonts.enable = true;
     smartBackup.enable = true;
