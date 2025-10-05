@@ -32,6 +32,7 @@ delib.rice {
     # Core tools
     git.enable = true;
     gpg.enable = true;
+    sops.enable = true;
 
     # Essential packages only
     packages = {
