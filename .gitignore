@@ -12,6 +12,7 @@ result-*
 *.swp
 *.swo
 *~
+.cache
 
 # Backup files
 *.bak
