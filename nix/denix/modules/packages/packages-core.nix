@@ -28,6 +28,9 @@ delib.module {
       unzip
       zip
 
+      # Programming languages
+      python3
+
       # Network tools
       nmap
 

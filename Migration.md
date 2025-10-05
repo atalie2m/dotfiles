@@ -68,7 +68,7 @@ nix/denix/
 
 6. **Host Configurations**
    - **a2m_mac**: Full development environment (aarch64-darwin)
-- **mn**: MN profile host (AI tools excluded by default)
+- **mn**: MN profile host (full tooling, including AI coding CLIs)
 
 7. **Rice System**
    - **minimum**: Essential tools and configuration
@@ -91,7 +91,7 @@ nix/denix/
 darwin-rebuild build --flake .#a2m_mac
 sudo darwin-rebuild switch --flake .#a2m_mac
 
-# MN host (default rice: mn; AI tools excluded)
+# MN host (default rice: mn; includes AI coding tools)
 darwin-rebuild build --flake .#mn_mac
 sudo darwin-rebuild switch --flake .#mn_mac
 
@@ -111,7 +111,7 @@ darwin-rebuild build --flake .#mn_mac-minimum
 - Smart backup services
 
 #### mn_mac Host (MN Rice)
-- Based on full but excludes AI coding tools (claude-code, codex)
+- Mirrors the full rice, including AI coding tools (claude-code, codex)
 - Essential tools and core productivity
 - Nix experimental features
 

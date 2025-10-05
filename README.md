@@ -23,7 +23,7 @@ This flake uses [Denix](https://github.com/yunfachi/denix) to build macOS config
 - Hosts: `a2m_mac` (default rice: `full`), `mn_mac` (default rice: `mn`).
 - Rices: `full`, `minimum`, `mn`.
   - `minimum`: minimal setup with Git and GPG only (no GUI/dev stacks).
-  - `mn`: based on `full` but excludes AI coding tools (claude-code, codex).
+  - `mn`: based on `full` with the same tooling set, including AI coding CLIs.
 
 Usage examples:
 
