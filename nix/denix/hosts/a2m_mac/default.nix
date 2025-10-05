@@ -9,6 +9,10 @@ delib.host {
   type = "desktop";
   homeManagerSystem = env.platform;
 
+  myconfig = {
+    packages.core.extraPackages = with pkgs; [ tmux ];
+  };
+
   home = { name, cfg, myconfig, ... }: {
     home = {
       inherit (env) username homeDirectory;
@@ -36,4 +40,3 @@ delib.host {
     };
   };
 }
-
