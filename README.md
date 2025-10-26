@@ -201,7 +201,16 @@ See the LICENSE file for complete attribution information.
 
 ## Initial Setup
 ```bash
+# Bootstrap darwin-rebuild on a fresh machine
 sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- switch --flake .#<PROFILE_NAME>
+```
+
+Replace `<PROFILE_NAME>` with one of the exported configurations (e.g. `a2m_mac`, `mn_mac`, `a2m_mac-minimum`, `mn_mac-minimum`). Profile names use underscores, not dashes.
+
+After this first run the `darwin-rebuild` wrapper is installed for root. If you also want it in your user profile, run:
+
+```bash
+nix profile install github:nix-darwin/nix-darwin#darwin-rebuild
 ```
 
 ## Subsequent Updates
@@ -212,3 +221,8 @@ sudo darwin-rebuild switch --flake .#<PROFILE_NAME>
 # home-manager configuration (replace <HOSTNAME> with your actual hostname)
 nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME>
 ```
+
+## Troubleshooting
+- **`darwin-rebuild: command not found`** → Run the bootstrap command above again; it pulls the wrapper from the `nix-darwin` flake. Keep the `--` separator between the flake reference and the subcommand.
+- **`error: unrecognised flag '--flake'`** → Ensure you invoke `nix run <flake>#<pkg> -- <cmd>`. Everything after `--` is passed through to `darwin-rebuild`.
+- **Using `sudo`** → macOS resets `PATH` under `sudo`; use the bootstrap command or `sudo -E darwin-rebuild …` after installing the wrapper in your user profile.
