@@ -48,6 +48,7 @@ delib.rice {
       productivity.enable = true;
       claude-code-overlay.enable = true;  # Enable claude-code overlay
       codex-overlay.enable = true;  # Enable codex overlay
+      gemini-cli-overlay.enable = true;  # Enable Gemini CLI overlay
     };
 
     # Native homebrew integration
