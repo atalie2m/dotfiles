@@ -54,6 +54,12 @@ delib.module {
 
     # Common shell initialization
     commonShellInit = ''
+      # Prefer GNU coreutils (unprefixed) when available
+      if [ -d "${pkgs.coreutils}/libexec/gnubin" ]; then
+        PATH="${pkgs.coreutils}/libexec/gnubin:$PATH"
+        export PATH
+      fi
+
       # Custom function for process search
       psgrep() {
         ps aux | grep -i "$1" | grep -v grep

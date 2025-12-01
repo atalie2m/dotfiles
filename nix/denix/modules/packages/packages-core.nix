@@ -12,6 +12,7 @@ delib.module {
   home.ifEnabled = { cfg, myconfig, ... }: {
     home.packages = with pkgs; [
       # Shell utilities
+      coreutils
       curl
       wget
       jq
