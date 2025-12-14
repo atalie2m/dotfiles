@@ -1,9 +1,10 @@
 { delib, ... }:
 
-# mn rice: based on full; retains full-featured tooling
+# mn rice: mirrors `full`, including the `minimum` base
 delib.rice {
   name = "mn";
-  inherits = [ "full" ];
+  # NOTE: Inherits are not assumed to be transitive; include `minimum` explicitly.
+  inherits = [ "minimum" "full" ];
 
   myconfig = {};
 }
