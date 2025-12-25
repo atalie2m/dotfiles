@@ -1,7 +1,7 @@
 { delib, ... }:
 
 let
-  version = "0.21.0-nightly.20251213.977248e09";
+  version = "0.22.2";
   overlay = final: prev: {
     gemini-cli = prev.stdenv.mkDerivation rec {
       pname = "gemini-cli";
@@ -9,7 +9,7 @@ let
 
       src = prev.fetchurl {
         url = "https://github.com/google-gemini/gemini-cli/releases/download/v${version}/gemini.js";
-        hash = "sha256-K4F/43K9q1aYdgfJiHO0CH6wCSqHcE8Q/jQCIPAsRuE=";
+        hash = "sha256-neUS8w+3Fz5rwL0DWj1y/GPUo++H5jawDM7jKNGdlZ0=";
       };
 
       dontUnpack = true;
