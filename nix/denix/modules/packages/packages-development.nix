@@ -25,7 +25,6 @@ delib.module {
       # Cloud tooling
       awscli2
       terraform
-      wrangler
     ] ++ (lib.optionals cfg.includeLanguageTools [
       nodejs
       python3

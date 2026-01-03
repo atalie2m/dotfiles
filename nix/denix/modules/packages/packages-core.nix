@@ -16,18 +16,22 @@ delib.module {
       curl
       wget
       jq
+      yq
+      httpie
 
       # File and text processing
       ripgrep
       fd
       bat
       eza
+      watchexec
 
       # System tools
       htop
       tree
       unzip
       zip
+      just
 
       # Programming languages
       python3
