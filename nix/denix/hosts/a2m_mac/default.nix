@@ -11,6 +11,7 @@ delib.host {
 
   myconfig = {
     packages.core.extraPackages = with pkgs; [ tmux ];
+    tmux.enable = true;
   };
 
   home = { name, cfg, myconfig, ... }: {
