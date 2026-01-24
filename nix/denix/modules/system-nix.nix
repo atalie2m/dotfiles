@@ -1,4 +1,4 @@
-{ delib, ... }:
+{ delib, lib, ... }:
 
 # System-level Nix configuration
 delib.module {
@@ -15,10 +15,10 @@ delib.module {
     nix = {
       settings = {
         # Enable experimental features
-        experimental-features = [
-          "nix-command"
-          "flakes"
-        ] ++ cfg.extraExperimentalFeatures;
+        experimental-features =
+          (lib.optionals cfg.enableNixCommand [ "nix-command" ])
+          ++ (lib.optionals cfg.enableFlakes [ "flakes" ])
+          ++ cfg.extraExperimentalFeatures;
 
         # Trust flake-provided nixConfig (e.g., extra-experimental-features)
         accept-flake-config = true;
@@ -42,10 +42,10 @@ delib.module {
   home.ifEnabled = { cfg, ... }: {
     # Home Manager Nix settings
     nix.settings = {
-      experimental-features = [
-        "nix-command"
-        "flakes"
-      ] ++ cfg.extraExperimentalFeatures;
+      experimental-features =
+        (lib.optionals cfg.enableNixCommand [ "nix-command" ])
+        ++ (lib.optionals cfg.enableFlakes [ "flakes" ])
+        ++ cfg.extraExperimentalFeatures;
 
       # Trust flake-provided nixConfig in user sessions
       accept-flake-config = true;

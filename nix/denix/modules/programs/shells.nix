@@ -176,20 +176,6 @@ delib.module {
           '';
         };
 
-        # Wrapper ~/.bashrc to load the Nix-managed configuration and optional local overrides
-        ".bashrc" = lib.mkIf cfg.bash.enable {
-          text = ''
-            # Source Nix-managed bash configuration
-            if [ -f "$HOME/.nix/.bashrc" ]; then
-              source "$HOME/.nix/.bashrc"
-            fi
-
-            # Source user overrides
-            if [ -f "$HOME/.bashrc.local" ]; then
-              source "$HOME/.bashrc.local"
-            fi
-          '';
-        };
       };
 
       # Session variables

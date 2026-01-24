@@ -33,16 +33,19 @@ delib.module {
       
       lfs.enable = cfg.enableLFS;
       
-      extraConfig = {
-        init.defaultBranch = cfg.defaultBranch;
-        pull.rebase = true;
-        push.autoSetupRemote = true;
-        core.editor = "code --wait";
-        
-        # Signing configuration (if enabled)
-        commit.gpgsign = lib.mkIf cfg.enableSigning true;
-        gpg.format = lib.mkIf cfg.enableSigning "openpgp";
-      } // cfg.extraConfig;
+      extraConfig = lib.mkMerge [
+        {
+          init.defaultBranch = cfg.defaultBranch;
+          pull.rebase = true;
+          push.autoSetupRemote = true;
+          core.editor = "code --wait";
+        }
+        (lib.mkIf cfg.enableSigning {
+          commit.gpgsign = true;
+          gpg.format = "openpgp";
+        })
+        cfg.extraConfig
+      ];
       
       inherit (cfg) aliases;
     };

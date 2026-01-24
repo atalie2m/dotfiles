@@ -99,21 +99,21 @@ jobs:
             echo "filters_success=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build darwin configuration (common)
+      - name: Build darwin configuration (a2m_mac)
         if: steps.check_filters.outputs.filters_success == 'true'
-        run: nix build .#darwinConfigurations.common.system
+        run: nix build .#darwinConfigurations.a2m_mac.system
 
-      - name: Build darwin configuration (commercial)
+      - name: Build darwin configuration (mn_mac)
         if: steps.check_filters.outputs.filters_success == 'true'  
-        run: nix build .#darwinConfigurations.commercial.system
+        run: nix build .#darwinConfigurations.mn_mac.system
 
-      - name: Build minimum configuration (common-minimum)
+      - name: Build minimum configuration (a2m_mac-minimum)
         if: steps.check_filters.outputs.filters_success == 'true'
-        run: nix build .#darwinConfigurations.common-minimum.system
+        run: nix build .#darwinConfigurations.a2m_mac-minimum.system
 
-      - name: Build full configuration (common-full)
+      - name: Build minimum configuration (mn_mac-minimum)
         if: steps.check_filters.outputs.filters_success == 'true'
-        run: nix build .#darwinConfigurations.common-full.system
+        run: nix build .#darwinConfigurations.mn_mac-minimum.system
         
       - name: Skip builds (git filters not working)
         if: steps.check_filters.outputs.filters_success == 'false'

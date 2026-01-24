@@ -8,22 +8,19 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: let
-    # Path to the root of your dotfiles repo
-    dotfilesRoot = ../../../.;
+    ruleDir = ../../../keyboards/karabiner/complex_modifications;
 
     #
     # 1. Complex-modification rule files
     #
-    ruleDir = "${dotfilesRoot}/keyboards/karabiner/complex_modifications";
-
     # List every JSON file you care about once; easier to reorder / comment out
     ruleFiles = {
-      japaneseToggle = "${ruleDir}/japanese-input-toggle.json";  
-      spaceShift     = "${ruleDir}/spacebar-to-shift.json";  
-      vyletAlt       = "${ruleDir}/vylet-alt-layout.json";  
-      shingetaEn     = "${ruleDir}/shingeta/shingeta_en.json";  
-      shingetaJp     = "${ruleDir}/shingeta/shingeta_jp.json";  
-      profileToggle  = "${ruleDir}/profile-toggle.json";
+      japaneseToggle = ruleDir + "/japanese-input-toggle.json";
+      spaceShift     = ruleDir + "/spacebar-to-shift.json";
+      vyletAlt       = ruleDir + "/vylet-alt-layout.json";
+      shingetaEn     = ruleDir + "/shingeta/shingeta_en.json";
+      shingetaJp     = ruleDir + "/shingeta/shingeta_jp.json";
+      profileToggle  = ruleDir + "/profile-toggle.json";
     };
 
     #
@@ -113,7 +110,7 @@ delib.module {
     home.file.".karabiner-debug.txt".text = ''
       Karabiner-Elements Nix module diagnostics
 
-      dotfilesRoot:  ${dotfilesRoot}
+      ruleDir:  ${ruleDir}
 
       Rule files considered:
       ${lib.concatMapStringsSep "\n" (name: "  • " + ruleFiles.${name}) (builtins.attrNames ruleFiles)}

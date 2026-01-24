@@ -99,8 +99,8 @@ git checkout HEAD -- flake.nix nix/nix-darwin.nix
 # Exclude documentation files to keep examples stable
 # README.md - keep examples as-is for documentation purposes
 
-# Always apply to git-filters directory itself
-.git-filters/* filter=system-info
+# Exclude git-filters directory to prevent recursive filtering
+.git-filters/* -filter
 ```
 
 Git setup (run once per repository):
