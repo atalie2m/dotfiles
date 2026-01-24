@@ -62,14 +62,24 @@ delib.module {
 
       # Custom function for process search
       psgrep() {
-        ps aux | grep -i "$1" | grep -v grep
+        if [[ -z "${1:-}" ]]; then
+          echo "Usage: psgrep <pattern>" >&2
+          return 1
+        fi
+        if command -v rg >/dev/null 2>&1; then
+          ps aux | rg -i -- "$1"
+        else
+          ps aux | grep -i -- "$1" | grep -v "[g]rep"
+        fi
       }
 
-      # Show nix develop environment info
-      if [[ -n "$IN_NIX_SHELL" ]]; then
+      # Show nix develop environment info (interactive shells only)
+      if [[ $- == *i* ]] && [[ -n "${IN_NIX_SHELL:-}" ]]; then
         echo "🚀 Nix develop environment active"
-        if [[ -n "$name" ]]; then
-          echo "Environment: $name"
+        if [[ -n "${DEVENV_PROFILE:-}" ]]; then
+          echo "Environment: ${DEVENV_PROFILE}"
+        elif [[ -n "${NIX_SHELL_NAME:-}" ]]; then
+          echo "Environment: ${NIX_SHELL_NAME}"
         fi
       fi
     '';

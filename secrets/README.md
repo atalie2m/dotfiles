@@ -1,12 +1,14 @@
-SOPS + age setup
+SOPS + age setup (CLI-only)
 
-This repository integrates sops-nix for both nix-darwin and Home Manager. Keys and secrets are not committed.
+This repository currently installs the `sops` and `age` CLI tools only. It does not enable the sops-nix modules or auto-generate keys during nix-darwin/Home Manager switches.
 
 Quick start
 
-- After switching the configuration, an age key is generated at `~/.config/sops/age/keys.txt` if missing.
+- Generate an age key if you do not already have one:
+  - `mkdir -p ~/.config/sops/age`
+  - `age-keygen -o ~/.config/sops/age/keys.txt`
 - Get your public key: `age-keygen -y ~/.config/sops/age/keys.txt`.
-- Create a `.sops.yaml` in this `secrets/` directory (don’t commit private key):
+- Create a `.sops.yaml` in this `secrets/` directory (do not commit private keys):
 
   ```yaml
   creation_rules:
@@ -24,5 +26,4 @@ Notes
 
 - Do not commit unencrypted secrets.
 - Rotate or add recipients by updating `.sops.yaml` and re-encrypting.
-- See Mic92/sops-nix docs for managing `sops.secrets` in Nix if you later want Nix to materialize files.
-
+- If you later wire in sops-nix, see its docs for managing `sops.secrets` in Nix.

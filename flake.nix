@@ -52,7 +52,13 @@
   outputs = { denix, ... } @ inputs: let
     env = import ./nix/env.nix;
     mkConfigurations = moduleSystem:
-      denix.lib.configurations {
+      let
+        _ = if env.username == "{{USER_NAME}}" then
+          throw "nix/env.nix still has placeholders. Run ./setup-env.sh"
+        else
+          null;
+      in
+      builtins.seq _ (denix.lib.configurations {
         inherit moduleSystem;
         homeManagerUser = env.username;
         # Point Denix to the base directory; it discovers hosts/modules/rices
@@ -68,7 +74,7 @@
         extraModules = if moduleSystem == "darwin" then [
           inputs.brew-nix.darwinModules.default
         ] else [];
-      };
+      });
   in {
     homeConfigurations = mkConfigurations "home";
     darwinConfigurations = mkConfigurations "darwin";

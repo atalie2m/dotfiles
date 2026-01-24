@@ -1,9 +1,5 @@
 { delib, pkgs, lib, ... }:
 
-let
-  env = import ../../env.nix;
-  keyFilePath = "${env.homeDirectory}/${env.configDirectory}/sops/age/keys.txt";
-in
 delib.module {
   name = "sops";
 
