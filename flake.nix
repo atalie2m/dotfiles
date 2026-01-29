@@ -53,7 +53,8 @@
     env = import ./nix/env.nix;
     mkConfigurations = moduleSystem:
       let
-        _ = if env.username == "{{USER_NAME}}" then
+        placeholderUser = "{{" + "USER_NAME" + "}}";
+        _ = if env.username == placeholderUser then
           throw "nix/env.nix still has placeholders. Run ./setup-env.sh"
         else
           null;
