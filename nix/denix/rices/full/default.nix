@@ -41,6 +41,8 @@ delib.rice {
       defaultShell = "zsh";
     };
 
+    vscode.enable = true;
+
     # Enhanced package sets
     packages = {
       core.enable = true;
