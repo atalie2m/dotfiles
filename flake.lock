@@ -149,6 +149,18 @@
         "type": "github"
       }
     },
+    "local": {
+      "flake": false,
+      "locked": {
+        "path": "./nix/local",
+        "type": "path"
+      },
+      "original": {
+        "path": "./nix/local",
+        "type": "path"
+      },
+      "parent": []
+    },
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
@@ -244,10 +256,24 @@
         "denix": "denix",
         "flake-parts": "flake-parts",
         "home-manager": "home-manager",
+        "local": "local",
         "nix-darwin": "nix-darwin",
         "nixpkgs": "nixpkgs_2",
+        "secrets": "secrets",
         "sops-nix": "sops-nix"
       }
+    },
+    "secrets": {
+      "flake": false,
+      "locked": {
+        "path": "./nix/secrets",
+        "type": "path"
+      },
+      "original": {
+        "path": "./nix/secrets",
+        "type": "path"
+      },
+      "parent": []
     },
     "sops-nix": {
       "inputs": {

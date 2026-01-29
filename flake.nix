@@ -42,6 +42,18 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Local facts (non-flake)
+    local = {
+      url = "path:./nix/local";
+      flake = false;
+    };
+
+    # Local secrets (non-flake)
+    secrets = {
+      url = "path:./nix/secrets";
+      flake = false;
+    };
   };
 
   # Ensure experimental features are available when operating on this flake
@@ -50,18 +62,20 @@
   };
 
   outputs = { denix, ... } @ inputs: let
-    env = import ./nix/env.nix;
+    localStub = builtins.pathExists (inputs.local + "/STUB");
     mkConfigurations = moduleSystem:
       let
-        placeholderUser = "{{" + "USER_NAME" + "}}";
-        _ = if env.username == placeholderUser then
-          throw "nix/env.nix still has placeholders. Run ./setup-env.sh"
+        facts = import (inputs.local + "/facts.nix");
+        user = facts.user or {};
+        username = user.username or "";
+        _ = if username == "" then
+          throw "facts.user.username is required (set in ~/.config/dotfiles-local/facts.nix or override inputs.local)"
         else
           null;
       in
       builtins.seq _ (denix.lib.configurations {
         inherit moduleSystem;
-        homeManagerUser = env.username;
+        homeManagerUser = username;
         # Point Denix to the base directory; it discovers hosts/modules/rices
         # under this root. Passing subdirectories can cause path resolution
         # issues in umport.
@@ -71,15 +85,13 @@
           (base.withConfig { args.enable = true; })
         ];
         specialArgs = { inherit inputs; };
-        # Import external modules; sops-nix not imported globally (CLI-only by default)
-        extraModules = if moduleSystem == "darwin" then [
-          inputs.brew-nix.darwinModules.default
-        ] else [];
+        # Import external modules
+        extraModules =
+          (if moduleSystem == "darwin" then [
+            inputs.brew-nix.darwinModules.default
+          ] else []);
       });
   in {
-    homeConfigurations = mkConfigurations "home";
-    darwinConfigurations = mkConfigurations "darwin";
-
     # Public flake templates for easy reuse
     templates = {
       web-dev = {
@@ -87,5 +99,8 @@
         description = "Web development template: devShell with Node 22, pnpm, bun, wrangler, awscli2, jq/yq, mkcert, just; Prettier formatting via treefmt-nix; apps.dev/apps.format and checks";
       };
     };
-  };
+  } // (if localStub then {} else {
+    homeConfigurations = mkConfigurations "home";
+    darwinConfigurations = mkConfigurations "darwin";
+  });
 }

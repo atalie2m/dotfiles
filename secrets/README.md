@@ -1,6 +1,20 @@
-SOPS + age setup (CLI-only)
+Local secrets (sops + age)
 
-This repository currently installs the `sops` and `age` CLI tools only. It does not enable the sops-nix modules or auto-generate keys during nix-darwin/Home Manager switches.
+This repository no longer stores secrets inside the repo. Instead, provide a local secrets input at:
+
+- `~/.config/dotfiles-secrets/`
+
+The in-repo `nix/secrets/` directory is a stub for public evaluation only. Do not place secrets in this repo.
+
+Minimum layout
+
+```
+~/.config/dotfiles-secrets/
+├── secrets.nix
+├── .sops.yaml
+└── files/
+    └── ai.env.sops.yaml
+```
 
 Quick start
 
@@ -8,22 +22,36 @@ Quick start
   - `mkdir -p ~/.config/sops/age`
   - `age-keygen -o ~/.config/sops/age/keys.txt`
 - Get your public key: `age-keygen -y ~/.config/sops/age/keys.txt`.
-- Create a `.sops.yaml` in this `secrets/` directory (do not commit private keys):
+- Create `~/.config/dotfiles-secrets/.sops.yaml` (do not commit private keys):
 
   ```yaml
   creation_rules:
-    - path_regex: secrets/.*\.(yaml|json|env)$
+    - path_regex: files/.*\.(yaml|json|env)$
       age: ["AGE_PUBLIC_KEY_HERE"]
   ```
 
 - Encrypt a file (example):
 
   ```bash
-  sops --encrypt --in-place secrets/example.yaml
+  sops --encrypt --in-place ~/.config/dotfiles-secrets/files/ai.env.sops.yaml
   ```
+
+Example `secrets.nix`
+
+```nix
+{
+  files = {
+    aiEnv = {
+      sopsFile = ./files/ai.env.sops.yaml;
+      targetPath = ".config/dotfiles/secrets/ai.env";
+      mode = "0600";
+    };
+  };
+}
+```
 
 Notes
 
-- Do not commit unencrypted secrets.
-- Rotate or add recipients by updating `.sops.yaml` and re-encrypting.
-- If you later wire in sops-nix, see its docs for managing `sops.secrets` in Nix.
+- `sops-nix` materializes secrets as files at activation time with strict permissions.
+- Encrypted files may live on disk; plaintext should not be committed or written to the Nix store.
+- Source materialized files in your shell config only if they exist.

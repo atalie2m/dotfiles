@@ -29,12 +29,23 @@ Usage examples:
 
 ```bash
 # Default rice for each host
-darwin-rebuild build --flake .#a2m_mac
-darwin-rebuild build --flake .#mn_mac
+FACTS="path:$HOME/.config/dotfiles-local"
+SECRETS="path:$HOME/.config/dotfiles-secrets"
+
+darwin-rebuild build --flake .#a2m_mac \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
+darwin-rebuild build --flake .#mn_mac \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
 
 # Switch rices per host
-darwin-rebuild build --flake .#a2m_mac-minimum
-darwin-rebuild build --flake .#mn_mac-minimum
+darwin-rebuild build --flake .#a2m_mac-minimum \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
+darwin-rebuild build --flake .#mn_mac-minimum \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
 ```
 
 ## Terminal Compatibility
@@ -50,65 +61,74 @@ darwin-rebuild build --flake .#mn_mac-minimum
 
 **Why this matters**: macOS Terminal.app only supports 256-color palette, which causes the Starship prompt colors to be approximated and appear different from the intended design. True Color terminals can display the full 16.7 million color spectrum, ensuring consistent visual appearance.
 
-## Git Smudge/Clean Filters
+## Local Facts + Secrets (Override Inputs)
 
-Automatically handles system information abstraction in configurations using Git filters.
+This repo no longer uses Git clean/smudge filters. Machine-specific facts and secrets live outside Git and are injected at build time using flake overrides.
 
-### Mechanism
+### Facts (non-secret)
 
-- **clean.sh**: Executed on `git add` - converts actual system information to specific placeholders
-- **smudge.sh**: Executed on `git checkout` - replaces placeholders with corresponding system values
+- Create `~/.config/dotfiles-local/facts.nix`
+- Required: `user.username`, `user.homeDirectory`
 
-### System Information Detection
+Example `facts.nix`:
+```nix
+{
+  user = {
+    username = "yourname";
+    fullName = "Your Name";
+    email = "you@example.com";
+    homeDirectory = "/Users/yourname";
+    platform = "aarch64-darwin";
+    stateVersion = {
+      home = "25.05";
+      darwin = 6;
+    };
+  };
 
-**clean.sh** handles multiple system information formats:
-- `ComputerName`: `John's Mac` → `{{COMPUTER_NAME}}` → `John's Mac`
-- `ComputerName (serialized)`: `John's Mac` → `{{SERIALIZED_COMPUTER_NAME}}` → `Johns-Mac`
-- `LocalHostName`: `Johns-Mac` → `{{LOCAL_HOSTNAME}}` → `Johns-Mac`
-- `UserName`: `john` → `{{USER_NAME}}` → `john`
+  machines = {
+    a2m_mac = {
+      computerName = "Your Mac";
+      localHostName = "your-mac";
+      hostName = "your-mac.local";
+    };
+  };
+}
+```
 
-**smudge.sh** replaces each placeholder with its corresponding value.
+### Secrets (confidential)
 
-### Workflow
+- Create `~/.config/dotfiles-secrets/`
+- Define `secrets.nix` and encrypted files (sops+age recommended)
+
+Example `secrets.nix`:
+```nix
+{
+  files = {
+    aiEnv = {
+      sopsFile = ./files/ai.env.sops.yaml;
+      targetPath = ".config/dotfiles/secrets/ai.env";
+      mode = "0600";
+    };
+  };
+}
+```
+
+Optional shell sourcing (in `~/.zshrc`):
+```bash
+if [ -f "$HOME/.config/dotfiles/secrets/ai.env" ]; then
+  source "$HOME/.config/dotfiles/secrets/ai.env"
+fi
+```
+
+### Build with overrides
 
 ```bash
-# Working directory: darwinConfigurations."Johns-Mac"
-# Working directory: primaryUser = "john";
-git add flake.nix nix/nix-darwin.nix
-# Repository: darwinConfigurations."{{LOCAL_HOSTNAME}}"
-# Repository: primaryUser = "{{USER_NAME}}";
-
-git checkout HEAD -- flake.nix nix/nix-darwin.nix
-# Working directory: darwinConfigurations."Johns-Mac"
-# Working directory: primaryUser = "john";
+darwin-rebuild build --flake .#a2m_mac \
+  --override-input local path:$HOME/.config/dotfiles-local \
+  --override-input secrets path:$HOME/.config/dotfiles-secrets
 ```
 
-### Configuration
-
-`.gitattributes`:
-```
-# Apply system-info filter to all text files that might contain system information
-*.nix filter=system-info
-*.txt filter=system-info
-*.yaml filter=system-info
-*.yml filter=system-info
-*.json filter=system-info
-*.toml filter=system-info
-*.sh filter=system-info
-
-# Exclude documentation files to keep examples stable
-# README.md - keep examples as-is for documentation purposes
-
-# Exclude git-filters directory to prevent recursive filtering
-.git-filters/* -filter
-```
-
-Git setup (run once per repository):
-```bash
-./setup-env.sh
-```
-
-**Note**: Git filter configuration is stored locally and needs to be set up on each machine/clone.
+**Note**: `nix/local/` and `nix/secrets/` in the repo are stubs for public evaluation (templates only). Real configurations require `--override-input` and should not include a `STUB` file.
 
 ## Karabiner-Elements Setup
 
@@ -154,7 +174,7 @@ The configuration is managed in `nix/denix/modules/karabiner.nix` and will autom
 3. Keep the links updated when you rebuild your configuration
 
 **Configuration Details:**
-- The dotfiles path is defined in `nix/env.nix` as `defaults.dotfilesPath`
+- Configuration files are sourced from the `keyboards/` directory in this repo
 - All configuration files are automatically discovered and linked
 - The setup is declarative and version-controlled
 - Changes take effect after running `darwin-rebuild switch --flake .`
@@ -171,7 +191,7 @@ For manual setup or if not using Nix:
 2. Create symbolic links to the JSON files in your dotfiles:
    ```bash
    # Replace /path/to/your/dotfiles with your actual dotfiles path
-   DOTFILES_PATH="/Users/u1/Local/atalie2m/GitHub/dotfiles"  # or your actual path
+   DOTFILES_PATH="/path/to/your/dotfiles"
 
    # Link all JSON files
    ln -sf "$DOTFILES_PATH/keyboards/karabiner/complex_modifications/japanese-input-toggle.json" ~/.config/karabiner/assets/complex_modifications/
@@ -202,7 +222,10 @@ See the LICENSE file for complete attribution information.
 ## Initial Setup
 ```bash
 # Bootstrap darwin-rebuild on a fresh machine
-sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- switch --flake .#<PROFILE_NAME>
+sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- switch \
+  --flake .#<PROFILE_NAME> \
+  --override-input local path:$HOME/.config/dotfiles-local \
+  --override-input secrets path:$HOME/.config/dotfiles-secrets
 ```
 
 Replace `<PROFILE_NAME>` with one of the exported configurations (e.g. `a2m_mac`, `mn_mac`, `a2m_mac-minimum`, `mn_mac-minimum`). Profile names use underscores, not dashes.
@@ -216,13 +239,18 @@ nix profile install github:nix-darwin/nix-darwin#darwin-rebuild
 ## Subsequent Updates
 ```bash
 # nix-darwin configuration
-sudo darwin-rebuild switch --flake .#<PROFILE_NAME>
+sudo darwin-rebuild switch --flake .#<PROFILE_NAME> \
+  --override-input local path:$HOME/.config/dotfiles-local \
+  --override-input secrets path:$HOME/.config/dotfiles-secrets
 
 # home-manager configuration (replace <HOSTNAME> with your actual hostname)
-nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME>
+nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME> \
+  --override-input local path:$HOME/.config/dotfiles-local \
+  --override-input secrets path:$HOME/.config/dotfiles-secrets
 ```
 
 ## Troubleshooting
+- **`attribute 'darwinConfigurations' missing`** → You are in public mode (stub inputs). Pass `--override-input local path:$HOME/.config/dotfiles-local` and `--override-input secrets path:$HOME/.config/dotfiles-secrets`.
 - **`darwin-rebuild: command not found`** → Run the bootstrap command above again; it pulls the wrapper from the `nix-darwin` flake. Keep the `--` separator between the flake reference and the subcommand.
 - **`error: unrecognised flag '--flake'`** → Ensure you invoke `nix run <flake>#<pkg> -- <cmd>`. Everything after `--` is passed through to `darwin-rebuild`.
 - **Using `sudo`** → macOS resets `PATH` under `sudo`; use the bootstrap command or `sudo -E darwin-rebuild …` after installing the wrapper in your user profile.

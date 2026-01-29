@@ -7,23 +7,24 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 - `nix/denix/hosts/{a2m_mac,mn_mac}/` — host profiles and system-level options.
 - `nix/denix/modules/` — reusable modules (programs, packages, shells, services, etc.).
 - `nix/denix/rices/` — higher‑level bundles (e.g., `full`, `minimum`).
-- `nix/env.nix` — machine/user facts populated via Git filters; do not hardcode values elsewhere.
+- `nix/local/` — stub local facts input (`facts.nix`, `STUB`) for public evaluation.
+- `nix/secrets/` — stub local secrets input (`secrets.nix`, `STUB`) for public evaluation.
 - `apps/` — user app configs (e.g., `apps/starship.toml`, `apps/vscode/...`).
 - `keyboards/` — Karabiner complex modifications JSON.
-- `.git-filters/` — clean/smudge filters for system info; run via `./setup-env.sh`.
+- Local facts live at `~/.config/dotfiles-local/facts.nix` (not in Git).
+- Local secrets live at `~/.config/dotfiles-secrets/` (not in Git).
 
 ## Build, Test, and Development Commands
-- `./setup-env.sh` — configures Git filters and repopulates `nix/env.nix` (requires clean tree).
-- `nix flake check` — validates flake, runs basic checks.
-- `darwin-rebuild build --flake .#a2m_mac` — builds the `a2m_mac` host (default rice: full); swap to `#mn_mac` as needed.
-- `sudo darwin-rebuild switch --flake .#a2m_mac` — applies the built configuration.
+- `nix flake check --override-input local path:$HOME/.config/dotfiles-local --override-input secrets path:$HOME/.config/dotfiles-secrets` — validates flake, runs basic checks.
+- `darwin-rebuild build --flake .#a2m_mac --override-input local path:$HOME/.config/dotfiles-local --override-input secrets path:$HOME/.config/dotfiles-secrets` — builds the `a2m_mac` host (default rice: full); swap to `#mn_mac` as needed.
+- `sudo darwin-rebuild switch --flake .#a2m_mac --override-input local path:$HOME/.config/dotfiles-local --override-input secrets path:$HOME/.config/dotfiles-secrets` — applies the built configuration.
 - Template: `nix flake init -t github:atalie2m/dotfiles#web-dev` (see `templates/web-dev`).
 
 ## Coding Style & Naming Conventions
 - Nix: 2‑space indent, trailing newline, stable attr ordering when reasonable. Prefer small modules under `nix/denix/modules/` with clear options.
-- Filenames/dirs: kebab‑case; Nix attributes: lowerCamelCase; constants via `nix/env.nix`.
+- Filenames/dirs: kebab‑case; Nix attributes: lowerCamelCase; constants via `config.facts`.
 - Shell: `#!/usr/bin/env bash` with `set -euo pipefail` (see existing scripts).
-- Do not commit host‑specific literals; use placeholders and filters.
+- Do not commit host‑specific literals; keep them in local facts or secrets inputs.
 
 ## Testing Guidelines
 - Primary: `nix flake check` and `darwin-rebuild build --flake .#(host)` for all touched hosts.
@@ -36,5 +37,4 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 - Link related issues; add small screenshots only when UI config changes (e.g., Starship/terminal visuals).
 
 ## Security & Configuration Tips
-- Run `./setup-env.sh` after cloning; it requires a clean working tree.
-- Never commit secrets or machine identifiers; filters convert them to placeholders.
+- Never commit secrets or machine identifiers; keep them in local facts/secrets inputs.

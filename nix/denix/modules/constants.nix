@@ -1,7 +1,7 @@
-{ delib, ... }:
+{ delib, config, ... }:
 
 let
-  env = import ../../env.nix;
+  user = config.facts.user or {};
 in
 # Global constants and user information shared across all modules
 delib.module {
@@ -9,19 +9,19 @@ delib.module {
 
   options.constants = with delib.options; {
     # User identification
-    username = readOnly (strOption env.username);
-    fullName = readOnly (strOption env.fullName);
-    email = readOnly (strOption env.email);
+    username = readOnly (strOption (user.username or ""));
+    fullName = readOnly (strOption (user.fullName or ""));
+    email = readOnly (strOption (user.email or ""));
     
     # System paths
-    homeDirectory = readOnly (strOption env.homeDirectory);
-    configDirectory = readOnly (strOption env.configDirectory);
+    homeDirectory = readOnly (strOption (user.homeDirectory or ""));
+    configDirectory = readOnly (strOption (user.configDirectory or ".config"));
     
     # Repository information
-    dotfilesPath = readOnly (strOption env.dotfilesPath);
+    dotfilesPath = readOnly (strOption (user.dotfilesPath or ""));
     
     # System information
-    systemType = readOnly (strOption env.systemType);
-    architecture = readOnly (strOption env.architecture);
+    systemType = readOnly (strOption (user.systemType or ""));
+    architecture = readOnly (strOption (user.architecture or ""));
   };
 }

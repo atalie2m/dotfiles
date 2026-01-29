@@ -88,16 +88,31 @@ nix/denix/
 ### Building Configurations
 ```bash
 # Full development environment (a2m_mac default rice: full)
-darwin-rebuild build --flake .#a2m_mac
-sudo darwin-rebuild switch --flake .#a2m_mac
+FACTS="path:$HOME/.config/dotfiles-local"
+SECRETS="path:$HOME/.config/dotfiles-secrets"
+
+darwin-rebuild build --flake .#a2m_mac \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
+sudo darwin-rebuild switch --flake .#a2m_mac \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
 
 # MN host (default rice: mn; includes AI coding tools)
-darwin-rebuild build --flake .#mn_mac
-sudo darwin-rebuild switch --flake .#mn_mac
+darwin-rebuild build --flake .#mn_mac \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
+sudo darwin-rebuild switch --flake .#mn_mac \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
 
 # Switch rices per host
-darwin-rebuild build --flake .#a2m_mac-minimum
-darwin-rebuild build --flake .#mn_mac-minimum
+darwin-rebuild build --flake .#a2m_mac-minimum \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
+darwin-rebuild build --flake .#mn_mac-minimum \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
 ```
 
 ### Available Features
@@ -156,11 +171,20 @@ darwin-rebuild build --flake .#mn_mac-minimum
 ### Current Test Commands
 ```bash
 # Validate flake structure
-nix flake check
+FACTS="path:$HOME/.config/dotfiles-local"
+SECRETS="path:$HOME/.config/dotfiles-secrets"
+
+nix flake check \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
 
 # Build configurations
-darwin-rebuild build --flake .#a2m_mac
-darwin-rebuild build --flake .#mn_mac
+darwin-rebuild build --flake .#a2m_mac \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
+darwin-rebuild build --flake .#mn_mac \
+  --override-input local "$FACTS" \
+  --override-input secrets "$SECRETS"
 
 # Show available outputs
 nix flake show
