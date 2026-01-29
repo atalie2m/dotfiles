@@ -25,28 +25,25 @@ This flake uses [Denix](https://github.com/yunfachi/denix) to build macOS config
   - `minimum`: minimal setup with Git and GPG only (no GUI/dev stacks).
   - `mn`: based on `full` with the same tooling set, including AI coding CLIs.
 
-Usage examples:
+CLI usage examples (recommended):
 
 ```bash
-# Default rice for each host
-FACTS="path:$HOME/.config/dotfiles-local"
-SECRETS="path:$HOME/.config/dotfiles-secrets"
+# Apply default rice for each host
+nix run .#apply -- --host a2m_mac
+nix run .#apply -- --host mn_mac
 
-darwin-rebuild build --flake .#a2m_mac \
-  --override-input local "$FACTS" \
-  --override-input secrets "$SECRETS"
-darwin-rebuild build --flake .#mn_mac \
-  --override-input local "$FACTS" \
-  --override-input secrets "$SECRETS"
+# Build only (no switch)
+nix run .#apply -- --host a2m_mac --action build
 
 # Switch rices per host
-darwin-rebuild build --flake .#a2m_mac-minimum \
-  --override-input local "$FACTS" \
-  --override-input secrets "$SECRETS"
-darwin-rebuild build --flake .#mn_mac-minimum \
-  --override-input local "$FACTS" \
-  --override-input secrets "$SECRETS"
+nix run .#apply -- --host a2m_mac --rice minimum
+nix run .#apply -- --host mn_mac --rice minimum
 ```
+
+Manual attribute examples (still valid):
+`a2m_mac`, `mn_mac`, `a2m_mac-minimum`, `mn_mac-minimum`.
+
+When `--rice` is provided, the CLI tries `host-rice` first and falls back to `host` if the rice matches the host default.
 
 ## Terminal Compatibility
 
@@ -121,6 +118,8 @@ fi
 ```
 
 ### Build with overrides
+
+All `nix run .#apply|.#update|.#doctor|.#bootstrap` commands pass overrides automatically. Manual invocations still need them:
 
 ```bash
 darwin-rebuild build --flake .#a2m_mac \
@@ -245,31 +244,72 @@ See the LICENSE file for complete attribution information.
 
 # Usage
 
-## Initial Setup
+## CLI (recommended)
+
+All CLI commands automatically append:
+`--override-input local "$FACTS"` and `--override-input secrets "$SECRETS"`.
+
+Defaults:
+- `FACTS_DIR=$HOME/.config/dotfiles-local`
+- `SECRETS_DIR=$HOME/.config/dotfiles-secrets`
+- `FACTS=path:$FACTS_DIR`
+- `SECRETS=path:$SECRETS_DIR`
+
+### Bootstrap (first run)
 ```bash
-# Bootstrap darwin-rebuild on a fresh machine
-sudo nix run github:nix-darwin/nix-darwin#darwin-rebuild -- switch \
-  --flake .#<PROFILE_NAME> \
-  --override-input local path:$HOME/.config/dotfiles-local \
-  --override-input secrets path:$HOME/.config/dotfiles-secrets
+# Generate facts/secrets, run doctor, then optionally apply
+nix run .#bootstrap -- --host a2m_mac --rice full --apply
+
+# Non-interactive (auto-apply)
+nix run .#bootstrap -- --host a2m_mac --rice full --yes
 ```
 
-Replace `<PROFILE_NAME>` with one of the exported configurations (e.g. `a2m_mac`, `mn_mac`, `a2m_mac-minimum`, `mn_mac-minimum`). Profile names use underscores, not dashes.
-
-After this first run the `darwin-rebuild` wrapper is installed for root. If you also want it in your user profile, run:
-
+### Doctor (health checks)
 ```bash
-nix profile install github:nix-darwin/nix-darwin#darwin-rebuild
+# Basic checks
+nix run .#doctor -- --host a2m_mac
+
+# Strict checks (includes nix flake check)
+nix run .#doctor -- --host a2m_mac --strict
+
+# JSON output for CI
+nix run .#doctor -- --json
 ```
 
-## Subsequent Updates
+### Apply (build/switch)
+```bash
+# Apply default rice
+nix run .#apply -- --host a2m_mac
+
+# Switch rices
+nix run .#apply -- --host a2m_mac --rice minimum
+
+# Build only (no switch)
+nix run .#apply -- --host a2m_mac --action build
+
+# Avoid sudo (CI/non-privileged)
+nix run .#apply -- --host a2m_mac --no-sudo --action build
+
+# Pass extra args to darwin-rebuild
+nix run .#apply -- --host a2m_mac -- --show-trace
+```
+
+### Update (flake inputs + checks/build)
 ```bash
 # Factory-style updates (flake inputs + nvfetcher + checks/build)
-nix run .#update -- a2m_mac
+nix run .#update -- --host a2m_mac
 
-# Apply the latest build
-nix run .#apply -- a2m_mac
+# Update all inputs
+UPDATE_ALL=1 nix run .#update -- --host a2m_mac
 
+# Force checks + formatter
+UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host a2m_mac
+```
+
+External binaries tracked outside nixpkgs live in `nix/nvfetcher/sources.toml`.
+
+## Manual commands (darwin-rebuild / home-manager)
+```bash
 # nix-darwin configuration
 sudo darwin-rebuild switch --flake .#<PROFILE_NAME> \
   --override-input local path:$HOME/.config/dotfiles-local \
@@ -281,11 +321,9 @@ nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME> \
   --override-input secrets path:$HOME/.config/dotfiles-secrets
 ```
 
-`nix run .#update` and `nix run .#apply` accept an optional host name (default: `a2m_mac`).
-External binaries tracked outside nixpkgs live in `nix/nvfetcher/sources.toml`.
-
 ## Troubleshooting
-- **`attribute 'darwinConfigurations' missing`** → You are in public mode (stub inputs). Pass `--override-input local path:$HOME/.config/dotfiles-local` and `--override-input secrets path:$HOME/.config/dotfiles-secrets`.
-- **`darwin-rebuild: command not found`** → Run the bootstrap command above again; it pulls the wrapper from the `nix-darwin` flake. Keep the `--` separator between the flake reference and the subcommand.
+- **`attribute 'darwinConfigurations' missing`** → Your local inputs are stubbed (or missing). Ensure `~/.config/dotfiles-local/facts.nix` exists and remove any `STUB` file, then rerun `nix run .#doctor`.
+- **`target not found for host/rice`** → Run `nix run .#doctor -- --host <host> --rice <rice>` to see available targets.
+- **`darwin-rebuild: command not found`** → `nix run .#apply` uses the nix-darwin wrapper automatically; for manual runs install it with `nix profile install github:nix-darwin/nix-darwin#darwin-rebuild`.
 - **`error: unrecognised flag '--flake'`** → Ensure you invoke `nix run <flake>#<pkg> -- <cmd>`. Everything after `--` is passed through to `darwin-rebuild`.
-- **Using `sudo`** → macOS resets `PATH` under `sudo`; use the bootstrap command or `sudo -E darwin-rebuild …` after installing the wrapper in your user profile.
+- **Using `sudo`** → macOS resets `PATH` under `sudo`; use the CLI (which calls `sudo -E`) or run `sudo -E darwin-rebuild …`.

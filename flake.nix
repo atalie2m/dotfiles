@@ -109,6 +109,14 @@
         type = "app";
         program = "${./nix/scripts/apply.sh}";
       };
+      doctor = {
+        type = "app";
+        program = "${./nix/scripts/doctor.sh}";
+      };
+      bootstrap = {
+        type = "app";
+        program = "${./nix/scripts/bootstrap.sh}";
+      };
     });
 
     # Public flake templates for easy reuse

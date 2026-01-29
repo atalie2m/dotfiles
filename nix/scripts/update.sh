@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=lib.sh
+source "$SCRIPT_DIR/lib.sh"
+
+DOTFILES_SCRIPT_LABEL="update"
+
 usage() {
   cat <<'USAGE'
-Usage: nix run .#update -- [host]
+Usage: nix run .#update -- [--host <host>] [--rice <rice>]
+       nix run .#update -- [host]
 
 Environment:
   HOST=...                Host to build (default: a2m_mac)
+  RICE=...                Rice to build (default: none)
   FACTS=...               Full local facts input (default: path:$HOME/.config/dotfiles-local)
   SECRETS=...             Full local secrets input (default: path:$HOME/.config/dotfiles-secrets)
   FACTS_DIR=...           Override local facts dir (default: $HOME/.config/dotfiles-local)
@@ -15,27 +23,53 @@ Environment:
   UPDATE_SKIP_CHECK=1     Skip nix flake check
   UPDATE_SKIP_BUILD=1     Skip darwin-rebuild build
   UPDATE_COMMIT=1         Commit flake.lock + nvfetcher sources after success
+  UPDATE_CHECKS=1         Force nix flake check even if UPDATE_SKIP_CHECK=1
+  UPDATE_FORMAT=1         Run formatter if available (best-effort)
 USAGE
 }
 
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
+host=""
+rice=""
 
-ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
-if [[ -z "$ROOT" ]]; then
-  echo "update: not in a git repository" >&2
-  exit 1
-fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --host)
+      [[ $# -lt 2 ]] && die "missing value for --host"
+      host="$2"
+      shift 2
+      ;;
+    --rice)
+      [[ $# -lt 2 ]] && die "missing value for --rice"
+      rice="$2"
+      shift 2
+      ;;
+    --)
+      die "unexpected -- (no passthrough supported)"
+      ;;
+    --*)
+      die "unknown option: $1"
+      ;;
+    *)
+      if [[ -z "$host" ]]; then
+        host="$1"
+        shift
+      else
+        die "unexpected argument: $1"
+      fi
+      ;;
+  esac
+done
 
+host="${host:-${HOST:-a2m_mac}}"
+rice="${rice:-${RICE:-}}"
+
+set_repo_root
 cd "$ROOT"
-
-HOST="${1:-${HOST:-a2m_mac}}"
-FACTS_DIR="${FACTS_DIR:-$HOME/.config/dotfiles-local}"
-SECRETS_DIR="${SECRETS_DIR:-$HOME/.config/dotfiles-secrets}"
-FACTS="${FACTS:-path:${FACTS_DIR}}"
-SECRETS="${SECRETS:-path:${SECRETS_DIR}}"
+resolve_inputs
 
 update_inputs=(
   nixpkgs
@@ -72,15 +106,38 @@ darwin_rebuild() {
   fi
 }
 
-if [[ "${UPDATE_SKIP_CHECK:-0}" != "1" ]]; then
+if [[ "${UPDATE_FORMAT:-0}" == "1" ]]; then
+  if nix run "$ROOT#format" -- --help >/dev/null 2>&1; then
+    if ! nix run "$ROOT#format"; then
+      log "formatter failed (continuing)"
+    fi
+  elif command -v treefmt >/dev/null 2>&1; then
+    if ! treefmt; then
+      log "treefmt failed (continuing)"
+    fi
+  else
+    log "formatter not available (skipping UPDATE_FORMAT)"
+  fi
+fi
+
+run_checks=1
+if [[ "${UPDATE_SKIP_CHECK:-0}" == "1" && "${UPDATE_CHECKS:-0}" != "1" ]]; then
+  run_checks=0
+fi
+if [[ "${UPDATE_CHECKS:-0}" == "1" ]]; then
+  run_checks=1
+fi
+
+if [[ "$run_checks" -eq 1 ]]; then
   nix flake check \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS"
 fi
 
 if [[ "${UPDATE_SKIP_BUILD:-0}" != "1" ]]; then
+  target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
   darwin_rebuild build \
-    --flake "$ROOT#${HOST}" \
+    --flake "$ROOT#${target}" \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS"
 fi

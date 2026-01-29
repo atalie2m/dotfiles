@@ -4,11 +4,12 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 
 ## Project Structure & Module Organization
 - `flake.nix` — flake inputs/outputs; exposes `darwinConfigurations` and `homeConfigurations` and a `templates/web-dev` flake template.
-- `nix/denix/hosts/{a2m_mac,mn_mac}/` — host profiles and system-level options.
+- `nix/denix/hosts/*/` — host profiles and system-level options.
 - `nix/denix/modules/` — reusable modules (programs, packages, shells, services, etc.).
 - `nix/denix/rices/` — higher‑level bundles (e.g., `full`, `minimum`).
 - `nix/local/` — stub local facts input (`facts.nix`, `STUB`) for public evaluation.
 - `nix/secrets/` — stub local secrets input (`secrets.nix`, `STUB`) for public evaluation.
+- `nix/scripts/` — CLI entrypoints (`apply`, `update`, `doctor`, `bootstrap`) and shared helpers.
 - `apps/` — user app configs (e.g., `apps/starship.toml`, `apps/vscode/...`).
 - `keyboards/` — Karabiner complex modifications JSON.
 - Local facts live at `~/.config/dotfiles-local/facts.nix` (not in Git).
@@ -16,8 +17,8 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 
 ## Build, Test, and Development Commands
 - `nix flake check --override-input local path:$HOME/.config/dotfiles-local --override-input secrets path:$HOME/.config/dotfiles-secrets` — validates flake, runs basic checks.
-- `darwin-rebuild build --flake .#a2m_mac --override-input local path:$HOME/.config/dotfiles-local --override-input secrets path:$HOME/.config/dotfiles-secrets` — builds the `a2m_mac` host (default rice: full); swap to `#mn_mac` as needed.
-- `sudo darwin-rebuild switch --flake .#a2m_mac --override-input local path:$HOME/.config/dotfiles-local --override-input secrets path:$HOME/.config/dotfiles-secrets` — applies the built configuration.
+- `nix run .#apply -- --host a2m_mac --action build` — builds the `a2m_mac` host (default rice: full); add `--rice <rice>` or swap host as needed.
+- `nix run .#apply -- --host a2m_mac` — applies the built configuration (uses `sudo -E` internally).
 - Template: `nix flake init -t github:atalie2m/dotfiles#web-dev` (see `templates/web-dev`).
 
 ## Coding Style & Naming Conventions
@@ -27,7 +28,7 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 - Do not commit host‑specific literals; keep them in local facts or secrets inputs.
 
 ## Testing Guidelines
-- Primary: `nix flake check` and `darwin-rebuild build --flake .#(host)` for all touched hosts.
+- Primary: `nix flake check` and `nix run .#apply -- --host <host> --action build` (or `darwin-rebuild build --flake .#<host>`) for all touched hosts.
 - Verify Karabiner JSON loads by linking or via Home Manager if applicable.
 - Keep changes minimal; include rollback notes when altering critical modules.
 

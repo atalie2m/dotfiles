@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=lib.sh
+source "$SCRIPT_DIR/lib.sh"
+
+DOTFILES_SCRIPT_LABEL="apply"
+
 usage() {
   cat <<'USAGE'
-Usage: nix run .#apply -- [host]
+Usage: nix run .#apply -- [--host <host>] [--rice <rice>] [--action switch|build] [--no-sudo] [--] [darwin-rebuild args...]
+       nix run .#apply -- [host]
 
 Environment:
   HOST=...        Host to switch (default: a2m_mac)
+  RICE=...        Rice to apply (default: none)
   FACTS=...       Full local facts input (default: path:$HOME/.config/dotfiles-local)
   SECRETS=...     Full local secrets input (default: path:$HOME/.config/dotfiles-secrets)
   FACTS_DIR=...   Override local facts dir (default: $HOME/.config/dotfiles-local)
@@ -14,24 +22,69 @@ Environment:
 USAGE
 }
 
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
+host=""
+rice=""
+action="switch"
+no_sudo=0
+passthrough=()
 
-ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
-if [[ -z "$ROOT" ]]; then
-  echo "apply: not in a git repository" >&2
-  exit 1
-fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --host)
+      [[ $# -lt 2 ]] && die "missing value for --host"
+      host="$2"
+      shift 2
+      ;;
+    --rice)
+      [[ $# -lt 2 ]] && die "missing value for --rice"
+      rice="$2"
+      shift 2
+      ;;
+    --action)
+      [[ $# -lt 2 ]] && die "missing value for --action"
+      action="$2"
+      shift 2
+      ;;
+    --no-sudo)
+      no_sudo=1
+      shift
+      ;;
+    --)
+      shift
+      passthrough=("$@")
+      break
+      ;;
+    --*)
+      die "unknown option: $1"
+      ;;
+    *)
+      if [[ -z "$host" ]]; then
+        host="$1"
+        shift
+      else
+        die "unexpected argument: $1 (use -- to pass through to darwin-rebuild)"
+      fi
+      ;;
+  esac
+done
 
+host="${host:-${HOST:-a2m_mac}}"
+rice="${rice:-${RICE:-}}"
+
+case "$action" in
+  switch|build) ;;
+  *) die "invalid --action: $action (expected switch or build)" ;;
+esac
+
+set_repo_root
 cd "$ROOT"
+resolve_inputs
 
-HOST="${1:-${HOST:-a2m_mac}}"
-FACTS_DIR="${FACTS_DIR:-$HOME/.config/dotfiles-local}"
-SECRETS_DIR="${SECRETS_DIR:-$HOME/.config/dotfiles-secrets}"
-FACTS="${FACTS:-path:${FACTS_DIR}}"
-SECRETS="${SECRETS:-path:${SECRETS_DIR}}"
+target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
 
 if command -v darwin-rebuild >/dev/null 2>&1; then
   rebuild_cmd=(darwin-rebuild)
@@ -39,13 +92,17 @@ else
   rebuild_cmd=(nix run github:nix-darwin/nix-darwin#darwin-rebuild --)
 fi
 
-rebuild_args=(switch
-  --flake "$ROOT#${HOST}"
+rebuild_args=("$action"
+  --flake "$ROOT#${target}"
   --override-input local "$FACTS"
   --override-input secrets "$SECRETS"
 )
 
-if [[ "$EUID" -eq 0 ]]; then
+if [[ ${#passthrough[@]} -gt 0 ]]; then
+  rebuild_args+=("${passthrough[@]}")
+fi
+
+if [[ "$EUID" -eq 0 || "$no_sudo" -eq 1 ]]; then
   "${rebuild_cmd[@]}" "${rebuild_args[@]}"
 else
   sudo -E "${rebuild_cmd[@]}" "${rebuild_args[@]}"
