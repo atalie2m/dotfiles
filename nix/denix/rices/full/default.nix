@@ -43,14 +43,14 @@ delib.rice {
 
     vscode.enable = true;
 
+    # Tool catalog defaults
+    tools.aiCodingAgent.enable = true;
+
     # Enhanced package sets
     packages = {
       core.enable = true;
       development.enable = true;
       productivity.enable = true;
-      claude-code-overlay.enable = true;  # Enable claude-code overlay
-      codex-overlay.enable = true;  # Enable codex overlay
-      gemini-cli-overlay.enable = true;  # Enable Gemini CLI overlay
     };
 
     # Native homebrew integration

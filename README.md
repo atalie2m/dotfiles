@@ -45,6 +45,21 @@ Manual attribute examples (still valid):
 
 When `--rice` is provided, the CLI tries `host-rice` first and falls back to `host` if the rice matches the host default.
 
+## Tool Catalog (myconfig.tools)
+
+List effective tool toggles for a target host/rice:
+
+```bash
+nix run .#list-tools -- --host a2m_mac
+nix run .#list-tools -- --host a2m_mac --rice minimum --format json
+```
+
+Manual evaluation (JSON):
+
+```bash
+nix eval --json .#darwinConfigurations.a2m_mac-minimum.config.myconfig.tools
+```
+
 ## Terminal Compatibility
 
 **For macOS users**: Please use a 24-bit True Color compatible terminal instead of the default Terminal.app. The Starship prompt configuration in this repository uses True Color (#RRGGBB) values that are only properly displayed in terminals with full color support.

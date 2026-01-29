@@ -37,9 +37,6 @@ delib.rice {
     # Essential packages only
     packages = {
       core.enable = true;
-      claude-code-overlay.enable = true;  # Enable claude-code overlay for all profiles
-      codex-overlay.enable = true;  # Enable codex overlay
-      gemini-cli-overlay.enable = true;  # Enable Gemini CLI overlay
     };
   };
 }

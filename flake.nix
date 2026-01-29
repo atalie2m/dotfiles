@@ -105,6 +105,10 @@
         type = "app";
         program = "${./nix/scripts/update.sh}";
       };
+      list-tools = {
+        type = "app";
+        program = "${./nix/scripts/list-tools.sh}";
+      };
       apply = {
         type = "app";
         program = "${./nix/scripts/apply.sh}";
