@@ -1,4 +1,4 @@
-{ delib, lib, ... }:
+{ delib, lib, config, ... }:
 
 # System-level Nix configuration
 delib.module {
@@ -9,9 +9,17 @@ delib.module {
     enableFlakes = boolOption true;
     enableNixCommand = boolOption true;
     extraExperimentalFeatures = listOfOption str [];
+    binaryCaches = {
+      substituters = listOfOption str [];
+      trustedPublicKeys = listOfOption str [];
+    };
   };
 
-  darwin.ifEnabled = { cfg, ... }: {
+  darwin.ifEnabled = { cfg, ... }: let
+    factCaches = config.facts.binaryCaches or {};
+    extraSubstituters = lib.unique (cfg.binaryCaches.substituters ++ (factCaches.substituters or []));
+    extraTrustedPublicKeys = lib.unique (cfg.binaryCaches.trustedPublicKeys ++ (factCaches.trustedPublicKeys or []));
+  in {
     nix = {
       settings = {
         # Enable experimental features
@@ -25,6 +33,12 @@ delib.module {
         
         # Trusted users for Nix daemon
         trusted-users = [ "@admin" ];
+      }
+      // lib.optionalAttrs (extraSubstituters != []) {
+        extra-substituters = extraSubstituters;
+      }
+      // lib.optionalAttrs (extraTrustedPublicKeys != []) {
+        extra-trusted-public-keys = extraTrustedPublicKeys;
       };
       
       # Enable garbage collection and optimization
@@ -39,7 +53,11 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { cfg, ... }: {
+  home.ifEnabled = { cfg, ... }: let
+    factCaches = config.facts.binaryCaches or {};
+    extraSubstituters = lib.unique (cfg.binaryCaches.substituters ++ (factCaches.substituters or []));
+    extraTrustedPublicKeys = lib.unique (cfg.binaryCaches.trustedPublicKeys ++ (factCaches.trustedPublicKeys or []));
+  in {
     # Home Manager Nix settings
     nix.settings = {
       experimental-features =
@@ -49,6 +67,12 @@ delib.module {
 
       # Trust flake-provided nixConfig in user sessions
       accept-flake-config = true;
+    }
+    // lib.optionalAttrs (extraSubstituters != []) {
+      extra-substituters = extraSubstituters;
+    }
+    // lib.optionalAttrs (extraTrustedPublicKeys != []) {
+      extra-trusted-public-keys = extraTrustedPublicKeys;
     };
   };
 }

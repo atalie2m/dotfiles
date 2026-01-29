@@ -20,6 +20,7 @@ delib.host {
 
   myconfig.facts = {
     inherit user machine machines;
+    binaryCaches = facts.binaryCaches or {};
   };
 
   home = { name, cfg, myconfig, ... }: {

@@ -21,6 +21,7 @@ delib.host {
   myconfig = {
     facts = {
       inherit user machine machines;
+      binaryCaches = facts.binaryCaches or {};
     };
     packages.core.extraPackages = with pkgs; [ tmux ];
     tmux.enable = true;

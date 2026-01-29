@@ -130,6 +130,32 @@ darwin-rebuild build --flake .#a2m_mac \
 
 **Note**: `nix/local/` and `nix/secrets/` in the repo are stubs for public evaluation (templates only). Real configurations require `--override-input` and should not include a `STUB` file.
 
+## Binary Cache (Cachix / Attic)
+
+This repo can pull from extra binary caches via your local facts.
+
+Add to `~/.config/dotfiles-local/facts.nix`:
+```nix
+{
+  binaryCaches = {
+    substituters = [
+      "https://your-cache.cachix.org"
+      # "https://attic.example.org/your-cache"
+    ];
+    trustedPublicKeys = [
+      "your-cache.cachix.org-1:REPLACE_WITH_PUBLIC_KEY"
+      # "attic.example.org-1:REPLACE_WITH_PUBLIC_KEY"
+    ];
+  };
+}
+```
+
+CI cache pushes are wired for Cachix. Set these in the GitHub repo:
+- `CACHIX_CACHE_NAME` (repository variable)
+- `CACHIX_AUTH_TOKEN` (repository secret, write-enabled)
+
+Once set, the macOS CI job builds `darwinConfigurations.*.system` and pushes results to the cache.
+
 ## Karabiner-Elements Setup
 
 This repository includes comprehensive keyboard layouts and input method configurations for Karabiner-Elements in the `keyboards/karabiner/complex_modifications/` directory.
