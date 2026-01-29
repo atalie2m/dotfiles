@@ -8,6 +8,10 @@ delib.module {
     enable = boolOption false;
     autoDock.enable = boolOption false;
     autoTrampolines.enable = boolOption true;
+    appLinks = {
+      enable = boolOption false;
+      targetDir = strOption "/Applications/Brew-nix Apps";
+    };
     casks = listOfOption str [
       "rio"
       "keyclu"
@@ -24,7 +28,9 @@ delib.module {
     extraCasks = listOfOption str [];
   };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }: {
+  darwin.ifEnabled = { cfg, myconfig, ... }: let
+    casks = cfg.casks ++ cfg.extraCasks;
+  in {
     # Enable brew-nix overlay
     nixpkgs.overlays = [ inputs.brew-nix.overlays.default ];
 
@@ -32,13 +38,57 @@ delib.module {
     brew-nix.enable = true;
 
     # Keep Nix apps discoverable via Spotlight and Dock pins stable
-    services.mac-app-util.enable = lib.mkIf cfg.autoTrampolines.enable true;
-    home-manager.sharedModules = lib.mkIf cfg.autoTrampolines.enable [
+    services.mac-app-util.enable = lib.mkIf (cfg.autoTrampolines.enable && !cfg.appLinks.enable) true;
+    home-manager.sharedModules = lib.mkIf (cfg.autoTrampolines.enable && !cfg.appLinks.enable) [
       inputs.mac-app-util.homeManagerModules.default
     ];
 
     # Install casks as system packages
-    environment.systemPackages = map (cask: pkgs.brewCasks.${cask}) (cfg.casks ++ cfg.extraCasks);
+    environment.systemPackages = map (cask: pkgs.brewCasks.${cask}) casks;
+
+    # Link real app bundles into Applications to avoid trampoline icons
+    system.activationScripts.brewNixAppLinks = lib.mkIf cfg.appLinks.enable {
+      deps = [ "applications" ];
+      text = ''
+        echo "brew-nix: linking cask apps into ${cfg.appLinks.targetDir}" >&2
+        targetDir="${cfg.appLinks.targetDir}"
+        if [ -z "$targetDir" ]; then
+          echo "brew-nix: appLinks.targetDir is empty, skipping" >&2
+        elif [ -e "$targetDir" ] && [ ! -d "$targetDir" ]; then
+          echo "brew-nix: appLinks targetDir exists and is not a directory: $targetDir" >&2
+        else
+          mkdir -p "$targetDir"
+
+          # Remove old symlinks pointing at the current system apps
+          find "$targetDir" -maxdepth 1 -type l -lname "/run/current-system/Applications/*" -exec rm -f {} + || true
+
+          for cask in ${lib.escapeShellArgs casks}; do
+            appPath=$(find -L /run/current-system/Applications -maxdepth 2 -type d -iname "''${cask}.app" | head -n 1)
+            if [ -z "$appPath" ]; then
+              echo "brew-nix app link: app for cask ''${cask} not found" >&2
+              continue
+            fi
+
+            dest="$targetDir/$(basename "$appPath")"
+            if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+              echo "brew-nix app link: $dest exists and is not a symlink, skipping" >&2
+              continue
+            fi
+            ln -sfn "$appPath" "$dest"
+          done
+        fi
+      '';
+    };
+
+    # Avoid stale trampoline apps when app links are enabled
+    system.activationScripts.brewNixCleanTrampolines = lib.mkIf cfg.appLinks.enable {
+      deps = [ "applications" ];
+      text = ''
+        if [ -d "/Applications/Nix Trampolines" ]; then
+          rm -rf "/Applications/Nix Trampolines" || true
+        fi
+      '';
+    };
   };
 
   home.ifEnabled = { cfg, ... }: let
@@ -56,7 +106,7 @@ delib.module {
       fi
 
       for cask in ${lib.escapeShellArgs casks}; do
-        appPath=$(find /run/current-system/Applications -maxdepth 2 -type d -iname "''${cask}.app" | head -n 1)
+        appPath=$(find -L /run/current-system/Applications -maxdepth 2 -type d -iname "''${cask}.app" | head -n 1)
         if [ -z "$appPath" ]; then
           echo "brew-nix Dock pin: app for cask ''${cask} not found" >&2
           continue

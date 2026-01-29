@@ -55,6 +55,10 @@ delib.rice {
     homebrew.native.enable = true;
 
     # Brew-nix integration for GUI applications
-    brew-nix.enable = true;
+    brew-nix = {
+      enable = true;
+      appLinks.enable = true;
+      autoTrampolines.enable = false;
+    };
   };
 }
