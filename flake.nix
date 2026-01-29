@@ -37,6 +37,11 @@
       };
     };
 
+    mac-app-util = {
+      url = "github:hraban/mac-app-util";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Secrets management
     sops-nix = {
       url = "github:Mic92/sops-nix";
@@ -63,6 +68,8 @@
 
   outputs = { denix, ... } @ inputs: let
     localStub = builtins.pathExists (inputs.local + "/STUB");
+    systems = [ "aarch64-darwin" "x86_64-darwin" ];
+    forAllSystems = inputs.nixpkgs.lib.genAttrs systems;
     mkConfigurations = moduleSystem:
       let
         facts = import (inputs.local + "/facts.nix");
@@ -89,9 +96,21 @@
         extraModules =
           (if moduleSystem == "darwin" then [
             inputs.brew-nix.darwinModules.default
+            inputs.mac-app-util.darwinModules.default
           ] else []);
       });
   in {
+    apps = forAllSystems (_: {
+      update = {
+        type = "app";
+        program = "${./nix/scripts/update.sh}";
+      };
+      apply = {
+        type = "app";
+        program = "${./nix/scripts/apply.sh}";
+      };
+    });
+
     # Public flake templates for easy reuse
     templates = {
       web-dev = {

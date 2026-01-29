@@ -238,6 +238,12 @@ nix profile install github:nix-darwin/nix-darwin#darwin-rebuild
 
 ## Subsequent Updates
 ```bash
+# Factory-style updates (flake inputs + nvfetcher + checks/build)
+nix run .#update -- a2m_mac
+
+# Apply the latest build
+nix run .#apply -- a2m_mac
+
 # nix-darwin configuration
 sudo darwin-rebuild switch --flake .#<PROFILE_NAME> \
   --override-input local path:$HOME/.config/dotfiles-local \
@@ -248,6 +254,9 @@ nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME> \
   --override-input local path:$HOME/.config/dotfiles-local \
   --override-input secrets path:$HOME/.config/dotfiles-secrets
 ```
+
+`nix run .#update` and `nix run .#apply` accept an optional host name (default: `a2m_mac`).
+External binaries tracked outside nixpkgs live in `nix/nvfetcher/sources.toml`.
 
 ## Troubleshooting
 - **`attribute 'darwinConfigurations' missing`** → You are in public mode (stub inputs). Pass `--override-input local path:$HOME/.config/dotfiles-local` and `--override-input secrets path:$HOME/.config/dotfiles-secrets`.

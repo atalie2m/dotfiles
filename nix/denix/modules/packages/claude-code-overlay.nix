@@ -1,13 +1,12 @@
 { delib, ... }:
 
 let
-  overlay = final: prev: {
+  overlay = final: prev: let
+    sources = prev.callPackage ../../../nvfetcher/_sources/generated.nix { };
+  in {
     claude-code = prev.claude-code.overrideAttrs (old: rec {
-      version = "2.1.23";
-      src = prev.fetchzip {
-        url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-        hash = "sha256-Cl/lwk1ffwrc+v1ncdShjeheNnkoocmXSDUDOCRHJgQ=";
-      };
+      version = sources."claude-code".version;
+      src = sources."claude-code".src;
 
       nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
         prev.nodejs_22

@@ -1,16 +1,15 @@
 { delib, ... }:
 
 let
-  version = "0.26.0";
-  overlay = final: prev: {
+  overlay = final: prev: let
+    sources = prev.callPackage ../../../nvfetcher/_sources/generated.nix { };
+    geminiSource = sources."gemini-cli";
+  in {
     gemini-cli = prev.stdenv.mkDerivation rec {
       pname = "gemini-cli";
-      inherit version;
+      version = geminiSource.version;
 
-      src = prev.fetchurl {
-        url = "https://github.com/google-gemini/gemini-cli/releases/download/v${version}/gemini.js";
-        hash = "sha256-IOx+n39JGYmHp42ObLD30H2Lgpju6bDBQ7fHLP1oc60=";
-      };
+      src = geminiSource.src;
 
       dontUnpack = true;
 

@@ -1,14 +1,13 @@
 { delib, ... }:
 
 let
-  overlay = final: prev: {
+  overlay = final: prev: let
+    sources = prev.callPackage ../../../nvfetcher/_sources/generated.nix { };
+  in {
     codex = prev.codex.overrideAttrs (old: rec {
       # Use the prebuilt NPM tarball published by @openai/codex
-      version = "0.92.0";
-      src = prev.fetchzip {
-        url = "https://registry.npmjs.org/@openai/codex/-/codex-${version}.tgz";
-        hash = "sha256-eHKQvPGrcRdpQf/l0h+KnY+fRykRYFUw1TTu8XII8NM=";
-      };
+      version = sources.codex.version;
+      src = sources.codex.src;
 
       nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
         prev.nodejs_22

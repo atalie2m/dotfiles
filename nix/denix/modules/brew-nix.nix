@@ -7,6 +7,7 @@ delib.module {
   options.brew-nix = with delib.options; {
     enable = boolOption false;
     autoDock.enable = boolOption false;
+    autoTrampolines.enable = boolOption true;
     casks = listOfOption str [
       "rio"
       "keyclu"
@@ -29,6 +30,12 @@ delib.module {
 
     # Enable brew-nix
     brew-nix.enable = true;
+
+    # Keep Nix apps discoverable via Spotlight and Dock pins stable
+    services.mac-app-util.enable = lib.mkIf cfg.autoTrampolines.enable true;
+    home-manager.sharedModules = lib.mkIf cfg.autoTrampolines.enable [
+      inputs.mac-app-util.homeManagerModules.default
+    ];
 
     # Install casks as system packages
     environment.systemPackages = map (cask: pkgs.brewCasks.${cask}) (cfg.casks ++ cfg.extraCasks);
