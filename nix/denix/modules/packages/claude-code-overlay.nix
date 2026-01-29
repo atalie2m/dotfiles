@@ -3,10 +3,10 @@
 let
   overlay = final: prev: {
     claude-code = prev.claude-code.overrideAttrs (old: rec {
-      version = "2.1.17";
+      version = "2.1.19";
       src = prev.fetchzip {
         url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-        hash = "sha256-cLJ8qKa8OhGpjdB7l1KAcG73EvH5T+OUww3flAKWihI=";
+        hash = "sha256-8nJWc74kVvRzFr6KSHbiv5mB6tb+29PJ1o9wkteypKw=";
       };
 
       nativeBuildInputs = (old.nativeBuildInputs or []) ++ [

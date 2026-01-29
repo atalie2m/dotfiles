@@ -4,10 +4,10 @@ let
   overlay = final: prev: {
     codex = prev.codex.overrideAttrs (old: rec {
       # Use the prebuilt NPM tarball published by @openai/codex
-      version = "0.89.0";
+      version = "0.91.0";
       src = prev.fetchzip {
         url = "https://registry.npmjs.org/@openai/codex/-/codex-${version}.tgz";
-        hash = "sha256-vaRZ/zJSDoFDhYqacpKTEmwq+yfBgDJ2c032FBut93c=";
+        hash = "sha256-4/7fWyWhC+L8dqMIF1wE+ze+vt+s2ZYEstMVPI6VAio=";
       };
 
       nativeBuildInputs = (old.nativeBuildInputs or []) ++ [
