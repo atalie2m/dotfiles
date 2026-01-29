@@ -20,7 +20,6 @@ delib.module {
 
       # Security and encryption
       gnupg
-      pinentry_mac
 
       # Cloud tooling
       awscli2

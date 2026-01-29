@@ -25,7 +25,6 @@ delib.module {
     services.gpg-agent = {
       enable = true;
       inherit (cfg.agent) enableSshSupport enableExtraSocket defaultCacheTtl defaultCacheTtlSsh maxCacheTtl;
-      pinentry.package = pkgs.pinentry_mac;
 
       enableBashIntegration = true;
       enableZshIntegration = true;
@@ -35,5 +34,13 @@ delib.module {
       SSH_AUTH_SOCK = "$(gpgconf --list-dirs agent-ssh-socket)";
       GPG_TTY = "$(tty)";
     };
+  };
+
+  darwin.ifEnabled = { ... }: {
+    home-manager.sharedModules = [
+      ({ pkgs, ... }: {
+        services.gpg-agent.pinentry.package = pkgs.pinentry_mac;
+      })
+    ];
   };
 }
