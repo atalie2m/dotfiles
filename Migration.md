@@ -88,8 +88,8 @@ nix/denix/
 ### Building Configurations
 ```bash
 # Full development environment (a2m_mac default rice: full)
-FACTS="path:$HOME/.config/dotfiles-local"
-SECRETS="path:$HOME/.config/dotfiles-secrets"
+FACTS="path:$HOME/.config/dotfiles"
+SECRETS="path:$HOME/.config/dotfiles"
 
 darwin-rebuild build --flake .#a2m_mac \
   --override-input local "$FACTS" \
@@ -171,8 +171,8 @@ darwin-rebuild build --flake .#mn_mac-minimum \
 ### Current Test Commands
 ```bash
 # Validate flake structure
-FACTS="path:$HOME/.config/dotfiles-local"
-SECRETS="path:$HOME/.config/dotfiles-secrets"
+FACTS="path:$HOME/.config/dotfiles"
+SECRETS="path:$HOME/.config/dotfiles"
 
 nix flake check \
   --override-input local "$FACTS" \

@@ -76,10 +76,21 @@ nix eval --json .#darwinConfigurations.a2m_mac-minimum.config.myconfig.tools
 ## Local Facts + Secrets (Override Inputs)
 
 This repo no longer uses Git clean/smudge filters. Machine-specific facts and secrets live outside Git and are injected at build time using flake overrides.
+Both inputs default to `~/.config/dotfiles/` (store `facts.nix` and `secrets.nix` side-by-side).
+
+Default layout:
+```
+~/.config/dotfiles/
+├── facts.nix
+├── secrets.nix
+├── .sops.yaml
+└── files/
+    └── ai.env.sops.yaml
+```
 
 ### Facts (non-secret)
 
-- Create `~/.config/dotfiles-local/facts.nix`
+- Create `~/.config/dotfiles/facts.nix`
 - Required: `user.username`, `user.homeDirectory`
 
 Example `facts.nix`:
@@ -109,7 +120,8 @@ Example `facts.nix`:
 
 ### Secrets (confidential)
 
-- Create `~/.config/dotfiles-secrets/`
+- Create `~/.config/dotfiles/secrets.nix`
+- Store encrypted files under `~/.config/dotfiles/files/` (sops+age recommended)
 - Define `secrets.nix` and encrypted files (sops+age recommended)
 
 Example `secrets.nix`:
@@ -118,7 +130,7 @@ Example `secrets.nix`:
   files = {
     aiEnv = {
       sopsFile = ./files/ai.env.sops.yaml;
-      targetPath = ".config/dotfiles/secrets/ai.env";
+      targetPath = ".config/dotfiles/ai.env";
       mode = "0600";
     };
   };
@@ -127,8 +139,8 @@ Example `secrets.nix`:
 
 Optional shell sourcing (in `~/.zshrc`):
 ```bash
-if [ -f "$HOME/.config/dotfiles/secrets/ai.env" ]; then
-  source "$HOME/.config/dotfiles/secrets/ai.env"
+if [ -f "$HOME/.config/dotfiles/ai.env" ]; then
+  source "$HOME/.config/dotfiles/ai.env"
 fi
 ```
 
@@ -138,8 +150,8 @@ All `nix run .#apply|.#update|.#doctor|.#bootstrap` commands pass overrides auto
 
 ```bash
 darwin-rebuild build --flake .#a2m_mac \
-  --override-input local path:$HOME/.config/dotfiles-local \
-  --override-input secrets path:$HOME/.config/dotfiles-secrets
+  --override-input local path:$HOME/.config/dotfiles \
+  --override-input secrets path:$HOME/.config/dotfiles
 ```
 
 **Note**: `nix/local/` and `nix/secrets/` in the repo are stubs for public evaluation (templates only). Real configurations require `--override-input` and should not include a `STUB` file.
@@ -148,7 +160,7 @@ darwin-rebuild build --flake .#a2m_mac \
 
 This repo can pull from extra binary caches via your local facts.
 
-Add to `~/.config/dotfiles-local/facts.nix`:
+Add to `~/.config/dotfiles/facts.nix`:
 ```nix
 {
   binaryCaches = {
@@ -265,8 +277,8 @@ All CLI commands automatically append:
 `--override-input local "$FACTS"` and `--override-input secrets "$SECRETS"`.
 
 Defaults:
-- `FACTS_DIR=$HOME/.config/dotfiles-local`
-- `SECRETS_DIR=$HOME/.config/dotfiles-secrets`
+- `FACTS_DIR=$HOME/.config/dotfiles`
+- `SECRETS_DIR=$HOME/.config/dotfiles`
 - `FACTS=path:$FACTS_DIR`
 - `SECRETS=path:$SECRETS_DIR`
 
@@ -327,17 +339,17 @@ External binaries tracked outside nixpkgs live in `nix/nvfetcher/sources.toml`.
 ```bash
 # nix-darwin configuration
 sudo darwin-rebuild switch --flake .#<PROFILE_NAME> \
-  --override-input local path:$HOME/.config/dotfiles-local \
-  --override-input secrets path:$HOME/.config/dotfiles-secrets
+  --override-input local path:$HOME/.config/dotfiles \
+  --override-input secrets path:$HOME/.config/dotfiles
 
 # home-manager configuration (replace <HOSTNAME> with your actual hostname)
 nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME> \
-  --override-input local path:$HOME/.config/dotfiles-local \
-  --override-input secrets path:$HOME/.config/dotfiles-secrets
+  --override-input local path:$HOME/.config/dotfiles \
+  --override-input secrets path:$HOME/.config/dotfiles
 ```
 
 ## Troubleshooting
-- **`attribute 'darwinConfigurations' missing`** → Your local inputs are stubbed (or missing). Ensure `~/.config/dotfiles-local/facts.nix` exists and remove any `STUB` file, then rerun `nix run .#doctor`.
+- **`attribute 'darwinConfigurations' missing`** → Your local inputs are stubbed (or missing). Ensure `~/.config/dotfiles/facts.nix` exists and remove any `STUB` file, then rerun `nix run .#doctor`.
 - **`target not found for host/rice`** → Run `nix run .#doctor -- --host <host> --rice <rice>` to see available targets.
 - **`darwin-rebuild: command not found`** → `nix run .#apply` uses the nix-darwin wrapper automatically; for manual runs install it with `nix profile install github:nix-darwin/nix-darwin#darwin-rebuild`.
 - **`error: unrecognised flag '--flake'`** → Ensure you invoke `nix run <flake>#<pkg> -- <cmd>`. Everything after `--` is passed through to `darwin-rebuild`.

@@ -12,11 +12,12 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 - `nix/scripts/` — CLI entrypoints (`apply`, `update`, `doctor`, `bootstrap`) and shared helpers.
 - `apps/` — user app configs (e.g., `apps/starship.toml`, `apps/vscode/...`).
 - `keyboards/` — Karabiner complex modifications JSON.
-- Local facts live at `~/.config/dotfiles-local/facts.nix` (not in Git).
-- Local secrets live at `~/.config/dotfiles-secrets/` (not in Git).
+- Local facts live at `~/.config/dotfiles/facts.nix` (not in Git).
+- Local secrets live at `~/.config/dotfiles/secrets.nix` and `~/.config/dotfiles/files/` (not in Git).
+- Both inputs default to the same base directory: `~/.config/dotfiles/`.
 
 ## Build, Test, and Development Commands
-- `nix flake check --override-input local path:$HOME/.config/dotfiles-local --override-input secrets path:$HOME/.config/dotfiles-secrets` — validates flake, runs basic checks.
+- `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles` — validates flake, runs basic checks.
 - `nix run .#apply -- --host a2m_mac --action build` — builds the `a2m_mac` host (default rice: full); add `--rice <rice>` or swap host as needed.
 - `nix run .#apply -- --host a2m_mac` — applies the built configuration (uses `sudo -E` internally).
 - Template: `nix flake init -t github:atalie2m/dotfiles#web-dev` (see `templates/web-dev`).

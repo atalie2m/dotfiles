@@ -2,14 +2,15 @@ Local secrets (sops + age)
 
 This repository no longer stores secrets inside the repo. Instead, provide a local secrets input at:
 
-- `~/.config/dotfiles-secrets/`
+- `~/.config/dotfiles/` (contains `secrets.nix` and `files/`)
 
 The in-repo `nix/secrets/` directory is a stub for public evaluation only. Do not place secrets in this repo.
 
 Minimum layout
 
 ```
-~/.config/dotfiles-secrets/
+~/.config/dotfiles/
+├── facts.nix
 ├── secrets.nix
 ├── .sops.yaml
 └── files/
@@ -22,7 +23,7 @@ Quick start
   - `mkdir -p ~/.config/sops/age`
   - `age-keygen -o ~/.config/sops/age/keys.txt`
 - Get your public key: `age-keygen -y ~/.config/sops/age/keys.txt`.
-- Create `~/.config/dotfiles-secrets/.sops.yaml` (do not commit private keys):
+- Create `~/.config/dotfiles/.sops.yaml` (do not commit private keys):
 
   ```yaml
   creation_rules:
@@ -33,7 +34,7 @@ Quick start
 - Encrypt a file (example):
 
   ```bash
-  sops --encrypt --in-place ~/.config/dotfiles-secrets/files/ai.env.sops.yaml
+  sops --encrypt --in-place ~/.config/dotfiles/files/ai.env.sops.yaml
   ```
 
 Example `secrets.nix`
@@ -43,7 +44,7 @@ Example `secrets.nix`
   files = {
     aiEnv = {
       sopsFile = ./files/ai.env.sops.yaml;
-      targetPath = ".config/dotfiles/secrets/ai.env";
+      targetPath = ".config/dotfiles/ai.env";
       mode = "0600";
     };
   };

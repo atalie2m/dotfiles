@@ -28,10 +28,10 @@ Usage: nix run .#update -- [--host <host>] [--rice <rice>]
 Environment:
   HOST=...                Host to build (default: a2m_mac)
   RICE=...                Rice to build (default: none)
-  FACTS=...               Full local facts input (default: path:$HOME/.config/dotfiles-local)
-  SECRETS=...             Full local secrets input (default: path:$HOME/.config/dotfiles-secrets)
-  FACTS_DIR=...           Override local facts dir (default: $HOME/.config/dotfiles-local)
-  SECRETS_DIR=...         Override local secrets dir (default: $HOME/.config/dotfiles-secrets)
+  FACTS=...               Full local facts input (default: path:$HOME/.config/dotfiles)
+  SECRETS=...             Full local secrets input (default: path:$HOME/.config/dotfiles)
+  FACTS_DIR=...           Override local facts dir (default: $HOME/.config/dotfiles)
+  SECRETS_DIR=...         Override local secrets dir (default: $HOME/.config/dotfiles)
   UPDATE_ALL=1            Update all flake inputs (default: selected inputs)
   UPDATE_SKIP_CHECK=1     Skip nix flake check
   UPDATE_SKIP_BUILD=1     Skip darwin-rebuild build

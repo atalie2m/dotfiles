@@ -29,10 +29,10 @@ Environment:
   HOST=...        Host to inspect (default: a2m_mac)
   RICE=...        Rice to inspect (default: none)
   FORMAT=...      Output format (json or text; default: text)
-  FACTS=...       Full local facts input (default: path:$HOME/.config/dotfiles-local)
-  SECRETS=...     Full local secrets input (default: path:$HOME/.config/dotfiles-secrets)
-  FACTS_DIR=...   Override local facts dir (default: $HOME/.config/dotfiles-local)
-  SECRETS_DIR=... Override local secrets dir (default: $HOME/.config/dotfiles-secrets)
+  FACTS=...       Full local facts input (default: path:$HOME/.config/dotfiles)
+  SECRETS=...     Full local secrets input (default: path:$HOME/.config/dotfiles)
+  FACTS_DIR=...   Override local facts dir (default: $HOME/.config/dotfiles)
+  SECRETS_DIR=... Override local secrets dir (default: $HOME/.config/dotfiles)
 USAGE
 }
 

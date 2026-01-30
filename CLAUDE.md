@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `brew-nix` is different from `homebrew` (nix-darwin). `brew-nix` installs brew Casks without pre-installing Homebrew.
 - Follow steps sequentially. After each step, run:
   - `git add` (stage changes)
-  - `nix flake check --override-input local path:$HOME/.config/dotfiles-local --override-input secrets path:$HOME/.config/dotfiles-secrets`
+  - `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles`
   - `nix run .#apply -- --host <host> --action build`
   - Ask the user to run `nix run .#apply -- --host <host>` (or `sudo darwin-rebuild switch ...` if they prefer manual invocation)
 
@@ -23,8 +23,8 @@ nix run .#apply -- --host a2m_mac
 
 # Manual alternative
 darwin-rebuild build --flake .#a2m_mac \
-  --override-input local path:$HOME/.config/dotfiles-local \
-  --override-input secrets path:$HOME/.config/dotfiles-secrets
+  --override-input local path:$HOME/.config/dotfiles \
+  --override-input secrets path:$HOME/.config/dotfiles
 ```
 
 ## Architecture Overview
@@ -38,8 +38,9 @@ This is a **Nix flake-based dotfiles repository** using nix-darwin and Home Mana
 - **nix/scripts/**: CLI entrypoints (`apply`, `update`, `doctor`, `bootstrap`) and shared helpers.
 
 ### Local Facts + Secrets
-- **Facts** live at `~/.config/dotfiles-local/facts.nix` and are injected with `--override-input local`.
-- **Secrets** live at `~/.config/dotfiles-secrets/` and are injected with `--override-input secrets`.
+- **Facts** live at `~/.config/dotfiles/facts.nix` and are injected with `--override-input local`.
+- **Secrets** live at `~/.config/dotfiles/secrets.nix` (and `~/.config/dotfiles/files/`) and are injected with `--override-input secrets`.
+  - Both inputs default to the same directory (`~/.config/dotfiles/`).
 - The repo contains stub inputs so templates work without local overrides; real configs require overrides.
   - The CLI apps (`apply/update/doctor/bootstrap`) pass these overrides automatically.
 

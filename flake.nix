@@ -80,7 +80,7 @@
         user = facts.user or {};
         username = user.username or "";
         _ = if username == "" then
-          throw "facts.user.username is required (set in ~/.config/dotfiles-local/facts.nix or override inputs.local)"
+          throw "facts.user.username is required (set in ~/.config/dotfiles/facts.nix or override inputs.local)"
         else
           null;
       in

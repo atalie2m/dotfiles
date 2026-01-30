@@ -21,8 +21,8 @@ set_repo_root() {
 }
 
 resolve_inputs() {
-  FACTS_DIR="${FACTS_DIR:-$HOME/.config/dotfiles-local}"
-  SECRETS_DIR="${SECRETS_DIR:-$HOME/.config/dotfiles-secrets}"
+  FACTS_DIR="${FACTS_DIR:-$HOME/.config/dotfiles}"
+  SECRETS_DIR="${SECRETS_DIR:-$HOME/.config/dotfiles}"
   FACTS="${FACTS:-path:${FACTS_DIR}}"
   SECRETS="${SECRETS:-path:${SECRETS_DIR}}"
 }
