@@ -43,6 +43,7 @@ delib.host {
         native = "__default__profile__";
       };
     };
+    tools.editor.vscode.appLaunchers.profiledApp.enable = true;
   };
 
   home = { name, cfg, myconfig, ... }: {
