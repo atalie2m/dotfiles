@@ -1,9 +1,9 @@
 { delib, ... }:
 
-# AI coding agent tool group
+# Editor tool group
 
 delib.module {
-  name = "tools.aiCodingAgent";
+  name = "tools.editor";
 
   options = with delib; moduleOptions {
     enable = boolOption false;

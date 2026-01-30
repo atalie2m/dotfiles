@@ -1,9 +1,9 @@
 { delib, ... }:
 
-# AI coding agent tool group
+# System integration tool group
 
 delib.module {
-  name = "tools.aiCodingAgent";
+  name = "tools.system";
 
   options = with delib; moduleOptions {
     enable = boolOption false;

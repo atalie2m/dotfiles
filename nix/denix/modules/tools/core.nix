@@ -1,9 +1,9 @@
 { delib, ... }:
 
-# AI coding agent tool group
+# Core CLI tool group
 
 delib.module {
-  name = "tools.aiCodingAgent";
+  name = "tools.core";
 
   options = with delib; moduleOptions {
     enable = boolOption false;

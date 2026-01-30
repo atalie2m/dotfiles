@@ -5,7 +5,7 @@
 delib.module {
   name = "tools.aiCodingAgent.claudeCode";
 
-  options.tools.aiCodingAgent.claudeCode = with delib.options; {
+  options = with delib; moduleOptions {
     enable = boolOption false;
   };
 

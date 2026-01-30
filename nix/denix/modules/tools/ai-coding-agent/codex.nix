@@ -5,7 +5,7 @@
 delib.module {
   name = "tools.aiCodingAgent.codex";
 
-  options.tools.aiCodingAgent.codex = with delib.options; {
+  options = with delib; moduleOptions {
     enable = boolOption false;
   };
 

@@ -23,8 +23,7 @@ delib.host {
       inherit user machine machines;
       binaryCaches = facts.binaryCaches or {};
     };
-    packages.core.extraPackages = with pkgs; [ tmux ];
-    tmux.enable = true;
+    tools.terminal.tmux.enable = true;
   };
 
   home = { name, cfg, myconfig, ... }: {

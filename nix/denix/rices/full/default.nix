@@ -18,49 +18,16 @@ delib.rice {
       };
     };
 
-    # Additional programs beyond minimum
-    gpg.enable = true;
-    karabiner.enable = true;
-    # Install sops/age CLIs and enable sops-nix integration when secrets are provided
-    sops.enable = true;
-
-    # Smart backup service for managing configuration conflicts
-    smartBackup = {
-      enable = true;
-      managedFiles = [
-        "$HOME/.config/karabiner/karabiner.json"
-      ];
-    };
-
-    # Unified shell configuration
-    shells = {
-      enable = true;
-      zsh.enable = true;
-      bash.enable = true;
-      starship.enable = true;
-      defaultShell = "zsh";
-    };
-
-    vscode.enable = true;
-
-    # Tool catalog defaults
     tools.aiCodingAgent.enable = true;
+    tools.dev.enable = true;
+    tools.editor.vscode.enable = true;
+    tools.shell.enable = true;
+    tools.shell.defaultShell = "zsh";
+    tools.system.karabiner.enable = true;
+    tools.system.homebrewNative.enable = true;
+    tools.system.brewNix.enable = true;
+    tools.system.brewNix.appLinks.enable = true;
+    tools.system.brewNix.autoTrampolines.enable = false;
 
-    # Enhanced package sets
-    packages = {
-      core.enable = true;
-      development.enable = true;
-      productivity.enable = true;
-    };
-
-    # Native homebrew integration
-    homebrew.native.enable = true;
-
-    # Brew-nix integration for GUI applications
-    brew-nix = {
-      enable = true;
-      appLinks.enable = true;
-      autoTrampolines.enable = false;
-    };
   };
 }

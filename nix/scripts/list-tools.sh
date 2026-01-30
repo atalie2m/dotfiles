@@ -91,45 +91,21 @@ resolve_inputs
 target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
 
 attr="$ROOT#darwinConfigurations.${target}.config"
-
-select_expr=$(cat <<'NIX'
-cfg:
-  if cfg ? myconfig && cfg.myconfig ? tools then cfg.myconfig.tools
-  else if cfg ? tools then cfg.tools
-  else {}
-NIX
-)
+tools_expr_path="./nix/scripts/list-tools.nix"
 
 if [[ "$format" == "json" ]]; then
   nix eval --json "$attr" \
-    --apply "$select_expr" \
+    --impure \
+    --apply "cfg: (import ${tools_expr_path} { }).select cfg" \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS"
   printf '\n'
   exit 0
 fi
 
-flatten_expr=$(cat <<'NIX'
-cfg:
-  let
-    tools =
-      if cfg ? myconfig && cfg.myconfig ? tools then cfg.myconfig.tools
-      else if cfg ? tools then cfg.tools
-      else {};
-    flatten = prefix: value:
-      if builtins.isAttrs value then
-        builtins.concatLists (builtins.map (name:
-          flatten (if prefix == "" then name else prefix + "." + name) value.${name}
-        ) (builtins.attrNames value))
-      else
-        [ "${prefix} = ${if value then "true" else "false"}" ];
-  in
-    builtins.concatStringsSep "\n" (flatten "" tools)
-NIX
-)
-
 nix eval --raw "$attr" \
-  --apply "$flatten_expr" \
+  --impure \
+  --apply "cfg: (import ${tools_expr_path} { }).text cfg" \
   --override-input local "$FACTS" \
   --override-input secrets "$SECRETS"
 printf '\n'

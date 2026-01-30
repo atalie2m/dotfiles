@@ -5,7 +5,7 @@
 delib.module {
   name = "tools.aiCodingAgent.geminiCli";
 
-  options.tools.aiCodingAgent.geminiCli = with delib.options; {
+  options = with delib; moduleOptions {
     enable = boolOption false;
   };
 

@@ -22,21 +22,17 @@ delib.rice {
       enable = true;
       allowAll = true;
     };
-    terminal.enable = true;
-    fonts.enable = true;
-    smartBackup.enable = true;
-
+    tools.core.enable = true;
+    tools.security.enable = true;
+    tools.dev.git.enable = true;
+    tools.terminal.rio.enable = true;
+    tools.terminal.terminalApp.enable = true;
+    tools.system.fonts.enable = true;
+    tools.system.smartBackup.enable = true;
     # Enable modern Nix features
     system.nix.enable = true;
 
     # Core tools
-    git.enable = true;
-    gpg.enable = true;
-    sops.enable = true;
-
-    # Essential packages only
-    packages = {
-      core.enable = true;
-    };
+    # Git/GPG/Sops now managed via tools.*
   };
 }
