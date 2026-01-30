@@ -36,7 +36,7 @@ delib.module {
       userName = myconfig.constants.fullName;
       userEmail = myconfig.constants.email;
 
-      lfs.enable = config.tools.dev.gitLfs.enable or false;
+      lfs.enable = (((myconfig.tools or {}).dev or {}).gitLfs or {}).enable or false;
 
       extraConfig = lib.mkMerge [
         {

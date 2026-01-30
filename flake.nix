@@ -15,6 +15,10 @@
     home-manager.url = "github:nix-community/home-manager/release-25.05";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
+    nix-homebrew = {
+      url = "github:zhaofengli/nix-homebrew";
+    };
+
     denix = {
       url = "github:yunfachi/denix";
       inputs = {
@@ -97,6 +101,7 @@
           (if moduleSystem == "darwin" then [
             inputs.brew-nix.darwinModules.default
             inputs.mac-app-util.darwinModules.default
+            inputs.nix-homebrew.darwinModules.nix-homebrew
           ] else []);
       });
   in {

@@ -15,10 +15,10 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { ... }: {
+  home.ifEnabled = { myconfig, ... }: {
     programs.starship = {
       enable = true;
-      enableZshIntegration = config.tools.shell.zsh.enable or false;
+      enableZshIntegration = (((myconfig.tools or {}).shell or {}).zsh or {}).enable or false;
       # Bash integration handled manually in ~/.nix/.bashrc
       enableBashIntegration = false;
     };

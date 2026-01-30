@@ -24,6 +24,25 @@ delib.host {
       binaryCaches = facts.binaryCaches or {};
     };
     tools.terminal.tmux.enable = true;
+    tools.system.macAppUtil = {
+      enable = true;
+      systemService.enable = false;
+      homeTrampolines.syncDock = true;
+      homeTrampolines.timeoutSeconds = 15;
+    };
+    tools.editor.vscode.appLaunchers.displayNames = {
+      python = "VSC - Python";
+      web = "VSC - Web";
+      writing = "VSC - Writing";
+      native = "VSC - Default";
+    };
+    tools.editor.vscode.appLaunchers.dynamicNames = {
+      enable = true;
+      prefix = "VSC - ";
+      profileIds = {
+        native = "__default__profile__";
+      };
+    };
   };
 
   home = { name, cfg, myconfig, ... }: {

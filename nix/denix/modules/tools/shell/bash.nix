@@ -17,8 +17,8 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { cfg, ... }: let
-    shellCfg = config.tools.shell;
+  home.ifEnabled = { cfg, myconfig, ... }: let
+    shellCfg = (myconfig.tools or {}).shell or {};
 
     commonAliases = {
       # File and directory operations
@@ -112,7 +112,9 @@ delib.module {
     };
   };
 
-  darwin.ifEnabled = { cfg, ... }: {
-    programs.bash.enable = lib.mkForce (config.tools.shell.manageSystemShells && cfg.enable);
+  darwin.ifEnabled = { cfg, myconfig, ... }: {
+    programs.bash.enable = lib.mkForce (
+      (((myconfig.tools or {}).shell or {}).manageSystemShells or false) && cfg.enable
+    );
   };
 }
