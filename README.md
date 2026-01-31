@@ -60,6 +60,25 @@ Manual evaluation (JSON):
 nix eval --json .#darwinConfigurations.a2m_mac-minimum.config.myconfig.tools
 ```
 
+## VS Code Instances (Directory Profiles)
+
+This repo uses "directory profiles" to run multiple isolated VS Code instances
+(separate user-data + extensions dirs) without relying on macOS app-bundle hacks.
+
+- Profiles live under `apps/vscode/<name>/`.
+  - `_default/` provides the baseline.
+  - Each profile can define:
+    - `settings.json`
+    - `extensions.txt`
+    - `extensions-disabled.txt` (installed but always launched disabled)
+    - `icon.icns` (optional, macOS launcher icon)
+- Generated commands:
+  - `code-<name>`: self-bootstraps (if baseline changed) then launches the instance.
+  - `code-<name>-bootstrap`: seed/merge settings and install baseline extensions.
+  - `code-<name>-reset`: backup the instance dir and re-bootstrap.
+
+See `docs/vscode.md` for details.
+
 ## Terminal Compatibility
 
 **For macOS users**: Please use a 24-bit True Color compatible terminal instead of the default Terminal.app. The Starship prompt configuration in this repository uses True Color (#RRGGBB) values that are only properly displayed in terminals with full color support.

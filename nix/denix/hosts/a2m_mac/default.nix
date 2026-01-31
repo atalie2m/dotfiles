@@ -36,14 +36,6 @@ delib.host {
       writing = "VSC - Writing";
       native = "VSC - Default";
     };
-    tools.editor.vscode.appLaunchers.dynamicNames = {
-      enable = true;
-      prefix = "VSC - ";
-      profileIds = {
-        native = "__default__profile__";
-      };
-    };
-    tools.editor.vscode.appLaunchers.profiledApp.enable = true;
   };
 
   home = { name, cfg, myconfig, ... }: {

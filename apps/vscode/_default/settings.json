@@ -1,5 +1,7 @@
 {
   "editor.inlayHints.enabled": "off",
+  "window.title": "[VSC] ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
+  "window.titleSeparator": " - ",
   "workbench.colorCustomizations": {
     "editor.lineHighlightBackground": "#1073cf2d",
     "editor.lineHighlightBorder": "#9fced11f"

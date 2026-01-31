@@ -1,0 +1,9 @@
+{
+  "window.title": "[PYTHON] ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#2ea043",
+    "titleBar.inactiveBackground": "#2ea043",
+    "statusBar.background": "#2ea043",
+    "statusBar.noFolderBackground": "#2ea043"
+  }
+}

@@ -3,10 +3,14 @@ james-yu.latex-workshop
 jeandeaual.lilypond-formatter
 jeandeaual.lilypond-syntax
 jeandeaual.scheme
+lhl2617.lilypond-formatter
 lhl2617.lilypond-pdf-preview
 lhl2617.lilypond-snippets
 lhl2617.vslilypond
 marp-team.marp-vscode
+ms-python.debugpy
+ms-python.python
+ms-python.vscode-pylance
 myriad-dreamin.tinymist
 rickaym.manim-sideview
 shd101wyy.markdown-preview-enhanced
