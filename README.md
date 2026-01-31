@@ -131,11 +131,13 @@ Example `facts.nix`:
     a2m_mac = {
       computerName = "Your Mac";
       localHostName = "your-mac";
-      hostName = "your-mac.local";
+      hostName = "your-mac";
     };
   };
 }
 ```
+
+These machine values are used to set macOS system naming via `tools.system.hostnames`.
 
 ### Secrets (confidential)
 
