@@ -70,6 +70,7 @@ let
     go = { group = "dev"; pkg = "go"; };
     mercurial = { group = "dev"; pkg = "mercurial"; };
     nodejs = { group = "dev"; pkg = "nodejs"; };
+    opentofu = { group = "dev"; pkg = "opentofu"; };
     terraform = { group = "dev"; pkg = "terraform"; };
   };
 in

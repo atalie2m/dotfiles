@@ -1,5 +1,5 @@
 {
-  description = "Web dev template (Node22, pnpm, bun, wrangler, awscli2, jq/yq, mkcert, just) with formatters and checks";
+  description = "Web dev template (Node22, pnpm, bun, optional wrangler, awscli2, jq/yq, mkcert, just) with formatters and checks";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -27,7 +27,9 @@
               node
               pkgs.nodePackages.pnpm
               pkgs.bun
-              pkgs.wrangler
+              # Optional: Cloudflare Workers tooling.
+              # Uncomment when this project needs wrangler.
+              # pkgs.wrangler
               pkgs.awscli2
               pkgs.jq
               pkgs.yq

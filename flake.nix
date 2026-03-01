@@ -250,7 +250,7 @@
         templates = {
           web-dev = {
             path = ./templates/web-dev;
-            description = "Web development template: devShell with Node 22, pnpm, bun, wrangler, awscli2, jq/yq, mkcert, just; Prettier formatting via treefmt-nix; apps.dev/apps.format and checks";
+            description = "Web development template: devShell with Node 22, pnpm, bun, optional wrangler, awscli2, jq/yq, mkcert, just; Prettier formatting via treefmt-nix; apps.dev/apps.format and checks";
           };
         };
       } // (if localStub then { } else {

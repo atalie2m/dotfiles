@@ -20,7 +20,12 @@ delib.rice {
     # Essential system configuration
     nixpkgs.unfree = {
       enable = true;
-      allowAll = true;
+      # Keep unfree permissions explicit and minimal for predictable ops.
+      allowAll = false;
+      packages = [
+        "terraform"
+        "vscode"
+      ];
     };
     tools.core.enable = true;
     tools.security.enable = true;

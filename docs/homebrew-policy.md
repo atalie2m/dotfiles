@@ -25,3 +25,8 @@ This document defines package-source boundaries for this dotfiles flake.
 1. Is each tool declared in exactly one source?
 2. Is the source choice consistent with this policy?
 3. Does `PATH` resolve to the intended executable?
+
+## Tool-Specific Notes
+
+1. Cloudflare `wrangler`: prefer Nix (`home-manager` or project `flake.nix`) as the default source.
+2. Keep Homebrew `wrangler` only as a pending fallback when the Nix package is broken or lagging.

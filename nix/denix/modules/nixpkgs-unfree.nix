@@ -8,7 +8,7 @@ delib.module {
   options.nixpkgs.unfree = with delib.options; {
     enable = boolOption false;
     allowAll = boolOption false;
-    packages = listOfOption str [ "claude-code" ];
+    packages = listOfOption str [ ];
   };
 
   home.ifEnabled = { cfg, ... }: {

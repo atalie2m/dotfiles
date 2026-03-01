@@ -7,7 +7,7 @@ nix flake init -t github:atalie2m/dotfiles#web-dev
 ```
 
 It provides:
-- Dev shell with Node.js 22, pnpm, bun, Cloudflare wrangler, AWS CLI v2, jq/yq, mkcert, just
+- Dev shell with Node.js 22, pnpm, bun, AWS CLI v2, jq/yq, mkcert, just (`wrangler` is optional and commented by default)
 - Prettier formatting integrated via treefmt-nix and exposed as `apps.format`
 - `nix run .#dev` for development tasks and `nix flake check` hooks
 
@@ -55,6 +55,34 @@ Application/tool sourcing priority is:
 1. `tools.system.homebrewNative` (nix-darwin managed Homebrew) for items that should stay "always latest".
 2. `tools.system.brewNix` for pure-Nix/pinned/verified casks. Currently unused by default, but kept for fallback.
 3. Custom implementation (for example `mk-node-cli-overlay`) only when both paths above are unsuitable.
+
+## Terraform / OpenTofu Policy
+
+1. Terraform/OpenTofu are managed per project via each repo's `flake.nix` (recommended default).
+2. Dotfiles/Home Manager can also provide them through `myconfig.tools.dev` for convenience.
+3. Unfree is allowed via `nixpkgs.unfree.packages` allow-list (not `allowAll`) to keep operations explicit.
+4. For Terraform-only repos, set `nixpkgs.config.allowUnfreePredicate` in that repo's flake and include `pkgs.terraform` in the devShell.
+
+Example (`flake.nix` for a Terraform repo):
+
+```nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  outputs = { nixpkgs, ... }:
+    let
+      system = "aarch64-darwin";
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [ "terraform" ];
+      };
+    in
+    {
+      devShells.${system}.default = pkgs.mkShell {
+        packages = [ pkgs.terraform pkgs.opentofu ];
+      };
+    };
+}
+```
 
 ## Tool Catalog (myconfig.tools)
 
