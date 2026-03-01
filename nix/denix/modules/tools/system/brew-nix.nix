@@ -1,6 +1,7 @@
 { delib, lib, inputs, pkgs, ... }:
 
-# Brew-nix integration for managing macOS applications via Nix
+# Brew-nix integration for managing macOS applications via Nix.
+# Kept as a secondary path for pinned/verified casks (empty by default).
 delib.module {
   name = "tools.system.brewNix";
 
@@ -12,15 +13,7 @@ delib.module {
       enable = boolOption false;
       targetDir = strOption "/Applications/Brew-nix Apps";
     };
-    casks = attrsOption {
-      rio = "Rio.app";
-      keyclu = "KeyClu.app";
-      latest = "Latest.app";
-      alacritty = "Alacritty.app";
-      ghostty = "Ghostty.app";
-      wezterm = "WezTerm.app";
-      xcodes-app = "Xcodes.app";
-    };
+    casks = attrsOption { };
     extraCasks = attrsOption { };
   };
 

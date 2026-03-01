@@ -1,16 +1,17 @@
-{ delib, lib, config, inputs, pkgs, ... }:
+{ delib, lib, ... }:
 
-# Native Homebrew integration for macOS applications and tools
+# Native Homebrew integration for macOS applications and tools.
+# Preferred for fast-moving apps/tools that should stay up to date.
 delib.module {
   name = "tools.system.homebrewNative";
 
   options = with delib; moduleOptions {
     enable = boolOption false;
 
-    # Homebrew formulae (CLI tools)
+    # Homebrew formulae (CLI tools, latest-first)
     brews = listOfOption str [ ];
 
-    # Homebrew casks (GUI applications)
+    # Homebrew casks (GUI applications, latest-first)
     casks = listOfOption str [ ];
 
     # Mac App Store applications (by ID)
