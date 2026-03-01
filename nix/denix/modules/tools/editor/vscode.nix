@@ -305,6 +305,7 @@ delib.module {
           (inst: {
             name = "vscode-app-${inst.name}";
             value = {
+              force = true;
               source = inst.appBundle;
               target = "${appLaunchersDir}/${inst.appDisplayName}.app";
               recursive = true;

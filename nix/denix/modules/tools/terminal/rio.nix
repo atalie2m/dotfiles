@@ -38,7 +38,10 @@ delib.module {
     in
     {
       xdg.configFile = {
-        "rio/config.toml".source = tomlFormat.generate "rio.toml" rioSettings;
+        "rio/config.toml" = {
+          force = true;
+          source = tomlFormat.generate "rio.toml" rioSettings;
+        };
       };
     };
 }

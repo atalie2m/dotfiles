@@ -34,7 +34,6 @@ delib.rice {
     tools.terminal.terminalApp.enable = true;
     tools.system.fonts.enable = true;
     tools.system.hostnames.enable = true;
-    tools.system.smartBackup.enable = true;
     # Enable modern Nix features
     system.nix.enable = true;
 

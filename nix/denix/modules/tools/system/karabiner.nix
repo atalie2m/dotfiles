@@ -104,13 +104,13 @@ delib.module {
           # 5. Symlink the entire modifications directory
           #
           complexModsSymlink = {
+            force = true;
             source = ruleDir;
             recursive = true; # keep file names intact
           };
         in
         {
-          # Install everything (symlink karabiner.json and complex_modifications)
-          # Force the symlink to avoid HM's own backup collision; we back up ourselves pre-activation.
+          # Install everything (symlink karabiner.json and complex_modifications).
           xdg.configFile."karabiner/karabiner.json" = {
             source = karabinerJson;
             force = true;
@@ -120,14 +120,17 @@ delib.module {
           #
           # Optional: write a small debug text next to the config
           #
-          home.file.".karabiner-debug.txt".text = ''
-            Karabiner-Elements Nix module diagnostics
+          home.file.".karabiner-debug.txt" = {
+            force = true;
+            text = ''
+              Karabiner-Elements Nix module diagnostics
 
-            ruleDir:  ${ruleDir}
+              ruleDir:  ${ruleDir}
 
-            Rule files considered:
-            ${lib.concatMapStringsSep "\n" (name: "  • " + ruleFiles.${name}) (builtins.attrNames ruleFiles)}
-          '';
+              Rule files considered:
+              ${lib.concatMapStringsSep "\n" (name: "  • " + ruleFiles.${name}) (builtins.attrNames ruleFiles)}
+            '';
+          };
         };
     in
     {

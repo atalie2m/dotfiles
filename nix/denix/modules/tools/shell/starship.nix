@@ -25,6 +25,7 @@ delib.module {
     };
 
     xdg.configFile."starship.toml" = {
+      force = true;
       source = ../../../../../apps/starship.toml;
     };
   };
