@@ -15,6 +15,9 @@ delib.module {
     editorCmd = strOption "vim";
     enableSigning = boolOption false;
     extraConfig = attrsOption { };
+    lfs = {
+      enable = boolOption false;
+    };
     aliases = attrsOption {
       # Default useful aliases
       st = "status";
@@ -28,7 +31,10 @@ delib.module {
   };
 
   myconfig = {
-    always = mkEnableDefault "tools.dev.git.enable";
+    always = args:
+      lib.recursiveUpdate
+        (mkEnableDefault "tools.dev.git.enable" args)
+        (mkEnableDefault "tools.dev.git.lfs.enable" args);
   };
 
   home.ifEnabled = { cfg, myconfig, ... }:
@@ -40,7 +46,7 @@ delib.module {
       programs.git = {
         enable = true;
 
-        lfs.enable = (((myconfig.tools or { }).dev or { }).gitLfs or { }).enable or false;
+        lfs.enable = cfg.lfs.enable;
 
         extraConfig = lib.mkMerge [
           {
