@@ -33,16 +33,6 @@ resolve_inputs() {
   SECRETS="${SECRETS:-path:${SECRETS_DIR}}"
 }
 
-default_rice_for_host() {
-  local root="$1"
-  local host="$2"
-  local host_file="$root/nix/denix/hosts/$host/default.nix"
-  if [[ ! -f $host_file ]]; then
-    return 0
-  fi
-  sed -nE 's/^[[:space:]]*rice[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$host_file" | head -n 1
-}
-
 list_darwin_targets() {
   local root="$1"
   local facts="$2"
@@ -101,12 +91,6 @@ resolve_target() {
   else
     if [[ $found_combo -eq 1 ]]; then
       printf '%s\n' "${host}-${rice}"
-      return 0
-    fi
-    local default_rice
-    default_rice=$(default_rice_for_host "$root" "$host")
-    if [[ -n $default_rice && $default_rice == "$rice" && $found_host -eq 1 ]]; then
-      printf '%s\n' "$host"
       return 0
     fi
   fi

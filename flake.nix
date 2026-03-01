@@ -77,7 +77,7 @@
   outputs = inputs @ { denix, flake-parts, ... }:
     let
       localStub = builtins.pathExists (inputs.local + "/STUB");
-      mkConfigurations = moduleSystem:
+      mkConfigurations = { moduleSystem, paths, exclude ? [ ] }:
         let
           facts = import (inputs.local + "/facts.nix");
           user = facts.user or { };
@@ -91,22 +91,7 @@
         builtins.seq _ (denix.lib.configurations {
           inherit moduleSystem;
           homeManagerUser = username;
-          # Point Denix to the base directory; it discovers hosts/modules/rices
-          # under this root. Passing subdirectories can cause path resolution
-          # issues in umport.
-          paths = [ ./nix/denix ];
-          exclude =
-            if moduleSystem == "nixos" then
-              [
-                ./nix/denix/hosts/a2m_mac
-                ./nix/denix/hosts/mn_mac
-                ./nix/denix/rices/full
-                ./nix/denix/rices/mn
-              ]
-            else if moduleSystem == "darwin" then
-              [ ./nix/denix/hosts/a2m_nixos ]
-            else
-              [ ];
+          inherit paths exclude;
           extensions = with denix.lib.extensions; [
             args
             (base.withConfig { args.enable = true; })
@@ -120,6 +105,27 @@
               inputs.nix-homebrew.darwinModules.nix-homebrew
             ] else [ ]);
         });
+
+      mkLatestConfigurations = moduleSystem:
+        mkConfigurations {
+          inherit moduleSystem;
+          paths = [ ./nix/denix ];
+          exclude = [ ./nix/denix/lib/mk-darwin-host.nix ] ++ (
+            if moduleSystem == "nixos" then
+              [
+                ./nix/denix/hosts/a2m_nixos
+                ./nix/denix/hosts/a2m_mac
+                ./nix/denix/hosts/mn_mac
+                ./nix/denix/rices/full
+                ./nix/denix/rices/mn
+                ./nix/denix/rices/minimum
+              ]
+            else if moduleSystem == "darwin" then
+              [ ./nix/denix/hosts/a2m_nixos ]
+            else
+              [ ]
+          );
+        };
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ inputs.treefmt-nix.flakeModule ];
@@ -248,9 +254,9 @@
           };
         };
       } // (if localStub then { } else {
-        nixosConfigurations = mkConfigurations "nixos";
-        homeConfigurations = mkConfigurations "home";
-        darwinConfigurations = mkConfigurations "darwin";
+        nixosConfigurations = mkLatestConfigurations "nixos";
+        homeConfigurations = mkLatestConfigurations "home";
+        darwinConfigurations = mkLatestConfigurations "darwin";
       });
     };
 }

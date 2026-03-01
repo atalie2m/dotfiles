@@ -38,12 +38,13 @@ nix run .#apply -- --host a2m_mac --action build
 # Switch rices per host
 nix run .#apply -- --host a2m_mac --rice minimum
 nix run .#apply -- --host mn_mac --rice minimum
+
 ```
 
 Manual attribute examples (still valid):
 `a2m_mac`, `mn_mac`, `a2m_mac-minimum`, `mn_mac-minimum`.
 
-When `--rice` is provided, the CLI tries `host-rice` first and falls back to `host` if the rice matches the host default.
+When `--rice` is provided, the CLI resolves only `host-rice` (no implicit fallback to `host`).
 
 ## Application Source Policy
 
