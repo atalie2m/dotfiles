@@ -123,7 +123,7 @@
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ inputs.treefmt-nix.flakeModule ];
-      systems = [ "aarch64-darwin" "x86_64-darwin" ];
+      systems = [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux" ];
 
       perSystem = { pkgs, config, ... }: {
         treefmt = {

@@ -49,6 +49,8 @@ When `--rice` is provided, the CLI tries `host-rice` first and falls back to `ho
 
 Application/tool sourcing priority is:
 
+- Detailed policy: [`docs/homebrew-policy.md`](docs/homebrew-policy.md)
+
 1. `tools.system.homebrewNative` (nix-darwin managed Homebrew) for items that should stay "always latest".
 2. `tools.system.brewNix` for pure-Nix/pinned/verified casks. Currently unused by default, but kept for fallback.
 3. Custom implementation (for example `mk-node-cli-overlay`) only when both paths above are unsuitable.

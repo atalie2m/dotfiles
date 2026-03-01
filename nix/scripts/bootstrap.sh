@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 LIB_PATH="$SCRIPT_DIR/lib.sh"
@@ -97,11 +98,13 @@ if [[ ! -d $FACTS_DIR ]]; then
   mkdir -p "$FACTS_DIR"
   log "created $FACTS_DIR"
 fi
+chmod 700 "$FACTS_DIR"
 
 if [[ ! -d $SECRETS_DIR ]]; then
   mkdir -p "$SECRETS_DIR"
   log "created $SECRETS_DIR"
 fi
+chmod 700 "$SECRETS_DIR"
 
 facts_file="$FACTS_DIR/facts.nix"
 if [[ ! -f $facts_file ]]; then
@@ -139,6 +142,7 @@ if [[ ! -f $facts_file ]]; then
 EOF
   log "generated $facts_file"
 fi
+chmod 600 "$facts_file"
 
 secrets_file="$SECRETS_DIR/secrets.nix"
 if [[ ! -f $secrets_file ]]; then
@@ -147,16 +151,23 @@ if [[ ! -f $secrets_file ]]; then
 EOF
   log "generated $secrets_file"
 fi
+chmod 600 "$secrets_file"
 
 age_key_file="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
 if [[ ! -f $age_key_file ]]; then
   if command -v age-keygen >/dev/null 2>&1; then
     mkdir -p "$(dirname "$age_key_file")"
+    chmod 700 "$(dirname "$age_key_file")"
     age-keygen -o "$age_key_file"
+    chmod 600 "$age_key_file"
     log "generated sops age key at $age_key_file"
   else
     log "age-keygen not found (skipping sops key generation)"
   fi
+fi
+
+if [[ -f $age_key_file ]]; then
+  chmod 600 "$age_key_file"
 fi
 
 doctor_args=()

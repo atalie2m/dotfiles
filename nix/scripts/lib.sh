@@ -16,7 +16,13 @@ die() {
 set_repo_root() {
   ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
   if [[ -z ${ROOT:-} ]]; then
-    die "not in a git repository"
+    local lib_dir
+    lib_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    ROOT=$(cd "$lib_dir/../.." && pwd)
+  fi
+
+  if [[ ! -f "$ROOT/flake.nix" ]]; then
+    die "unable to resolve flake root (expected flake.nix under $ROOT)"
   fi
 }
 

@@ -7,6 +7,7 @@ delib.module {
   options = with delib; moduleOptions {
     enable = boolOption false;
     defaultBranch = strOption "main";
+    editorCmd = strOption "vim";
     enableSigning = boolOption false;
     extraConfig = attrsOption { };
     aliases = attrsOption {
@@ -43,7 +44,7 @@ delib.module {
             init.defaultBranch = cfg.defaultBranch;
             pull.rebase = true;
             push.autoSetupRemote = true;
-            core.editor = "code --wait";
+            core.editor = cfg.editorCmd;
           }
           (lib.mkIf cfg.enableSigning {
             commit.gpgsign = true;

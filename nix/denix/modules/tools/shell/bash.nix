@@ -61,6 +61,21 @@ delib.module {
           fi
         }
 
+        # GPG agent environment (interactive shells only)
+        if [[ $- == *i* ]]; then
+          if command -v gpgconf >/dev/null 2>&1; then
+            gpgAgentSshSocket="$(gpgconf --list-dirs agent-ssh-socket 2>/dev/null || true)"
+            if [[ -n "''${gpgAgentSshSocket:-}" ]] && { [[ -z "''${SSH_AUTH_SOCK:-}" ]] || [[ ! -S "''${SSH_AUTH_SOCK}" ]]; }; then
+              export SSH_AUTH_SOCK="''${gpgAgentSshSocket}"
+            fi
+          fi
+
+          gpgTty="$(tty 2>/dev/null || true)"
+          if [[ -n "''${gpgTty:-}" ]] && [[ "''${gpgTty}" != "not a tty" ]]; then
+            export GPG_TTY="''${gpgTty}"
+          fi
+        fi
+
         # Show nix develop environment info (interactive shells only)
         if [[ $- == *i* ]] && [[ -n "''${IN_NIX_SHELL:-}" ]]; then
           echo "🚀 Nix develop environment active"

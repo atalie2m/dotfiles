@@ -33,10 +33,6 @@ delib.module {
       enableZshIntegration = true;
     };
 
-    home.sessionVariables = {
-      SSH_AUTH_SOCK = "$(gpgconf --list-dirs agent-ssh-socket)";
-      GPG_TTY = "$(tty)";
-    };
   };
 
   darwin.ifEnabled = { ... }: {

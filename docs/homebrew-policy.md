@@ -1,0 +1,27 @@
+# Homebrew Policy
+
+This document defines package-source boundaries for this dotfiles flake.
+
+## Source Boundary
+
+1. Use Nix packages by default for CLI tools and libraries.
+2. Use `tools.system.homebrewNative` only for software that is better managed as Homebrew formulas/casks on macOS (for example GUI apps that update rapidly or are macOS-specific).
+3. Use `tools.system.brewNix` as a pinned/fallback mechanism when native Homebrew integration is unsuitable.
+
+## Duplication Rules
+
+1. Do not install the same CLI from both Nix and Homebrew.
+2. When migrating a tool source (Nix <-> Homebrew), remove the old declaration in the same change.
+3. Keep GUI apps in Homebrew casks unless there is a strong reason to package them with Nix.
+
+## PATH and Runtime Rules
+
+1. Prefer Nix-provided CLIs in `PATH` for reproducibility.
+2. If a Homebrew CLI must remain, document why in the module that enables it.
+3. Validate the effective binary with `command -v <tool>` after apply/build changes.
+
+## Review Checklist
+
+1. Is each tool declared in exactly one source?
+2. Is the source choice consistent with this policy?
+3. Does `PATH` resolve to the intended executable?
