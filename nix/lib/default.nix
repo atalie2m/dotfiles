@@ -14,7 +14,9 @@ in
   requireHomebrew = { taps ? [ ], brews ? [ ], casks ? [ ], masApps ? { } }:
     lib.mkMerge [
       {
-        tools.system.homebrewNative.enable = lib.mkDefault true;
+        # Prefer enabling Homebrew when a tool explicitly requires it.
+        # Keep this weaker than explicit user values, but stronger than inherited mkDefault false.
+        tools.system.homebrewNative.enable = lib.mkOverride 900 true;
       }
       (lib.optionalAttrs (taps != [ ]) {
         tools.system.homebrewNative.taps = lib.mkAfter taps;
