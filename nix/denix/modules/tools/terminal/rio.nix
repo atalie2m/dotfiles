@@ -19,21 +19,23 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { ... }: let
-    rioSettings = {
-      fonts = {
-        family = "0xProto Nerd Font";
-        size = 11;
-      };
+  home.ifEnabled = { ... }:
+    let
+      rioSettings = {
+        fonts = {
+          family = "0xProto Nerd Font";
+          size = 11;
+        };
 
-      window = {
-        opacity = 0.8;
+        window = {
+          opacity = 0.8;
+        };
+      };
+      tomlFormat = pkgs.formats.toml { };
+    in
+    {
+      xdg.configFile = {
+        "rio/config.toml".source = tomlFormat.generate "rio.toml" rioSettings;
       };
     };
-    tomlFormat = pkgs.formats.toml { };
-  in {
-    xdg.configFile = {
-      "rio/config.toml".source = tomlFormat.generate "rio.toml" rioSettings;
-    };
-  };
 }

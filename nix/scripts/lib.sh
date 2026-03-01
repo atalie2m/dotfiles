@@ -15,7 +15,7 @@ die() {
 
 set_repo_root() {
   ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
-  if [[ -z "${ROOT:-}" ]]; then
+  if [[ -z ${ROOT:-} ]]; then
     die "not in a git repository"
   fi
 }
@@ -31,7 +31,7 @@ default_rice_for_host() {
   local root="$1"
   local host="$2"
   local host_file="$root/nix/denix/hosts/$host/default.nix"
-  if [[ ! -f "$host_file" ]]; then
+  if [[ ! -f $host_file ]]; then
     return 0
   fi
   sed -nE 's/^[[:space:]]*rice[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$host_file" | head -n 1
@@ -60,7 +60,7 @@ resolve_target() {
   local facts="$4"
   local secrets="$5"
 
-  if [[ -z "$host" ]]; then
+  if [[ -z $host ]]; then
     log "host is required"
     return 1
   fi
@@ -71,7 +71,7 @@ resolve_target() {
     return 1
   fi
 
-  if [[ -z "$targets" ]]; then
+  if [[ -z $targets ]]; then
     log "no darwinConfigurations found (check local/secrets inputs and STUB)"
     return 1
   fi
@@ -80,14 +80,14 @@ resolve_target() {
   local found_combo=0
   local target
   while IFS= read -r target; do
-    [[ -z "$target" ]] && continue
-    [[ "$target" == "$host" ]] && found_host=1
-    if [[ -n "$rice" && "$target" == "${host}-${rice}" ]]; then
+    [[ -z $target ]] && continue
+    [[ $target == "$host" ]] && found_host=1
+    if [[ -n $rice && $target == "${host}-${rice}" ]]; then
       found_combo=1
     fi
-  done <<< "$targets"
+  done <<<"$targets"
 
-  if [[ -z "$rice" ]]; then
+  if [[ -z $rice ]]; then
     if [[ $found_host -eq 1 ]]; then
       printf '%s\n' "$host"
       return 0
@@ -99,7 +99,7 @@ resolve_target() {
     fi
     local default_rice
     default_rice=$(default_rice_for_host "$root" "$host")
-    if [[ -n "$default_rice" && "$default_rice" == "$rice" && $found_host -eq 1 ]]; then
+    if [[ -n $default_rice && $default_rice == "$rice" && $found_host -eq 1 ]]; then
       printf '%s\n' "$host"
       return 0
     fi
@@ -108,9 +108,9 @@ resolve_target() {
   log "target not found for host '$host'${rice:+ and rice '$rice'}"
   log "available darwinConfigurations:"
   while IFS= read -r target; do
-    [[ -z "$target" ]] && continue
+    [[ -z $target ]] && continue
     printf '  - %s\n' "$target" >&2
-  done <<< "$targets"
+  done <<<"$targets"
   return 1
 }
 

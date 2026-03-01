@@ -8,6 +8,10 @@
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs-lib.follows = "nixpkgs";
     };
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-25.05";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
@@ -70,103 +74,170 @@
     extra-experimental-features = [ "nix-command" "flakes" ];
   };
 
-  outputs = { denix, ... } @ inputs: let
-    localStub = builtins.pathExists (inputs.local + "/STUB");
-    systems = [ "aarch64-darwin" "x86_64-darwin" ];
-    forAllSystems = inputs.nixpkgs.lib.genAttrs systems;
-    mkConfigurations = moduleSystem:
-      let
-        facts = import (inputs.local + "/facts.nix");
-        user = facts.user or {};
-        username = user.username or "";
-        _ = if username == "" then
-          throw "facts.user.username is required (set in ~/.config/dotfiles/facts.nix or override inputs.local)"
-        else
-          null;
-      in
-      builtins.seq _ (denix.lib.configurations {
-        inherit moduleSystem;
-        homeManagerUser = username;
-        # Point Denix to the base directory; it discovers hosts/modules/rices
-        # under this root. Passing subdirectories can cause path resolution
-        # issues in umport.
-        paths = [ ./nix/denix ];
-        extensions = with denix.lib.extensions; [
-          args
-          (base.withConfig { args.enable = true; })
-        ];
-        specialArgs = { inherit inputs; };
-        # Import external modules
-        extraModules =
-          (if moduleSystem == "darwin" then [
-            inputs.brew-nix.darwinModules.default
-            inputs.mac-app-util.darwinModules.default
-            inputs.nix-homebrew.darwinModules.nix-homebrew
-          ] else []);
+  outputs = inputs @ { denix, flake-parts, ... }:
+    let
+      localStub = builtins.pathExists (inputs.local + "/STUB");
+      mkConfigurations = moduleSystem:
+        let
+          facts = import (inputs.local + "/facts.nix");
+          user = facts.user or { };
+          username = user.username or "";
+          _ =
+            if username == "" then
+              throw "facts.user.username is required (set in ~/.config/dotfiles/facts.nix or override inputs.local)"
+            else
+              null;
+        in
+        builtins.seq _ (denix.lib.configurations {
+          inherit moduleSystem;
+          homeManagerUser = username;
+          # Point Denix to the base directory; it discovers hosts/modules/rices
+          # under this root. Passing subdirectories can cause path resolution
+          # issues in umport.
+          paths = [ ./nix/denix ];
+          extensions = with denix.lib.extensions; [
+            args
+            (base.withConfig { args.enable = true; })
+          ];
+          specialArgs = { inherit inputs; };
+          # Import external modules
+          extraModules =
+            (if moduleSystem == "darwin" then [
+              inputs.brew-nix.darwinModules.default
+              inputs.mac-app-util.darwinModules.default
+              inputs.nix-homebrew.darwinModules.nix-homebrew
+            ] else [ ]);
+        });
+    in
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [ inputs.treefmt-nix.flakeModule ];
+      systems = [ "aarch64-darwin" "x86_64-darwin" ];
+
+      perSystem = { pkgs, config, ... }: {
+        treefmt = {
+          projectRootFile = "flake.nix";
+          settings.global.excludes = [ ".direnv/**" "result/**" ];
+          programs.nixpkgs-fmt.enable = true;
+          programs.shfmt = {
+            enable = true;
+            indent_size = 2;
+          };
+        };
+
+        formatter = config.treefmt.build.wrapper;
+
+        checks = {
+          statix = pkgs.runCommand "statix-check"
+            {
+              nativeBuildInputs = [ pkgs.statix ];
+              src = inputs.self;
+            } ''
+                        cd "$src"
+                        config_file=$(mktemp)
+                        cat >"$config_file" <<'EOF'
+            disabled = [
+              "manual_inherit"
+              "manual_inherit_from"
+              "useless_parens"
+              "empty_pattern"
+              "useless_has_attr"
+              "repeated_keys"
+            ]
+            ignore = [ ".direnv", "result" ]
+            nix_version = "2.4"
+            EOF
+                        statix check --config "$config_file" .
+                        touch "$out"
+          '';
+
+          deadnix = pkgs.runCommand "deadnix-check"
+            {
+              nativeBuildInputs = [ pkgs.deadnix ];
+              src = inputs.self;
+            } ''
+            cd "$src"
+            deadnix --fail -l -L .
+            touch "$out"
+          '';
+
+          shellcheck = pkgs.runCommand "shellcheck-check"
+            {
+              nativeBuildInputs = [ pkgs.findutils pkgs.shellcheck ];
+              src = inputs.self;
+            } ''
+            cd "$src"
+            mapfile -t files < <(find nix/scripts -type f -name '*.sh' | sort)
+            if [[ "''${#files[@]}" -eq 0 ]]; then
+              touch "$out"
+              exit 0
+            fi
+            shellcheck \
+              -e SC1091 \
+              -e SC2016 \
+              -e SC2034 \
+              "''${files[@]}"
+            touch "$out"
+          '';
+        };
+
+        devShells.default = pkgs.mkShell {
+          name = "dotfiles-dev";
+          packages = [
+            pkgs.age
+            pkgs.deadnix
+            pkgs.nvfetcher
+            pkgs.shellcheck
+            pkgs.sops
+            pkgs.statix
+            config.treefmt.build.wrapper
+          ];
+        };
+
+        apps = {
+          update = {
+            type = "app";
+            program = "${./nix/scripts/update.sh}";
+            meta.description = "Update flake inputs, run checks, and build host targets.";
+          };
+          list-tools = {
+            type = "app";
+            program = "${./nix/scripts/list-tools.sh}";
+            meta.description = "List effective myconfig.tools values for a host/rice.";
+          };
+          apply = {
+            type = "app";
+            program = "${./nix/scripts/apply.sh}";
+            meta.description = "Build or switch nix-darwin configurations.";
+          };
+          doctor = {
+            type = "app";
+            program = "${./nix/scripts/doctor.sh}";
+            meta.description = "Run dotfiles health checks.";
+          };
+          bootstrap = {
+            type = "app";
+            program = "${./nix/scripts/bootstrap.sh}";
+            meta.description = "Initialize local facts/secrets and optionally apply.";
+          };
+          format = {
+            type = "app";
+            program = "${config.treefmt.build.wrapper}/bin/treefmt";
+            meta.description = "Format Nix and shell files with treefmt.";
+          };
+        };
+      };
+
+      flake = {
+        # Public flake templates for easy reuse
+        templates = {
+          web-dev = {
+            path = ./templates/web-dev;
+            description = "Web development template: devShell with Node 22, pnpm, bun, wrangler, awscli2, jq/yq, mkcert, just; Prettier formatting via treefmt-nix; apps.dev/apps.format and checks";
+          };
+        };
+      } // (if localStub then { } else {
+        homeConfigurations = mkConfigurations "home";
+        darwinConfigurations = mkConfigurations "darwin";
       });
-    formatPrograms = forAllSystems (system:
-      let
-        pkgs = inputs.nixpkgs.legacyPackages.${system};
-      in
-      pkgs.writeShellScript "dotfiles-format" ''
-        set -euo pipefail
-        export PATH="${pkgs.nixpkgs-fmt}/bin:${pkgs.shfmt}/bin:$PATH"
-        config_file=$(mktemp)
-        trap 'rm -f "$config_file"' EXIT
-        cat >"$config_file" <<'EOF'
-[global]
-excludes = [".direnv/**", "result/**"]
-
-[formatter.nix]
-command = "nixpkgs-fmt"
-includes = ["*.nix", "**/*.nix"]
-
-[formatter.shell]
-command = "shfmt"
-options = ["-w", "-s", "-i", "2"]
-includes = ["*.sh", "**/*.sh"]
-EOF
-        exec ${pkgs.treefmt}/bin/treefmt --config-file "$config_file" "$@"
-      '');
-  in {
-    apps = forAllSystems (system: {
-      update = {
-        type = "app";
-        program = "${./nix/scripts/update.sh}";
-      };
-      list-tools = {
-        type = "app";
-        program = "${./nix/scripts/list-tools.sh}";
-      };
-      apply = {
-        type = "app";
-        program = "${./nix/scripts/apply.sh}";
-      };
-      doctor = {
-        type = "app";
-        program = "${./nix/scripts/doctor.sh}";
-      };
-      bootstrap = {
-        type = "app";
-        program = "${./nix/scripts/bootstrap.sh}";
-      };
-      format = {
-        type = "app";
-        program = "${formatPrograms.${system}}";
-      };
-    });
-
-    formatter = forAllSystems (system: formatPrograms.${system});
-
-    # Public flake templates for easy reuse
-    templates = {
-      web-dev = {
-        path = ./templates/web-dev;
-        description = "Web development template: devShell with Node 22, pnpm, bun, wrangler, awscli2, jq/yq, mkcert, just; Prettier formatting via treefmt-nix; apps.dev/apps.format and checks";
-      };
     };
-  } // (if localStub then {} else {
-    homeConfigurations = mkConfigurations "home";
-    darwinConfigurations = mkConfigurations "darwin";
-  });
 }

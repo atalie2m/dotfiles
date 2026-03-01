@@ -8,16 +8,16 @@ delib.module {
     enable = boolOption false;
 
     # Homebrew formulae (CLI tools)
-    brews = listOfOption str [];
+    brews = listOfOption str [ ];
 
     # Homebrew casks (GUI applications)
-    casks = listOfOption str [];
+    casks = listOfOption str [ ];
 
     # Mac App Store applications (by ID)
-    masApps = attrsOfOption int {};
+    masApps = attrsOfOption int { };
 
     # Additional Homebrew taps
-    taps = listOfOption str [];
+    taps = listOfOption str [ ];
 
     # Cleanup settings
     enableCleanup = boolOption true;

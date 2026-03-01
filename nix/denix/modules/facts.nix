@@ -21,13 +21,13 @@ delib.module {
       };
     };
 
-    machines = attrsOption {};
-    machine = attrsOption {};
+    machines = attrsOption { };
+    machine = attrsOption { };
 
     # Optional binary cache configuration (Cachix/Attic/etc.)
     binaryCaches = {
-      substituters = listOfOption str [];
-      trustedPublicKeys = listOfOption str [];
+      substituters = listOfOption str [ ];
+      trustedPublicKeys = listOfOption str [ ];
     };
   };
 }

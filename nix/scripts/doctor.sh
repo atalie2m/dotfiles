@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 LIB_PATH="$SCRIPT_DIR/lib.sh"
-if [[ ! -f "$LIB_PATH" ]]; then
+if [[ ! -f $LIB_PATH ]]; then
   if git_root=$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null); then
     if [[ -f "$git_root/nix/scripts/lib.sh" ]]; then
       SCRIPT_DIR="$git_root/nix/scripts"
@@ -11,7 +11,7 @@ if [[ ! -f "$LIB_PATH" ]]; then
     fi
   fi
 fi
-if [[ ! -f "$LIB_PATH" ]]; then
+if [[ ! -f $LIB_PATH ]]; then
   echo "doctor: lib.sh not found (tried $LIB_PATH)" >&2
   exit 1
 fi
@@ -41,37 +41,37 @@ json=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    --host)
-      [[ $# -lt 2 ]] && die "missing value for --host"
-      host="$2"
-      shift 2
-      ;;
-    --rice)
-      [[ $# -lt 2 ]] && die "missing value for --rice"
-      rice="$2"
-      shift 2
-      ;;
-    --strict)
-      strict=1
-      shift
-      ;;
-    --json)
-      json=1
-      shift
-      ;;
-    --)
-      die "unexpected -- (no passthrough supported)"
-      ;;
-    --*)
-      die "unknown option: $1"
-      ;;
-    *)
-      die "unexpected argument: $1"
-      ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  --host)
+    [[ $# -lt 2 ]] && die "missing value for --host"
+    host="$2"
+    shift 2
+    ;;
+  --rice)
+    [[ $# -lt 2 ]] && die "missing value for --rice"
+    rice="$2"
+    shift 2
+    ;;
+  --strict)
+    strict=1
+    shift
+    ;;
+  --json)
+    json=1
+    shift
+    ;;
+  --)
+    die "unexpected -- (no passthrough supported)"
+    ;;
+  --*)
+    die "unknown option: $1"
+    ;;
+  *)
+    die "unexpected argument: $1"
+    ;;
   esac
 done
 
@@ -98,21 +98,21 @@ record_check() {
   CHECK_MESSAGE+=("$message")
 
   case "$status" in
-    fail) FAILURES=$((FAILURES + 1)) ;;
-    warn) WARNINGS=$((WARNINGS + 1)) ;;
+  fail) FAILURES=$((FAILURES + 1)) ;;
+  warn) WARNINGS=$((WARNINGS + 1)) ;;
   esac
 
-  if [[ "$json" -eq 0 ]]; then
+  if [[ $json -eq 0 ]]; then
     printf '%-5s %s: %s\n' "$status" "$name" "$message"
   fi
 }
 
 facts_file="$FACTS_DIR/facts.nix"
-if [[ -f "$facts_file" ]]; then
+if [[ -f $facts_file ]]; then
   record_check "facts.exists" "ok" "$facts_file"
   if command -v nix >/dev/null 2>&1; then
     if username=$(nix eval --raw --file "$facts_file" --apply 'x: x.user.username or ""' 2>/dev/null); then
-      if [[ -n "$username" ]]; then
+      if [[ -n $username ]]; then
         record_check "facts.username" "ok" "$username"
       else
         record_check "facts.username" "fail" "facts.user.username is empty"
@@ -122,7 +122,7 @@ if [[ -f "$facts_file" ]]; then
     fi
 
     if home_dir=$(nix eval --raw --file "$facts_file" --apply 'x: x.user.homeDirectory or ""' 2>/dev/null); then
-      if [[ -n "$home_dir" ]]; then
+      if [[ -n $home_dir ]]; then
         record_check "facts.homeDirectory" "ok" "$home_dir"
       else
         record_check "facts.homeDirectory" "fail" "facts.user.homeDirectory is empty"
@@ -144,14 +144,14 @@ else
 fi
 
 secrets_file="$SECRETS_DIR/secrets.nix"
-if [[ -f "$secrets_file" ]]; then
+if [[ -f $secrets_file ]]; then
   record_check "secrets.exists" "ok" "$secrets_file"
 else
   record_check "secrets.exists" "fail" "$secrets_file missing"
 fi
 
 age_key_file="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
-if [[ -f "$age_key_file" ]]; then
+if [[ -f $age_key_file ]]; then
   record_check "sops.ageKey" "ok" "$age_key_file"
 else
   record_check "sops.ageKey" "warn" "$age_key_file missing"
@@ -168,7 +168,7 @@ else
 fi
 
 machine_arch=$(uname -m 2>/dev/null || true)
-if [[ "$machine_arch" == "arm64" ]]; then
+if [[ $machine_arch == "arm64" ]]; then
   if command -v arch >/dev/null 2>&1 && arch -x86_64 /usr/bin/true >/dev/null 2>&1; then
     record_check "darwin.rosetta" "ok" "Rosetta available"
   else
@@ -180,15 +180,15 @@ fi
 
 if command -v nix >/dev/null 2>&1; then
   if targets=$(list_darwin_targets "$ROOT" "$FACTS" "$SECRETS"); then
-    if [[ -z "$targets" ]]; then
+    if [[ -z $targets ]]; then
       record_check "flake.targets" "fail" "no darwinConfigurations found"
-    elif [[ -n "$host" ]]; then
-      if [[ "$json" -eq 1 ]]; then
+    elif [[ -n $host ]]; then
+      if [[ $json -eq 1 ]]; then
         target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS" 2>/dev/null || true)
       else
         target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS" || true)
       fi
-      if [[ -n "$target" ]]; then
+      if [[ -n $target ]]; then
         if nix eval --raw "$ROOT#darwinConfigurations.${target}.system.drvPath" \
           --override-input local "$FACTS" \
           --override-input secrets "$SECRETS" \
@@ -211,7 +211,7 @@ else
   record_check "flake.targets" "fail" "nix not found (cannot evaluate flake)"
 fi
 
-if [[ "$strict" -eq 1 ]]; then
+if [[ $strict -eq 1 ]]; then
   if nix flake check \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS" \
@@ -222,9 +222,9 @@ if [[ "$strict" -eq 1 ]]; then
   fi
 fi
 
-if [[ "$json" -eq 1 ]]; then
+if [[ $json -eq 1 ]]; then
   ok="false"
-  if [[ "$FAILURES" -eq 0 ]]; then
+  if [[ $FAILURES -eq 0 ]]; then
     ok="true"
   fi
   printf '{'
@@ -237,14 +237,14 @@ if [[ "$json" -eq 1 ]]; then
     status=$(json_escape "${CHECK_STATUS[$i]}")
     message=$(json_escape "${CHECK_MESSAGE[$i]}")
     printf '{"name":"%s","status":"%s","message":"%s"}' "$name" "$status" "$message"
-    if [[ "$i" -lt $((${#CHECK_NAMES[@]} - 1)) ]]; then
+    if [[ $i -lt $((${#CHECK_NAMES[@]} - 1)) ]]; then
       printf ','
     fi
   done
   printf ']}\n'
 fi
 
-if [[ "$FAILURES" -eq 0 ]]; then
+if [[ $FAILURES -eq 0 ]]; then
   exit 0
 fi
 exit 1

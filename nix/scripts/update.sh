@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 LIB_PATH="$SCRIPT_DIR/lib.sh"
-if [[ ! -f "$LIB_PATH" ]]; then
+if [[ ! -f $LIB_PATH ]]; then
   if git_root=$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null); then
     if [[ -f "$git_root/nix/scripts/lib.sh" ]]; then
       SCRIPT_DIR="$git_root/nix/scripts"
@@ -11,7 +11,7 @@ if [[ ! -f "$LIB_PATH" ]]; then
     fi
   fi
 fi
-if [[ ! -f "$LIB_PATH" ]]; then
+if [[ ! -f $LIB_PATH ]]; then
   echo "update: lib.sh not found (tried $LIB_PATH)" >&2
   exit 1
 fi
@@ -46,34 +46,34 @@ rice=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    --host)
-      [[ $# -lt 2 ]] && die "missing value for --host"
-      host="$2"
-      shift 2
-      ;;
-    --rice)
-      [[ $# -lt 2 ]] && die "missing value for --rice"
-      rice="$2"
-      shift 2
-      ;;
-    --)
-      die "unexpected -- (no passthrough supported)"
-      ;;
-    --*)
-      die "unknown option: $1"
-      ;;
-    *)
-      if [[ -z "$host" ]]; then
-        host="$1"
-        shift
-      else
-        die "unexpected argument: $1"
-      fi
-      ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  --host)
+    [[ $# -lt 2 ]] && die "missing value for --host"
+    host="$2"
+    shift 2
+    ;;
+  --rice)
+    [[ $# -lt 2 ]] && die "missing value for --rice"
+    rice="$2"
+    shift 2
+    ;;
+  --)
+    die "unexpected -- (no passthrough supported)"
+    ;;
+  --*)
+    die "unknown option: $1"
+    ;;
+  *)
+    if [[ -z $host ]]; then
+      host="$1"
+      shift
+    else
+      die "unexpected argument: $1"
+    fi
+    ;;
   esac
 done
 
@@ -95,7 +95,7 @@ update_inputs=(
   mac-app-util
 )
 
-if [[ "${UPDATE_ALL:-0}" == "1" ]]; then
+if [[ ${UPDATE_ALL:-0} == "1" ]]; then
   nix flake update
 else
   update_args=()
@@ -113,25 +113,25 @@ darwin_rebuild() {
   fi
 }
 
-if [[ "${UPDATE_FORMAT:-0}" == "1" ]]; then
+if [[ ${UPDATE_FORMAT:-0} == "1" ]]; then
   nix run "$ROOT#format"
 fi
 
 run_checks=1
-if [[ "${UPDATE_SKIP_CHECK:-0}" == "1" && "${UPDATE_CHECKS:-0}" != "1" ]]; then
+if [[ ${UPDATE_SKIP_CHECK:-0} == "1" && ${UPDATE_CHECKS:-0} != "1" ]]; then
   run_checks=0
 fi
-if [[ "${UPDATE_CHECKS:-0}" == "1" ]]; then
+if [[ ${UPDATE_CHECKS:-0} == "1" ]]; then
   run_checks=1
 fi
 
-if [[ "$run_checks" -eq 1 ]]; then
+if [[ $run_checks -eq 1 ]]; then
   nix flake check \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS"
 fi
 
-if [[ "${UPDATE_SKIP_BUILD:-0}" != "1" ]]; then
+if [[ ${UPDATE_SKIP_BUILD:-0} != "1" ]]; then
   target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
   darwin_rebuild build \
     --flake "$ROOT#${target}" \
@@ -139,7 +139,7 @@ if [[ "${UPDATE_SKIP_BUILD:-0}" != "1" ]]; then
     --override-input secrets "$SECRETS"
 fi
 
-if [[ "${UPDATE_COMMIT:-0}" == "1" ]]; then
+if [[ ${UPDATE_COMMIT:-0} == "1" ]]; then
   if git diff --quiet && git diff --cached --quiet; then
     echo "update: no changes to commit"
   else

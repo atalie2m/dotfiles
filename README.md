@@ -370,6 +370,23 @@ UPDATE_ALL=1 nix run .#update -- --host a2m_mac
 UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host a2m_mac
 ```
 
+### Formatter / Checks / Dev Shell
+```bash
+# treefmt formatter (used by `nix fmt`)
+nix fmt
+
+# explicit format app (same formatter as above)
+nix run .#format
+
+# checks: treefmt + statix + deadnix + shellcheck
+nix flake check \
+  --override-input local path:$HOME/.config/dotfiles \
+  --override-input secrets path:$HOME/.config/dotfiles
+
+# dotfiles development toolchain
+nix develop
+```
+
 ## Manual commands (darwin-rebuild / home-manager)
 ```bash
 # nix-darwin configuration

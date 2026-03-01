@@ -9,6 +9,6 @@ delib.module {
     enable = boolOption false;
     manageSystemShells = boolOption false;
     defaultShell = strOption "zsh";
-    extraAliases = attrsOption {};
+    extraAliases = attrsOption { };
   };
 }

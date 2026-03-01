@@ -7,10 +7,10 @@ delib.module {
 
   options.system.overview = with delib.options; {
     enable = boolOption false;
-    
+
     # Profile type affects default configurations
-    profile = enumOption ["minimal" "development" "full"] "development";
-    
+    profile = enumOption [ "minimal" "development" "full" ] "development";
+
     # Feature flags for major system components
     features = {
       developmentTools = boolOption true;
@@ -18,7 +18,7 @@ delib.module {
       guiApplications = boolOption true;
       cloudSync = boolOption false;
     };
-    
+
     # Hardware-specific optimizations
     hardware = {
       enableLowPowerMode = boolOption false;

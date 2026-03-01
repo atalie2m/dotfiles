@@ -16,16 +16,18 @@ delib.module {
     };
   };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }: let
-    userName = myconfig.facts.user.username or myconfig.constants.username or "";
-    platform = myconfig.facts.user.platform or pkgs.stdenv.hostPlatform.system;
-    enableRosetta = platform == "aarch64-darwin";
-  in {
-    nix-homebrew = {
-      enable = true;
-      user = userName;
-      inherit enableRosetta;
-      autoMigrate = cfg.autoMigrate;
+  darwin.ifEnabled = { cfg, myconfig, ... }:
+    let
+      userName = myconfig.facts.user.username or myconfig.constants.username or "";
+      platform = myconfig.facts.user.platform or pkgs.stdenv.hostPlatform.system;
+      enableRosetta = platform == "aarch64-darwin";
+    in
+    {
+      nix-homebrew = {
+        enable = true;
+        user = userName;
+        inherit enableRosetta;
+        autoMigrate = cfg.autoMigrate;
+      };
     };
-  };
 }

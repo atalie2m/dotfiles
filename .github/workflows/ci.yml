@@ -84,9 +84,6 @@ jobs:
           echo "local_dir=$LOCAL_DIR" >> "$GITHUB_OUTPUT"
           echo "secrets_dir=$SECRETS_DIR" >> "$GITHUB_OUTPUT"
 
-      - name: Run Statix Check
-        run: nix run github:nerdypepper/statix -- check .
-
       - name: Run Nix Flake Check
         run: >
           nix flake check

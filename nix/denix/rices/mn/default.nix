@@ -6,5 +6,5 @@ delib.rice {
   # NOTE: Inherits are not assumed to be transitive; include `minimum` explicitly.
   inherits = [ "minimum" "full" ];
 
-  myconfig = {};
+  myconfig = { };
 }

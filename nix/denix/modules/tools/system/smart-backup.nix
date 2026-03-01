@@ -5,7 +5,7 @@ delib.module {
 
   options = with delib; moduleOptions {
     enable = boolOption false;
-    files = listOfOption str [];
+    files = listOfOption str [ ];
     managedFiles = listOfOption str [
       "$HOME/.config/karabiner/karabiner.json"
     ];
@@ -31,44 +31,45 @@ delib.module {
         else if lib.hasPrefix "$HOME/" file then "${homeDirectory}/${lib.removePrefix "$HOME/" file}"
         else file;
       backupPaths = map resolveHomePath (cfg.files ++ cfg.managedFiles);
-    in {
-    # Keep HM backup extension simple; rotate existing backups ourselves.
-    home-manager.backupFileExtension = cfg.backupSuffix;
+    in
+    {
+      # Keep HM backup extension simple; rotate existing backups ourselves.
+      home-manager.backupFileExtension = cfg.backupSuffix;
 
-    # Rotate any existing HM backups before Home Manager runs (pre-activation),
-    # so HM won't attempt to overwrite an existing backup and fail.
-    system.activationScripts.rotateHmBackupsPre = {
-      deps = [ ];
-      text = ''
-        echo "Smart Backup: Pre-activation rotation of existing HM backups (*.${cfg.backupSuffix})"
-        if [[ -n ''${SUDO_USER:-} ]]; then
-          sudo -u "$SUDO_USER" bash -lc '
-            set -euo pipefail
-            timestamp_format="${cfg.timestampFormat}"
-            files=(
-              ${lib.concatMapStringsSep "\n              " lib.escapeShellArg backupPaths}
-            )
-            for expanded_file in "''${files[@]}"; do
-              candidate="$expanded_file.${cfg.backupSuffix}"
-              if [[ -e "$candidate" ]]; then
-                ts=$(date +"$timestamp_format")
-                echo "Rotating pre-existing HM backup $candidate to $candidate-$ts"
-                mv "$candidate" "$candidate-$ts"
-              fi
-              # Proactively back up the original file before HM force-links the new one
-              if [[ -e "$expanded_file" && ! -L "$expanded_file" ]]; then
-                ts=$(date +"$timestamp_format")
-                echo "Backing up original file $expanded_file to $expanded_file.${cfg.backupSuffix}-$ts"
-                cp -R "$expanded_file" "$expanded_file.${cfg.backupSuffix}-$ts"
-              fi
-            done
-          '
-        else
-          echo "Smart Backup: SUDO_USER not set; skipping pre-activation rotation"
-        fi
-      '';
+      # Rotate any existing HM backups before Home Manager runs (pre-activation),
+      # so HM won't attempt to overwrite an existing backup and fail.
+      system.activationScripts.rotateHmBackupsPre = {
+        deps = [ ];
+        text = ''
+          echo "Smart Backup: Pre-activation rotation of existing HM backups (*.${cfg.backupSuffix})"
+          if [[ -n ''${SUDO_USER:-} ]]; then
+            sudo -u "$SUDO_USER" bash -lc '
+              set -euo pipefail
+              timestamp_format="${cfg.timestampFormat}"
+              files=(
+                ${lib.concatMapStringsSep "\n              " lib.escapeShellArg backupPaths}
+              )
+              for expanded_file in "''${files[@]}"; do
+                candidate="$expanded_file.${cfg.backupSuffix}"
+                if [[ -e "$candidate" ]]; then
+                  ts=$(date +"$timestamp_format")
+                  echo "Rotating pre-existing HM backup $candidate to $candidate-$ts"
+                  mv "$candidate" "$candidate-$ts"
+                fi
+                # Proactively back up the original file before HM force-links the new one
+                if [[ -e "$expanded_file" && ! -L "$expanded_file" ]]; then
+                  ts=$(date +"$timestamp_format")
+                  echo "Backing up original file $expanded_file to $expanded_file.${cfg.backupSuffix}-$ts"
+                  cp -R "$expanded_file" "$expanded_file.${cfg.backupSuffix}-$ts"
+                fi
+              done
+            '
+          else
+            echo "Smart Backup: SUDO_USER not set; skipping pre-activation rotation"
+          fi
+        '';
+      };
     };
-  };
 
   home.ifEnabled = { cfg, myconfig, ... }:
     let
@@ -81,27 +82,28 @@ delib.module {
       backupPaths = map resolveHomePath (cfg.files ++ cfg.managedFiles);
       userBackupPaths = map resolveHomePath cfg.files;
       managedBackupPaths = map resolveHomePath cfg.managedFiles;
-    in {
-    # Early rotation in Home Manager activation (low order value).
-    # Note: We also rotate in nix-darwin pre-activation above; this is an extra safeguard.
-    home.activation.rotateHmBackups = lib.mkOrder 5 ''
-      echo "Smart Backup: HM pre-rotation of existing HM backups (*.${cfg.backupSuffix})"
-      timestamp_format="${cfg.timestampFormat}"
-      files=(
-        ${lib.concatMapStringsSep "\n        " lib.escapeShellArg backupPaths}
-      )
-      for expanded_file in "''${files[@]}"; do
-        candidate="$expanded_file.${cfg.backupSuffix}"
-        if [[ -e "$candidate" ]]; then
-          ts=$(date +"$timestamp_format")
-          echo "Rotating pre-existing HM backup $candidate to $candidate-$ts (HM)"
-          mv "$candidate" "$candidate-$ts"
-        fi
-      done
-    '';
+    in
+    {
+      # Early rotation in Home Manager activation (low order value).
+      # Note: We also rotate in nix-darwin pre-activation above; this is an extra safeguard.
+      home.activation.rotateHmBackups = lib.mkOrder 5 ''
+        echo "Smart Backup: HM pre-rotation of existing HM backups (*.${cfg.backupSuffix})"
+        timestamp_format="${cfg.timestampFormat}"
+        files=(
+          ${lib.concatMapStringsSep "\n        " lib.escapeShellArg backupPaths}
+        )
+        for expanded_file in "''${files[@]}"; do
+          candidate="$expanded_file.${cfg.backupSuffix}"
+          if [[ -e "$candidate" ]]; then
+            ts=$(date +"$timestamp_format")
+            echo "Rotating pre-existing HM backup $candidate to $candidate-$ts (HM)"
+            mv "$candidate" "$candidate-$ts"
+          fi
+        done
+      '';
 
-    # Run early to try to precede Home Manager's linkGeneration.
-    home.activation.smartBackup = lib.mkOrder 50 ''
+      # Run early to try to precede Home Manager's linkGeneration.
+      home.activation.smartBackup = lib.mkOrder 50 ''
         echo "Smart Backup: Starting backup process..."
 
         # Rotate existing Home Manager backup (only the configured suffix) to timestamped name
@@ -174,5 +176,5 @@ delib.module {
 
         echo "Smart Backup: Backup process completed."
       '';
-  };
+    };
 }

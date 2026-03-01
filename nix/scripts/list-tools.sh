@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 LIB_PATH="$SCRIPT_DIR/lib.sh"
-if [[ ! -f "$LIB_PATH" ]]; then
+if [[ ! -f $LIB_PATH ]]; then
   if git_root=$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null); then
     if [[ -f "$git_root/nix/scripts/lib.sh" ]]; then
       SCRIPT_DIR="$git_root/nix/scripts"
@@ -11,7 +11,7 @@ if [[ ! -f "$LIB_PATH" ]]; then
     fi
   fi
 fi
-if [[ ! -f "$LIB_PATH" ]]; then
+if [[ ! -f $LIB_PATH ]]; then
   echo "list-tools: lib.sh not found (tried $LIB_PATH)" >&2
   exit 1
 fi
@@ -42,36 +42,36 @@ format=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    --host)
-      [[ $# -lt 2 ]] && die "missing value for --host"
-      host="$2"
-      shift 2
-      ;;
-    --rice)
-      [[ $# -lt 2 ]] && die "missing value for --rice"
-      rice="$2"
-      shift 2
-      ;;
-    --format)
-      [[ $# -lt 2 ]] && die "missing value for --format"
-      format="$2"
-      shift 2
-      ;;
-    --*)
-      die "unknown option: $1"
-      ;;
-    *)
-      if [[ -z "$host" ]]; then
-        host="$1"
-        shift
-      else
-        die "unexpected argument: $1"
-      fi
-      ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  --host)
+    [[ $# -lt 2 ]] && die "missing value for --host"
+    host="$2"
+    shift 2
+    ;;
+  --rice)
+    [[ $# -lt 2 ]] && die "missing value for --rice"
+    rice="$2"
+    shift 2
+    ;;
+  --format)
+    [[ $# -lt 2 ]] && die "missing value for --format"
+    format="$2"
+    shift 2
+    ;;
+  --*)
+    die "unknown option: $1"
+    ;;
+  *)
+    if [[ -z $host ]]; then
+      host="$1"
+      shift
+    else
+      die "unexpected argument: $1"
+    fi
+    ;;
   esac
 done
 
@@ -80,8 +80,8 @@ rice="${rice:-${RICE:-}}"
 format="${format:-${FORMAT:-text}}"
 
 case "$format" in
-  json|text) ;;
-  *) die "invalid --format: $format (expected json or text)" ;;
+json | text) ;;
+*) die "invalid --format: $format (expected json or text)" ;;
 esac
 
 set_repo_root
@@ -93,7 +93,7 @@ target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
 attr="$ROOT#darwinConfigurations.${target}.config"
 tools_expr_path="./nix/scripts/list-tools.nix"
 
-if [[ "$format" == "json" ]]; then
+if [[ $format == "json" ]]; then
   nix eval --json "$attr" \
     --impure \
     --apply "cfg: (import ${tools_expr_path} { }).select cfg" \

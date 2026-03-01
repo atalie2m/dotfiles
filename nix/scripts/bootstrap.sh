@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 LIB_PATH="$SCRIPT_DIR/lib.sh"
-if [[ ! -f "$LIB_PATH" ]]; then
+if [[ ! -f $LIB_PATH ]]; then
   if git_root=$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null); then
     if [[ -f "$git_root/nix/scripts/lib.sh" ]]; then
       SCRIPT_DIR="$git_root/nix/scripts"
@@ -11,7 +11,7 @@ if [[ ! -f "$LIB_PATH" ]]; then
     fi
   fi
 fi
-if [[ ! -f "$LIB_PATH" ]]; then
+if [[ ! -f $LIB_PATH ]]; then
   echo "bootstrap: lib.sh not found (tried $LIB_PATH)" >&2
   exit 1
 fi
@@ -43,46 +43,46 @@ strict=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    --host)
-      [[ $# -lt 2 ]] && die "missing value for --host"
-      host="$2"
-      shift 2
-      ;;
-    --rice)
-      [[ $# -lt 2 ]] && die "missing value for --rice"
-      rice="$2"
-      shift 2
-      ;;
-    --apply)
-      apply_after=1
-      shift
-      ;;
-    --yes)
-      apply_after=1
-      auto_yes=1
-      shift
-      ;;
-    --no-sudo)
-      no_sudo=1
-      shift
-      ;;
-    --strict)
-      strict=1
-      shift
-      ;;
-    --)
-      die "unexpected -- (no passthrough supported)"
-      ;;
-    --*)
-      die "unknown option: $1"
-      ;;
-    *)
-      die "unexpected argument: $1"
-      ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  --host)
+    [[ $# -lt 2 ]] && die "missing value for --host"
+    host="$2"
+    shift 2
+    ;;
+  --rice)
+    [[ $# -lt 2 ]] && die "missing value for --rice"
+    rice="$2"
+    shift 2
+    ;;
+  --apply)
+    apply_after=1
+    shift
+    ;;
+  --yes)
+    apply_after=1
+    auto_yes=1
+    shift
+    ;;
+  --no-sudo)
+    no_sudo=1
+    shift
+    ;;
+  --strict)
+    strict=1
+    shift
+    ;;
+  --)
+    die "unexpected -- (no passthrough supported)"
+    ;;
+  --*)
+    die "unknown option: $1"
+    ;;
+  *)
+    die "unexpected argument: $1"
+    ;;
   esac
 done
 
@@ -93,32 +93,32 @@ set_repo_root
 cd "$ROOT"
 resolve_inputs
 
-if [[ ! -d "$FACTS_DIR" ]]; then
+if [[ ! -d $FACTS_DIR ]]; then
   mkdir -p "$FACTS_DIR"
   log "created $FACTS_DIR"
 fi
 
-if [[ ! -d "$SECRETS_DIR" ]]; then
+if [[ ! -d $SECRETS_DIR ]]; then
   mkdir -p "$SECRETS_DIR"
   log "created $SECRETS_DIR"
 fi
 
 facts_file="$FACTS_DIR/facts.nix"
-if [[ ! -f "$facts_file" ]]; then
+if [[ ! -f $facts_file ]]; then
   username="${USER:-}"
-  if [[ -z "$username" ]]; then
+  if [[ -z $username ]]; then
     username=$(id -un 2>/dev/null || true)
   fi
   home_dir="${HOME:-}"
 
   platform=""
   case "$(uname -m 2>/dev/null || true)" in
-    arm64) platform="aarch64-darwin" ;;
-    x86_64) platform="x86_64-darwin" ;;
+  arm64) platform="aarch64-darwin" ;;
+  x86_64) platform="x86_64-darwin" ;;
   esac
 
   platform_line=""
-  if [[ -n "$platform" ]]; then
+  if [[ -n $platform ]]; then
     platform_line="    platform = \"${platform}\";"
   fi
 
@@ -138,7 +138,7 @@ EOF
 fi
 
 secrets_file="$SECRETS_DIR/secrets.nix"
-if [[ ! -f "$secrets_file" ]]; then
+if [[ ! -f $secrets_file ]]; then
   cat >"$secrets_file" <<'EOF'
 {}
 EOF
@@ -146,7 +146,7 @@ EOF
 fi
 
 age_key_file="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
-if [[ ! -f "$age_key_file" ]]; then
+if [[ ! -f $age_key_file ]]; then
   if command -v age-keygen >/dev/null 2>&1; then
     mkdir -p "$(dirname "$age_key_file")"
     age-keygen -o "$age_key_file"
@@ -157,40 +157,40 @@ if [[ ! -f "$age_key_file" ]]; then
 fi
 
 doctor_args=()
-if [[ -n "$host" ]]; then
+if [[ -n $host ]]; then
   doctor_args+=(--host "$host")
 fi
-if [[ -n "$rice" ]]; then
+if [[ -n $rice ]]; then
   doctor_args+=(--rice "$rice")
 fi
-if [[ "$strict" -eq 1 ]]; then
+if [[ $strict -eq 1 ]]; then
   doctor_args+=(--strict)
 fi
 
 "$SCRIPT_DIR/doctor.sh" "${doctor_args[@]}"
 
-if [[ "$apply_after" -eq 1 ]]; then
+if [[ $apply_after -eq 1 ]]; then
   run_apply=0
-  if [[ "$auto_yes" -eq 1 ]]; then
+  if [[ $auto_yes -eq 1 ]]; then
     run_apply=1
   elif [[ -t 0 ]]; then
     read -r -p "bootstrap: run apply now? [y/N] " reply
     case "$reply" in
-      y|Y|yes|YES) run_apply=1 ;;
+    y | Y | yes | YES) run_apply=1 ;;
     esac
   else
     log "non-interactive shell; skipping apply"
   fi
 
-  if [[ "$run_apply" -eq 1 ]]; then
+  if [[ $run_apply -eq 1 ]]; then
     apply_args=()
-    if [[ -n "$host" ]]; then
+    if [[ -n $host ]]; then
       apply_args+=(--host "$host")
     fi
-    if [[ -n "$rice" ]]; then
+    if [[ -n $rice ]]; then
       apply_args+=(--rice "$rice")
     fi
-    if [[ "$no_sudo" -eq 1 ]]; then
+    if [[ $no_sudo -eq 1 ]]; then
       apply_args+=(--no-sudo)
     fi
     "$SCRIPT_DIR/apply.sh" "${apply_args[@]}"

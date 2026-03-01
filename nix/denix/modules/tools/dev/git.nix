@@ -8,7 +8,7 @@ delib.module {
     enable = boolOption false;
     defaultBranch = strOption "main";
     enableSigning = boolOption false;
-    extraConfig = attrsOption {};
+    extraConfig = attrsOption { };
     aliases = attrsOption {
       # Default useful aliases
       st = "status";
@@ -33,7 +33,7 @@ delib.module {
       userName = myconfig.constants.fullName;
       userEmail = myconfig.constants.email;
 
-      lfs.enable = (((myconfig.tools or {}).dev or {}).gitLfs or {}).enable or false;
+      lfs.enable = (((myconfig.tools or { }).dev or { }).gitLfs or { }).enable or false;
 
       extraConfig = lib.mkMerge [
         {
@@ -48,7 +48,7 @@ delib.module {
         })
         cfg.extraConfig
       ];
-      
+
       inherit (cfg) aliases;
     };
   };
