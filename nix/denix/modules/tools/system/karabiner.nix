@@ -1,4 +1,4 @@
-{ delib, lib, pkgs, ... }:
+{ delib, lib, ... }:
 
 delib.module {
   name = "tools.system.karabiner";
@@ -13,7 +13,7 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { cfg, ... }:
+  darwin.ifEnabled = { ... }:
     let
       ruleDir = ../../../../../keyboards/karabiner/complex_modifications;
 
@@ -65,63 +65,70 @@ delib.module {
       ];
 
       #
-      # 4. Full Karabiner config
+      # 4. Build Home Manager module for Karabiner
       #
-      # Build karabiner.json in the store and link it into place
-      karabinerJson = pkgs.writeText "karabiner.json" (builtins.toJSON {
-        global = {
-          check_for_updates_on_startup = false;
-          show_in_menu_bar = true;
+      mkKarabinerHomeModule = { pkgs, ... }:
+        let
+          # 4. Full Karabiner config
+          #
+          # Build karabiner.json in the store and link it into place
+          karabinerJson = pkgs.writeText "karabiner.json" (builtins.toJSON {
+            global = {
+              check_for_updates_on_startup = false;
+              show_in_menu_bar = true;
+            };
+
+            profiles = [
+              {
+                name = "A2m";
+                selected = false;
+                complex_modifications.rules = ataliesRules;
+                virtual_hid_keyboard = {
+                  keyboard_type_v2 = "ansi";
+                };
+              }
+              {
+                name = "Std";
+                selected = true;
+                complex_modifications.rules = standardRules;
+                virtual_hid_keyboard = {
+                  keyboard_type_v2 = "ansi";
+                };
+              }
+            ];
+          });
+
+          #
+          # 5. Symlink the entire modifications directory
+          #
+          complexModsSymlink = {
+            source = ruleDir;
+            recursive = true; # keep file names intact
+          };
+        in
+        lib.mkIf pkgs.stdenv.isDarwin {
+          # Install everything (symlink karabiner.json and complex_modifications)
+          # Force the symlink to avoid HM's own backup collision; we back up ourselves pre-activation.
+          xdg.configFile."karabiner/karabiner.json" = {
+            source = karabinerJson;
+            force = true;
+          };
+          xdg.configFile."karabiner/assets/complex_modifications" = complexModsSymlink;
+
+          #
+          # Optional: write a small debug text next to the config
+          #
+          home.file.".karabiner-debug.txt".text = ''
+            Karabiner-Elements Nix module diagnostics
+
+            ruleDir:  ${ruleDir}
+
+            Rule files considered:
+            ${lib.concatMapStringsSep "\n" (name: "  • " + ruleFiles.${name}) (builtins.attrNames ruleFiles)}
+          '';
         };
-
-        profiles = [
-          {
-            name = "A2m";
-            selected = false;
-            complex_modifications.rules = ataliesRules;
-            virtual_hid_keyboard = {
-              keyboard_type_v2 = "ansi";
-            };
-          }
-          {
-            name = "Std";
-            selected = true;
-            complex_modifications.rules = standardRules;
-            virtual_hid_keyboard = {
-              keyboard_type_v2 = "ansi";
-            };
-          }
-        ];
-      });
-
-      #
-      # 5. Symlink the entire modifications directory
-      #
-      complexModsSymlink = {
-        source = ruleDir;
-        recursive = true; # keep file names intact
-      };
-
     in
     {
-      # Install everything (symlink karabiner.json and complex_modifications)
-      # Force the symlink to avoid HM's own backup collision; we back up ourselves pre-activation.
-      xdg.configFile."karabiner/karabiner.json" = {
-        source = karabinerJson;
-        force = true;
-      };
-      xdg.configFile."karabiner/assets/complex_modifications" = complexModsSymlink;
-
-      #
-      # Optional: write a small debug text next to the config
-      #
-      home.file.".karabiner-debug.txt".text = ''
-        Karabiner-Elements Nix module diagnostics
-
-        ruleDir:  ${ruleDir}
-
-        Rule files considered:
-        ${lib.concatMapStringsSep "\n" (name: "  • " + ruleFiles.${name}) (builtins.attrNames ruleFiles)}
-      '';
+      home-manager.sharedModules = [ mkKarabinerHomeModule ];
     };
 }

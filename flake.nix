@@ -95,6 +95,18 @@
           # under this root. Passing subdirectories can cause path resolution
           # issues in umport.
           paths = [ ./nix/denix ];
+          exclude =
+            if moduleSystem == "nixos" then
+              [
+                ./nix/denix/hosts/a2m_mac
+                ./nix/denix/hosts/mn_mac
+                ./nix/denix/rices/full
+                ./nix/denix/rices/mn
+              ]
+            else if moduleSystem == "darwin" then
+              [ ./nix/denix/hosts/a2m_nixos ]
+            else
+              [ ];
           extensions = with denix.lib.extensions; [
             args
             (base.withConfig { args.enable = true; })
@@ -236,6 +248,7 @@
           };
         };
       } // (if localStub then { } else {
+        nixosConfigurations = mkConfigurations "nixos";
         homeConfigurations = mkConfigurations "home";
         darwinConfigurations = mkConfigurations "darwin";
       });

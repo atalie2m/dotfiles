@@ -92,12 +92,12 @@ delib.module {
       };
     };
 
-  home.ifEnabled = { cfg, ... }:
+  home.ifEnabled = { cfg, pkgs, ... }:
     let
       caskApps = cfg.casks // cfg.extraCasks;
       appLinkSpecs = map (cask: "${cask}|${caskApps.${cask}}") (lib.attrNames caskApps);
     in
-    {
+    lib.mkIf pkgs.stdenv.isDarwin {
       # Needed to manage Dock entries
       home.packages = lib.optionals cfg.autoDock.enable [ pkgs.dockutil ];
 

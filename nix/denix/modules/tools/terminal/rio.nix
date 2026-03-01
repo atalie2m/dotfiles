@@ -13,10 +13,11 @@ delib.module {
     always = { parent, ... }: {
       tools.terminal.rio.enable = lib.mkDefault parent.enable;
     };
-    ifEnabled = { ... }: {
-      tools.system.homebrewNative.enable = lib.mkDefault true;
-      tools.system.homebrewNative.casks = lib.mkAfter [ "rio" ];
-    };
+    ifEnabled = { myconfig, ... }:
+      lib.mkIf (lib.hasSuffix "-darwin" (myconfig.facts.user.platform or "")) {
+        tools.system.homebrewNative.enable = lib.mkDefault true;
+        tools.system.homebrewNative.casks = lib.mkAfter [ "rio" ];
+      };
   };
 
   home.ifEnabled = { ... }:
