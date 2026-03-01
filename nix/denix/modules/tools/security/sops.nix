@@ -29,7 +29,7 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { cfg, myconfig, ... }: let
+  home.ifEnabled = { myconfig, ... }: let
     homeDir = myconfig.facts.user.homeDirectory or myconfig.constants.homeDirectory or "";
     secrets = lib.mapAttrs (name: entry: mkSecret homeDir name entry) secretFiles;
   in {
@@ -41,7 +41,7 @@ delib.module {
     };
   };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }: let
+  darwin.ifEnabled = { myconfig, ... }: let
     homeDir = myconfig.facts.user.homeDirectory or myconfig.constants.homeDirectory or "";
     userName = myconfig.facts.user.username or myconfig.constants.username or "";
     secrets = lib.mapAttrs (name: entry:
@@ -49,8 +49,6 @@ delib.module {
       // (lib.optionalAttrs (userName != "") { owner = userName; })
     ) secretFiles;
   in {
-    environment.systemPackages = [ pkgs.sops pkgs.age ];
-
     sops = lib.mkIf hasSecrets {
       age.keyFile = "${homeDir}/.config/sops/age/keys.txt";
       secrets = secrets;

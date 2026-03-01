@@ -1,4 +1,4 @@
-{ delib, lib, pkgs, ... }:
+{ delib, lib, ... }:
 
 # tools.dev.gitLfs tool
 
@@ -15,7 +15,4 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { ... }: {
-    home.packages = [ pkgs."git-lfs" ];
-  };
 }

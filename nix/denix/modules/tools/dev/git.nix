@@ -1,4 +1,4 @@
-{ delib, lib, pkgs, config, ... }:
+{ delib, lib, ... }:
 
 # Git configuration with user information from constants
 delib.module {
@@ -28,9 +28,6 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, myconfig, ... }: {
-    # Ensure git CLI is available when the module is enabled
-    home.packages = [ pkgs.git ];
-
     programs.git = {
       enable = true;
       userName = myconfig.constants.fullName;

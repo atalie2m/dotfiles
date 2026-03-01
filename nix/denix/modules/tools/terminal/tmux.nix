@@ -1,4 +1,4 @@
-{ delib, lib, pkgs, ... }:
+{ delib, lib, ... }:
 
 # Tmux configuration
 delib.module {
@@ -17,8 +17,6 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: {
-    home.packages = [ pkgs.tmux ];
-
     programs.tmux = {
       enable = true;
       extraConfig = ''
