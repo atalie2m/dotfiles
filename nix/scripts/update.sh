@@ -35,7 +35,7 @@ Environment:
   UPDATE_ALL=1            Update all flake inputs (default: selected inputs)
   UPDATE_SKIP_CHECK=1     Skip nix flake check
   UPDATE_SKIP_BUILD=1     Skip darwin-rebuild build
-  UPDATE_COMMIT=1         Commit flake.lock + nvfetcher sources after success
+  UPDATE_COMMIT=1         Commit flake.lock after success
   UPDATE_CHECKS=1         Force nix flake check even if UPDATE_SKIP_CHECK=1
   UPDATE_FORMAT=1         Run formatter if available (best-effort)
 USAGE
@@ -105,12 +105,6 @@ else
   nix flake update "${update_args[@]}"
 fi
 
-if [[ -f "$ROOT/nix/nvfetcher/sources.toml" ]]; then
-  nix run nixpkgs#nvfetcher -- \
-    -c "$ROOT/nix/nvfetcher/sources.toml" \
-    -o "$ROOT/nix/nvfetcher/_sources"
-fi
-
 darwin_rebuild() {
   if command -v darwin-rebuild >/dev/null 2>&1; then
     darwin-rebuild "$@"
@@ -159,7 +153,7 @@ if [[ "${UPDATE_COMMIT:-0}" == "1" ]]; then
   if git diff --quiet && git diff --cached --quiet; then
     echo "update: no changes to commit"
   else
-    git add flake.lock nix/nvfetcher/_sources
-    git commit -m "chore(update): flake inputs and nvfetcher sources"
+    git add flake.lock
+    git commit -m "chore(update): flake inputs"
   fi
 fi

@@ -344,7 +344,7 @@ nix run .#apply -- --host a2m_mac -- --show-trace
 
 ### Update (flake inputs + checks/build)
 ```bash
-# Factory-style updates (flake inputs + nvfetcher + checks/build)
+# Factory-style updates (flake inputs + checks/build)
 nix run .#update -- --host a2m_mac
 
 # Update all inputs
@@ -353,8 +353,6 @@ UPDATE_ALL=1 nix run .#update -- --host a2m_mac
 # Force checks + formatter
 UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host a2m_mac
 ```
-
-External binaries tracked outside nixpkgs live in `nix/nvfetcher/sources.toml`.
 
 ## Manual commands (darwin-rebuild / home-manager)
 ```bash
