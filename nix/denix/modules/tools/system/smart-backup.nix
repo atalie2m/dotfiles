@@ -22,7 +22,16 @@ delib.module {
   # Enable Home Manager's built-in backup of conflicting files.
   # Use a stable extension (e.g. ".backup"). We'll rotate any existing files with that
   # extension to a timestamped variant before HM runs to avoid clobber errors.
-  darwin.ifEnabled = { cfg, ... }: {
+  darwin.ifEnabled = { cfg, myconfig, ... }:
+    let
+      homeDirectory = myconfig.facts.user.homeDirectory or myconfig.constants.homeDirectory or "";
+      resolveHomePath = file:
+        if homeDirectory == "" then file
+        else if file == "$HOME" then homeDirectory
+        else if lib.hasPrefix "$HOME/" file then "${homeDirectory}/${lib.removePrefix "$HOME/" file}"
+        else file;
+      backupPaths = map resolveHomePath (cfg.files ++ cfg.managedFiles);
+    in {
     # Keep HM backup extension simple; rotate existing backups ourselves.
     home-manager.backupFileExtension = cfg.backupSuffix;
 
@@ -32,16 +41,14 @@ delib.module {
       deps = [ ];
       text = ''
         echo "Smart Backup: Pre-activation rotation of existing HM backups (*.${cfg.backupSuffix})"
-        # Run as invoking user so $HOME expands correctly
         if [[ -n ''${SUDO_USER:-} ]]; then
-          sudo -u "$SUDO_USER" sh -lc '
-            set -e
+          sudo -u "$SUDO_USER" bash -lc '
+            set -euo pipefail
             timestamp_format="${cfg.timestampFormat}"
             files=(
-              ${lib.concatMapStringsSep "\n              " (file: "\"${file}\"") (cfg.files ++ cfg.managedFiles)}
+              ${lib.concatMapStringsSep "\n              " lib.escapeShellArg backupPaths}
             )
-            for f in "''${files[@]}"; do
-              expanded_file=$(eval echo "$f")
+            for expanded_file in "''${files[@]}"; do
               candidate="$expanded_file.${cfg.backupSuffix}"
               if [[ -e "$candidate" ]]; then
                 ts=$(date +"$timestamp_format")
@@ -63,17 +70,27 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { cfg, ... }: {
+  home.ifEnabled = { cfg, myconfig, ... }:
+    let
+      homeDirectory = myconfig.facts.user.homeDirectory or myconfig.constants.homeDirectory or "";
+      resolveHomePath = file:
+        if homeDirectory == "" then file
+        else if file == "$HOME" then homeDirectory
+        else if lib.hasPrefix "$HOME/" file then "${homeDirectory}/${lib.removePrefix "$HOME/" file}"
+        else file;
+      backupPaths = map resolveHomePath (cfg.files ++ cfg.managedFiles);
+      userBackupPaths = map resolveHomePath cfg.files;
+      managedBackupPaths = map resolveHomePath cfg.managedFiles;
+    in {
     # Early rotation in Home Manager activation (low order value).
     # Note: We also rotate in nix-darwin pre-activation above; this is an extra safeguard.
     home.activation.rotateHmBackups = lib.mkOrder 5 ''
       echo "Smart Backup: HM pre-rotation of existing HM backups (*.${cfg.backupSuffix})"
       timestamp_format="${cfg.timestampFormat}"
       files=(
-        ${lib.concatMapStringsSep "\n        " (file: "\"${file}\"") (cfg.files ++ cfg.managedFiles)}
+        ${lib.concatMapStringsSep "\n        " lib.escapeShellArg backupPaths}
       )
-      for f in "''${files[@]}"; do
-        expanded_file=$(eval echo "$f")
+      for expanded_file in "''${files[@]}"; do
         candidate="$expanded_file.${cfg.backupSuffix}"
         if [[ -e "$candidate" ]]; then
           ts=$(date +"$timestamp_format")
@@ -142,21 +159,18 @@ delib.module {
 
         # First, rotate any existing HM backups for all configured paths to avoid clobber errors
         ${lib.concatMapStringsSep "\n" (file: ''
-          expanded_file=$(eval echo "${file}")
-          rotate_hm_backup "$expanded_file"
-        '') (cfg.files ++ cfg.managedFiles)}
+          rotate_hm_backup ${lib.escapeShellArg file}
+        '') backupPaths}
 
         # Backup all configured files (non-destructive)
         ${lib.concatMapStringsSep "\n" (file: ''
-          expanded_file=$(eval echo "${file}")
-          smart_backup "$expanded_file"
-        '') cfg.files}
+          smart_backup ${lib.escapeShellArg file}
+        '') userBackupPaths}
 
         # Backup and remove all managed files (destructive)
         ${lib.concatMapStringsSep "\n" (file: ''
-          expanded_file=$(eval echo "${file}")
-          smart_backup_managed "$expanded_file"
-        '') cfg.managedFiles}
+          smart_backup_managed ${lib.escapeShellArg file}
+        '') managedBackupPaths}
 
         echo "Smart Backup: Backup process completed."
       '';

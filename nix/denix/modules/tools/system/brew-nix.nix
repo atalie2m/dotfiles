@@ -12,20 +12,16 @@ delib.module {
       enable = boolOption false;
       targetDir = strOption "/Applications/Brew-nix Apps";
     };
-    casks = listOfOption str [
-      "rio"
-      "keyclu"
-      "latest"
-      "alacritty"
-      "ghostty"
-      "wezterm"  # Note: WezTerm has unusual packaging structure in brew-nix.
-                 # App is installed as WezTerm-macos-VERSION/WezTerm.app instead of direct WezTerm.app,
-                 # making it invisible to Launchpad/Spotlight. CLI works fine via 'wezterm' command.
-                 # Can be opened manually: open "/run/current-system/Applications/WezTerm-macos-*/WezTerm.app"
-                 # Unlike Rectangle which installs as direct Rectangle.app and appears normally in Launchpad.
-      "xcodes-app"
-    ];
-    extraCasks = listOfOption str [];
+    casks = attrsOption {
+      rio = "Rio.app";
+      keyclu = "KeyClu.app";
+      latest = "Latest.app";
+      alacritty = "Alacritty.app";
+      ghostty = "Ghostty.app";
+      wezterm = "WezTerm.app";
+      xcodes-app = "Xcodes.app";
+    };
+    extraCasks = attrsOption {};
   };
 
   myconfig = {
@@ -35,7 +31,9 @@ delib.module {
   };
 
   darwin.ifEnabled = { cfg, myconfig, ... }: let
-    casks = cfg.casks ++ cfg.extraCasks;
+    caskApps = cfg.casks // cfg.extraCasks;
+    caskNames = lib.attrNames caskApps;
+    appLinkSpecs = map (cask: "${cask}|${caskApps.${cask}}") caskNames;
   in {
     # Enable brew-nix overlay
     nixpkgs.overlays = [ inputs.brew-nix.overlays.default ];
@@ -50,7 +48,7 @@ delib.module {
     ];
 
     # Install casks as system packages
-    environment.systemPackages = map (cask: pkgs.brewCasks.${cask}) casks;
+    environment.systemPackages = map (cask: pkgs.brewCasks.${cask}) caskNames;
 
     # Link real app bundles into Applications to avoid trampoline icons
     system.activationScripts.brewNixAppLinks = lib.mkIf cfg.appLinks.enable {
@@ -68,10 +66,12 @@ delib.module {
           # Remove old symlinks pointing at the current system apps
           find "$targetDir" -maxdepth 1 -type l -lname "/run/current-system/Applications/*" -exec rm -f {} + || true
 
-          for cask in ${lib.escapeShellArgs casks}; do
-            appPath=$(find -L /run/current-system/Applications -maxdepth 2 -type d -iname "''${cask}.app" | head -n 1)
+          for entry in ${lib.escapeShellArgs appLinkSpecs}; do
+            cask="''${entry%%|*}"
+            appName="''${entry#*|}"
+            appPath=$(find -L /run/current-system/Applications -maxdepth 3 -type d -iname "$appName" | head -n 1)
             if [ -z "$appPath" ]; then
-              echo "brew-nix app link: app for cask ''${cask} not found" >&2
+              echo "brew-nix app link: app for cask ''${cask} (''${appName}) not found" >&2
               continue
             fi
 
@@ -98,7 +98,8 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: let
-    casks = cfg.casks ++ cfg.extraCasks;
+    caskApps = cfg.casks // cfg.extraCasks;
+    appLinkSpecs = map (cask: "${cask}|${caskApps.${cask}}") (lib.attrNames caskApps);
   in {
     # Needed to manage Dock entries
     home.packages = lib.optionals cfg.autoDock.enable [ pkgs.dockutil ];
@@ -111,10 +112,12 @@ delib.module {
         exit 0
       fi
 
-      for cask in ${lib.escapeShellArgs casks}; do
-        appPath=$(find -L /run/current-system/Applications -maxdepth 2 -type d -iname "''${cask}.app" | head -n 1)
+      for entry in ${lib.escapeShellArgs appLinkSpecs}; do
+        cask="''${entry%%|*}"
+        appName="''${entry#*|}"
+        appPath=$(find -L /run/current-system/Applications -maxdepth 3 -type d -iname "$appName" | head -n 1)
         if [ -z "$appPath" ]; then
-          echo "brew-nix Dock pin: app for cask ''${cask} not found" >&2
+          echo "brew-nix Dock pin: app for cask ''${cask} (''${appName}) not found" >&2
           continue
         fi
 

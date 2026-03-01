@@ -8,6 +8,7 @@ delib.module {
     enable = boolOption false;
     enableFlakes = boolOption true;
     enableNixCommand = boolOption true;
+    acceptFlakeConfig = boolOption true;
     extraExperimentalFeatures = listOfOption str [];
     binaryCaches = {
       substituters = listOfOption str [];
@@ -29,7 +30,7 @@ delib.module {
           ++ cfg.extraExperimentalFeatures;
 
         # Trust flake-provided nixConfig (e.g., extra-experimental-features)
-        accept-flake-config = true;
+        accept-flake-config = cfg.acceptFlakeConfig;
         
         # Trusted users for Nix daemon
         trusted-users = [ "@admin" ];
@@ -66,7 +67,7 @@ delib.module {
         ++ cfg.extraExperimentalFeatures;
 
       # Trust flake-provided nixConfig in user sessions
-      accept-flake-config = true;
+      accept-flake-config = cfg.acceptFlakeConfig;
     }
     // lib.optionalAttrs (extraSubstituters != []) {
       extra-substituters = extraSubstituters;

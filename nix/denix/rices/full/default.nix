@@ -27,11 +27,16 @@ delib.rice {
     tools.shell.defaultShell = "zsh";
     tools.system.karabiner.enable = true;
     tools.system.aerospace.enable = true;
-    tools.system.homebrewNative.enable = true;
     tools.system.nixHomebrew.enable = true;
-    tools.system.brewNix.enable = true;
-    tools.system.brewNix.appLinks.enable = true;
-    tools.system.brewNix.autoTrampolines.enable = false;
+    tools.system.homebrewNative.enable = true;
+    tools.system.homebrewNative.casks = [
+      "keyclu"
+      "latest"
+      "alacritty"
+      "ghostty"
+      "wezterm"
+      "xcodes-app"
+    ];
 
   };
 }

@@ -37,7 +37,7 @@ Environment:
   UPDATE_SKIP_BUILD=1     Skip darwin-rebuild build
   UPDATE_COMMIT=1         Commit flake.lock after success
   UPDATE_CHECKS=1         Force nix flake check even if UPDATE_SKIP_CHECK=1
-  UPDATE_FORMAT=1         Run formatter if available (best-effort)
+  UPDATE_FORMAT=1         Run repository formatter (nix run .#format)
 USAGE
 }
 
@@ -114,17 +114,7 @@ darwin_rebuild() {
 }
 
 if [[ "${UPDATE_FORMAT:-0}" == "1" ]]; then
-  if nix run "$ROOT#format" -- --help >/dev/null 2>&1; then
-    if ! nix run "$ROOT#format"; then
-      log "formatter failed (continuing)"
-    fi
-  elif command -v treefmt >/dev/null 2>&1; then
-    if ! treefmt; then
-      log "treefmt failed (continuing)"
-    fi
-  else
-    log "formatter not available (skipping UPDATE_FORMAT)"
-  fi
+  nix run "$ROOT#format"
 fi
 
 run_checks=1

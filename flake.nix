@@ -104,8 +104,32 @@
             inputs.nix-homebrew.darwinModules.nix-homebrew
           ] else []);
       });
+    formatPrograms = forAllSystems (system:
+      let
+        pkgs = inputs.nixpkgs.legacyPackages.${system};
+      in
+      pkgs.writeShellScript "dotfiles-format" ''
+        set -euo pipefail
+        export PATH="${pkgs.nixpkgs-fmt}/bin:${pkgs.shfmt}/bin:$PATH"
+        config_file=$(mktemp)
+        trap 'rm -f "$config_file"' EXIT
+        cat >"$config_file" <<'EOF'
+[global]
+excludes = [".direnv/**", "result/**"]
+
+[formatter.nix]
+command = "nixpkgs-fmt"
+includes = ["*.nix", "**/*.nix"]
+
+[formatter.shell]
+command = "shfmt"
+options = ["-w", "-s", "-i", "2"]
+includes = ["*.sh", "**/*.sh"]
+EOF
+        exec ${pkgs.treefmt}/bin/treefmt --config-file "$config_file" "$@"
+      '');
   in {
-    apps = forAllSystems (_: {
+    apps = forAllSystems (system: {
       update = {
         type = "app";
         program = "${./nix/scripts/update.sh}";
@@ -126,7 +150,13 @@
         type = "app";
         program = "${./nix/scripts/bootstrap.sh}";
       };
+      format = {
+        type = "app";
+        program = "${formatPrograms.${system}}";
+      };
     });
+
+    formatter = forAllSystems (system: formatPrograms.${system});
 
     # Public flake templates for easy reuse
     templates = {

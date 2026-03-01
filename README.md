@@ -203,6 +203,22 @@ CI cache pushes are wired for Cachix. Set these in the GitHub repo:
 
 Once set, the macOS CI job builds `darwinConfigurations.*.system` and pushes results to the cache.
 
+## Flake Config Trust (`accept-flake-config`)
+
+This repo defaults `system.nix.acceptFlakeConfig = true` for convenience, so flake-level `nixConfig` is applied automatically.
+
+Tradeoff:
+- Pros: smoother day-to-day usage for this dotfiles flake (fewer manual flags).
+- Cons: evaluating unknown third-party flakes can apply their `nixConfig` (for example cache/substituter settings).
+
+If you want stricter behavior, disable it in your host/rice config:
+
+```nix
+{
+  myconfig.system.nix.acceptFlakeConfig = false;
+}
+```
+
 ## Karabiner-Elements Setup
 
 This repository includes comprehensive keyboard layouts and input method configurations for Karabiner-Elements in the `keyboards/karabiner/complex_modifications/` directory.

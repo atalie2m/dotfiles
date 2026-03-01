@@ -34,8 +34,6 @@ delib.module {
         or "";
       iconPath = "${dotfilesPath}/apps/emacs/emacs-icon-1.0.icns";
     in
-    assert lib.assertMsg (dotfilesPath != "")
-      "facts.user.dotfilesPath is required to set emacs-plus icon";
     {
       home.file.".emacs.d/early-init.el".source = ../../../../../apps/emacs/early-init.el;
       home.file.".emacs.d/init.el".source = ../../../../../apps/emacs/init.el;
@@ -43,6 +41,7 @@ delib.module {
         source = ../../../../../apps/emacs/lisp;
         recursive = true;
       };
+    } // lib.optionalAttrs (dotfilesPath != "") {
       home.file.".config/emacs-plus/build.yml".text = ''
         icon:
           url: ${iconPath}

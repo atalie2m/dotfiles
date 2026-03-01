@@ -122,11 +122,14 @@ if [[ ! -f "$facts_file" ]]; then
     platform_line="    platform = \"${platform}\";"
   fi
 
+  dotfiles_path="$ROOT"
+
   cat >"$facts_file" <<EOF
 {
   user = {
     username = "${username}";
     homeDirectory = "${home_dir}";
+    dotfilesPath = "${dotfiles_path}";
 ${platform_line}
   };
 }

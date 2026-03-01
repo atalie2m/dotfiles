@@ -13,6 +13,10 @@ delib.module {
     always = { parent, ... }: {
       tools.terminal.rio.enable = lib.mkDefault parent.enable;
     };
+    ifEnabled = { ... }: {
+      tools.system.homebrewNative.enable = lib.mkDefault true;
+      tools.system.homebrewNative.casks = lib.mkAfter [ "rio" ];
+    };
   };
 
   home.ifEnabled = { ... }: let
@@ -28,7 +32,6 @@ delib.module {
     };
     tomlFormat = pkgs.formats.toml { };
   in {
-    # Rio app itself is installed via brew-nix; this module only manages config.
     xdg.configFile = {
       "rio/config.toml".source = tomlFormat.generate "rio.toml" rioSettings;
     };

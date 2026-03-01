@@ -106,9 +106,9 @@ delib.module {
         # full refresh on terminal resize
         TRAPWINCH() { zle && zle -R }
 
-        # Load local ~/.zshrc if it exists
-        if [[ -f ~/.zshrc ]]; then
-          source ~/.zshrc
+        # Load user-specific Zsh customizations if present
+        if [[ -f "$HOME/.zshrc.local" ]]; then
+          source "$HOME/.zshrc.local"
         fi
       '';
 
