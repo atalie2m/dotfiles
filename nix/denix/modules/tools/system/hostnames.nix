@@ -1,10 +1,6 @@
-{ delib, lib, ... }:
+{ delib, lib, dotlib, ... }:
 
 # Manage macOS host naming from facts.machines.<host>
-
-let
-  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
-in
 
 delib.module {
   name = "tools.system.hostnames";
@@ -14,7 +10,7 @@ delib.module {
   };
 
   myconfig = {
-    always = mkEnableDefault "tools.system.hostnames.enable";
+    always = dotlib.mkEnableDefault "tools.system.hostnames.enable";
   };
 
   darwin.ifEnabled = { myconfig, ... }:

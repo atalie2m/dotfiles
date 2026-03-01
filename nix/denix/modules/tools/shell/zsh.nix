@@ -1,10 +1,6 @@
-{ delib, lib, ... }:
+{ delib, lib, dotlib, ... }:
 
 # Zsh configuration
-
-let
-  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
-in
 
 delib.module {
   name = "tools.shell.zsh";
@@ -18,7 +14,7 @@ delib.module {
   };
 
   myconfig = {
-    always = mkEnableDefault "tools.shell.zsh.enable";
+    always = dotlib.mkEnableDefault "tools.shell.zsh.enable";
   };
 
   home.ifEnabled = { cfg, ... }: {

@@ -1,7 +1,6 @@
-{ delib, pkgs, lib, inputs, ... }:
+{ delib, pkgs, lib, dotlib, inputs, ... }:
 
 let
-  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
   localSecrets = import (inputs.secrets + "/secrets.nix");
   secretFiles = localSecrets.files or { };
   hasSecrets = secretFiles != { };
@@ -38,7 +37,7 @@ delib.module {
   };
 
   myconfig = {
-    always = mkEnableDefault "tools.security.sops.enable";
+    always = dotlib.mkEnableDefault "tools.security.sops.enable";
   };
 
   home.ifEnabled = { myconfig, ... }:

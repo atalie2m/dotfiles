@@ -77,6 +77,7 @@
   outputs = inputs @ { denix, flake-parts, ... }:
     let
       localStub = builtins.pathExists (inputs.local + "/STUB");
+      dotlib = import ./nix/lib { lib = inputs.nixpkgs.lib; };
       mkConfigurations = { moduleSystem, paths, exclude ? [ ] }:
         let
           facts = import (inputs.local + "/facts.nix");
@@ -96,21 +97,17 @@
             args
             (base.withConfig { args.enable = true; })
           ];
-          specialArgs = { inherit inputs; };
-          # Import external modules
-          extraModules =
-            (if moduleSystem == "darwin" then [
-              inputs.brew-nix.darwinModules.default
-              inputs.mac-app-util.darwinModules.default
-              inputs.nix-homebrew.darwinModules.nix-homebrew
-            ] else [ ]);
+          specialArgs = { inherit inputs dotlib; };
         });
 
       mkLatestConfigurations = moduleSystem:
         mkConfigurations {
           inherit moduleSystem;
           paths = [ ./nix/denix ];
-          exclude = [ ./nix/denix/lib/mk-darwin-host.nix ] ++ (
+          exclude = [
+            ./nix/denix/lib/mk-darwin-host.nix
+            ./nix/denix/lib/mk-nixos-host.nix
+          ] ++ (
             if moduleSystem == "nixos" then
               [
                 ./nix/denix/hosts/a2m_nixos

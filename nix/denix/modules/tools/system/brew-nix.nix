@@ -1,11 +1,7 @@
-{ delib, lib, inputs, pkgs, ... }:
+{ delib, lib, dotlib, inputs, pkgs, ... }:
 
 # Brew-nix integration for managing macOS applications via Nix.
 # Kept as a secondary path for pinned/verified casks (empty by default).
-
-let
-  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
-in
 
 delib.module {
   name = "tools.system.brewNix";
@@ -23,10 +19,16 @@ delib.module {
   };
 
   myconfig = {
-    always = mkEnableDefault "tools.system.brewNix.enable";
+    always = dotlib.mkEnableDefault "tools.system.brewNix.enable";
   };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }:
+  darwin.always = { ... }: {
+    imports = [
+      inputs.brew-nix.darwinModules.default
+    ];
+  };
+
+  darwin.ifEnabled = { cfg, ... }:
     let
       caskApps = cfg.casks // cfg.extraCasks;
       caskNames = lib.attrNames caskApps;

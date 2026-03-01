@@ -1,10 +1,6 @@
-{ delib, lib, pkgs, ... }:
+{ delib, lib, dotlib, pkgs, ... }:
 
 # VS Code: isolated instances by purpose with mutable extensions
-
-let
-  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
-in
 
 delib.module {
   name = "tools.editor.vscode";
@@ -21,7 +17,7 @@ delib.module {
   };
 
   myconfig = {
-    always = mkEnableDefault "tools.editor.vscode.enable";
+    always = dotlib.mkEnableDefault "tools.editor.vscode.enable";
   };
 
   home.ifEnabled = { cfg, myconfig, ... }:

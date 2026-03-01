@@ -1,11 +1,7 @@
-{ delib, lib, inputs, pkgs, ... }:
+{ delib, lib, dotlib, inputs, pkgs, ... }:
 
 # mac-app-util integration for Spotlight/Dock trampolines
 # https://github.com/hraban/mac-app-util
-
-let
-  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
-in
 
 delib.module {
   name = "tools.system.macAppUtil";
@@ -26,7 +22,11 @@ delib.module {
   };
 
   myconfig = {
-    always = mkEnableDefault "tools.system.macAppUtil.enable";
+    always = dotlib.mkEnableDefault "tools.system.macAppUtil.enable";
+  };
+
+  darwin.always = { ... }: {
+    imports = [ inputs.mac-app-util.darwinModules.default ];
   };
 
   darwin.ifEnabled = { cfg, ... }:

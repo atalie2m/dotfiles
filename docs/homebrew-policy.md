@@ -7,6 +7,8 @@ This document defines package-source boundaries for this dotfiles flake.
 1. Use Nix packages by default for CLI tools and libraries.
 2. Use `tools.system.homebrewNative` only for software that is better managed as Homebrew formulas/casks on macOS (for example GUI apps that update rapidly or are macOS-specific).
 3. Use `tools.system.brewNix` as a pinned/fallback mechanism when native Homebrew integration is unsuitable.
+4. For Homebrew-only installs that need no extra behavior, add them to `nix/denix/modules/tools/brew-catalog.nix` instead of creating a dedicated module file.
+5. Keep dedicated Homebrew modules only when additional configuration/activation logic is required.
 
 ## Duplication Rules
 

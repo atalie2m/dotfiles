@@ -1,10 +1,6 @@
-{ delib, lib, ... }:
+{ delib, lib, dotlib, ... }:
 
 # Git configuration with user information from constants
-
-let
-  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
-in
 
 delib.module {
   name = "tools.dev.git";
@@ -31,10 +27,10 @@ delib.module {
   };
 
   myconfig = {
-    always = args:
-      lib.recursiveUpdate
-        (mkEnableDefault "tools.dev.git.enable" args)
-        (mkEnableDefault "tools.dev.git.lfs.enable" args);
+    always = dotlib.mkEnableDefaults [
+      "tools.dev.git.enable"
+      "tools.dev.git.lfs.enable"
+    ];
   };
 
   home.ifEnabled = { cfg, myconfig, ... }:

@@ -42,6 +42,8 @@ Deeper toggles such as `system.brewNix.autoDock.enable` are intentionally omitte
 
 ## Implementation Notes
 
+- Nixpkgs install catalog: `nix/denix/modules/tools/catalog.nix`
+- Homebrew install catalog: `nix/denix/modules/tools/brew-catalog.nix`
 - `nix/scripts/list-tools.sh`
 - `nix/scripts/list-tools.nix`
 

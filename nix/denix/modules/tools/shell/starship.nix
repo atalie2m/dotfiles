@@ -1,10 +1,6 @@
-{ delib, lib, ... }:
+{ delib, lib, dotlib, ... }:
 
 # Starship prompt configuration
-
-let
-  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
-in
 
 delib.module {
   name = "tools.shell.starship";
@@ -14,7 +10,7 @@ delib.module {
   };
 
   myconfig = {
-    always = mkEnableDefault "tools.shell.starship.enable";
+    always = dotlib.mkEnableDefault "tools.shell.starship.enable";
   };
 
   home.ifEnabled = { myconfig, ... }: {

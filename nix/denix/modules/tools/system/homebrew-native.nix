@@ -1,11 +1,7 @@
-{ delib, lib, ... }:
+{ delib, lib, dotlib, ... }:
 
 # Native Homebrew integration for macOS applications and tools.
 # Preferred for fast-moving apps/tools that should stay up to date.
-
-let
-  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
-in
 
 delib.module {
   name = "tools.system.homebrewNative";
@@ -31,7 +27,7 @@ delib.module {
   };
 
   myconfig = {
-    always = mkEnableDefault "tools.system.homebrewNative.enable";
+    always = dotlib.mkEnableDefault "tools.system.homebrewNative.enable";
   };
 
   darwin.ifEnabled = { cfg, myconfig, ... }: {

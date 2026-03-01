@@ -1,7 +1,6 @@
-{ delib, lib, pkgs, ... }:
+{ delib, lib, dotlib, pkgs, ... }:
 
 let
-  mkEnableDefault = import ../../../lib/mk-enable-default.nix { inherit lib; };
   systemName =
     if pkgs.stdenv.isDarwin then "darwin"
     else if pkgs.stdenv.isLinux then "linux"
@@ -35,7 +34,7 @@ let
       };
 
       myconfig = {
-        always = mkEnableDefault (lib.concatStringsSep "." optionPath);
+        always = dotlib.mkEnableDefault (lib.concatStringsSep "." optionPath);
       };
 
       home.ifEnabled = { ... }: {

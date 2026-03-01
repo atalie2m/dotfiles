@@ -1,10 +1,6 @@
-{ delib, lib, ... }:
+{ delib, lib, dotlib, ... }:
 
 # Bash configuration
-
-let
-  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
-in
 
 delib.module {
   name = "tools.shell.bash";
@@ -16,7 +12,7 @@ delib.module {
   };
 
   myconfig = {
-    always = mkEnableDefault "tools.shell.bash.enable";
+    always = dotlib.mkEnableDefault "tools.shell.bash.enable";
   };
 
   home.ifEnabled = { cfg, ... }: {
