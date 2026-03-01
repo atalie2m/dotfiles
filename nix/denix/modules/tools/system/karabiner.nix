@@ -106,7 +106,7 @@ delib.module {
             recursive = true; # keep file names intact
           };
         in
-        lib.mkIf pkgs.stdenv.isDarwin {
+        {
           # Install everything (symlink karabiner.json and complex_modifications)
           # Force the symlink to avoid HM's own backup collision; we back up ourselves pre-activation.
           xdg.configFile."karabiner/karabiner.json" = {

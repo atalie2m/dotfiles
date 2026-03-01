@@ -48,7 +48,7 @@ delib.module {
             end tell
           '';
         in
-        lib.mkIf pkgs.stdenv.isDarwin {
+        {
           home.activation.configureTerminal = lib.mkOrder 600 ''
             $DRY_RUN_CMD /usr/bin/osascript ${terminalConfigScript}
           '';

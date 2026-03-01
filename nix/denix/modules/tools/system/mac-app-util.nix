@@ -48,8 +48,8 @@ delib.module {
         '';
       };
       home-manager.sharedModules = lib.optional cfg.homeTrampolines.enable (
-        { pkgs, ... }:
-        lib.mkIf pkgs.stdenv.isDarwin {
+        { ... }:
+        {
           home.activation.macAppUtilTrampolines = lib.mkOrder 200 ''
             fromDir="${fromDir}"
             toDir="${toDir}"

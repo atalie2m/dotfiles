@@ -65,16 +65,6 @@ delib.host {
     system.stateVersion = nixosStateVersion;
     nixpkgs.hostPlatform = platform;
 
-    # Minimal boot/filesystem placeholders so `nixosConfigurations` evaluates/builds.
-    fileSystems."/" = {
-      device = "/dev/disk/by-label/nixos";
-      fsType = "ext4";
-    };
-    boot.loader.grub = {
-      enable = true;
-      device = "/dev/vda";
-    };
-
     nix.package = pkgs.nix;
 
     users.users.${username} = {
