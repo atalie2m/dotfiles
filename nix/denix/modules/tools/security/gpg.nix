@@ -1,6 +1,11 @@
 { delib, lib, ... }:
 
 # GPG and GPG agent configuration
+
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.security.gpg";
 
@@ -17,9 +22,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.security.gpg.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.security.gpg.enable";
   };
 
   home.ifEnabled = { cfg, ... }: {

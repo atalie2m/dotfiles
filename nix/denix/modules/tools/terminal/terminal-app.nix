@@ -2,6 +2,10 @@
 
 # macOS Terminal.app configuration
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.terminal.terminalApp";
 
@@ -10,9 +14,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.terminal.terminalApp.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.terminal.terminalApp.enable";
   };
 
   darwin.ifEnabled = { ... }: {

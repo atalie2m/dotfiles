@@ -212,29 +212,46 @@
         };
 
         apps = {
+          dotfiles = {
+            type = "app";
+            program = "${pkgs.writeShellScript "dotfiles-cli" ''
+              exec ${./nix/scripts/dotfiles.sh} "$@"
+            ''}";
+            meta.description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/list-tools).";
+          };
           update = {
             type = "app";
-            program = "${./nix/scripts/update.sh}";
+            program = "${pkgs.writeShellScript "dotfiles-update" ''
+              exec ${./nix/scripts/dotfiles.sh} update "$@"
+            ''}";
             meta.description = "Update flake inputs, run checks, and build host targets.";
           };
           list-tools = {
             type = "app";
-            program = "${./nix/scripts/list-tools.sh}";
+            program = "${pkgs.writeShellScript "dotfiles-list-tools" ''
+              exec ${./nix/scripts/dotfiles.sh} list-tools "$@"
+            ''}";
             meta.description = "List effective myconfig.tools values for a host/rice.";
           };
           apply = {
             type = "app";
-            program = "${./nix/scripts/apply.sh}";
+            program = "${pkgs.writeShellScript "dotfiles-apply" ''
+              exec ${./nix/scripts/dotfiles.sh} apply "$@"
+            ''}";
             meta.description = "Build or switch nix-darwin configurations.";
           };
           doctor = {
             type = "app";
-            program = "${./nix/scripts/doctor.sh}";
+            program = "${pkgs.writeShellScript "dotfiles-doctor" ''
+              exec ${./nix/scripts/dotfiles.sh} doctor "$@"
+            ''}";
             meta.description = "Run dotfiles health checks.";
           };
           bootstrap = {
             type = "app";
-            program = "${./nix/scripts/bootstrap.sh}";
+            program = "${pkgs.writeShellScript "dotfiles-bootstrap" ''
+              exec ${./nix/scripts/dotfiles.sh} bootstrap "$@"
+            ''}";
             meta.description = "Initialize local facts/secrets and optionally apply.";
           };
           format = {

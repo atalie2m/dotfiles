@@ -1,6 +1,7 @@
 { delib, pkgs, lib, inputs, ... }:
 
 let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
   localSecrets = import (inputs.secrets + "/secrets.nix");
   secretFiles = localSecrets.files or { };
   hasSecrets = secretFiles != { };
@@ -17,6 +18,17 @@ let
       path = mkTargetPath homeDir targetPath;
       mode = entry.mode or "0600";
     };
+
+  getHomeDir = myconfig:
+    myconfig.facts.user.homeDirectory or myconfig.constants.homeDirectory or "";
+
+  mkSecrets = { homeDir, userName ? "" }:
+    lib.mapAttrs
+      (name: entry:
+        (mkSecret homeDir name entry)
+        // (lib.optionalAttrs (userName != "") { owner = userName; })
+      )
+      secretFiles;
 in
 delib.module {
   name = "tools.security.sops";
@@ -26,15 +38,13 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.security.sops.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.security.sops.enable";
   };
 
   home.ifEnabled = { myconfig, ... }:
     let
-      homeDir = myconfig.facts.user.homeDirectory or myconfig.constants.homeDirectory or "";
-      secrets = lib.mapAttrs (name: entry: mkSecret homeDir name entry) secretFiles;
+      homeDir = getHomeDir myconfig;
+      secrets = mkSecrets { inherit homeDir; };
     in
     {
       home.packages = [ pkgs.sops pkgs.age ];
@@ -47,14 +57,9 @@ delib.module {
 
   darwin.ifEnabled = { myconfig, ... }:
     let
-      homeDir = myconfig.facts.user.homeDirectory or myconfig.constants.homeDirectory or "";
+      homeDir = getHomeDir myconfig;
       userName = myconfig.facts.user.username or myconfig.constants.username or "";
-      secrets = lib.mapAttrs
-        (name: entry:
-          (mkSecret homeDir name entry)
-          // (lib.optionalAttrs (userName != "") { owner = userName; })
-        )
-        secretFiles;
+      secrets = mkSecrets { inherit homeDir userName; };
     in
     {
       sops = lib.mkIf hasSecrets {

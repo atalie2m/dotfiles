@@ -2,6 +2,10 @@
 
 # Emacs (GUI via Homebrew) + Meow configuration
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.editor.emacs";
 
@@ -10,21 +14,16 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.editor.emacs.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.editor.emacs.enable";
     ifEnabled = { ... }: {
       tools.system.homebrewNative.enable = lib.mkDefault true;
+      tools.system.homebrewNative.taps = lib.mkAfter [
+        "d12frosted/emacs-plus"
+      ];
+      tools.system.homebrewNative.casks = lib.mkAfter [
+        "emacs-plus-app"
+      ];
     };
-  };
-
-  darwin.ifEnabled = { ... }: {
-    homebrew.taps = lib.mkAfter [
-      "d12frosted/emacs-plus"
-    ];
-    homebrew.casks = lib.mkAfter [
-      "emacs-plus-app"
-    ];
   };
 
   home.ifEnabled = { ... }:

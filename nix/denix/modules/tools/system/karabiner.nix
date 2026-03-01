@@ -1,5 +1,9 @@
 { delib, lib, ... }:
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.system.karabiner";
 
@@ -8,9 +12,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.system.karabiner.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.system.karabiner.enable";
   };
 
   darwin.ifEnabled = { ... }:

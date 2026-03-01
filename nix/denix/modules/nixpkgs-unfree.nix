@@ -2,6 +2,13 @@
 
 # Allow select unfree packages on both Home Manager and Darwin
 
+let
+  mkAllowUnfreePredicate = cfg:
+    if cfg.allowAll
+    then (_: true)
+    else (pkg: lib.elem (lib.getName pkg) cfg.packages);
+in
+
 delib.module {
   name = "nixpkgs.unfree";
 
@@ -12,16 +19,10 @@ delib.module {
   };
 
   home.ifEnabled = { cfg, ... }: {
-    nixpkgs.config.allowUnfreePredicate =
-      if cfg.allowAll
-      then (_: true)
-      else (pkg: lib.elem (lib.getName pkg) cfg.packages);
+    nixpkgs.config.allowUnfreePredicate = mkAllowUnfreePredicate cfg;
   };
 
   darwin.ifEnabled = { cfg, ... }: {
-    nixpkgs.config.allowUnfreePredicate =
-      if cfg.allowAll
-      then (_: true)
-      else (pkg: lib.elem (lib.getName pkg) cfg.packages);
+    nixpkgs.config.allowUnfreePredicate = mkAllowUnfreePredicate cfg;
   };
 }

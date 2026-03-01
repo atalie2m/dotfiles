@@ -2,6 +2,11 @@
 
 # Brew-nix integration for managing macOS applications via Nix.
 # Kept as a secondary path for pinned/verified casks (empty by default).
+
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.system.brewNix";
 
@@ -18,9 +23,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.system.brewNix.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.system.brewNix.enable";
   };
 
   darwin.ifEnabled = { cfg, myconfig, ... }:

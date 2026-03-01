@@ -2,6 +2,10 @@
 
 # tools.dev.gitLfs tool
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.dev.gitLfs";
 
@@ -10,9 +14,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.dev.gitLfs.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.dev.gitLfs.enable";
   };
 
 }

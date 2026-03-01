@@ -1,6 +1,11 @@
 { delib, lib, ... }:
 
 # Git configuration with user information from constants
+
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.dev.git";
 
@@ -23,9 +28,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.dev.git.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.dev.git.enable";
   };
 
   home.ifEnabled = { cfg, myconfig, ... }:

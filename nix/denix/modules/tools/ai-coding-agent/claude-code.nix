@@ -3,6 +3,10 @@
 # Anthropic Claude Code
 # Native only (Homebrew cask)
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.aiCodingAgent.claudeCode";
 
@@ -12,9 +16,7 @@ delib.module {
 
   # Default tool enablement to the group toggle unless explicitly overridden.
   myconfig = {
-    always = { parent, ... }: {
-      tools.aiCodingAgent.claudeCode.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.aiCodingAgent.claudeCode.enable";
     ifEnabled = {
       tools.system.homebrewNative.enable = lib.mkDefault true;
       tools.system.homebrewNative.casks = lib.mkAfter [ "claude-code" ];

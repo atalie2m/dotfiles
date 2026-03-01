@@ -2,6 +2,10 @@
 
 # Rio terminal configuration
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.terminal.rio";
 
@@ -10,9 +14,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.terminal.rio.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.terminal.rio.enable";
     ifEnabled = { myconfig, ... }:
       lib.mkIf (lib.hasSuffix "-darwin" (myconfig.facts.user.platform or "")) {
         tools.system.homebrewNative.enable = lib.mkDefault true;

@@ -2,6 +2,10 @@
 
 # Neovim (plain install)
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.editor.neovim";
 
@@ -10,9 +14,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.editor.neovim.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.editor.neovim.enable";
   };
 
   home.ifEnabled = { ... }: {

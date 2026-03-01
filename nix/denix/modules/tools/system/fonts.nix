@@ -1,5 +1,9 @@
 { delib, lib, pkgs, ... }:
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.system.fonts";
 
@@ -8,9 +12,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.system.fonts.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.system.fonts.enable";
   };
 
   home.ifEnabled = { cfg, ... }: {

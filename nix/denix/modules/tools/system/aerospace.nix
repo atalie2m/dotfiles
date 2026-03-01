@@ -1,6 +1,11 @@
 { delib, lib, ... }:
 
 # AeroSpace window manager (Homebrew cask)
+
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.system.aerospace";
 
@@ -9,9 +14,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.system.aerospace.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.system.aerospace.enable";
     ifEnabled = { ... }: {
       tools.system.homebrewNative.enable = lib.mkDefault true;
       tools.system.homebrewNative.taps = lib.mkAfter [

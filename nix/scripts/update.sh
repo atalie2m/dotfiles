@@ -1,24 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-LIB_PATH="$SCRIPT_DIR/lib.sh"
-if [[ ! -f $LIB_PATH ]]; then
-  if git_root=$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null); then
-    if [[ -f "$git_root/nix/scripts/lib.sh" ]]; then
-      SCRIPT_DIR="$git_root/nix/scripts"
-      LIB_PATH="$SCRIPT_DIR/lib.sh"
-    fi
-  fi
-fi
-if [[ ! -f $LIB_PATH ]]; then
-  echo "update: lib.sh not found (tried $LIB_PATH)" >&2
-  exit 1
-fi
-# shellcheck source=lib.sh
-source "$LIB_PATH"
-
 DOTFILES_SCRIPT_LABEL="update"
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=load-lib.sh
+source "$SCRIPT_DIR/load-lib.sh"
 
 usage() {
   cat <<'USAGE'

@@ -2,6 +2,10 @@
 
 # nix-homebrew: install Homebrew declaratively for nix-darwin
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.system.nixHomebrew";
 
@@ -11,9 +15,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.system.nixHomebrew.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.system.nixHomebrew.enable";
   };
 
   darwin.ifEnabled = { cfg, myconfig, ... }:

@@ -1,6 +1,10 @@
-{ delib, lib, pkgs, config, ... }:
+{ delib, lib, ... }:
 
 # Starship prompt configuration
+
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
 
 delib.module {
   name = "tools.shell.starship";
@@ -10,17 +14,14 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.shell.starship.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.shell.starship.enable";
   };
 
   home.ifEnabled = { myconfig, ... }: {
     programs.starship = {
       enable = true;
       enableZshIntegration = (((myconfig.tools or { }).shell or { }).zsh or { }).enable or false;
-      # Bash integration handled manually in ~/.nix/.bashrc
-      enableBashIntegration = false;
+      enableBashIntegration = (((myconfig.tools or { }).shell or { }).bash or { }).enable or false;
     };
 
     xdg.configFile."starship.toml" = {

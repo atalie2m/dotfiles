@@ -1,6 +1,11 @@
 { delib, lib, ... }:
 
 # Tmux configuration
+
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.terminal.tmux";
 
@@ -11,9 +16,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.terminal.tmux.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.terminal.tmux.enable";
   };
 
   home.ifEnabled = { cfg, ... }: {

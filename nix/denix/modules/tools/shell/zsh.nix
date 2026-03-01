@@ -1,6 +1,10 @@
-{ delib, lib, pkgs, config, ... }:
+{ delib, lib, ... }:
 
 # Zsh configuration
+
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
 
 delib.module {
   name = "tools.shell.zsh";
@@ -14,127 +18,54 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.shell.zsh.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.shell.zsh.enable";
   };
 
-  home.ifEnabled = { cfg, myconfig, ... }:
-    let
-      shellCfg = (myconfig.tools or { }).shell or { };
+  home.ifEnabled = { cfg, ... }: {
+    programs.zsh = {
+      enable = true;
+      dotDir = ".nix";
 
-      commonAliases = {
-        # File and directory operations
-        ll = "ls -la";
-        la = "ls -A";
-        l = "ls -CF";
-
-        # Development aliases
-        dev = "nix develop";
-        build = "nix build";
-        run = "nix run";
-        search = "nix search";
-
-        # Git shortcuts
-        gs = "git status";
-        ga = "git add";
-        gc = "git commit";
-        gp = "git push";
-        gl = "git log --oneline";
+      history = {
+        size = cfg.historySize;
+        save = cfg.historySize;
+        ignoreDups = true;
+        ignoreSpace = true;
       };
 
-      commonShellInit = ''
-        # Prefer GNU coreutils (unprefixed) when available
-        if [ -d "${pkgs.coreutils}/libexec/gnubin" ]; then
-          PATH="${pkgs.coreutils}/libexec/gnubin:$PATH"
-          export PATH
+      shellAliases = {
+        helloworld = "echo '👋 Hello from Zsh! You are running in a Zsh shell.'";
+      };
+
+      initContent = ''
+        if [[ -f "$HOME/.config/shell/common.sh" ]]; then
+          source "$HOME/.config/shell/common.sh"
         fi
 
-        # Custom function for process search
-        psgrep() {
-          if [[ -z "''${1:-}" ]]; then
-            echo "Usage: psgrep <pattern>" >&2
-            return 1
-          fi
-          if command -v rg >/dev/null 2>&1; then
-            ps aux | rg -i -- "$1"
-          else
-            ps aux | grep -i -- "$1" | grep -v "[g]rep"
-          fi
-        }
+        # Avoid right-prompt artifacts on resize and when typing
+        # - transient_rprompt hides RPROMPT while typing
+        # - prompt_cr/prompt_sp improve redraw on wraps and partial lines
+        setopt TRANSIENT_RPROMPT
+        setopt PROMPT_CR
+        setopt PROMPT_SP
+        # keep a small gap from terminal edge to avoid wrap glitches
+        ZLE_RPROMPT_INDENT=1
+        # clear end-of-line mark to prevent leftovers on reflow
+        PROMPT_EOL_MARK=""
+        # full refresh on terminal resize
+        TRAPWINCH() { zle && zle -R }
 
-        # GPG agent environment (interactive shells only)
-        if [[ $- == *i* ]]; then
-          if command -v gpgconf >/dev/null 2>&1; then
-            gpgAgentSshSocket="$(gpgconf --list-dirs agent-ssh-socket 2>/dev/null || true)"
-            if [[ -n "''${gpgAgentSshSocket:-}" ]] && { [[ -z "''${SSH_AUTH_SOCK:-}" ]] || [[ ! -S "''${SSH_AUTH_SOCK}" ]]; }; then
-              export SSH_AUTH_SOCK="''${gpgAgentSshSocket}"
-            fi
-          fi
-
-          gpgTty="$(tty 2>/dev/null || true)"
-          if [[ -n "''${gpgTty:-}" ]] && [[ "''${gpgTty}" != "not a tty" ]]; then
-            export GPG_TTY="''${gpgTty}"
-          fi
-        fi
-
-        # Show nix develop environment info (interactive shells only)
-        if [[ $- == *i* ]] && [[ -n "''${IN_NIX_SHELL:-}" ]]; then
-          echo "🚀 Nix develop environment active"
-          if [[ -n "''${DEVENV_PROFILE:-}" ]]; then
-            echo "Environment: ''${DEVENV_PROFILE}"
-          elif [[ -n "''${NIX_SHELL_NAME:-}" ]]; then
-            echo "Environment: ''${NIX_SHELL_NAME}"
-          fi
+        # Load user-specific Zsh customizations if present
+        if [[ -f "$HOME/.zshrc.local" ]]; then
+          source "$HOME/.zshrc.local"
         fi
       '';
 
-      allAliases = commonAliases // shellCfg.extraAliases;
-    in
-    {
-      programs.zsh = {
-        enable = true;
-        dotDir = ".nix";
-
-        history = {
-          size = cfg.historySize;
-          save = cfg.historySize;
-          ignoreDups = true;
-          ignoreSpace = true;
-        };
-
-        shellAliases = allAliases // {
-          helloworld = "echo '👋 Hello from Zsh! You are running in a Zsh shell.'";
-        };
-
-        initContent = ''
-          ${commonShellInit}
-
-          # Avoid right-prompt artifacts on resize and when typing
-          # - transient_rprompt hides RPROMPT while typing
-          # - prompt_cr/prompt_sp improve redraw on wraps and partial lines
-          setopt TRANSIENT_RPROMPT
-          setopt PROMPT_CR
-          setopt PROMPT_SP
-          # keep a small gap from terminal edge to avoid wrap glitches
-          ZLE_RPROMPT_INDENT=1
-          # clear end-of-line mark to prevent leftovers on reflow
-          PROMPT_EOL_MARK=""
-          # full refresh on terminal resize
-          TRAPWINCH() { zle && zle -R }
-
-          # Load user-specific Zsh customizations if present
-          if [[ -f "$HOME/.zshrc.local" ]]; then
-            source "$HOME/.zshrc.local"
-          fi
-        '';
-
-        autosuggestion.enable = cfg.enableAutosuggestions;
-        syntaxHighlighting.enable = cfg.enableSyntaxHighlighting;
-        inherit (cfg) enableCompletion;
-      };
-
+      autosuggestion.enable = cfg.enableAutosuggestions;
+      syntaxHighlighting.enable = cfg.enableSyntaxHighlighting;
+      inherit (cfg) enableCompletion;
     };
+  };
 
   darwin.ifEnabled = { cfg, myconfig, ... }: {
     programs.zsh.enable = lib.mkForce (

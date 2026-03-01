@@ -2,6 +2,10 @@
 
 # GitHub Copilot CLI (Homebrew cask)
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.aiCodingAgent.githubCopilotCli";
 
@@ -10,9 +14,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.aiCodingAgent.githubCopilotCli.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.aiCodingAgent.githubCopilotCli.enable";
     ifEnabled = {
       tools.system.homebrewNative.enable = lib.mkDefault true;
       tools.system.homebrewNative.casks = lib.mkAfter [ "copilot-cli" ];

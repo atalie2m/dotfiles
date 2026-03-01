@@ -1,5 +1,9 @@
 { delib, lib, ... }:
 
+let
+  mkEnableDefault = import ../../../../lib/mk-enable-default.nix { inherit lib; };
+in
+
 delib.module {
   name = "tools.system.smartBackup";
 
@@ -14,9 +18,7 @@ delib.module {
   };
 
   myconfig = {
-    always = { parent, ... }: {
-      tools.system.smartBackup.enable = lib.mkDefault parent.enable;
-    };
+    always = mkEnableDefault "tools.system.smartBackup.enable";
   };
 
   # Enable Home Manager's built-in backup of conflicting files.

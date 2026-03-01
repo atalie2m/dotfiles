@@ -1,5 +1,35 @@
 { delib, lib, config, ... }:
 
+let
+  mkBinaryCaches = cfg:
+    let
+      factCaches = config.facts.binaryCaches or { };
+    in
+    {
+      extraSubstituters = lib.unique (cfg.binaryCaches.substituters ++ (factCaches.substituters or [ ]));
+      extraTrustedPublicKeys = lib.unique (cfg.binaryCaches.trustedPublicKeys ++ (factCaches.trustedPublicKeys or [ ]));
+    };
+
+  mkCommonSettings = cfg:
+    let
+      caches = mkBinaryCaches cfg;
+    in
+    {
+      experimental-features =
+        (lib.optionals cfg.enableNixCommand [ "nix-command" ])
+        ++ (lib.optionals cfg.enableFlakes [ "flakes" ])
+        ++ cfg.extraExperimentalFeatures;
+
+      accept-flake-config = cfg.acceptFlakeConfig;
+    }
+    // lib.optionalAttrs (caches.extraSubstituters != [ ]) {
+      extra-substituters = caches.extraSubstituters;
+    }
+    // lib.optionalAttrs (caches.extraTrustedPublicKeys != [ ]) {
+      extra-trusted-public-keys = caches.extraTrustedPublicKeys;
+    };
+in
+
 # System-level Nix configuration
 delib.module {
   name = "system.nix";
@@ -17,31 +47,10 @@ delib.module {
   };
 
   darwin.ifEnabled = { cfg, ... }:
-    let
-      factCaches = config.facts.binaryCaches or { };
-      extraSubstituters = lib.unique (cfg.binaryCaches.substituters ++ (factCaches.substituters or [ ]));
-      extraTrustedPublicKeys = lib.unique (cfg.binaryCaches.trustedPublicKeys ++ (factCaches.trustedPublicKeys or [ ]));
-    in
     {
       nix = {
-        settings = {
-          # Enable experimental features
-          experimental-features =
-            (lib.optionals cfg.enableNixCommand [ "nix-command" ])
-              ++ (lib.optionals cfg.enableFlakes [ "flakes" ])
-              ++ cfg.extraExperimentalFeatures;
-
-          # Trust flake-provided nixConfig (e.g., extra-experimental-features)
-          accept-flake-config = cfg.acceptFlakeConfig;
-
-          # Trusted users for Nix daemon
+        settings = (mkCommonSettings cfg) // {
           trusted-users = [ "@admin" ];
-        }
-        // lib.optionalAttrs (extraSubstituters != [ ]) {
-          extra-substituters = extraSubstituters;
-        }
-        // lib.optionalAttrs (extraTrustedPublicKeys != [ ]) {
-          extra-trusted-public-keys = extraTrustedPublicKeys;
         };
 
         # Enable garbage collection and optimization
@@ -56,28 +65,8 @@ delib.module {
       };
     };
 
-  home.ifEnabled = { cfg, ... }:
-    let
-      factCaches = config.facts.binaryCaches or { };
-      extraSubstituters = lib.unique (cfg.binaryCaches.substituters ++ (factCaches.substituters or [ ]));
-      extraTrustedPublicKeys = lib.unique (cfg.binaryCaches.trustedPublicKeys ++ (factCaches.trustedPublicKeys or [ ]));
-    in
-    {
-      # Home Manager Nix settings
-      nix.settings = {
-        experimental-features =
-          (lib.optionals cfg.enableNixCommand [ "nix-command" ])
-            ++ (lib.optionals cfg.enableFlakes [ "flakes" ])
-            ++ cfg.extraExperimentalFeatures;
-
-        # Trust flake-provided nixConfig in user sessions
-        accept-flake-config = cfg.acceptFlakeConfig;
-      }
-      // lib.optionalAttrs (extraSubstituters != [ ]) {
-        extra-substituters = extraSubstituters;
-      }
-      // lib.optionalAttrs (extraTrustedPublicKeys != [ ]) {
-        extra-trusted-public-keys = extraTrustedPublicKeys;
-      };
-    };
+  home.ifEnabled = { cfg, ... }: {
+    # Home Manager Nix settings
+    nix.settings = mkCommonSettings cfg;
+  };
 }
