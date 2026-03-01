@@ -1,6 +1,7 @@
-{ delib, lib, pkgs, config, ... }:
+{ delib, lib, ... }:
 
 # Google Gemini CLI
+# Native only (Homebrew formula)
 
 delib.module {
   name = "tools.aiCodingAgent.geminiCli";
@@ -15,11 +16,8 @@ delib.module {
       tools.aiCodingAgent.geminiCli.enable = lib.mkDefault parent.enable;
     };
     ifEnabled = {
-      packages.gemini-cli-overlay.enable = lib.mkDefault true;
+      tools.system.homebrewNative.enable = lib.mkDefault true;
+      tools.system.homebrewNative.brews = lib.mkAfter [ "gemini-cli" ];
     };
-  };
-
-  home.ifEnabled = { ... }: {
-    home.packages = [ pkgs.gemini-cli ];
   };
 }

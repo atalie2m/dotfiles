@@ -1,6 +1,7 @@
-{ delib, lib, pkgs, config, ... }:
+{ delib, lib, ... }:
 
 # OpenAI Codex CLI
+# Native only (Homebrew cask)
 
 delib.module {
   name = "tools.aiCodingAgent.codex";
@@ -15,11 +16,8 @@ delib.module {
       tools.aiCodingAgent.codex.enable = lib.mkDefault parent.enable;
     };
     ifEnabled = {
-      packages.codex-overlay.enable = lib.mkDefault true;
+      tools.system.homebrewNative.enable = lib.mkDefault true;
+      tools.system.homebrewNative.casks = lib.mkAfter [ "codex" ];
     };
-  };
-
-  home.ifEnabled = { ... }: {
-    home.packages = [ pkgs.codex ];
   };
 }
