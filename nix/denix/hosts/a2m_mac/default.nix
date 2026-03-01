@@ -6,12 +6,23 @@ let
   machines = facts.machines or { };
   machine = machines.a2m_mac or { };
   username = user.username or "";
-  homeDirectory = user.homeDirectory or "";
-  platform = user.platform or pkgs.stdenv.hostPlatform.system;
+  defaultHomeDirectory =
+    if username != "" && pkgs.stdenv.isDarwin then "/Users/${username}" else "";
+  homeDirectory = user.homeDirectory or defaultHomeDirectory;
+  factsPlatform = user.platform or "";
+  platform = if factsPlatform != "" then factsPlatform else "aarch64-darwin";
+  effectiveUser = {
+    inherit username homeDirectory platform;
+    fullName = user.fullName or "";
+    email = user.email or "";
+    configDirectory = user.configDirectory or ".config";
+    systemType = user.systemType or "";
+    architecture = user.architecture or "";
+    stateVersion = user.stateVersion or { };
+  };
   stateVersion = user.stateVersion or { };
 in
 assert lib.assertMsg (username != "") "facts.user.username is required for a2m_mac";
-assert lib.assertMsg (homeDirectory != "") "facts.user.homeDirectory is required for a2m_mac";
 delib.host {
   name = "a2m_mac";
   rice = "full"; # default rice; can switch to -minimum
@@ -20,7 +31,8 @@ delib.host {
 
   myconfig = {
     facts = {
-      inherit user machine machines;
+      user = effectiveUser;
+      inherit machine machines;
       binaryCaches = facts.binaryCaches or { };
     };
     tools.terminal.tmux.enable = true;

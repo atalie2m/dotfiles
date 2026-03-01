@@ -27,12 +27,10 @@ delib.module {
     ];
   };
 
-  home.ifEnabled = { myconfig, ... }:
+  home.ifEnabled = { ... }:
     let
-      dotfilesPath = myconfig.facts.user.dotfilesPath
-        or myconfig.constants.dotfilesPath
-        or "";
-      iconPath = "${dotfilesPath}/apps/emacs/emacs-icon-1.0.icns";
+      iconPath = ../../../../../apps/emacs/emacs-icon-1.0.icns;
+      hasIcon = builtins.pathExists iconPath;
     in
     {
       home.file.".emacs.d/early-init.el".source = ../../../../../apps/emacs/early-init.el;
@@ -41,7 +39,7 @@ delib.module {
         source = ../../../../../apps/emacs/lisp;
         recursive = true;
       };
-    } // lib.optionalAttrs (dotfilesPath != "") {
+    } // lib.optionalAttrs hasIcon {
       home.file.".config/emacs-plus/build.yml".text = ''
         icon:
           url: ${iconPath}

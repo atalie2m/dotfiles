@@ -109,29 +109,32 @@ if [[ ! -f $facts_file ]]; then
   if [[ -z $username ]]; then
     username=$(id -un 2>/dev/null || true)
   fi
-  home_dir="${HOME:-}"
-
-  platform=""
-  case "$(uname -m 2>/dev/null || true)" in
-  arm64) platform="aarch64-darwin" ;;
-  x86_64) platform="x86_64-darwin" ;;
-  esac
-
-  platform_line=""
-  if [[ -n $platform ]]; then
-    platform_line="    platform = \"${platform}\";"
+  if [[ -z $username ]]; then
+    username="yourname"
   fi
-
-  dotfiles_path="$ROOT"
 
   cat >"$facts_file" <<EOF
 {
   user = {
     username = "${username}";
-    homeDirectory = "${home_dir}";
-    dotfilesPath = "${dotfiles_path}";
-${platform_line}
+
+    # Optional for Git identity:
+    # fullName = "Your Name";
+    # email = "you@example.com";
+
+    # Optional overrides:
+    # homeDirectory = "/Users/${username}";
+    # platform = "x86_64-darwin"; # default is aarch64-darwin
   };
+
+  # Optional machine metadata for tools.system.hostnames:
+  # machines = {
+  #   a2m_mac = {
+  #     computerName = "Your Mac";
+  #     localHostName = "your-mac";
+  #     hostName = "your-mac";
+  #   };
+  # };
 }
 EOF
   log "generated $facts_file"

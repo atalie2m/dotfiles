@@ -6,13 +6,17 @@ delib.module {
 
   options.facts = with delib.options; {
     user = {
+      # Required
       username = strOption "";
+
+      # Optional identity
       fullName = strOption "";
       email = strOption "";
+
+      # Optional overrides (normally derived)
       homeDirectory = strOption "";
       platform = strOption "";
       configDirectory = strOption ".config";
-      dotfilesPath = strOption "";
       systemType = strOption "";
       architecture = strOption "";
       stateVersion = {

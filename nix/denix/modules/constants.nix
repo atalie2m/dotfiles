@@ -1,7 +1,13 @@
-{ delib, config, ... }:
+{ delib, config, lib, ... }:
 
 let
   user = config.facts.user or { };
+  username = user.username or "";
+  platform = user.platform or "";
+  defaultHomeDirectory =
+    if username == "" then ""
+    else if lib.hasSuffix "-darwin" platform then "/Users/${username}"
+    else "/home/${username}";
 in
 # Global constants and user information shared across all modules
 delib.module {
@@ -14,11 +20,9 @@ delib.module {
     email = readOnly (strOption (user.email or ""));
 
     # System paths
-    homeDirectory = readOnly (strOption (user.homeDirectory or ""));
+    homeDirectory = readOnly (strOption (user.homeDirectory or defaultHomeDirectory));
+    platform = readOnly (strOption platform);
     configDirectory = readOnly (strOption (user.configDirectory or ".config"));
-
-    # Repository information
-    dotfilesPath = readOnly (strOption (user.dotfilesPath or ""));
 
     # System information
     systemType = readOnly (strOption (user.systemType or ""));

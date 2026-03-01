@@ -118,17 +118,25 @@ Default layout:
 ### Facts (non-secret)
 
 - Create `~/.config/dotfiles/facts.nix`
-- Required: `user.username`, `user.homeDirectory`
+- Required: `user.username`
+- Recommended (for Git identity): `user.fullName`, `user.email`
+- Optional overrides:
+  `user.homeDirectory` (auto-derived) and `user.platform` (defaults to `aarch64-darwin`; set explicitly on Intel Macs)
 
 Example `facts.nix`:
 ```nix
 {
   user = {
     username = "yourname";
+
+    # Recommended (used by Git module)
     fullName = "Your Name";
     email = "you@example.com";
-    homeDirectory = "/Users/yourname";
-    platform = "aarch64-darwin";
+
+    # Optional overrides
+    # homeDirectory = "/Users/yourname";
+    # platform = "x86_64-darwin"; # default is aarch64-darwin
+
     stateVersion = {
       home = "25.05";
       darwin = 6;
@@ -329,12 +337,14 @@ Defaults:
 
 ### Bootstrap (first run)
 ```bash
-# Generate facts/secrets, run doctor, then optionally apply
+# Generate minimal facts/secrets, run doctor, then optionally apply
 nix run .#bootstrap -- --host a2m_mac --rice full --apply
 
 # Non-interactive (auto-apply)
 nix run .#bootstrap -- --host a2m_mac --rice full --yes
 ```
+
+`bootstrap` creates a minimal `facts.nix` (`user.username` only) and leaves extra fields as opt-in comments.
 
 ### Doctor (health checks)
 ```bash

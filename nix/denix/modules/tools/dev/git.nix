@@ -27,29 +27,34 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { cfg, myconfig, ... }: {
-    programs.git = {
-      enable = true;
-      userName = myconfig.constants.fullName;
-      userEmail = myconfig.constants.email;
+  home.ifEnabled = { cfg, myconfig, ... }:
+    let
+      fullName = myconfig.constants.fullName;
+      email = myconfig.constants.email;
+    in
+    {
+      programs.git = {
+        enable = true;
 
-      lfs.enable = (((myconfig.tools or { }).dev or { }).gitLfs or { }).enable or false;
+        lfs.enable = (((myconfig.tools or { }).dev or { }).gitLfs or { }).enable or false;
 
-      extraConfig = lib.mkMerge [
-        {
-          init.defaultBranch = cfg.defaultBranch;
-          pull.rebase = true;
-          push.autoSetupRemote = true;
-          core.editor = "code --wait";
-        }
-        (lib.mkIf cfg.enableSigning {
-          commit.gpgsign = true;
-          gpg.format = "openpgp";
-        })
-        cfg.extraConfig
-      ];
+        extraConfig = lib.mkMerge [
+          {
+            init.defaultBranch = cfg.defaultBranch;
+            pull.rebase = true;
+            push.autoSetupRemote = true;
+            core.editor = "code --wait";
+          }
+          (lib.mkIf cfg.enableSigning {
+            commit.gpgsign = true;
+            gpg.format = "openpgp";
+          })
+          cfg.extraConfig
+        ];
 
-      inherit (cfg) aliases;
+        inherit (cfg) aliases;
+      }
+      // lib.optionalAttrs (fullName != "") { userName = fullName; }
+      // lib.optionalAttrs (email != "") { userEmail = email; };
     };
-  };
 }
