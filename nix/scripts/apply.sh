@@ -88,7 +88,8 @@ target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
 if command -v darwin-rebuild >/dev/null 2>&1; then
   rebuild_cmd=(darwin-rebuild)
 else
-  rebuild_cmd=(nix run github:nix-darwin/nix-darwin#darwin-rebuild --)
+  darwin_rebuild_bin="$(nix build --no-link --print-out-paths nix-darwin#darwin-rebuild)/bin/darwin-rebuild"
+  rebuild_cmd=("$darwin_rebuild_bin")
 fi
 
 rebuild_args=("$action"

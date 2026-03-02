@@ -112,21 +112,6 @@ delib.module {
             force = true;
           };
           xdg.configFile."karabiner/assets/complex_modifications" = complexModsSymlink;
-
-          #
-          # Optional: write a small debug text next to the config
-          #
-          home.file.".karabiner-debug.txt" = {
-            force = true;
-            text = ''
-              Karabiner-Elements Nix module diagnostics
-
-              ruleDir:  ${ruleDir}
-
-              Rule files considered:
-              ${lib.concatMapStringsSep "\n" (name: "  • " + ruleFiles.${name}) (builtins.attrNames ruleFiles)}
-            '';
-          };
         };
     in
     {

@@ -20,10 +20,6 @@ delib.module {
       enable = true;
       inherit (cfg) enableCompletion;
 
-      shellAliases = {
-        helloworld = "echo '👋 Hello from Bash! You are running in a Bash shell.'";
-      };
-
       initExtra = ''
         HISTCONTROL=ignoredups:ignorespace
         HISTSIZE=${toString cfg.historySize}

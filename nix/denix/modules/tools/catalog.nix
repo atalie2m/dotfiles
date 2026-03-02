@@ -33,9 +33,13 @@ let
         enable = boolOption false;
       };
 
-      myconfig = {
-        always = dotlib.mkEnableDefault (lib.concatStringsSep "." optionPath);
-      };
+      myconfig =
+        {
+          always = dotlib.mkEnableDefault (lib.concatStringsSep "." optionPath);
+        }
+        // lib.optionalAttrs (spec ? unfree && spec.unfree != [ ]) {
+          ifEnabled = { ... }: dotlib.requireUnfree spec.unfree;
+        };
 
       home.ifEnabled = { ... }: {
         home.packages = lib.optional (isSupportedSystem && package != null) package;
@@ -70,7 +74,11 @@ let
     mercurial = { group = "dev"; pkg = "mercurial"; };
     nodejs = { group = "dev"; pkg = "nodejs"; };
     opentofu = { group = "dev"; pkg = "opentofu"; };
-    terraform = { group = "dev"; pkg = "terraform"; };
+    terraform = {
+      group = "dev";
+      pkg = "terraform";
+      unfree = [ "terraform" ];
+    };
   };
 in
 {

@@ -65,8 +65,25 @@ done
 
 host="${host:-${HOST:-a2m_mac}}"
 rice="${rice:-${RICE:-}}"
+start_dir="$PWD"
 
 set_repo_root
+
+if [[ $ROOT == /nix/store/* ]]; then
+  if [[ -f "$start_dir/flake.nix" && -f "$start_dir/flake.lock" && -w "$start_dir/flake.nix" && -w "$start_dir/flake.lock" ]]; then
+    log "resolved store root for CLI; using writable checkout at $start_dir for update"
+    ROOT="$start_dir"
+  fi
+fi
+
+if [[ ! -f "$ROOT/flake.lock" ]]; then
+  die "flake.lock not found under $ROOT (update requires a writable checkout)"
+fi
+
+if [[ ! -w "$ROOT/flake.nix" || ! -w "$ROOT/flake.lock" ]]; then
+  die "update requires a writable flake checkout (current root: $ROOT)"
+fi
+
 cd "$ROOT"
 resolve_inputs
 
@@ -95,7 +112,10 @@ darwin_rebuild() {
   if command -v darwin-rebuild >/dev/null 2>&1; then
     darwin-rebuild "$@"
   else
-    nix run github:nix-darwin/nix-darwin#darwin-rebuild -- "$@"
+    if [[ -z ${DARWIN_REBUILD_BIN:-} ]]; then
+      DARWIN_REBUILD_BIN="$(nix build --no-link --print-out-paths nix-darwin#darwin-rebuild)/bin/darwin-rebuild"
+    fi
+    "$DARWIN_REBUILD_BIN" "$@"
   fi
 }
 

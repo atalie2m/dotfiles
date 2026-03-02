@@ -5,6 +5,6 @@ let
 in
 mkDarwinHost {
   name = "mn_mac";
-  rice = "mn";
+  rice = "full";
   machineKey = "mn_mac";
 }

@@ -29,10 +29,6 @@ delib.module {
         ignoreSpace = true;
       };
 
-      shellAliases = {
-        helloworld = "echo '👋 Hello from Zsh! You are running in a Zsh shell.'";
-      };
-
       initContent = ''
         if [[ -f "$HOME/.config/shell/common.sh" ]]; then
           source "$HOME/.config/shell/common.sh"

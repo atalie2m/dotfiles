@@ -3,14 +3,6 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-if [[ ! -f "$SCRIPT_DIR/apply.sh" ]]; then
-  if git_root=$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null); then
-    if [[ -f "$git_root/nix/scripts/apply.sh" ]]; then
-      SCRIPT_DIR="$git_root/nix/scripts"
-    fi
-  fi
-fi
-
 usage() {
   cat <<'USAGE'
 Usage: nix run .#dotfiles -- <subcommand> [args...]

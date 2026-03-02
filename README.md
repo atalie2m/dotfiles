@@ -20,10 +20,13 @@ It provides:
 
 This flake uses [Denix](https://github.com/yunfachi/denix) to build macOS configurations.
 
-- Hosts: `a2m_mac` (default rice: `full`), `mn_mac` (default rice: `mn`).
-- Rices: `full`, `minimum`, `mn`.
-  - `minimum`: minimal setup with Git and GPG only (no GUI/dev stacks).
-  - `mn`: based on `full` with the same tooling set, including AI coding CLIs.
+- Hosts: `a2m_mac` (default rice: `full`), `mn_mac` (default rice: `full`).
+- Rices: `base`, `darwin`, `dev`, `full`, `minimum`.
+  - `base`: cross-platform essentials (`system.nix`, core CLI, shell, Git, GPG/SOPS).
+  - `darwin`: macOS base integrations (Homebrew + hostnames/fonts).
+  - `dev`: editor/terminal/workstation stack.
+  - `full`: composition of `base + darwin + dev`.
+  - `minimum`: compatibility alias for `base`.
 
 CLI usage examples (recommended):
 
@@ -60,7 +63,7 @@ Application/tool sourcing priority is:
 
 1. Terraform/OpenTofu are managed per project via each repo's `flake.nix` (recommended default).
 2. Dotfiles/Home Manager can also provide them through `myconfig.tools.dev` for convenience.
-3. Unfree is allowed via `nixpkgs.unfree.packages` allow-list (not `allowAll`) to keep operations explicit.
+3. Unfree allow-list is derived from enabled tools (for example `terraform`, `vscode`) via helper wiring; `allowAll` remains disabled.
 4. For Terraform-only repos, set `nixpkgs.config.allowUnfreePredicate` in that repo's flake and include `pkgs.terraform` in the devShell.
 
 Example (`flake.nix` for a Terraform repo):

@@ -16,6 +16,7 @@ in
       {
         # Prefer enabling Homebrew when a tool explicitly requires it.
         # Keep this weaker than explicit user values, but stronger than inherited mkDefault false.
+        tools.system.nixHomebrew.enable = lib.mkOverride 900 true;
         tools.system.homebrewNative.enable = lib.mkOverride 900 true;
       }
       (lib.optionalAttrs (taps != [ ]) {
@@ -32,9 +33,26 @@ in
       })
     ];
 
+  requireUnfree = packages:
+    lib.mkMerge [
+      {
+        nixpkgs.unfree.enable = lib.mkOverride 900 true;
+        nixpkgs.unfree.allowAll = lib.mkOverride 900 false;
+      }
+      (lib.optionalAttrs (packages != [ ]) {
+        nixpkgs.unfree.packages = lib.mkAfter packages;
+      })
+    ];
+
   ifDarwin = myconfig: attrs:
     lib.mkIf (lib.hasSuffix "-darwin" (getPlatform myconfig)) attrs;
 
   ifLinux = myconfig: attrs:
+    lib.mkIf (lib.hasSuffix "-linux" (getPlatform myconfig)) attrs;
+
+  requireDarwin = myconfig: attrs:
+    lib.mkIf (lib.hasSuffix "-darwin" (getPlatform myconfig)) attrs;
+
+  requireLinux = myconfig: attrs:
     lib.mkIf (lib.hasSuffix "-linux" (getPlatform myconfig)) attrs;
 }

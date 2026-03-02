@@ -113,9 +113,9 @@
                 ./nix/denix/hosts/a2m_nixos
                 ./nix/denix/hosts/a2m_mac
                 ./nix/denix/hosts/mn_mac
+                ./nix/denix/rices/darwin
+                ./nix/denix/rices/dev
                 ./nix/denix/rices/full
-                ./nix/denix/rices/mn
-                ./nix/denix/rices/minimum
               ]
             else if moduleSystem == "darwin" then
               [ ./nix/denix/hosts/a2m_nixos ]
@@ -128,136 +128,147 @@
       imports = [ inputs.treefmt-nix.flakeModule ];
       systems = [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux" ];
 
-      perSystem = { pkgs, config, ... }: {
-        treefmt = {
-          projectRootFile = "flake.nix";
-          settings.global.excludes = [ ".direnv/**" "result/**" ];
-          programs.nixpkgs-fmt.enable = true;
-          programs.shfmt = {
-            enable = true;
-            indent_size = 2;
+      perSystem = { pkgs, config, ... }:
+        let
+          scripts = ./nix/scripts;
+          dotfilesRoot = ./.;
+        in
+        {
+          treefmt = {
+            projectRootFile = "flake.nix";
+            settings.global.excludes = [ ".direnv/**" "result/**" ];
+            programs.nixpkgs-fmt.enable = true;
+            programs.shfmt = {
+              enable = true;
+              indent_size = 2;
+            };
           };
-        };
 
-        formatter = config.treefmt.build.wrapper;
+          formatter = config.treefmt.build.wrapper;
 
-        checks = {
-          statix = pkgs.runCommand "statix-check"
-            {
-              nativeBuildInputs = [ pkgs.statix ];
-              src = inputs.self;
-            } ''
-                        cd "$src"
-                        config_file=$(mktemp)
-                        cat >"$config_file" <<'EOF'
-            disabled = [
-              "manual_inherit"
-              "manual_inherit_from"
-              "useless_parens"
-              "empty_pattern"
-              "useless_has_attr"
-              "repeated_keys"
-            ]
-            ignore = [ ".direnv", "result" ]
-            nix_version = "2.4"
-            EOF
-                        statix check --config "$config_file" .
-                        touch "$out"
-          '';
+          checks = {
+            statix = pkgs.runCommand "statix-check"
+              {
+                nativeBuildInputs = [ pkgs.statix ];
+                src = inputs.self;
+              } ''
+                          cd "$src"
+                          config_file=$(mktemp)
+                          cat >"$config_file" <<'EOF'
+              disabled = [
+                "manual_inherit"
+                "manual_inherit_from"
+                "useless_parens"
+                "empty_pattern"
+                "useless_has_attr"
+                "repeated_keys"
+              ]
+              ignore = [ ".direnv", "result" ]
+              nix_version = "2.4"
+              EOF
+                          statix check --config "$config_file" .
+                          touch "$out"
+            '';
 
-          deadnix = pkgs.runCommand "deadnix-check"
-            {
-              nativeBuildInputs = [ pkgs.deadnix ];
-              src = inputs.self;
-            } ''
-            cd "$src"
-            deadnix --fail -l -L .
-            touch "$out"
-          '';
-
-          shellcheck = pkgs.runCommand "shellcheck-check"
-            {
-              nativeBuildInputs = [ pkgs.findutils pkgs.shellcheck ];
-              src = inputs.self;
-            } ''
-            cd "$src"
-            mapfile -t files < <(find nix/scripts -type f -name '*.sh' | sort)
-            if [[ "''${#files[@]}" -eq 0 ]]; then
+            deadnix = pkgs.runCommand "deadnix-check"
+              {
+                nativeBuildInputs = [ pkgs.deadnix ];
+                src = inputs.self;
+              } ''
+              cd "$src"
+              deadnix --fail -l -L .
               touch "$out"
-              exit 0
-            fi
-            shellcheck \
-              -e SC1091 \
-              -e SC2016 \
-              -e SC2034 \
-              "''${files[@]}"
-            touch "$out"
-          '';
-        };
+            '';
 
-        devShells.default = pkgs.mkShell {
-          name = "dotfiles-dev";
-          packages = [
-            pkgs.age
-            pkgs.deadnix
-            pkgs.nvfetcher
-            pkgs.shellcheck
-            pkgs.sops
-            pkgs.statix
-            config.treefmt.build.wrapper
-          ];
-        };
+            shellcheck = pkgs.runCommand "shellcheck-check"
+              {
+                nativeBuildInputs = [ pkgs.findutils pkgs.shellcheck ];
+                src = inputs.self;
+              } ''
+              cd "$src"
+              mapfile -t files < <(find nix/scripts -type f -name '*.sh' | sort)
+              if [[ "''${#files[@]}" -eq 0 ]]; then
+                touch "$out"
+                exit 0
+              fi
+              shellcheck \
+                -e SC1091 \
+                -e SC2016 \
+                -e SC2034 \
+                "''${files[@]}"
+              touch "$out"
+            '';
+          };
 
-        apps = {
-          dotfiles = {
-            type = "app";
-            program = "${pkgs.writeShellScript "dotfiles-cli" ''
-              exec ${./nix/scripts/dotfiles.sh} "$@"
-            ''}";
-            meta.description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/list-tools).";
+          devShells.default = pkgs.mkShell {
+            name = "dotfiles-dev";
+            packages = [
+              pkgs.age
+              pkgs.deadnix
+              pkgs.nvfetcher
+              pkgs.shellcheck
+              pkgs.sops
+              pkgs.statix
+              config.treefmt.build.wrapper
+            ];
           };
-          update = {
-            type = "app";
-            program = "${pkgs.writeShellScript "dotfiles-update" ''
-              exec ${./nix/scripts/dotfiles.sh} update "$@"
+
+          apps = {
+            dotfiles = {
+              type = "app";
+              program = "${pkgs.writeShellScript "dotfiles-cli" ''
+              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
+              exec ${scripts}/dotfiles.sh "$@"
             ''}";
-            meta.description = "Update flake inputs, run checks, and build host targets.";
-          };
-          list-tools = {
-            type = "app";
-            program = "${pkgs.writeShellScript "dotfiles-list-tools" ''
-              exec ${./nix/scripts/dotfiles.sh} list-tools "$@"
+              meta.description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/list-tools).";
+            };
+            update = {
+              type = "app";
+              program = "${pkgs.writeShellScript "dotfiles-update" ''
+              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
+              exec ${scripts}/dotfiles.sh update "$@"
             ''}";
-            meta.description = "List effective myconfig.tools values for a host/rice.";
-          };
-          apply = {
-            type = "app";
-            program = "${pkgs.writeShellScript "dotfiles-apply" ''
-              exec ${./nix/scripts/dotfiles.sh} apply "$@"
+              meta.description = "Update flake inputs, run checks, and build host targets.";
+            };
+            list-tools = {
+              type = "app";
+              program = "${pkgs.writeShellScript "dotfiles-list-tools" ''
+              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
+              exec ${scripts}/dotfiles.sh list-tools "$@"
             ''}";
-            meta.description = "Build or switch nix-darwin configurations.";
-          };
-          doctor = {
-            type = "app";
-            program = "${pkgs.writeShellScript "dotfiles-doctor" ''
-              exec ${./nix/scripts/dotfiles.sh} doctor "$@"
+              meta.description = "List effective myconfig.tools values for a host/rice.";
+            };
+            apply = {
+              type = "app";
+              program = "${pkgs.writeShellScript "dotfiles-apply" ''
+              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
+              exec ${scripts}/dotfiles.sh apply "$@"
             ''}";
-            meta.description = "Run dotfiles health checks.";
-          };
-          bootstrap = {
-            type = "app";
-            program = "${pkgs.writeShellScript "dotfiles-bootstrap" ''
-              exec ${./nix/scripts/dotfiles.sh} bootstrap "$@"
+              meta.description = "Build or switch nix-darwin configurations.";
+            };
+            doctor = {
+              type = "app";
+              program = "${pkgs.writeShellScript "dotfiles-doctor" ''
+              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
+              exec ${scripts}/dotfiles.sh doctor "$@"
             ''}";
-            meta.description = "Initialize local facts/secrets and optionally apply.";
-          };
-          format = {
-            type = "app";
-            program = "${config.treefmt.build.wrapper}/bin/treefmt";
-            meta.description = "Format Nix and shell files with treefmt.";
+              meta.description = "Run dotfiles health checks.";
+            };
+            bootstrap = {
+              type = "app";
+              program = "${pkgs.writeShellScript "dotfiles-bootstrap" ''
+              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
+              exec ${scripts}/dotfiles.sh bootstrap "$@"
+            ''}";
+              meta.description = "Initialize local facts/secrets and optionally apply.";
+            };
+            format = {
+              type = "app";
+              program = "${config.treefmt.build.wrapper}/bin/treefmt";
+              meta.description = "Format Nix and shell files with treefmt.";
+            };
           };
         };
-      };
 
       flake = {
         # Public flake templates for easy reuse

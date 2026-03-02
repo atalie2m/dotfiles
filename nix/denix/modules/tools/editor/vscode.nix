@@ -18,6 +18,7 @@ delib.module {
 
   myconfig = {
     always = dotlib.mkEnableDefault "tools.editor.vscode.enable";
+    ifEnabled = { ... }: dotlib.requireUnfree [ "vscode" ];
   };
 
   home.ifEnabled = { cfg, myconfig, ... }:

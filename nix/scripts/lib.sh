@@ -14,8 +14,11 @@ die() {
 }
 
 set_repo_root() {
-  ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
-  if [[ -z ${ROOT:-} ]]; then
+  if [[ -n ${DOTFILES_ROOT:-} ]]; then
+    if ! ROOT=$(cd "$DOTFILES_ROOT" 2>/dev/null && pwd); then
+      die "DOTFILES_ROOT is not a readable directory: $DOTFILES_ROOT"
+    fi
+  else
     local lib_dir
     lib_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
     ROOT=$(cd "$lib_dir/../.." && pwd)
