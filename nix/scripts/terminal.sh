@@ -5,6 +5,8 @@ DOTFILES_SCRIPT_LABEL="terminal"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=load-lib.sh
 source "$SCRIPT_DIR/load-lib.sh"
+# shellcheck source=sync-core.sh
+source_dotfiles_script "sync-core.sh"
 
 usage() {
   cat <<'USAGE'
@@ -60,102 +62,49 @@ plist="$real_plist"
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/terminal-app/profiles"
 legacy_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/terminal/profiles"
 work_plist=""
+profile_index=""
+profile_file_count=0
+profile_invalid_seed=0
 
-trap 'if [[ -n ${work_plist:-} ]]; then rm -f "$work_plist"; fi' EXIT
-
-resolve_repo_worktree_root() {
-  local candidate=""
-
-  if command -v git >/dev/null 2>&1; then
-    candidate="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
-    if [[ -n $candidate && -f $candidate/flake.nix && -d $candidate/apps/terminal && -d $candidate/nix/scripts ]]; then
-      cd "$candidate" && pwd
-      return 0
-    fi
-  fi
-
-  if [[ -f "$(pwd)/flake.nix" && -d "$(pwd)/apps/terminal" && -d "$(pwd)/nix/scripts" ]]; then
-    pwd
-    return 0
-  fi
-
-  return 1
+cleanup() {
+  [[ -n ${work_plist:-} ]] && rm -f "$work_plist"
+  [[ -n ${profile_index:-} ]] && rm -f "$profile_index"
 }
+trap cleanup EXIT
 
-while [[ $# -gt 0 ]]; do
+sync_cli_parse_script_option() {
   case "$1" in
-  --check)
-    mode="check"
-    shift
-    ;;
-  --adopt)
-    mode="adopt"
-    shift
-    ;;
-  --forget)
-    mode="forget"
-    shift
-    ;;
   --profile)
     [[ $# -lt 2 ]] && die "missing value for --profile"
     profile_filter="$2"
-    shift 2
-    ;;
-  --details)
-    details=1
-    shift
-    ;;
-  --diff)
-    show_diff=1
-    shift
+    sync_core_cli_consumed=2
+    return 0
     ;;
   --dir)
     [[ $# -lt 2 ]] && die "missing value for --dir"
     profiles_dir="$2"
     default_profiles_dir=0
-    shift 2
+    sync_core_cli_consumed=2
+    return 0
     ;;
   --state-dir)
     [[ $# -lt 2 ]] && die "missing value for --state-dir"
     state_dir="$2"
-    shift 2
-    ;;
-  --in-place)
-    in_place=1
-    shift
-    ;;
-  --force)
-    force=1
-    shift
-    ;;
-  --output-dir)
-    [[ $# -lt 2 ]] && die "missing value for --output-dir"
-    output_dir="$2"
-    shift 2
-    ;;
-  -h | --help)
-    usage
-    exit 0
-    ;;
-  --*)
-    die "unknown option: $1"
-    ;;
-  *)
-    die "unexpected argument: $1"
+    sync_core_cli_consumed=2
+    return 0
     ;;
   esac
-done
 
-if [[ $mode != "adopt" && ($in_place -eq 1 || $force -eq 1 || -n $output_dir) ]]; then
-  die "--in-place/--force/--output-dir are only valid with --adopt"
-fi
+  return 1
+}
 
-if [[ $mode == "adopt" && $in_place -eq 1 && -n $output_dir ]]; then
-  die "--output-dir cannot be used with --adopt --in-place"
-fi
+sync_core_parse_cli_args 0 "$@"
+
+sync_core_validate_adopt_flags "$mode" "$in_place" "$output_dir"
+sync_core_validate_force_usage "$mode" "$in_place" "$force" 0 "--in-place/--force/--output-dir are only valid with --adopt"
 
 if [[ $default_profiles_dir -eq 1 ]]; then
-  worktree_root="$(resolve_repo_worktree_root || true)"
+  worktree_root="$(resolve_repo_worktree_root_for "apps/terminal" || true)"
   if [[ -n $worktree_root ]]; then
     ROOT="$worktree_root"
     profiles_dir="$ROOT/apps/terminal"
@@ -169,16 +118,30 @@ fi
 if [[ $mode != "forget" ]]; then
   [[ -d $profiles_dir ]] || die "profiles directory not found: $profiles_dir"
 
-  work_plist="$(mktemp "${TMPDIR:-/tmp}/terminal-sync.XXXXXX.plist")"
-  if ! /usr/bin/defaults export com.apple.Terminal - >"$work_plist" 2>/dev/null; then
-    if [[ -f $real_plist ]]; then
-      cp "$real_plist" "$work_plist"
-    else
-      /usr/libexec/PlistBuddy -c "Clear dict" "$work_plist" >/dev/null 2>&1 || true
+  if [[ -n ${DOTFILES_TERMINAL_SYNC_PLIST:-} ]]; then
+    if [[ ! -f ${DOTFILES_TERMINAL_SYNC_PLIST} ]]; then
+      die "plist override does not exist: $DOTFILES_TERMINAL_SYNC_PLIST"
     fi
+    plist="$DOTFILES_TERMINAL_SYNC_PLIST"
+  else
+    work_plist="$(mktemp "${TMPDIR:-/tmp}/terminal-sync.XXXXXX.plist")"
+    if ! /usr/bin/defaults export com.apple.Terminal - >"$work_plist" 2>/dev/null; then
+      if [[ -f $real_plist ]]; then
+        cp "$real_plist" "$work_plist"
+      else
+        /usr/libexec/PlistBuddy -c "Clear dict" "$work_plist" >/dev/null 2>&1 || true
+      fi
+    fi
+    plist="$work_plist"
   fi
-  plist="$work_plist"
 fi
+
+escape_plist_key() {
+  local value="$1"
+
+  value="$(printf '%s' "$value" | /usr/bin/sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+  printf '%s' "$value"
+}
 
 profile_state_key() {
   local name="$1"
@@ -191,14 +154,6 @@ profile_state_key() {
   printf '%s.%s\n' "$prefix" "$short_hash"
 }
 
-profile_state_file() {
-  local name="$1"
-  local key
-
-  key="$(profile_state_key "$name")"
-  printf '%s/%s.sha256\n' "$state_dir" "$key"
-}
-
 legacy_state_file() {
   local name="$1"
   local full_hash
@@ -207,49 +162,9 @@ legacy_state_file() {
   printf '%s/%s.sha256\n' "$legacy_state_dir" "$full_hash"
 }
 
-read_last_applied_hash() {
-  local name="$1"
-  local state_file legacy_file
-
-  state_file="$(profile_state_file "$name")"
-  if [[ -f $state_file ]]; then
-    head -n 1 "$state_file" | tr -d '[:space:]'
-    return 0
-  fi
-
-  legacy_file="$(legacy_state_file "$name")"
-  if [[ -f $legacy_file ]]; then
-    head -n 1 "$legacy_file" | tr -d '[:space:]'
-  fi
-}
-
-write_last_applied_hash() {
-  local name="$1"
-  local hash="$2"
-  local state_file
-
-  state_file="$(profile_state_file "$name")"
-  mkdir -p "$state_dir"
-  printf '%s\n' "$hash" >"$state_file"
-}
-
-forget_last_applied_hash() {
-  local name="$1"
-  local state_file legacy_file removed=0
-
-  state_file="$(profile_state_file "$name")"
-  if [[ -f $state_file ]]; then
-    rm -f "$state_file"
-    removed=1
-  fi
-
-  legacy_file="$(legacy_state_file "$name")"
-  if [[ -f $legacy_file ]]; then
-    rm -f "$legacy_file"
-    removed=1
-  fi
-
-  return $((1 - removed))
+profile_name_from_file() {
+  local file="$1"
+  /usr/bin/plutil -extract name raw "$file" 2>/dev/null || true
 }
 
 has_profile() {
@@ -259,158 +174,54 @@ has_profile() {
   /usr/libexec/PlistBuddy -c "Print :\"Window Settings\":\"$escaped_name\":name" "$plist" >/dev/null 2>&1
 }
 
-profile_name_from_file() {
-  local file="$1"
-  /usr/bin/plutil -extract name raw "$file" 2>/dev/null || true
-}
-
-canonical_hash_from_file() {
-  local file="$1"
-  local tmpdir src_bin
-
-  tmpdir="$(mktemp -d)"
-  src_bin="$tmpdir/source.bin"
-
-  if ! /usr/bin/plutil -convert binary1 -o "$src_bin" "$file" >/dev/null 2>&1; then
-    rm -rf "$tmpdir"
-    return 1
-  fi
-
-  /usr/bin/shasum -a 256 "$src_bin" | /usr/bin/awk '{print $1}'
-  rm -rf "$tmpdir"
-  return 0
-}
-
-canonical_hash_from_profile() {
+extract_profile_binary() {
   local name="$1"
-  local tmpdir cur_xml cur_bin escaped_name
+  local out_file="$2"
+  local tmp_xml escaped_name
 
-  tmpdir="$(mktemp -d)"
-  cur_xml="$tmpdir/current.xml"
-  cur_bin="$tmpdir/current.bin"
   escaped_name="$(escape_plist_key "$name")"
+  tmp_xml="$(mktemp)"
 
-  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escaped_name\"" "$plist" >"$cur_xml" 2>/dev/null; then
-    rm -rf "$tmpdir"
-    return 1
-  fi
-  if ! /usr/bin/plutil -convert binary1 -o "$cur_bin" "$cur_xml" >/dev/null 2>&1; then
-    rm -rf "$tmpdir"
+  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escaped_name\"" "$plist" >"$tmp_xml" 2>/dev/null; then
+    rm -f "$tmp_xml"
     return 1
   fi
 
-  /usr/bin/shasum -a 256 "$cur_bin" | /usr/bin/awk '{print $1}'
-  rm -rf "$tmpdir"
+  if ! /usr/bin/plutil -convert binary1 -o "$out_file" "$tmp_xml" >/dev/null 2>&1; then
+    rm -f "$tmp_xml"
+    return 1
+  fi
+
+  rm -f "$tmp_xml"
   return 0
 }
 
 print_canonical_xml_from_file() {
   local file="$1"
   local out_file="$2"
-
   /usr/bin/plutil -convert xml1 -o "$out_file" "$file" >/dev/null 2>&1
 }
 
 print_canonical_xml_from_profile() {
   local name="$1"
   local out_file="$2"
-  local tmpdir cur_xml escaped_name
+  local tmp_xml escaped_name
 
-  tmpdir="$(mktemp -d)"
-  cur_xml="$tmpdir/current.xml"
   escaped_name="$(escape_plist_key "$name")"
+  tmp_xml="$(mktemp)"
 
-  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escaped_name\"" "$plist" >"$cur_xml" 2>/dev/null; then
-    rm -rf "$tmpdir"
+  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escaped_name\"" "$plist" >"$tmp_xml" 2>/dev/null; then
+    rm -f "$tmp_xml"
     return 1
   fi
 
-  if ! /usr/bin/plutil -convert xml1 -o "$out_file" "$cur_xml" >/dev/null 2>&1; then
-    rm -rf "$tmpdir"
+  if ! /usr/bin/plutil -convert xml1 -o "$out_file" "$tmp_xml" >/dev/null 2>&1; then
+    rm -f "$tmp_xml"
     return 1
   fi
 
-  rm -rf "$tmpdir"
+  rm -f "$tmp_xml"
   return 0
-}
-
-is_sha256_hash() {
-  local value="$1"
-  [[ $value =~ ^[0-9a-fA-F]{64}$ ]]
-}
-
-escape_plist_key() {
-  local value="$1"
-
-  value="$(printf '%s' "$value" | /usr/bin/sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
-  printf '%s' "$value"
-}
-
-determine_profile_status() {
-  local name="$1"
-  local file="$2"
-  local desired_hash actual_hash="" last_hash=""
-
-  desired_hash="$(canonical_hash_from_file "$file" || true)"
-  if [[ -z $desired_hash ]]; then
-    printf 'invalid|%s||\n' "$name"
-    return 0
-  fi
-
-  if has_profile "$name"; then
-    actual_hash="$(canonical_hash_from_profile "$name" || true)"
-    if [[ -z $actual_hash ]]; then
-      printf 'error|%s|%s||\n' "$name" "$desired_hash"
-      return 0
-    fi
-  fi
-
-  last_hash="$(read_last_applied_hash "$name")"
-
-  if [[ -n $last_hash ]]; then
-    if ! is_sha256_hash "$last_hash"; then
-      printf 'state-invalid|%s|%s|%s|%s\n' "$name" "$desired_hash" "$actual_hash" "$last_hash"
-      return 0
-    fi
-
-    if [[ -z $actual_hash ]]; then
-      printf 'drift-missing|%s|%s||%s\n' "$name" "$desired_hash" "$last_hash"
-      return 0
-    fi
-
-    if [[ $actual_hash == "$last_hash" ]]; then
-      if [[ $actual_hash == "$desired_hash" ]]; then
-        printf 'in-sync|%s|%s|%s|%s\n' "$name" "$desired_hash" "$actual_hash" "$last_hash"
-      else
-        printf 'safe-update|%s|%s|%s|%s\n' "$name" "$desired_hash" "$actual_hash" "$last_hash"
-      fi
-      return 0
-    fi
-
-    if [[ $actual_hash == "$desired_hash" ]]; then
-      printf 'state-stale|%s|%s|%s|%s\n' "$name" "$desired_hash" "$actual_hash" "$last_hash"
-      return 0
-    fi
-
-    if [[ $desired_hash == "$last_hash" ]]; then
-      printf 'drift-external|%s|%s|%s|%s\n' "$name" "$desired_hash" "$actual_hash" "$last_hash"
-      return 0
-    fi
-
-    printf 'conflict|%s|%s|%s|%s\n' "$name" "$desired_hash" "$actual_hash" "$last_hash"
-    return 0
-  fi
-
-  if [[ -z $actual_hash ]]; then
-    printf 'missing|%s|%s||\n' "$name" "$desired_hash"
-    return 0
-  fi
-
-  if [[ $actual_hash == "$desired_hash" ]]; then
-    printf 'in-sync-untracked|%s|%s|%s|\n' "$name" "$desired_hash" "$actual_hash"
-  else
-    printf 'drift-untracked|%s|%s|%s|\n' "$name" "$desired_hash" "$actual_hash"
-  fi
 }
 
 extract_raw_or_missing() {
@@ -432,7 +243,7 @@ print_drift_details() {
   local name="$1"
   local src_file="$2"
   local last_hash="${3:-}"
-  local tmpdir cur_xml escaped_name
+  local cur_xml tmpdir escaped_name
 
   tmpdir="$(mktemp -d)"
   cur_xml="$tmpdir/current.xml"
@@ -504,6 +315,7 @@ print_profile_diff() {
   log "diff: $name"
   /usr/bin/diff -u "$repo_xml" "$cur_xml" || true
   rm -rf "$tmpdir"
+  return 0
 }
 
 adopt_profile_to_path() {
@@ -531,120 +343,196 @@ adopt_profile_to_path() {
   return 0
 }
 
-forget_mode() {
-  local forgotten=0 missing_state=0 invalid=0
+build_profile_index_for_sync() {
+  local file name
+
+  profile_index="$(mktemp)"
+  profile_file_count=0
+  profile_invalid_seed=0
+
+  while IFS= read -r file; do
+    [[ -z $file ]] && continue
+    profile_file_count=$((profile_file_count + 1))
+
+    name="$(profile_name_from_file "$file")"
+    if [[ -z $name ]]; then
+      log "invalid profile file (missing 'name'): $file"
+      profile_invalid_seed=$((profile_invalid_seed + 1))
+      continue
+    fi
+
+    printf '%s|%s|%s\n' "$name" "$file" "$plist" >>"$profile_index"
+  done < <(find "$profiles_dir" -maxdepth 1 -type f -name '*.terminal' | sort)
+}
+
+build_profile_index_for_forget() {
+  local file name
+
+  profile_index="$(mktemp)"
+  profile_file_count=0
+  profile_invalid_seed=0
 
   if [[ -n $profile_filter ]]; then
-    if forget_last_applied_hash "$profile_filter"; then
-      forgotten=$((forgotten + 1))
-      log "forgot lastApplied state: $profile_filter"
-    else
-      missing_state=$((missing_state + 1))
-      log "no lastApplied state found: $profile_filter"
+    printf '%s||\n' "$profile_filter" >"$profile_index"
+    profile_file_count=1
+    return 0
+  fi
+
+  [[ -d $profiles_dir ]] || die "profiles directory not found: $profiles_dir"
+
+  while IFS= read -r file; do
+    [[ -z $file ]] && continue
+    profile_file_count=$((profile_file_count + 1))
+
+    name="$(profile_name_from_file "$file")"
+    if [[ -z $name ]]; then
+      log "invalid profile file (missing 'name'): $file"
+      profile_invalid_seed=$((profile_invalid_seed + 1))
+      continue
     fi
-  else
-    [[ -d $profiles_dir ]] || die "profiles directory not found: $profiles_dir"
 
-    while IFS= read -r file; do
-      [[ -z $file ]] && continue
-
-      name="$(profile_name_from_file "$file")"
-      if [[ -z $name ]]; then
-        log "invalid profile file (missing 'name'): $file"
-        invalid=$((invalid + 1))
-        continue
-      fi
-
-      if forget_last_applied_hash "$name"; then
-        forgotten=$((forgotten + 1))
-      else
-        missing_state=$((missing_state + 1))
-      fi
-    done < <(find "$profiles_dir" -maxdepth 1 -type f -name '*.terminal' | sort)
-  fi
-
-  log "summary: forgotten=$forgotten missing_state=$missing_state invalid=$invalid"
-  if [[ $invalid -gt 0 ]]; then
-    exit 1
-  fi
-  exit 0
+    printf '%s|%s|\n' "$name" "$file" >>"$profile_index"
+  done < <(find "$profiles_dir" -maxdepth 1 -type f -name '*.terminal' | sort)
 }
 
 if [[ $mode == "forget" ]]; then
-  forget_mode
+  build_profile_index_for_forget
+else
+  build_profile_index_for_sync
 fi
 
-checked=0
-in_sync=0
-pending=0
-untracked=0
-state_stale=0
-drift=0
-drift_missing=0
-conflicts=0
-missing=0
-invalid=0
-staged=0
-adopted=0
-refused=0
-errors=0
-adoptable_drift=0
+sync_adapter_list_items() {
+  cat "$profile_index"
+}
 
-resolved_output_dir=""
+sync_adapter_is_selected() {
+  local id="$1"
 
-while IFS= read -r file; do
-  [[ -z $file ]] && continue
-
-  name="$(profile_name_from_file "$file")"
-  if [[ -z $name ]]; then
-    log "invalid profile file (missing 'name'): $file"
-    invalid=$((invalid + 1))
-    continue
+  if [[ -n $profile_filter && $id != "$profile_filter" ]]; then
+    return 1
   fi
 
-  if [[ -n $profile_filter && $name != "$profile_filter" ]]; then
-    continue
+  return 0
+}
+
+sync_adapter_state_key() {
+  local id="$1"
+  profile_state_key "$id"
+}
+
+sync_adapter_read_last_applied_hash() {
+  local id="$1"
+  local state_file legacy_file
+
+  state_file="$(sync_core_state_file_for_key "$(profile_state_key "$id")")"
+  if [[ -f $state_file ]]; then
+    head -n 1 "$state_file" | tr -d '[:space:]'
+    return 0
   fi
 
-  checked=$((checked + 1))
+  legacy_file="$(legacy_state_file "$id")"
+  if [[ -f $legacy_file ]]; then
+    head -n 1 "$legacy_file" | tr -d '[:space:]'
+  fi
+}
 
-  status_line="$(determine_profile_status "$name" "$file")"
-  IFS='|' read -r status _ desired_hash actual_hash last_hash <<<"$status_line"
+sync_adapter_forget_last_applied_hash() {
+  local id="$1"
+  local state_file legacy_file removed=0
+
+  state_file="$(sync_core_state_file_for_key "$(profile_state_key "$id")")"
+  if [[ -f $state_file ]]; then
+    rm -f "$state_file"
+    removed=1
+  fi
+
+  legacy_file="$(legacy_state_file "$id")"
+  if [[ -f $legacy_file ]]; then
+    rm -f "$legacy_file"
+    removed=1
+  fi
+
+  return $((1 - removed))
+}
+
+sync_adapter_extract_desired() {
+  local _id="$1"
+  local output_file="$2"
+  local desired_meta="$3"
+
+  [[ -f $desired_meta ]] || return 1
+  /usr/bin/plutil -convert binary1 -o "$output_file" "$desired_meta" >/dev/null 2>&1
+}
+
+sync_adapter_extract_actual() {
+  local id="$1"
+  local output_file="$2"
+
+  if ! has_profile "$id"; then
+    return 2
+  fi
+
+  extract_profile_binary "$id" "$output_file"
+}
+
+sync_adapter_write_desired_to_actual() {
+  return 1
+}
+
+sync_adapter_export_actual() {
+  local id="$1"
+  local destination="$2"
+  adopt_profile_to_path "$id" "$destination"
+}
+
+sync_adapter_stage_fallback_basename() {
+  local id="$1"
+  printf '%s.terminal\n' "$(profile_state_key "$id")"
+}
+
+sync_adapter_print_details() {
+  local id="$1"
+  local status="$2"
+  local _desired_hash="$3"
+  local _actual_hash="$4"
+  local last_hash="$5"
+  local desired_meta="$6"
+
+  if [[ $status != "drift-missing" ]]; then
+    print_drift_details "$id" "$desired_meta" "$last_hash" || true
+  fi
+}
+
+sync_adapter_print_diff() {
+  local id="$1"
+  local _status="$2"
+  local desired_meta="$3"
+  print_profile_diff "$id" "$desired_meta"
+}
+
+sync_adapter_log_status() {
+  local id="$1"
+  local status="$2"
+  local desired_meta="$3"
+  local _actual_meta="$4"
+  local last_hash="$5"
 
   case "$status" in
-  in-sync)
-    in_sync=$((in_sync + 1))
-    ;;
   safe-update)
-    pending=$((pending + 1))
-    log "safe update pending: $name ($file)"
+    log "safe update pending: $id ($desired_meta)"
     log "  repo changed; current still matches lastApplied, apply can overwrite safely"
     ;;
   in-sync-untracked)
-    in_sync=$((in_sync + 1))
-    untracked=$((untracked + 1))
-    log "in sync but no lastApplied state: $name"
+    log "in sync but no lastApplied state: $id"
     ;;
   state-stale)
-    in_sync=$((in_sync + 1))
-    state_stale=$((state_stale + 1))
-    log "state stale (desired==actual, lastApplied is old): $name"
+    log "state stale (desired==actual, lastApplied is old): $id"
     ;;
   missing)
-    missing=$((missing + 1))
-    log "missing in Terminal.app: $name"
-    ;;
-  invalid | error | state-invalid)
-    invalid=$((invalid + 1))
-    log "invalid state for profile '$name' ($status)"
-    [[ -n $last_hash ]] && log "  lastApplied: $last_hash"
+    log "missing in Terminal.app: $id"
     ;;
   drift-untracked | drift-missing | drift-external | conflict)
-    drift=$((drift + 1))
-    [[ $status == "conflict" ]] && conflicts=$((conflicts + 1))
-    [[ $status == "drift-missing" ]] && drift_missing=$((drift_missing + 1))
-
-    log "drift detected: $name ($file)"
+    log "drift detected: $id ($desired_meta)"
     [[ -n $last_hash ]] && log "  lastApplied: $last_hash"
     case "$status" in
     drift-untracked)
@@ -660,110 +548,44 @@ while IFS= read -r file; do
       log "  reason: both repo and current changed from lastApplied"
       ;;
     esac
-
-    if [[ $details -eq 1 && $status != "drift-missing" ]]; then
-      print_drift_details "$name" "$file" "$last_hash" || true
-    fi
-
-    if [[ $show_diff -eq 1 && $status != "drift-missing" ]]; then
-      print_profile_diff "$name" "$file" || true
-    fi
-
-    if [[ $status != "drift-missing" ]]; then
-      adoptable_drift=$((adoptable_drift + 1))
-    fi
-
-    if [[ $mode == "adopt" ]]; then
-      if [[ $status == "drift-missing" ]]; then
-        continue
-      fi
-
-      if [[ $in_place -eq 0 ]]; then
-        if [[ -z $resolved_output_dir ]]; then
-          if [[ -n $output_dir ]]; then
-            resolved_output_dir="$output_dir"
-          else
-            if [[ -w $ROOT ]]; then
-              resolved_output_dir="$ROOT/.cache/terminal-adopt/$(/bin/date +%Y%m%d-%H%M%S)"
-            else
-              resolved_output_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/terminal-adopt/$(/bin/date +%Y%m%d-%H%M%S)"
-            fi
-          fi
-          mkdir -p "$resolved_output_dir"
-        fi
-
-        out_file="$resolved_output_dir/$(basename "$file")"
-        if [[ -e $out_file ]]; then
-          out_file="$resolved_output_dir/$(profile_state_key "$name").terminal"
-        fi
-
-        if adopt_profile_to_path "$name" "$out_file"; then
-          log "staged adopted profile: $name -> $out_file"
-          staged=$((staged + 1))
-        else
-          log "failed to stage profile '$name'"
-          errors=$((errors + 1))
-        fi
-      else
-        if [[ $status == "conflict" && $force -eq 0 ]]; then
-          log "refused in-place adopt for conflict profile '$name' (use --force)"
-          refused=$((refused + 1))
-          continue
-        fi
-
-        if adopt_profile_to_path "$name" "$file"; then
-          adopted_hash="$(canonical_hash_from_profile "$name" || true)"
-          if [[ -z $adopted_hash ]]; then
-            log "failed to compute adopted hash for '$name'"
-            errors=$((errors + 1))
-          else
-            write_last_applied_hash "$name" "$adopted_hash"
-            log "adopted Terminal.app profile into repo file: $file"
-            adopted=$((adopted + 1))
-          fi
-        else
-          log "failed to adopt profile '$name' into $file"
-          errors=$((errors + 1))
-        fi
-      fi
-    fi
-    ;;
-  *)
-    invalid=$((invalid + 1))
-    log "unknown status '$status' for profile '$name'"
     ;;
   esac
-done < <(find "$profiles_dir" -maxdepth 1 -type f -name '*.terminal' | sort)
+}
 
-if [[ $checked -eq 0 ]]; then
+sync_adapter_on_no_selection() {
   if [[ -n $profile_filter ]]; then
     die "no profile file matched --profile '$profile_filter' in $profiles_dir"
   fi
   die "no .terminal files found in $profiles_dir"
-fi
+}
 
-log "summary: checked=$checked in_sync=$in_sync pending=$pending state_stale=$state_stale drift=$drift conflicts=$conflicts drift_missing=$drift_missing missing=$missing untracked=$untracked staged=$staged adopted=$adopted refused=$refused invalid=$invalid errors=$errors"
-log "state dir: $state_dir"
-[[ -n $resolved_output_dir ]] && log "staging dir: $resolved_output_dir"
-
-if [[ $mode == "check" ]]; then
-  if [[ $invalid -gt 0 || $errors -gt 0 || $drift -gt 0 || $missing -gt 0 ]]; then
-    exit 1
-  fi
-  exit 0
-fi
-
-if [[ $mode == "adopt" ]]; then
-  if [[ $in_place -eq 0 ]]; then
-    if [[ $invalid -gt 0 || $errors -gt 0 || $missing -gt 0 || $drift_missing -gt 0 ]]; then
-      exit 1
-    fi
-    exit 0
+sync_adapter_print_summary() {
+  if [[ $mode == "forget" ]]; then
+    log "summary: forgotten=$sync_core_forgotten missing_state=$sync_core_missing_state invalid=$sync_core_invalid"
+    return 0
   fi
 
-  if [[ $invalid -gt 0 || $errors -gt 0 || $missing -gt 0 || $drift_missing -gt 0 || $refused -gt 0 || $adopted -lt $adoptable_drift ]]; then
-    exit 1
-  fi
+  log "summary: checked=$sync_core_checked in_sync=$sync_core_in_sync pending=$sync_core_pending state_stale=$sync_core_state_stale drift=$sync_core_drift conflicts=$sync_core_conflicts drift_missing=$sync_core_drift_missing missing=$sync_core_missing untracked=$sync_core_untracked staged=$sync_core_staged adopted=$sync_core_adopted refused=$sync_core_refused invalid=$sync_core_invalid errors=$sync_core_errors"
+  log "state dir: $state_dir"
+  [[ -n ${sync_core_resolved_output_dir:-} ]] && log "staging dir: $sync_core_resolved_output_dir"
+}
+
+sync_core_mode="$mode"
+sync_core_details="$details"
+sync_core_show_diff="$show_diff"
+sync_core_in_place="$in_place"
+sync_core_force="$force"
+sync_core_output_dir="$output_dir"
+sync_core_root="$ROOT"
+sync_core_state_dir="$state_dir"
+sync_core_staging_subdir="terminal-adopt"
+sync_core_invalid_desired_status="invalid"
+sync_core_invalid_actual_status="error"
+sync_core_error_status="error"
+sync_core_invalid_seed="$profile_invalid_seed"
+sync_core_forget_invalid_seed="$profile_invalid_seed"
+
+if sync_core_run; then
   exit 0
 fi
 

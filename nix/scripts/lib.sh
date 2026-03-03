@@ -116,3 +116,41 @@ json_escape() {
   value=${value//$'\t'/\\t}
   printf '%s' "$value"
 }
+
+resolve_repo_worktree_root_for() {
+  local required_path="$1"
+  local candidate=""
+
+  if command -v git >/dev/null 2>&1; then
+    candidate="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+    if [[ -n $candidate && -f $candidate/flake.nix && -d $candidate/$required_path && -d $candidate/nix/scripts ]]; then
+      cd "$candidate" && pwd
+      return 0
+    fi
+  fi
+
+  if [[ -f "$(pwd)/flake.nix" && -d "$(pwd)/$required_path" && -d "$(pwd)/nix/scripts" ]]; then
+    pwd
+    return 0
+  fi
+
+  return 1
+}
+
+source_dotfiles_script() {
+  local script_name="$1"
+  local primary="${DOTFILES_SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/$script_name"
+  local fallback="$(pwd)/nix/scripts/$script_name"
+  local target="$primary"
+
+  if [[ ! -f $target ]]; then
+    if [[ -f $fallback ]]; then
+      target="$fallback"
+    else
+      die "$script_name not found (tried $primary and $fallback)"
+    fi
+  fi
+
+  # shellcheck disable=SC1090
+  source "$target"
+}

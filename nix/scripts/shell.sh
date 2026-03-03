@@ -5,6 +5,8 @@ DOTFILES_SCRIPT_LABEL="shell"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=load-lib.sh
 source "$SCRIPT_DIR/load-lib.sh"
+# shellcheck source=sync-core.sh
+source_dotfiles_script "sync-core.sh"
 
 usage() {
   cat <<'USAGE'
@@ -65,25 +67,6 @@ set_repo_root
 managed_dir="$ROOT/apps/shell/managed"
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/shell/blocks"
 
-resolve_repo_worktree_root() {
-  local candidate=""
-
-  if command -v git >/dev/null 2>&1; then
-    candidate="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
-    if [[ -n $candidate && -f $candidate/flake.nix && -d $candidate/apps/shell/managed && -d $candidate/nix/scripts ]]; then
-      cd "$candidate" && pwd
-      return 0
-    fi
-  fi
-
-  if [[ -f "$(pwd)/flake.nix" && -d "$(pwd)/apps/shell/managed" && -d "$(pwd)/nix/scripts" ]]; then
-    pwd
-    return 0
-  fi
-
-  return 1
-}
-
 append_shell_filter() {
   local shell_name="$1"
 
@@ -104,24 +87,8 @@ append_shell_filter() {
   esac
 }
 
-while [[ $# -gt 0 ]]; do
+sync_cli_parse_script_option() {
   case "$1" in
-  --check)
-    mode="check"
-    shift
-    ;;
-  --apply)
-    mode="apply"
-    shift
-    ;;
-  --adopt)
-    mode="adopt"
-    shift
-    ;;
-  --forget)
-    mode="forget"
-    shift
-    ;;
   --shell)
     [[ $# -lt 2 ]] && die "missing value for --shell"
     case "$2" in
@@ -135,81 +102,45 @@ while [[ $# -gt 0 ]]; do
       die "invalid --shell value: $2 (expected zsh, bash, fish, all)"
       ;;
     esac
-    shift 2
+    sync_core_cli_consumed=2
+    return 0
     ;;
   --target)
     [[ $# -lt 2 ]] && die "missing value for --target"
     target_filter="$2"
-    shift 2
-    ;;
-  --details)
-    details=1
-    shift
-    ;;
-  --diff)
-    show_diff=1
-    shift
+    sync_core_cli_consumed=2
+    return 0
     ;;
   --managed-dir)
     [[ $# -lt 2 ]] && die "missing value for --managed-dir"
     managed_dir="$2"
     default_managed_dir=0
-    shift 2
+    sync_core_cli_consumed=2
+    return 0
     ;;
   --state-dir)
     [[ $# -lt 2 ]] && die "missing value for --state-dir"
     state_dir="$2"
-    shift 2
-    ;;
-  --in-place)
-    in_place=1
-    shift
-    ;;
-  --force)
-    force=1
-    shift
-    ;;
-  --output-dir)
-    [[ $# -lt 2 ]] && die "missing value for --output-dir"
-    output_dir="$2"
-    shift 2
-    ;;
-  -h | --help)
-    usage
-    exit 0
-    ;;
-  --*)
-    die "unknown option: $1"
-    ;;
-  *)
-    die "unexpected argument: $1"
+    sync_core_cli_consumed=2
+    return 0
     ;;
   esac
-done
+
+  return 1
+}
+
+sync_core_parse_cli_args 1 "$@"
 
 if [[ $default_managed_dir -eq 1 ]]; then
-  worktree_root="$(resolve_repo_worktree_root || true)"
+  worktree_root="$(resolve_repo_worktree_root_for "apps/shell/managed" || true)"
   if [[ -n $worktree_root ]]; then
     ROOT="$worktree_root"
     managed_dir="$ROOT/apps/shell/managed"
   fi
 fi
 
-if [[ $mode != "adopt" && ($in_place -eq 1 || -n $output_dir) ]]; then
-  die "--in-place/--output-dir are only valid with --adopt"
-fi
-
-if [[ $mode == "check" && $force -eq 1 ]]; then
-  die "--force is only valid with --apply or --adopt --in-place"
-fi
-
-if [[ $mode == "adopt" && $in_place -eq 1 && -n $output_dir ]]; then
-  die "--output-dir cannot be used with --adopt --in-place"
-fi
-
-if [[ $mode == "adopt" && $in_place -eq 0 && $force -eq 1 ]]; then
-  die "--force is only valid with --adopt --in-place"
-fi
+sync_core_validate_adopt_flags "$mode" "$in_place" "$output_dir"
+sync_core_validate_force_usage "$mode" "$in_place" "$force" 1 "--force is only valid with --apply or --adopt --in-place"
 
 if [[ $mode != "forget" && ! -d $managed_dir ]]; then
   die "managed dir not found: $managed_dir"
@@ -321,62 +252,10 @@ target_selected() {
   esac
 }
 
-is_sha256_hash() {
-  local value="$1"
-  [[ $value =~ ^[0-9a-fA-F]{64}$ ]]
-}
-
-state_file_for_target() {
-  local id="$1"
-  printf '%s/%s.sha256\n' "$state_dir" "$id"
-}
-
-read_last_applied_hash() {
-  local id="$1"
-  local state_file
-
-  state_file="$(state_file_for_target "$id")"
-  if [[ -f $state_file ]]; then
-    head -n 1 "$state_file" | tr -d '[:space:]'
-  fi
-}
-
-write_last_applied_hash() {
-  local id="$1"
-  local hash="$2"
-  local state_file
-
-  state_file="$(state_file_for_target "$id")"
-  mkdir -p "$state_dir"
-  printf '%s\n' "$hash" >"$state_file"
-}
-
-forget_last_applied_hash() {
-  local id="$1"
-  local state_file
-
-  state_file="$(state_file_for_target "$id")"
-  if [[ -f $state_file ]]; then
-    rm -f "$state_file"
-    return 0
-  fi
-  return 1
-}
-
 canonicalize_text_to_file() {
   local source_file="$1"
   local output_file="$2"
   /usr/bin/awk '{ sub(/\r$/, ""); print }' "$source_file" >"$output_file"
-}
-
-canonical_hash_from_file() {
-  local file="$1"
-  local tmp
-
-  tmp="$(mktemp)"
-  canonicalize_text_to_file "$file" "$tmp"
-  /usr/bin/shasum -a 256 "$tmp" | /usr/bin/awk '{print $1}'
-  rm -f "$tmp"
 }
 
 extract_managed_block() {
@@ -424,8 +303,7 @@ extract_managed_block() {
   ' "$source_file" >"$output_file"; then
     return 0
   else
-    rc=$?
-    case "$rc" in
+    case "$?" in
     2) return 2 ;;
     3) return 3 ;;
     *) return 3 ;;
@@ -465,108 +343,9 @@ extract_actual_content_for_target() {
     rm -f "$tmp_block"
     return 0
   else
-    rc=$?
+    local rc=$?
     rm -f "$tmp_block"
     return "$rc"
-  fi
-}
-
-determine_target_status() {
-  local id="$1"
-  local desired_path actual_path desired_tmp actual_tmp desired_hash actual_hash last_hash status rc
-
-  desired_path="$(target_desired_path_for_id "$id")"
-  actual_path="$(target_actual_path_for_id "$id")"
-  desired_tmp="$(mktemp)"
-  actual_tmp="$(mktemp)"
-  desired_hash=""
-  actual_hash=""
-  last_hash="$(read_last_applied_hash "$id")"
-
-  if ! extract_desired_content_for_target "$id" "$desired_tmp"; then
-    rm -f "$desired_tmp" "$actual_tmp"
-    printf 'invalid-desired|%s|||%s|%s|%s\n' "$id" "$last_hash" "$desired_path" "$actual_path"
-    return 0
-  fi
-
-  desired_hash="$(canonical_hash_from_file "$desired_tmp" || true)"
-  if [[ -z $desired_hash ]]; then
-    rm -f "$desired_tmp" "$actual_tmp"
-    printf 'invalid-desired|%s|||%s|%s|%s\n' "$id" "$last_hash" "$desired_path" "$actual_path"
-    return 0
-  fi
-
-  if extract_actual_content_for_target "$id" "$actual_tmp"; then
-    actual_hash="$(canonical_hash_from_file "$actual_tmp" || true)"
-    if [[ -z $actual_hash ]]; then
-      rm -f "$desired_tmp" "$actual_tmp"
-      printf 'error|%s|%s||%s|%s|%s\n' "$id" "$desired_hash" "$last_hash" "$desired_path" "$actual_path"
-      return 0
-    fi
-  else
-    rc=$?
-    case "$rc" in
-    2)
-      actual_hash=""
-      ;;
-    3)
-      rm -f "$desired_tmp" "$actual_tmp"
-      printf 'actual-invalid|%s|%s||%s|%s|%s\n' "$id" "$desired_hash" "$last_hash" "$desired_path" "$actual_path"
-      return 0
-      ;;
-    *)
-      rm -f "$desired_tmp" "$actual_tmp"
-      printf 'error|%s|%s||%s|%s|%s\n' "$id" "$desired_hash" "$last_hash" "$desired_path" "$actual_path"
-      return 0
-      ;;
-    esac
-  fi
-
-  rm -f "$desired_tmp" "$actual_tmp"
-
-  if [[ -n $last_hash ]] && ! is_sha256_hash "$last_hash"; then
-    printf 'state-invalid|%s|%s|%s|%s|%s|%s\n' "$id" "$desired_hash" "$actual_hash" "$last_hash" "$desired_path" "$actual_path"
-    return 0
-  fi
-
-  if [[ -n $last_hash ]]; then
-    if [[ -z $actual_hash ]]; then
-      printf 'drift-missing|%s|%s||%s|%s|%s\n' "$id" "$desired_hash" "$last_hash" "$desired_path" "$actual_path"
-      return 0
-    fi
-
-    if [[ $actual_hash == "$last_hash" ]]; then
-      if [[ $actual_hash == "$desired_hash" ]]; then
-        printf 'in-sync|%s|%s|%s|%s|%s|%s\n' "$id" "$desired_hash" "$actual_hash" "$last_hash" "$desired_path" "$actual_path"
-      else
-        printf 'safe-update|%s|%s|%s|%s|%s|%s\n' "$id" "$desired_hash" "$actual_hash" "$last_hash" "$desired_path" "$actual_path"
-      fi
-      return 0
-    fi
-
-    if [[ $actual_hash == "$desired_hash" ]]; then
-      printf 'state-stale|%s|%s|%s|%s|%s|%s\n' "$id" "$desired_hash" "$actual_hash" "$last_hash" "$desired_path" "$actual_path"
-      return 0
-    fi
-
-    if [[ $desired_hash == "$last_hash" ]]; then
-      printf 'drift-external|%s|%s|%s|%s|%s|%s\n' "$id" "$desired_hash" "$actual_hash" "$last_hash" "$desired_path" "$actual_path"
-      return 0
-    fi
-
-    printf 'conflict|%s|%s|%s|%s|%s|%s\n' "$id" "$desired_hash" "$actual_hash" "$last_hash" "$desired_path" "$actual_path"
-    return 0
-  fi
-
-  if [[ -z $actual_hash ]]; then
-    printf 'missing|%s|%s|||%s|%s\n' "$id" "$desired_hash" "$desired_path" "$actual_path"
-    return 0
-  fi
-
-  if [[ $actual_hash == "$desired_hash" ]]; then
-    printf 'in-sync-untracked|%s|%s|%s||%s|%s\n' "$id" "$desired_hash" "$actual_hash" "$desired_path" "$actual_path"
-  else
-    printf 'drift-untracked|%s|%s|%s||%s|%s\n' "$id" "$desired_hash" "$actual_hash" "$desired_path" "$actual_path"
   fi
 }
 
@@ -817,22 +596,6 @@ write_target_from_desired() {
   write_block_to_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
 }
 
-compute_actual_hash_for_target() {
-  local id="$1"
-  local tmp_actual hash
-
-  tmp_actual="$(mktemp)"
-  if ! extract_actual_content_for_target "$id" "$tmp_actual"; then
-    rm -f "$tmp_actual"
-    return 1
-  fi
-
-  hash="$(canonical_hash_from_file "$tmp_actual" || true)"
-  rm -f "$tmp_actual"
-  [[ -n $hash ]] || return 1
-  printf '%s\n' "$hash"
-}
-
 ensure_zshrc_compat_link() {
   local zshrc="$HOME/.zshrc"
   local zdotdir_zshrc="$HOME/.nix/.zshrc"
@@ -873,158 +636,93 @@ ensure_zshrc_compat_link() {
   return 1
 }
 
-forget_mode() {
-  local forgotten=0 missing_state=0 selected=0
-  local id
+sync_adapter_list_items() {
+  local id desired_path actual_path
 
   while IFS= read -r id; do
     [[ -z $id ]] && continue
-    if ! target_selected "$id"; then
-      continue
-    fi
-
-    selected=$((selected + 1))
-    if forget_last_applied_hash "$id"; then
-      forgotten=$((forgotten + 1))
-      log "forgot lastApplied state: $id"
-    else
-      missing_state=$((missing_state + 1))
-      log "no lastApplied state found: $id"
-    fi
+    desired_path="$(target_desired_path_for_id "$id")"
+    actual_path="$(target_actual_path_for_id "$id")"
+    printf '%s|%s|%s\n' "$id" "$desired_path" "$actual_path"
   done < <(list_target_ids)
-
-  if [[ $selected -eq 0 ]]; then
-    if [[ -n $target_filter ]]; then
-      die "no target matched --target '$target_filter'"
-    fi
-    if [[ -n $shell_filter && $shell_filter != "all" ]]; then
-      die "no target matched --shell '$shell_filter'"
-    fi
-    die "no targets selected"
-  fi
-
-  log "summary: forgotten=$forgotten missing_state=$missing_state"
-  exit 0
 }
 
-if [[ $mode == "forget" ]]; then
-  forget_mode
-fi
+sync_adapter_is_selected() {
+  local id="$1"
+  target_selected "$id"
+}
 
-checked=0
-selected=0
-in_sync=0
-pending=0
-state_stale=0
-drift=0
-drift_missing=0
-conflicts=0
-missing=0
-untracked=0
-invalid=0
-errors=0
-applied=0
-staged=0
-adopted=0
-refused=0
-adoptable_drift=0
-unresolved=0
+sync_adapter_state_key() {
+  local id="$1"
+  printf '%s\n' "$id"
+}
 
-resolved_output_dir=""
+sync_adapter_extract_desired() {
+  local id="$1"
+  local output_file="$2"
+  extract_desired_content_for_target "$id" "$output_file"
+}
 
-while IFS= read -r id; do
-  [[ -z $id ]] && continue
+sync_adapter_extract_actual() {
+  local id="$1"
+  local output_file="$2"
+  extract_actual_content_for_target "$id" "$output_file"
+}
 
-  if ! target_selected "$id"; then
-    continue
-  fi
+sync_adapter_write_desired_to_actual() {
+  local id="$1"
+  write_target_from_desired "$id"
+}
 
-  selected=$((selected + 1))
-  checked=$((checked + 1))
+sync_adapter_export_actual() {
+  local id="$1"
+  local destination="$2"
+  export_actual_to_path "$id" "$destination"
+}
 
-  status_line="$(determine_target_status "$id")"
-  IFS='|' read -r status _ desired_hash actual_hash last_hash desired_path actual_path <<<"$status_line"
+sync_adapter_stage_fallback_basename() {
+  local id="$1"
+  printf '%s.block\n' "$id"
+}
+
+sync_adapter_print_details() {
+  local id="$1"
+  local _status="$2"
+  local _desired_hash="$3"
+  local _actual_hash="$4"
+  local _last_hash="$5"
+  local desired_meta="$6"
+  local actual_meta="$7"
+  print_target_details "$id" "$desired_meta" "$actual_meta"
+}
+
+sync_adapter_print_diff() {
+  local id="$1"
+  print_target_diff "$id"
+}
+
+sync_adapter_log_status() {
+  local id="$1"
+  local status="$2"
+  local _desired_meta="$3"
+  local actual_meta="$4"
+  local last_hash="$5"
 
   case "$status" in
-  in-sync)
-    in_sync=$((in_sync + 1))
-    ;;
   safe-update)
-    pending=$((pending + 1))
     log "safe update pending: $id"
     log "  desired changed; current still matches lastApplied, apply can overwrite safely"
-    if [[ $mode == "apply" ]]; then
-      if write_target_from_desired "$id"; then
-        applied_hash="$(compute_actual_hash_for_target "$id" || true)"
-        if [[ -z $applied_hash ]]; then
-          log "failed to compute applied hash for '$id'"
-          errors=$((errors + 1))
-        elif ! write_last_applied_hash "$id" "$applied_hash"; then
-          log "failed to write lastApplied state for '$id'"
-          errors=$((errors + 1))
-        else
-          applied=$((applied + 1))
-          log "applied managed content: $id"
-        fi
-      else
-        log "failed to apply managed content: $id"
-        errors=$((errors + 1))
-      fi
-    fi
     ;;
   in-sync-untracked)
-    in_sync=$((in_sync + 1))
-    untracked=$((untracked + 1))
     log "in sync but no lastApplied state: $id"
-    if [[ $mode == "apply" ]]; then
-      if [[ -n $actual_hash ]] && write_last_applied_hash "$id" "$actual_hash"; then
-        log "wrote missing lastApplied state: $id"
-      else
-        log "failed to write missing lastApplied state: $id"
-        errors=$((errors + 1))
-      fi
-    fi
     ;;
   state-stale)
-    in_sync=$((in_sync + 1))
-    state_stale=$((state_stale + 1))
     log "state stale (desired==actual, lastApplied is old): $id"
-    if [[ $mode == "apply" ]]; then
-      if [[ -n $actual_hash ]] && write_last_applied_hash "$id" "$actual_hash"; then
-        log "refreshed lastApplied state: $id"
-      else
-        log "failed to refresh lastApplied state: $id"
-        errors=$((errors + 1))
-      fi
-    fi
     ;;
   missing)
-    missing=$((missing + 1))
-    log "missing managed content in local target: $id ($actual_path)"
-    if [[ $mode == "apply" ]]; then
-      if write_target_from_desired "$id"; then
-        applied_hash="$(compute_actual_hash_for_target "$id" || true)"
-        if [[ -z $applied_hash ]]; then
-          log "failed to compute applied hash for '$id'"
-          errors=$((errors + 1))
-        elif ! write_last_applied_hash "$id" "$applied_hash"; then
-          log "failed to write lastApplied state for '$id'"
-          errors=$((errors + 1))
-        else
-          applied=$((applied + 1))
-          log "applied managed content: $id"
-        fi
-      else
-        log "failed to apply managed content: $id"
-        errors=$((errors + 1))
-      fi
-    fi
+    log "missing managed content in local target: $id ($actual_meta)"
     ;;
   drift-untracked | drift-missing | drift-external | conflict)
-    drift=$((drift + 1))
-    [[ $status == "conflict" ]] && conflicts=$((conflicts + 1))
-    [[ $status == "drift-missing" ]] && drift_missing=$((drift_missing + 1))
-
     log "drift detected: $id"
     [[ -n $last_hash ]] && log "  lastApplied: $last_hash"
     case "$status" in
@@ -1041,110 +739,11 @@ while IFS= read -r id; do
       log "  reason: both desired and local changed from lastApplied"
       ;;
     esac
-
-    if [[ $details -eq 1 ]]; then
-      print_target_details "$id" "$desired_path" "$actual_path"
-    fi
-
-    if [[ $show_diff -eq 1 && $status != "drift-missing" ]]; then
-      print_target_diff "$id" || true
-    fi
-
-    if [[ $status != "drift-missing" ]]; then
-      adoptable_drift=$((adoptable_drift + 1))
-    fi
-
-    if [[ $mode == "adopt" ]]; then
-      if [[ $status == "drift-missing" ]]; then
-        continue
-      fi
-
-      if [[ $in_place -eq 0 ]]; then
-        if [[ -z $resolved_output_dir ]]; then
-          if [[ -n $output_dir ]]; then
-            resolved_output_dir="$output_dir"
-          else
-            if [[ -w $ROOT ]]; then
-              resolved_output_dir="$ROOT/.cache/shell-adopt/$(/bin/date +%Y%m%d-%H%M%S)"
-            else
-              resolved_output_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/shell-adopt/$(/bin/date +%Y%m%d-%H%M%S)"
-            fi
-          fi
-          mkdir -p "$resolved_output_dir"
-        fi
-
-        out_file="$resolved_output_dir/$(basename "$desired_path")"
-        if [[ -e $out_file ]]; then
-          out_file="$resolved_output_dir/$id.block"
-        fi
-
-        if export_actual_to_path "$id" "$out_file"; then
-          log "staged adopted managed content: $id -> $out_file"
-          staged=$((staged + 1))
-        else
-          log "failed to stage managed content for '$id'"
-          errors=$((errors + 1))
-        fi
-      else
-        if [[ $status == "conflict" && $force -eq 0 ]]; then
-          log "refused in-place adopt for conflict target '$id' (use --force)"
-          refused=$((refused + 1))
-          continue
-        fi
-
-        if export_actual_to_path "$id" "$desired_path"; then
-          adopted_hash="$(compute_actual_hash_for_target "$id" || true)"
-          if [[ -z $adopted_hash ]]; then
-            log "failed to compute adopted hash for '$id'"
-            errors=$((errors + 1))
-          elif ! write_last_applied_hash "$id" "$adopted_hash"; then
-            log "failed to write lastApplied after adopt for '$id'"
-            errors=$((errors + 1))
-          else
-            log "adopted managed content into desired file: $desired_path"
-            adopted=$((adopted + 1))
-          fi
-        else
-          log "failed to adopt managed content for '$id' into $desired_path"
-          errors=$((errors + 1))
-        fi
-      fi
-    elif [[ $mode == "apply" ]]; then
-      if [[ $force -eq 0 ]]; then
-        unresolved=$((unresolved + 1))
-      else
-        if write_target_from_desired "$id"; then
-          applied_hash="$(compute_actual_hash_for_target "$id" || true)"
-          if [[ -z $applied_hash ]]; then
-            log "failed to compute applied hash for '$id'"
-            errors=$((errors + 1))
-          elif ! write_last_applied_hash "$id" "$applied_hash"; then
-            log "failed to write lastApplied state for '$id'"
-            errors=$((errors + 1))
-          else
-            applied=$((applied + 1))
-            log "force-applied managed content: $id"
-          fi
-        else
-          log "failed to force-apply managed content: $id"
-          errors=$((errors + 1))
-        fi
-      fi
-    fi
-    ;;
-  invalid-desired | actual-invalid | error | state-invalid)
-    invalid=$((invalid + 1))
-    log "invalid state for target '$id' ($status)"
-    [[ -n $last_hash ]] && log "  lastApplied: $last_hash"
-    ;;
-  *)
-    invalid=$((invalid + 1))
-    log "unknown status '$status' for target '$id'"
     ;;
   esac
-done < <(list_target_ids)
+}
 
-if [[ $selected -eq 0 ]]; then
+sync_adapter_on_no_selection() {
   if [[ -n $target_filter ]]; then
     die "no target matched --target '$target_filter'"
   fi
@@ -1152,46 +751,45 @@ if [[ $selected -eq 0 ]]; then
     die "no target matched --shell '$shell_filter'"
   fi
   die "no shell targets selected"
+}
+
+sync_adapter_after_apply() {
+  if target_selected "zsh-zdotdir"; then
+    ensure_zshrc_compat_link
+    return $?
+  fi
+  return 0
+}
+
+sync_adapter_print_summary() {
+  if [[ $mode == "forget" ]]; then
+    log "summary: forgotten=$sync_core_forgotten missing_state=$sync_core_missing_state"
+    return 0
+  fi
+
+  log "summary: checked=$sync_core_checked in_sync=$sync_core_in_sync pending=$sync_core_pending state_stale=$sync_core_state_stale drift=$sync_core_drift conflicts=$sync_core_conflicts drift_missing=$sync_core_drift_missing missing=$sync_core_missing untracked=$sync_core_untracked applied=$sync_core_applied staged=$sync_core_staged adopted=$sync_core_adopted refused=$sync_core_refused unresolved=$sync_core_unresolved invalid=$sync_core_invalid errors=$sync_core_errors"
+  log "managed dir: $managed_dir"
+  log "state dir: $state_dir"
+  [[ -n ${sync_core_resolved_output_dir:-} ]] && log "staging dir: $sync_core_resolved_output_dir"
+}
+
+sync_core_mode="$mode"
+sync_core_details="$details"
+sync_core_show_diff="$show_diff"
+sync_core_in_place="$in_place"
+sync_core_force="$force"
+sync_core_output_dir="$output_dir"
+sync_core_root="$ROOT"
+sync_core_state_dir="$state_dir"
+sync_core_staging_subdir="shell-adopt"
+sync_core_invalid_desired_status="invalid-desired"
+sync_core_invalid_actual_status="actual-invalid"
+sync_core_error_status="error"
+sync_core_invalid_seed=0
+sync_core_forget_invalid_seed=0
+
+if sync_core_run; then
+  exit 0
 fi
 
-log "summary: checked=$checked in_sync=$in_sync pending=$pending state_stale=$state_stale drift=$drift conflicts=$conflicts drift_missing=$drift_missing missing=$missing untracked=$untracked applied=$applied staged=$staged adopted=$adopted refused=$refused unresolved=$unresolved invalid=$invalid errors=$errors"
-log "managed dir: $managed_dir"
-log "state dir: $state_dir"
-[[ -n $resolved_output_dir ]] && log "staging dir: $resolved_output_dir"
-
-if [[ $mode == "apply" ]] && target_selected "zsh-zdotdir"; then
-  if ! ensure_zshrc_compat_link; then
-    errors=$((errors + 1))
-  fi
-fi
-
-case "$mode" in
-check)
-  if [[ $invalid -gt 0 || $errors -gt 0 || $drift -gt 0 || $missing -gt 0 ]]; then
-    exit 1
-  fi
-  exit 0
-  ;;
-adopt)
-  if [[ $in_place -eq 0 ]]; then
-    if [[ $invalid -gt 0 || $errors -gt 0 || $missing -gt 0 || $drift_missing -gt 0 ]]; then
-      exit 1
-    fi
-    exit 0
-  fi
-
-  if [[ $invalid -gt 0 || $errors -gt 0 || $missing -gt 0 || $drift_missing -gt 0 || $refused -gt 0 || $adopted -lt $adoptable_drift ]]; then
-    exit 1
-  fi
-  exit 0
-  ;;
-apply)
-  if [[ $invalid -gt 0 || $errors -gt 0 || $unresolved -gt 0 ]]; then
-    exit 1
-  fi
-  exit 0
-  ;;
-*)
-  exit 1
-  ;;
-esac
+exit 1

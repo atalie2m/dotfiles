@@ -137,6 +137,7 @@ See `docs/vscode.md` for details.
 ### Terminal.app profile management (without AppleScript)
 
 Terminal.app profiles are managed as `.terminal` files in this repo (`apps/terminal/`), then imported during Home Manager activation.
+Runtime sync operations are implemented through the shared sync adapter core (`nix/scripts/sync-core.sh`) with a Terminal adapter in `nix/scripts/terminal.sh`.
 
 - Source of truth: `apps/terminal/*.terminal`
 - State guard: stores last-applied profile hashes under `~/.local/state/dotfiles/terminal-app/profiles/*.sha256`
@@ -193,6 +194,7 @@ DOTFILES_TERMINAL_FORCE_IMPORT=1 nix run .#apply -- --host a2m_mac
 ### Shell sync (lastApplied 3-way)
 
 Shell local overrides are managed with lastApplied state:
+Runtime sync operations are implemented through the shared sync adapter core (`nix/scripts/sync-core.sh`) with a shell adapter in `nix/scripts/shell.sh`.
 
 - Desired source:
   - `apps/shell/managed/zdotdir.zshrc.block.sh`
@@ -263,6 +265,14 @@ nix/scripts/shell-zsh-writeability-test.sh
 ```
 
 The test script uses temporary `HOME`/`XDG_STATE_HOME` and removes all test files on exit.
+
+Additional sync adapter/core tests:
+
+```bash
+nix/scripts/sync-core-fake-adapter-test.sh
+nix/scripts/sync-shell-smoke-test.sh
+nix/scripts/sync-terminal-smoke-test.sh
+```
 
 ## Local Facts + Secrets (Override Inputs)
 
