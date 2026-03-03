@@ -34,6 +34,10 @@ delib.module {
         fi
       '';
     };
+
+    # Keep Home Manager generated bashrc in a separate immutable layer.
+    # The runtime ~/.bashrc entrypoint is managed as a writable wrapper.
+    home.file.".bashrc".target = lib.mkForce ".nix/hm-bash/.bashrc";
   };
 
   darwin.ifEnabled = { cfg, myconfig, ... }: {

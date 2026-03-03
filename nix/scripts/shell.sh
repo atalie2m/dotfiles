@@ -18,8 +18,10 @@ Description:
   Manage shell config with lastApplied 3-way status.
   - zsh-zdotdir: managed block in ~/.nix/.zshrc (runtime entrypoint)
   - zsh-local: whole file at ~/.zshrc.local (local hooks)
-  - bash: managed block in ~/.bashrc.local
-  - fish: whole file at ~/.config/fish/conf.d/00-dotfiles.fish
+  - bash-rc: managed block in ~/.bashrc (runtime entrypoint)
+  - bash-local: managed block in ~/.bashrc.local
+  - fish-config: managed block in ~/.config/fish/config.fish (runtime entrypoint)
+  - fish-core: whole file at ~/.config/fish/conf.d/00-dotfiles.fish
 
 Options:
   --check              Detect drift/missing/invalid (default mode)
@@ -27,7 +29,7 @@ Options:
   --adopt              Export current local managed content for drifted targets
   --forget             Remove last-applied hash state
   --shell <name>       Filter targets by shell (repeatable, default: all)
-  --target <id>        Filter one target id (zsh-zdotdir, zsh-local, bash-local, fish-core)
+  --target <id>        Filter one target id (zsh-zdotdir, zsh-local, bash-rc, bash-local, fish-config, fish-core)
   --details            Print concise per-target details
   --diff               Print unified diff (desired vs current)
   --managed-dir <path> Desired managed content directory (default: <repo>/apps/shell/managed)
@@ -217,7 +219,9 @@ fi
 list_target_ids() {
   printf '%s\n' "zsh-zdotdir"
   printf '%s\n' "zsh-local"
+  printf '%s\n' "bash-rc"
   printf '%s\n' "bash-local"
+  printf '%s\n' "fish-config"
   printf '%s\n' "fish-core"
 }
 
@@ -225,7 +229,9 @@ target_shell_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "zsh" ;;
   zsh-local) printf '%s\n' "zsh" ;;
+  bash-rc) printf '%s\n' "bash" ;;
   bash-local) printf '%s\n' "bash" ;;
+  fish-config) printf '%s\n' "fish" ;;
   fish-core) printf '%s\n' "fish" ;;
   *)
     return 1
@@ -236,7 +242,7 @@ target_shell_for_id() {
 target_type_for_id() {
   case "$1" in
   zsh-local | fish-core) printf '%s\n' "file" ;;
-  zsh-zdotdir | bash-local) printf '%s\n' "block" ;;
+  zsh-zdotdir | bash-rc | bash-local | fish-config) printf '%s\n' "block" ;;
   *)
     return 1
     ;;
@@ -247,7 +253,9 @@ target_actual_path_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "$HOME/.nix/.zshrc" ;;
   zsh-local) printf '%s\n' "$HOME/.zshrc.local" ;;
+  bash-rc) printf '%s\n' "$HOME/.bashrc" ;;
   bash-local) printf '%s\n' "$HOME/.bashrc.local" ;;
+  fish-config) printf '%s\n' "$HOME/.config/fish/config.fish" ;;
   fish-core) printf '%s\n' "$HOME/.config/fish/conf.d/00-dotfiles.fish" ;;
   *)
     return 1
@@ -259,7 +267,9 @@ target_desired_path_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "$managed_dir/zdotdir.zshrc.block.sh" ;;
   zsh-local) printf '%s\n' "$managed_dir/zshrc.local.sh" ;;
+  bash-rc) printf '%s\n' "$managed_dir/bashrc.entrypoint.block.sh" ;;
   bash-local) printf '%s\n' "$managed_dir/bashrc.local.block.sh" ;;
+  fish-config) printf '%s\n' "$managed_dir/fish.config.block.fish" ;;
   fish-core) printf '%s\n' "$managed_dir/00-dotfiles.fish" ;;
   *)
     return 1
@@ -271,7 +281,9 @@ target_begin_marker_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "# >>> dotfiles-managed:zdotdir.zshrc >>>" ;;
   zsh-local) printf '%s\n' "" ;;
+  bash-rc) printf '%s\n' "# >>> dotfiles-managed:bashrc >>>" ;;
   bash-local) printf '%s\n' "# >>> dotfiles-managed:bashrc.local >>>" ;;
+  fish-config) printf '%s\n' "# >>> dotfiles-managed:fish.config >>>" ;;
   fish-core) printf '%s\n' "" ;;
   *)
     return 1
@@ -283,7 +295,9 @@ target_end_marker_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "# <<< dotfiles-managed:zdotdir.zshrc <<<" ;;
   zsh-local) printf '%s\n' "" ;;
+  bash-rc) printf '%s\n' "# <<< dotfiles-managed:bashrc <<<" ;;
   bash-local) printf '%s\n' "# <<< dotfiles-managed:bashrc.local <<<" ;;
+  fish-config) printf '%s\n' "# <<< dotfiles-managed:fish.config <<<" ;;
   fish-core) printf '%s\n' "" ;;
   *)
     return 1
@@ -725,7 +739,7 @@ write_fresh_block_file() {
   return 0
 }
 
-write_zdotdir_entrypoint_file() {
+write_entrypoint_file() {
   local target_file="$1"
   local desired_file="$2"
   local begin_marker="$3"
@@ -794,7 +808,7 @@ write_target_from_desired() {
   begin_marker="$(target_begin_marker_for_id "$id")"
   end_marker="$(target_end_marker_for_id "$id")"
 
-  if [[ $id == "zsh-zdotdir" ]]; then
+  if [[ $id == "zsh-zdotdir" || $id == "bash-rc" || $id == "fish-config" ]]; then
     if [[ -L $actual_path ]]; then
       link_target="$(readlink "$actual_path" || true)"
       if [[ $link_target == /nix/store/* ]]; then
@@ -803,7 +817,7 @@ write_target_from_desired() {
       fi
     fi
 
-    write_zdotdir_entrypoint_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
+    write_entrypoint_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
     return $?
   fi
 

@@ -196,11 +196,15 @@ Shell local overrides are managed with lastApplied state:
 
 - Desired source:
   - `apps/shell/managed/zdotdir.zshrc.block.sh`
+  - `apps/shell/managed/bashrc.entrypoint.block.sh`
+  - `apps/shell/managed/fish.config.block.fish`
   - `apps/shell/managed/zshrc.local.sh`
   - `apps/shell/managed/bashrc.local.block.sh`
   - `apps/shell/managed/00-dotfiles.fish`
 - Local targets:
   - `~/.nix/.zshrc` (managed block only; runtime ZDOTDIR entrypoint)
+  - `~/.bashrc` (managed block only; runtime bash entrypoint)
+  - `~/.config/fish/config.fish` (managed block only; runtime fish entrypoint)
   - `~/.zshrc.local` (whole file managed)
   - `~/.bashrc.local` (managed block only)
   - `~/.config/fish/conf.d/00-dotfiles.fish` (whole file)
@@ -208,12 +212,20 @@ Shell local overrides are managed with lastApplied state:
 - Compatibility link:
   - `shell sync --apply` prefers `~/.zshrc -> .nix/.zshrc` (fallback: `.zshrc.local` when wrapper is absent)
 
-Bash managed block markers:
+Managed block markers:
 
 ```bash
+# >>> dotfiles-managed:bashrc >>>
+# ... managed content ...
+# <<< dotfiles-managed:bashrc <<<
+
 # >>> dotfiles-managed:bashrc.local >>>
 # ... managed content ...
 # <<< dotfiles-managed:bashrc.local <<<
+
+# >>> dotfiles-managed:fish.config >>>
+# ... managed content ...
+# <<< dotfiles-managed:fish.config <<<
 ```
 
 Workflow:
@@ -236,6 +248,8 @@ nix run .#dotfiles -- shell sync --adopt --in-place --force
 nix run .#dotfiles -- shell sync --forget
 nix run .#dotfiles -- shell sync --forget --target zsh-local
 nix run .#dotfiles -- shell sync --forget --target zsh-zdotdir
+nix run .#dotfiles -- shell sync --forget --target bash-rc
+nix run .#dotfiles -- shell sync --forget --target fish-config
 ```
 
 `nix run .#apply -- --host <host>` now runs `shell sync --apply` before `darwin-rebuild switch`.
@@ -245,7 +259,7 @@ To skip this pre-step intentionally, set:
 DOTFILES_SKIP_SHELL_SYNC=1 nix run .#apply -- --host a2m_mac
 ```
 
-Zsh writeability regression tests (isolated + auto cleanup):
+Shell entrypoint writeability regression tests (isolated + auto cleanup):
 
 ```bash
 nix/scripts/shell-zsh-writeability-test.sh

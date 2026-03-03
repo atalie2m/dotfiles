@@ -12,7 +12,7 @@ Usage:
   nix/scripts/shell-zsh-writeability-test.sh
 
 Description:
-  Runs isolated integration tests for zsh shell sync behavior.
+  Runs isolated integration tests for shell entrypoint writeability.
   Uses temporary HOME/XDG_STATE_HOME and removes all test files on exit.
 USAGE
 }
@@ -257,8 +257,185 @@ test_fallback_link_when_wrapper_not_selected() {
   pass "$name"
 }
 
+test_bash_entrypoint_fresh_apply() {
+  local name="bash-entrypoint-fresh-apply"
+  local env_data home_dir state_dir first_line
+  env_data="$(new_test_env "$name")"
+  home_dir="${env_data%%|*}"
+  state_dir="${env_data##*|}"
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+    fail "$name" "shell sync apply failed"
+    return
+  fi
+
+  if [[ ! -f "$home_dir/.bashrc" ]]; then
+    fail "$name" "bash entrypoint missing: $home_dir/.bashrc"
+    return
+  fi
+
+  first_line="$(head -n 1 "$home_dir/.bashrc" || true)"
+  if ! assert_eq "# >>> dotfiles-managed:bashrc >>>" "$first_line"; then
+    fail "$name" "managed block marker missing at top of bash entrypoint"
+    return
+  fi
+
+  pass "$name"
+}
+
+test_bash_entrypoint_preserves_installer_tail() {
+  local name="bash-entrypoint-preserve-tail"
+  local env_data home_dir state_dir rc_file end_line installer_line
+  env_data="$(new_test_env "$name")"
+  home_dir="${env_data%%|*}"
+  state_dir="${env_data##*|}"
+  rc_file="$home_dir/.bashrc"
+
+  cat >"$rc_file" <<'EOF'
+export PATH="$HOME/.local/bin:$PATH"
+# installer line
+EOF
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+    fail "$name" "shell sync apply failed"
+    return
+  fi
+
+  if ! grep -Fqx 'export PATH="$HOME/.local/bin:$PATH"' "$rc_file"; then
+    fail "$name" "installer line was not preserved"
+    return
+  fi
+
+  end_line="$(grep -n '^# <<< dotfiles-managed:bashrc <<<$' "$rc_file" | head -n 1 | cut -d: -f1 || true)"
+  installer_line="$(grep -n '^export PATH="\$HOME/.local/bin:\$PATH"$' "$rc_file" | head -n 1 | cut -d: -f1 || true)"
+  if [[ -z "$end_line" || -z "$installer_line" || "$installer_line" -le "$end_line" ]]; then
+    fail "$name" "installer lines are not in unmanaged tail"
+    return
+  fi
+
+  pass "$name"
+}
+
+test_bash_entrypoint_store_symlink_migration() {
+  local name="bash-entrypoint-store-symlink-migration"
+  local env_data home_dir state_dir rc_file
+  env_data="$(new_test_env "$name")"
+  home_dir="${env_data%%|*}"
+  state_dir="${env_data##*|}"
+  rc_file="$home_dir/.bashrc"
+
+  ln -s "/nix/store/fake-hm-bashrc" "$rc_file"
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+    fail "$name" "shell sync apply failed"
+    return
+  fi
+
+  if [[ -L "$rc_file" ]]; then
+    fail "$name" "bash entrypoint is still a symlink"
+    return
+  fi
+
+  if [[ ! -f "$rc_file" ]]; then
+    fail "$name" "bash entrypoint regular file missing after migration"
+    return
+  fi
+
+  pass "$name"
+}
+
+test_fish_entrypoint_fresh_apply() {
+  local name="fish-entrypoint-fresh-apply"
+  local env_data home_dir state_dir cfg_file first_line
+  env_data="$(new_test_env "$name")"
+  home_dir="${env_data%%|*}"
+  state_dir="${env_data##*|}"
+  cfg_file="$home_dir/.config/fish/config.fish"
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+    fail "$name" "shell sync apply failed"
+    return
+  fi
+
+  if [[ ! -f "$cfg_file" ]]; then
+    fail "$name" "fish entrypoint missing: $cfg_file"
+    return
+  fi
+
+  first_line="$(head -n 1 "$cfg_file" || true)"
+  if ! assert_eq "# >>> dotfiles-managed:fish.config >>>" "$first_line"; then
+    fail "$name" "managed block marker missing at top of fish entrypoint"
+    return
+  fi
+
+  pass "$name"
+}
+
+test_fish_entrypoint_preserves_installer_tail() {
+  local name="fish-entrypoint-preserve-tail"
+  local env_data home_dir state_dir cfg_file end_line installer_line
+  env_data="$(new_test_env "$name")"
+  home_dir="${env_data%%|*}"
+  state_dir="${env_data##*|}"
+  cfg_file="$home_dir/.config/fish/config.fish"
+
+  mkdir -p "$(dirname "$cfg_file")"
+  cat >"$cfg_file" <<'EOF'
+set -gx FNM_DIR "$HOME/.fnm"
+# installer line
+EOF
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+    fail "$name" "shell sync apply failed"
+    return
+  fi
+
+  if ! grep -Fqx 'set -gx FNM_DIR "$HOME/.fnm"' "$cfg_file"; then
+    fail "$name" "installer line was not preserved"
+    return
+  fi
+
+  end_line="$(grep -n '^# <<< dotfiles-managed:fish.config <<<$' "$cfg_file" | head -n 1 | cut -d: -f1 || true)"
+  installer_line="$(grep -n '^set -gx FNM_DIR "\$HOME/.fnm"$' "$cfg_file" | head -n 1 | cut -d: -f1 || true)"
+  if [[ -z "$end_line" || -z "$installer_line" || "$installer_line" -le "$end_line" ]]; then
+    fail "$name" "installer lines are not in unmanaged tail"
+    return
+  fi
+
+  pass "$name"
+}
+
+test_fish_entrypoint_store_symlink_migration() {
+  local name="fish-entrypoint-store-symlink-migration"
+  local env_data home_dir state_dir cfg_file
+  env_data="$(new_test_env "$name")"
+  home_dir="${env_data%%|*}"
+  state_dir="${env_data##*|}"
+  cfg_file="$home_dir/.config/fish/config.fish"
+
+  mkdir -p "$(dirname "$cfg_file")"
+  ln -s "/nix/store/fake-hm-fish-config" "$cfg_file"
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+    fail "$name" "shell sync apply failed"
+    return
+  fi
+
+  if [[ -L "$cfg_file" ]]; then
+    fail "$name" "fish entrypoint is still a symlink"
+    return
+  fi
+
+  if [[ ! -f "$cfg_file" ]]; then
+    fail "$name" "fish entrypoint regular file missing after migration"
+    return
+  fi
+
+  pass "$name"
+}
+
 main() {
-  echo "test: running zsh writeability integration tests"
+  echo "test: running shell entrypoint writeability integration tests"
   echo "test: temp root = $tmp_root"
 
   test_fresh_apply_creates_writable_wrapper_and_link
@@ -266,6 +443,12 @@ main() {
   test_legacy_store_symlink_is_replaced_with_regular_file
   test_compat_link_legacy_to_new_target
   test_fallback_link_when_wrapper_not_selected
+  test_bash_entrypoint_fresh_apply
+  test_bash_entrypoint_preserves_installer_tail
+  test_bash_entrypoint_store_symlink_migration
+  test_fish_entrypoint_fresh_apply
+  test_fish_entrypoint_preserves_installer_tail
+  test_fish_entrypoint_store_symlink_migration
 
   echo "test: summary pass=$pass_count fail=$fail_count"
 
