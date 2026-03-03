@@ -231,32 +231,6 @@ EOF
   pass "$name"
 }
 
-test_fallback_link_when_wrapper_not_selected() {
-  local name="fallback-link-zsh-local-only"
-  local env_data home_dir state_dir link_target
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target zsh-local >/dev/null; then
-    fail "$name" "shell sync apply failed"
-    return
-  fi
-
-  if [[ ! -L "$home_dir/.zshrc" ]]; then
-    fail "$name" "~/.zshrc is not a symlink"
-    return
-  fi
-
-  link_target="$(readlink "$home_dir/.zshrc" || true)"
-  if ! assert_eq ".zshrc.local" "$link_target"; then
-    fail "$name" "unexpected fallback link target: $link_target"
-    return
-  fi
-
-  pass "$name"
-}
-
 test_bash_entrypoint_fresh_apply() {
   local name="bash-entrypoint-fresh-apply"
   local env_data home_dir state_dir first_line
@@ -442,7 +416,6 @@ main() {
   test_existing_mutable_wrapper_preserves_installer_tail
   test_legacy_store_symlink_is_replaced_with_regular_file
   test_compat_link_legacy_to_new_target
-  test_fallback_link_when_wrapper_not_selected
   test_bash_entrypoint_fresh_apply
   test_bash_entrypoint_preserves_installer_tail
   test_bash_entrypoint_store_symlink_migration

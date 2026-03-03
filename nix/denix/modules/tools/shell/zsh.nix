@@ -23,11 +23,7 @@ delib.module {
       dotDir = ".nix/hm-zsh";
 
       envExtra = ''
-        if [[ -f "$HOME/.nix/.zshrc" ]]; then
-          export ZDOTDIR="$HOME/.nix"
-        else
-          export ZDOTDIR="$HOME/.nix/hm-zsh"
-        fi
+        export ZDOTDIR="$HOME/.nix"
       '';
 
       history = {
@@ -56,8 +52,8 @@ delib.module {
         TRAPWINCH() { zle && zle -R }
 
         # Load user-specific Zsh customizations if present
-        if [[ -f "$HOME/.zshrc.local" ]]; then
-          source "$HOME/.zshrc.local"
+        if [[ -f "$HOME/.config/shell/zsh.local.sh" ]]; then
+          source "$HOME/.config/shell/zsh.local.sh"
         fi
       '';
 

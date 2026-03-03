@@ -198,19 +198,17 @@ Shell local overrides are managed with lastApplied state:
   - `apps/shell/managed/zdotdir.zshrc.block.sh`
   - `apps/shell/managed/bashrc.entrypoint.block.sh`
   - `apps/shell/managed/fish.config.block.fish`
-  - `apps/shell/managed/zshrc.local.sh`
   - `apps/shell/managed/bashrc.local.block.sh`
   - `apps/shell/managed/00-dotfiles.fish`
 - Local targets:
   - `~/.nix/.zshrc` (managed block only; runtime ZDOTDIR entrypoint)
   - `~/.bashrc` (managed block only; runtime bash entrypoint)
   - `~/.config/fish/config.fish` (managed block only; runtime fish entrypoint)
-  - `~/.zshrc.local` (whole file managed)
   - `~/.bashrc.local` (managed block only)
   - `~/.config/fish/conf.d/00-dotfiles.fish` (whole file)
 - State guard: `~/.local/state/dotfiles/shell/blocks/*.sha256`
 - Compatibility link:
-  - `shell sync --apply` prefers `~/.zshrc -> .nix/.zshrc` (fallback: `.zshrc.local` when wrapper is absent)
+  - `shell sync --apply` ensures `~/.zshrc -> .nix/.zshrc`
 
 Managed block markers:
 
@@ -246,7 +244,6 @@ nix run .#dotfiles -- shell sync --adopt --in-place --force
 
 # Optional: clear lastApplied state
 nix run .#dotfiles -- shell sync --forget
-nix run .#dotfiles -- shell sync --forget --target zsh-local
 nix run .#dotfiles -- shell sync --forget --target zsh-zdotdir
 nix run .#dotfiles -- shell sync --forget --target bash-rc
 nix run .#dotfiles -- shell sync --forget --target fish-config

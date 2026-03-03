@@ -17,7 +17,6 @@ Usage:
 Description:
   Manage shell config with lastApplied 3-way status.
   - zsh-zdotdir: managed block in ~/.nix/.zshrc (runtime entrypoint)
-  - zsh-local: whole file at ~/.zshrc.local (local hooks)
   - bash-rc: managed block in ~/.bashrc (runtime entrypoint)
   - bash-local: managed block in ~/.bashrc.local
   - fish-config: managed block in ~/.config/fish/config.fish (runtime entrypoint)
@@ -29,7 +28,7 @@ Options:
   --adopt              Export current local managed content for drifted targets
   --forget             Remove last-applied hash state
   --shell <name>       Filter targets by shell (repeatable, default: all)
-  --target <id>        Filter one target id (zsh-zdotdir, zsh-local, bash-rc, bash-local, fish-config, fish-core)
+  --target <id>        Filter one target id (zsh-zdotdir, bash-rc, bash-local, fish-config, fish-core)
   --details            Print concise per-target details
   --diff               Print unified diff (desired vs current)
   --managed-dir <path> Desired managed content directory (default: <repo>/apps/shell/managed)
@@ -218,7 +217,6 @@ fi
 
 list_target_ids() {
   printf '%s\n' "zsh-zdotdir"
-  printf '%s\n' "zsh-local"
   printf '%s\n' "bash-rc"
   printf '%s\n' "bash-local"
   printf '%s\n' "fish-config"
@@ -228,7 +226,6 @@ list_target_ids() {
 target_shell_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "zsh" ;;
-  zsh-local) printf '%s\n' "zsh" ;;
   bash-rc) printf '%s\n' "bash" ;;
   bash-local) printf '%s\n' "bash" ;;
   fish-config) printf '%s\n' "fish" ;;
@@ -241,7 +238,7 @@ target_shell_for_id() {
 
 target_type_for_id() {
   case "$1" in
-  zsh-local | fish-core) printf '%s\n' "file" ;;
+  fish-core) printf '%s\n' "file" ;;
   zsh-zdotdir | bash-rc | bash-local | fish-config) printf '%s\n' "block" ;;
   *)
     return 1
@@ -252,7 +249,6 @@ target_type_for_id() {
 target_actual_path_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "$HOME/.nix/.zshrc" ;;
-  zsh-local) printf '%s\n' "$HOME/.zshrc.local" ;;
   bash-rc) printf '%s\n' "$HOME/.bashrc" ;;
   bash-local) printf '%s\n' "$HOME/.bashrc.local" ;;
   fish-config) printf '%s\n' "$HOME/.config/fish/config.fish" ;;
@@ -266,7 +262,6 @@ target_actual_path_for_id() {
 target_desired_path_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "$managed_dir/zdotdir.zshrc.block.sh" ;;
-  zsh-local) printf '%s\n' "$managed_dir/zshrc.local.sh" ;;
   bash-rc) printf '%s\n' "$managed_dir/bashrc.entrypoint.block.sh" ;;
   bash-local) printf '%s\n' "$managed_dir/bashrc.local.block.sh" ;;
   fish-config) printf '%s\n' "$managed_dir/fish.config.block.fish" ;;
@@ -280,7 +275,6 @@ target_desired_path_for_id() {
 target_begin_marker_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "# >>> dotfiles-managed:zdotdir.zshrc >>>" ;;
-  zsh-local) printf '%s\n' "" ;;
   bash-rc) printf '%s\n' "# >>> dotfiles-managed:bashrc >>>" ;;
   bash-local) printf '%s\n' "# >>> dotfiles-managed:bashrc.local >>>" ;;
   fish-config) printf '%s\n' "# >>> dotfiles-managed:fish.config >>>" ;;
@@ -294,7 +288,6 @@ target_begin_marker_for_id() {
 target_end_marker_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "# <<< dotfiles-managed:zdotdir.zshrc <<<" ;;
-  zsh-local) printf '%s\n' "" ;;
   bash-rc) printf '%s\n' "# <<< dotfiles-managed:bashrc <<<" ;;
   bash-local) printf '%s\n' "# <<< dotfiles-managed:bashrc.local <<<" ;;
   fish-config) printf '%s\n' "# <<< dotfiles-managed:fish.config <<<" ;;
@@ -843,18 +836,11 @@ compute_actual_hash_for_target() {
 ensure_zshrc_compat_link() {
   local zshrc="$HOME/.zshrc"
   local zdotdir_zshrc="$HOME/.nix/.zshrc"
-  local zshrc_local="$HOME/.zshrc.local"
-  local desired_rel=""
-  local desired_abs=""
+  local desired_rel=".nix/.zshrc"
+  local desired_abs="$zdotdir_zshrc"
   local link_target
 
-  if [[ -e $zdotdir_zshrc || -L $zdotdir_zshrc ]]; then
-    desired_rel=".nix/.zshrc"
-    desired_abs="$zdotdir_zshrc"
-  elif [[ -e $zshrc_local || -L $zshrc_local ]]; then
-    desired_rel=".zshrc.local"
-    desired_abs="$zshrc_local"
-  else
+  if [[ ! -e $zdotdir_zshrc && ! -L $zdotdir_zshrc ]]; then
     return 0
   fi
 
@@ -864,21 +850,13 @@ ensure_zshrc_compat_link() {
       return 0
     fi
 
-    case "$link_target" in
-    ".zshrc.local" | "$zshrc_local" | ".nix/.zshrc" | "$zdotdir_zshrc")
-      rm -f "$zshrc"
-      if ln -s "$desired_rel" "$zshrc"; then
-        log "updated ~/.zshrc compat symlink -> $desired_rel"
-        return 0
-      fi
-      log "failed to update ~/.zshrc compat symlink"
-      return 1
-      ;;
-    *)
-      log "skipped ~/.zshrc compat link: existing symlink points to $link_target"
+    rm -f "$zshrc"
+    if ln -s "$desired_rel" "$zshrc"; then
+      log "updated ~/.zshrc compat symlink -> $desired_rel"
       return 0
-      ;;
-    esac
+    fi
+    log "failed to update ~/.zshrc compat symlink"
+    return 1
   fi
 
   if [[ -e $zshrc ]]; then
@@ -1181,7 +1159,7 @@ log "managed dir: $managed_dir"
 log "state dir: $state_dir"
 [[ -n $resolved_output_dir ]] && log "staging dir: $resolved_output_dir"
 
-if [[ $mode == "apply" ]] && { target_selected "zsh-zdotdir" || target_selected "zsh-local"; }; then
+if [[ $mode == "apply" ]] && target_selected "zsh-zdotdir"; then
   if ! ensure_zshrc_compat_link; then
     errors=$((errors + 1))
   fi
