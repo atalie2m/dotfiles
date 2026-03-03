@@ -134,6 +134,62 @@ See `docs/vscode.md` for details.
 
 **Why this matters**: macOS Terminal.app only supports 256-color palette, which causes the Starship prompt colors to be approximated and appear different from the intended design. True Color terminals can display the full 16.7 million color spectrum, ensuring consistent visual appearance.
 
+### Terminal.app profile management (without AppleScript)
+
+Terminal.app profiles are managed as `.terminal` files in this repo (`apps/terminal/`), then imported during Home Manager activation.
+
+- Source of truth: `apps/terminal/*.terminal`
+- State guard: stores last-applied profile hashes under `~/.local/state/dotfiles/terminal-app/profiles/*.sha256`
+- Snapshot: stores last-applied profile snapshots under `~/.local/state/dotfiles/terminal-app/snapshots/*.plist`
+- Import behavior: when current hash matches last-applied, repo updates are imported without force
+- Selection: `tools.terminal.terminalApp.defaultProfile` / `startupProfile`
+- Drift guard: apply aborts when current Terminal profile differs from last-applied (`failOnDrift = true`)
+- Missing/failed import guard: apply aborts when managed profiles are still missing after import
+- Backup: saves `com.apple.Terminal.plist` snapshots before import under `~/.local/state/dotfiles/terminal-app/backups/`
+- Forced re-import: enable `tools.terminal.terminalApp.forceImport = true` or use one-shot `DOTFILES_TERMINAL_FORCE_IMPORT=1`
+
+Current managed profiles:
+- `Atalie Standard` (`apps/terminal/Atalie-Standard.terminal`)
+- `Atalie Dark` (`apps/terminal/Atalie-Dark.terminal`)
+- `Atalie Glass` (`apps/terminal/Atalie-Glass.terminal`)
+- `Atalie Glass Dark` (`apps/terminal/Atalie-Glass-Dark.terminal`)
+- `Atalie Glass Light` (`apps/terminal/Atalie-Glass-Light.terminal`)
+
+Current default profile:
+- `Atalie Standard`
+
+To add more profiles later, add more entries under:
+- `tools.terminal.terminalApp.profiles`
+- or `tools.terminal.terminalApp.extraProfiles`
+
+Drift handling workflow:
+
+```bash
+# 1) Check drift
+nix run .#dotfiles -- terminal sync --check
+# (returns non-zero when drift/missing/invalid profiles are detected)
+
+# Optional: show concise per-profile diff details
+nix run .#dotfiles -- terminal sync --check --diff
+
+# 2) If drift is intentional, stage current Terminal.app values (does not overwrite repo)
+nix run .#dotfiles -- terminal sync --adopt
+
+# Optional: overwrite repo files directly (conflicts need --force)
+nix run .#dotfiles -- terminal sync --adopt --in-place
+nix run .#dotfiles -- terminal sync --adopt --in-place --force
+
+# Optional: clear lastApplied state (all or one profile)
+nix run .#dotfiles -- terminal sync --forget
+nix run .#dotfiles -- terminal sync --forget --profile "Atalie Standard"
+
+# 3) Apply (repo-only updates are imported without force when current == lastApplied)
+nix run .#apply -- --host a2m_mac
+
+# 4) Use force only when you intentionally want to overwrite external edits
+DOTFILES_TERMINAL_FORCE_IMPORT=1 nix run .#apply -- --host a2m_mac
+```
+
 ## Local Facts + Secrets (Override Inputs)
 
 This repo no longer uses Git clean/smudge filters. Machine-specific facts and secrets live outside Git and are injected at build time using flake overrides.

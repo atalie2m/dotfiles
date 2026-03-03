@@ -302,6 +302,21 @@ if [[ $strict -eq 1 ]]; then
   else
     record_check "flake.check" "fail" "nix flake check failed"
   fi
+
+  if [[ $(uname -s 2>/dev/null || true) == "Darwin" ]]; then
+    terminal_script="$SCRIPT_DIR/terminal.sh"
+    if [[ -x $terminal_script ]]; then
+      if "$terminal_script" sync --check >/dev/null 2>&1; then
+        record_check "terminal.sync" "ok" "terminal sync check passed"
+      else
+        record_check "terminal.sync" "fail" "terminal sync check failed (run: nix run .#dotfiles -- terminal sync --check)"
+      fi
+    else
+      record_check "terminal.sync" "warn" "terminal sync script not found; skipped"
+    fi
+  else
+    record_check "terminal.sync" "ok" "skipped on non-Darwin host"
+  fi
 fi
 
 if [[ $json -eq 1 ]]; then

@@ -13,6 +13,7 @@ Subcommands:
   doctor
   bootstrap
   list-tools
+  terminal
 USAGE
 }
 
@@ -25,11 +26,16 @@ subcommand="$1"
 shift
 
 case "$subcommand" in
-apply | update | doctor | bootstrap | list-tools)
+apply | update | doctor | bootstrap | list-tools | terminal)
   target="$SCRIPT_DIR/${subcommand}.sh"
   if [[ ! -f $target ]]; then
-    echo "dotfiles: subcommand script not found: $target" >&2
-    exit 1
+    cwd_target="$(pwd)/nix/scripts/${subcommand}.sh"
+    if [[ -f $cwd_target ]]; then
+      target="$cwd_target"
+    else
+      echo "dotfiles: subcommand script not found: $target" >&2
+      exit 1
+    fi
   fi
   exec "$target" "$@"
   ;;

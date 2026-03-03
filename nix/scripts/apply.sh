@@ -102,6 +102,13 @@ if [[ ${#passthrough[@]} -gt 0 ]]; then
   rebuild_args+=("${passthrough[@]}")
 fi
 
+force_import_flag="/tmp/dotfiles-terminal-force-import"
+if [[ ${DOTFILES_TERMINAL_FORCE_IMPORT:-0} == "1" ]]; then
+  printf '1\n' >"$force_import_flag"
+  chmod 0644 "$force_import_flag" >/dev/null 2>&1 || true
+  trap 'rm -f "$force_import_flag"' EXIT
+fi
+
 if [[ $EUID -eq 0 || $no_sudo -eq 1 ]]; then
   "${rebuild_cmd[@]}" "${rebuild_args[@]}"
 else
