@@ -190,6 +190,61 @@ nix run .#apply -- --host a2m_mac
 DOTFILES_TERMINAL_FORCE_IMPORT=1 nix run .#apply -- --host a2m_mac
 ```
 
+### Shell sync (lastApplied 3-way)
+
+Shell local overrides are managed with lastApplied state:
+
+- Desired source:
+  - `apps/shell/managed/zdotdir.zshrc.block.sh`
+  - `apps/shell/managed/zshrc.local.sh`
+  - `apps/shell/managed/bashrc.local.block.sh`
+  - `apps/shell/managed/00-dotfiles.fish`
+- Local targets:
+  - `~/.nix/.zshrc` (managed block only; runtime ZDOTDIR entrypoint)
+  - `~/.zshrc.local` (whole file managed)
+  - `~/.bashrc.local` (managed block only)
+  - `~/.config/fish/conf.d/00-dotfiles.fish` (whole file)
+- State guard: `~/.local/state/dotfiles/shell/blocks/*.sha256`
+- Compatibility link:
+  - `shell sync --apply` prefers `~/.zshrc -> .nix/.zshrc` (fallback: `.zshrc.local` when wrapper is absent)
+
+Bash managed block markers:
+
+```bash
+# >>> dotfiles-managed:bashrc.local >>>
+# ... managed content ...
+# <<< dotfiles-managed:bashrc.local <<<
+```
+
+Workflow:
+
+```bash
+# 1) Check drift/conflict
+nix run .#dotfiles -- shell sync --check
+
+# Optional: show diff for drifted targets
+nix run .#dotfiles -- shell sync --check --diff
+
+# 2) If local edits are intentional, stage adopt output
+nix run .#dotfiles -- shell sync --adopt
+
+# Optional: overwrite desired managed files directly (conflicts require --force)
+nix run .#dotfiles -- shell sync --adopt --in-place
+nix run .#dotfiles -- shell sync --adopt --in-place --force
+
+# Optional: clear lastApplied state
+nix run .#dotfiles -- shell sync --forget
+nix run .#dotfiles -- shell sync --forget --target zsh-local
+nix run .#dotfiles -- shell sync --forget --target zsh-zdotdir
+```
+
+`nix run .#apply -- --host <host>` now runs `shell sync --apply` before `darwin-rebuild switch`.
+To skip this pre-step intentionally, set:
+
+```bash
+DOTFILES_SKIP_SHELL_SYNC=1 nix run .#apply -- --host a2m_mac
+```
+
 ## Local Facts + Secrets (Override Inputs)
 
 This repo no longer uses Git clean/smudge filters. Machine-specific facts and secrets live outside Git and are injected at build time using flake overrides.

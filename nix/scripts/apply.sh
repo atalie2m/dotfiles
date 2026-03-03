@@ -85,6 +85,15 @@ resolve_inputs
 
 target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
 
+if [[ $action == "switch" && ${DOTFILES_SKIP_SHELL_SYNC:-0} != "1" ]]; then
+  shell_sync_script="$SCRIPT_DIR/shell.sh"
+  if [[ -x $shell_sync_script ]]; then
+    "$shell_sync_script" sync --apply
+  else
+    log "shell sync script not found or not executable; skipping shell managed-block apply"
+  fi
+fi
+
 if command -v darwin-rebuild >/dev/null 2>&1; then
   rebuild_cmd=(darwin-rebuild)
 else

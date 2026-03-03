@@ -44,6 +44,7 @@ delib.module {
 
             realPlist="$HOME/Library/Preferences/com.apple.Terminal.plist"
             workPlist="$(mktemp "''${TMPDIR:-/tmp}/terminal-prefs.XXXXXX.plist")"
+            verifyPlist="$(mktemp "''${TMPDIR:-/tmp}/terminal-verify.XXXXXX.plist")"
             stateUpdateList="$(mktemp "''${TMPDIR:-/tmp}/terminal-state-updates.XXXXXX")"
             plist="$workPlist"
 
@@ -63,14 +64,21 @@ delib.module {
             : "''${DRY_RUN_CMD:=}"
 
             cleanup() {
-              rm -f "$workPlist" "$stateUpdateList"
+              rm -f "$workPlist" "$verifyPlist" "$stateUpdateList"
             }
             trap cleanup EXIT
+
+            escape_plist_key() {
+              value="$1"
+              value="$(printf '%s' "$value" | /usr/bin/sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+              printf '%s' "$value"
+            }
 
             has_profile_in_plist() {
               plistPath="$1"
               name="$2"
-              if [ -f "$plistPath" ] && /usr/libexec/PlistBuddy -c "Print :\"Window Settings\":\"$name\":name" "$plistPath" >/dev/null 2>&1; then
+              escapedName="$(escape_plist_key "$name")"
+              if [ -f "$plistPath" ] && /usr/libexec/PlistBuddy -c "Print :\"Window Settings\":\"$escapedName\":name" "$plistPath" >/dev/null 2>&1; then
                 return 0
               fi
               return 1
@@ -111,8 +119,9 @@ delib.module {
               tmpdir="$(mktemp -d)"
               curXml="$tmpdir/current.xml"
               curBin="$tmpdir/current.bin"
+              escapedName="$(escape_plist_key "$name")"
 
-              if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$name\"" "$plistPath" >"$curXml" 2>/dev/null; then
+              if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escapedName\"" "$plistPath" >"$curXml" 2>/dev/null; then
                 rm -rf "$tmpdir"
                 return 1
               fi
@@ -201,6 +210,7 @@ delib.module {
               name="$1"
               plistPath="$2"
               key="$(profile_state_key "$name")"
+              escapedName="$(escape_plist_key "$name")"
               snapshotPath="$snapshotDir/$key.plist"
               tmpSnapshot="$(mktemp "''${TMPDIR:-/tmp}/terminal-snapshot.XXXXXX.plist")"
 
@@ -216,7 +226,7 @@ delib.module {
                 return 1
               fi
 
-              if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$name\"" "$plistPath" >"$tmpSnapshot" 2>/dev/null; then
+              if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escapedName\"" "$plistPath" >"$tmpSnapshot" 2>/dev/null; then
                 echo "terminal-app: failed to export snapshot for profile: $name" >&2
                 rm -f "$tmpSnapshot"
                 return 1
@@ -258,6 +268,7 @@ delib.module {
             for entry in ${lib.escapeShellArgs profileSpecs}; do
               name="''${entry%%|*}"
               file="''${entry#*|}"
+              escapedName="$(escape_plist_key "$name")"
 
               if [ ! -f "$file" ]; then
                 echo "terminal-app: profile file not found: $file" >&2
@@ -414,16 +425,16 @@ delib.module {
               if [ "$shouldImport" -eq 1 ]; then
                 if has_profile "$name"; then
                   # Replace profile deterministically from .terminal content.
-                  $DRY_RUN_CMD /usr/libexec/PlistBuddy -c "Delete :\"Window Settings\":\"$name\"" "$plist" >/dev/null 2>&1 || true
+                  $DRY_RUN_CMD /usr/libexec/PlistBuddy -c "Delete :\"Window Settings\":\"$escapedName\"" "$plist" >/dev/null 2>&1 || true
                 fi
 
-                if ! $DRY_RUN_CMD /usr/libexec/PlistBuddy -c "Add :\"Window Settings\":\"$name\" dict" "$plist"; then
+                if ! $DRY_RUN_CMD /usr/libexec/PlistBuddy -c "Add :\"Window Settings\":\"$escapedName\" dict" "$plist"; then
                   echo "terminal-app: failed to create profile container: $name" >&2
                   importFailures=1
                   continue
                 fi
 
-                if ! $DRY_RUN_CMD /usr/libexec/PlistBuddy -c "Merge \"$file\" :\"Window Settings\":\"$name\"" "$plist"; then
+                if ! $DRY_RUN_CMD /usr/libexec/PlistBuddy -c "Merge \"$file\" :\"Window Settings\":\"$escapedName\"" "$plist"; then
                   echo "terminal-app: failed to merge profile file into plist: $name ($file)" >&2
                   importFailures=1
                   continue
@@ -533,11 +544,20 @@ delib.module {
                 fi
               fi
 
+              if ! /usr/bin/defaults export com.apple.Terminal - >"$verifyPlist" 2>/dev/null; then
+                if [ -f "$realPlist" ]; then
+                  cp "$realPlist" "$verifyPlist"
+                else
+                  echo "terminal-app: failed to export Terminal preferences after import" >&2
+                  exit 1
+                fi
+              fi
+
               stateFailures=0
               while IFS= read -r stateName; do
                 [ -z "$stateName" ] && continue
 
-                appliedHash="$(canonical_hash_from_profile_in_plist "$realPlist" "$stateName" || true)"
+                appliedHash="$(canonical_hash_from_profile_in_plist "$verifyPlist" "$stateName" || true)"
                 if [ -z "$appliedHash" ]; then
                   echo "terminal-app: failed to hash applied profile for state update: $stateName" >&2
                   stateFailures=1
@@ -550,7 +570,7 @@ delib.module {
                   continue
                 fi
 
-                if ! write_last_applied_snapshot "$stateName" "$realPlist"; then
+                if ! write_last_applied_snapshot "$stateName" "$verifyPlist"; then
                   echo "terminal-app: failed to write snapshot for profile: $stateName" >&2
                   stateFailures=1
                 fi

@@ -314,8 +314,20 @@ if [[ $strict -eq 1 ]]; then
     else
       record_check "terminal.sync" "warn" "terminal sync script not found; skipped"
     fi
+
+    shell_script="$SCRIPT_DIR/shell.sh"
+    if [[ -x $shell_script ]]; then
+      if "$shell_script" sync --check >/dev/null 2>&1; then
+        record_check "shell.sync" "ok" "shell sync check passed"
+      else
+        record_check "shell.sync" "fail" "shell sync check failed (run: nix run .#dotfiles -- shell sync --check)"
+      fi
+    else
+      record_check "shell.sync" "warn" "shell sync script not found; skipped"
+    fi
   else
     record_check "terminal.sync" "ok" "skipped on non-Darwin host"
+    record_check "shell.sync" "ok" "skipped on non-Darwin host"
   fi
 fi
 

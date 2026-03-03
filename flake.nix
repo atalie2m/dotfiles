@@ -217,6 +217,12 @@
             dotfiles = {
               type = "app";
               program = "${pkgs.writeShellScript "dotfiles-cli" ''
+              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
+                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
+                  export DOTFILES_ROOT="$candidate_root"
+                fi
+              fi
               export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
               exec ${scripts}/dotfiles.sh "$@"
             ''}";
@@ -225,6 +231,12 @@
             update = {
               type = "app";
               program = "${pkgs.writeShellScript "dotfiles-update" ''
+              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
+                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
+                  export DOTFILES_ROOT="$candidate_root"
+                fi
+              fi
               export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
               exec ${scripts}/dotfiles.sh update "$@"
             ''}";
@@ -233,6 +245,12 @@
             list-tools = {
               type = "app";
               program = "${pkgs.writeShellScript "dotfiles-list-tools" ''
+              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
+                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
+                  export DOTFILES_ROOT="$candidate_root"
+                fi
+              fi
               export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
               exec ${scripts}/dotfiles.sh list-tools "$@"
             ''}";
@@ -241,6 +259,12 @@
             apply = {
               type = "app";
               program = "${pkgs.writeShellScript "dotfiles-apply" ''
+              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
+                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
+                  export DOTFILES_ROOT="$candidate_root"
+                fi
+              fi
               export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
               exec ${scripts}/dotfiles.sh apply "$@"
             ''}";
@@ -249,6 +273,12 @@
             doctor = {
               type = "app";
               program = "${pkgs.writeShellScript "dotfiles-doctor" ''
+              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
+                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
+                  export DOTFILES_ROOT="$candidate_root"
+                fi
+              fi
               export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
               exec ${scripts}/dotfiles.sh doctor "$@"
             ''}";
@@ -257,6 +287,12 @@
             bootstrap = {
               type = "app";
               program = "${pkgs.writeShellScript "dotfiles-bootstrap" ''
+              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
+                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
+                  export DOTFILES_ROOT="$candidate_root"
+                fi
+              fi
               export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
               exec ${scripts}/dotfiles.sh bootstrap "$@"
             ''}";

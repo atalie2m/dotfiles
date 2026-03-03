@@ -20,7 +20,15 @@ delib.module {
   home.ifEnabled = { cfg, ... }: {
     programs.zsh = {
       enable = true;
-      dotDir = ".nix";
+      dotDir = ".nix/hm-zsh";
+
+      envExtra = ''
+        if [[ -f "$HOME/.nix/.zshrc" ]]; then
+          export ZDOTDIR="$HOME/.nix"
+        else
+          export ZDOTDIR="$HOME/.nix/hm-zsh"
+        fi
+      '';
 
       history = {
         size = cfg.historySize;

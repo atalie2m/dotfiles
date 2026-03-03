@@ -51,19 +51,36 @@ show_diff=0
 in_place=0
 force=0
 output_dir=""
+default_profiles_dir=1
 
 set_repo_root
 profiles_dir="$ROOT/apps/terminal"
-plist="$HOME/Library/Preferences/com.apple.Terminal.plist"
+real_plist="$HOME/Library/Preferences/com.apple.Terminal.plist"
+plist="$real_plist"
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/terminal-app/profiles"
 legacy_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/terminal/profiles"
+work_plist=""
 
-# When running via `nix run .#dotfiles` on a dirty tree, DOTFILES_ROOT may point
-# to a store copy that does not contain newly added files yet.
-if [[ ! -d $profiles_dir && -f "$(pwd)/flake.nix" && -d "$(pwd)/apps/terminal" ]]; then
-  ROOT="$(pwd)"
-  profiles_dir="$ROOT/apps/terminal"
-fi
+trap 'if [[ -n ${work_plist:-} ]]; then rm -f "$work_plist"; fi' EXIT
+
+resolve_repo_worktree_root() {
+  local candidate=""
+
+  if command -v git >/dev/null 2>&1; then
+    candidate="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+    if [[ -n $candidate && -f $candidate/flake.nix && -d $candidate/apps/terminal && -d $candidate/nix/scripts ]]; then
+      cd "$candidate" && pwd
+      return 0
+    fi
+  fi
+
+  if [[ -f "$(pwd)/flake.nix" && -d "$(pwd)/apps/terminal" && -d "$(pwd)/nix/scripts" ]]; then
+    pwd
+    return 0
+  fi
+
+  return 1
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -95,6 +112,7 @@ while [[ $# -gt 0 ]]; do
   --dir)
     [[ $# -lt 2 ]] && die "missing value for --dir"
     profiles_dir="$2"
+    default_profiles_dir=0
     shift 2
     ;;
   --state-dir)
@@ -136,9 +154,30 @@ if [[ $mode == "adopt" && $in_place -eq 1 && -n $output_dir ]]; then
   die "--output-dir cannot be used with --adopt --in-place"
 fi
 
+if [[ $default_profiles_dir -eq 1 ]]; then
+  worktree_root="$(resolve_repo_worktree_root || true)"
+  if [[ -n $worktree_root ]]; then
+    ROOT="$worktree_root"
+    profiles_dir="$ROOT/apps/terminal"
+  fi
+fi
+
+if [[ $mode == "adopt" && $in_place -eq 1 && ! -w $profiles_dir ]]; then
+  die "profiles directory is not writable for --adopt --in-place: $profiles_dir (run from repo checkout or pass --dir)"
+fi
+
 if [[ $mode != "forget" ]]; then
   [[ -d $profiles_dir ]] || die "profiles directory not found: $profiles_dir"
-  [[ -f $plist ]] || die "Terminal preferences not found: $plist"
+
+  work_plist="$(mktemp "${TMPDIR:-/tmp}/terminal-sync.XXXXXX.plist")"
+  if ! /usr/bin/defaults export com.apple.Terminal - >"$work_plist" 2>/dev/null; then
+    if [[ -f $real_plist ]]; then
+      cp "$real_plist" "$work_plist"
+    else
+      /usr/libexec/PlistBuddy -c "Clear dict" "$work_plist" >/dev/null 2>&1 || true
+    fi
+  fi
+  plist="$work_plist"
 fi
 
 profile_state_key() {
@@ -215,7 +254,9 @@ forget_last_applied_hash() {
 
 has_profile() {
   local name="$1"
-  /usr/libexec/PlistBuddy -c "Print :\"Window Settings\":\"$name\":name" "$plist" >/dev/null 2>&1
+  local escaped_name
+  escaped_name="$(escape_plist_key "$name")"
+  /usr/libexec/PlistBuddy -c "Print :\"Window Settings\":\"$escaped_name\":name" "$plist" >/dev/null 2>&1
 }
 
 profile_name_from_file() {
@@ -242,13 +283,14 @@ canonical_hash_from_file() {
 
 canonical_hash_from_profile() {
   local name="$1"
-  local tmpdir cur_xml cur_bin
+  local tmpdir cur_xml cur_bin escaped_name
 
   tmpdir="$(mktemp -d)"
   cur_xml="$tmpdir/current.xml"
   cur_bin="$tmpdir/current.bin"
+  escaped_name="$(escape_plist_key "$name")"
 
-  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$name\"" "$plist" >"$cur_xml" 2>/dev/null; then
+  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escaped_name\"" "$plist" >"$cur_xml" 2>/dev/null; then
     rm -rf "$tmpdir"
     return 1
   fi
@@ -272,12 +314,13 @@ print_canonical_xml_from_file() {
 print_canonical_xml_from_profile() {
   local name="$1"
   local out_file="$2"
-  local tmpdir cur_xml
+  local tmpdir cur_xml escaped_name
 
   tmpdir="$(mktemp -d)"
   cur_xml="$tmpdir/current.xml"
+  escaped_name="$(escape_plist_key "$name")"
 
-  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$name\"" "$plist" >"$cur_xml" 2>/dev/null; then
+  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escaped_name\"" "$plist" >"$cur_xml" 2>/dev/null; then
     rm -rf "$tmpdir"
     return 1
   fi
@@ -294,6 +337,13 @@ print_canonical_xml_from_profile() {
 is_sha256_hash() {
   local value="$1"
   [[ $value =~ ^[0-9a-fA-F]{64}$ ]]
+}
+
+escape_plist_key() {
+  local value="$1"
+
+  value="$(printf '%s' "$value" | /usr/bin/sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+  printf '%s' "$value"
 }
 
 determine_profile_status() {
@@ -382,12 +432,13 @@ print_drift_details() {
   local name="$1"
   local src_file="$2"
   local last_hash="${3:-}"
-  local tmpdir cur_xml
+  local tmpdir cur_xml escaped_name
 
   tmpdir="$(mktemp -d)"
   cur_xml="$tmpdir/current.xml"
+  escaped_name="$(escape_plist_key "$name")"
 
-  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$name\"" "$plist" >"$cur_xml" 2>/dev/null; then
+  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escaped_name\"" "$plist" >"$cur_xml" 2>/dev/null; then
     rm -rf "$tmpdir"
     return 1
   fi
@@ -458,13 +509,14 @@ print_profile_diff() {
 adopt_profile_to_path() {
   local name="$1"
   local destination="$2"
-  local tmpdir cur_xml out_tmp
+  local tmpdir cur_xml out_tmp escaped_name
 
   tmpdir="$(mktemp -d)"
   cur_xml="$tmpdir/current.xml"
   out_tmp="$tmpdir/out.terminal"
+  escaped_name="$(escape_plist_key "$name")"
 
-  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$name\"" "$plist" >"$cur_xml" 2>/dev/null; then
+  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escaped_name\"" "$plist" >"$cur_xml" 2>/dev/null; then
     rm -rf "$tmpdir"
     return 1
   fi
@@ -631,7 +683,11 @@ while IFS= read -r file; do
           if [[ -n $output_dir ]]; then
             resolved_output_dir="$output_dir"
           else
-            resolved_output_dir="$ROOT/.cache/terminal-adopt/$(/bin/date +%Y%m%d-%H%M%S)"
+            if [[ -w $ROOT ]]; then
+              resolved_output_dir="$ROOT/.cache/terminal-adopt/$(/bin/date +%Y%m%d-%H%M%S)"
+            else
+              resolved_output_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/terminal-adopt/$(/bin/date +%Y%m%d-%H%M%S)"
+            fi
           fi
           mkdir -p "$resolved_output_dir"
         fi
