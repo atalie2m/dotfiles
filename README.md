@@ -245,6 +245,14 @@ To skip this pre-step intentionally, set:
 DOTFILES_SKIP_SHELL_SYNC=1 nix run .#apply -- --host a2m_mac
 ```
 
+Zsh writeability regression tests (isolated + auto cleanup):
+
+```bash
+nix/scripts/shell-zsh-writeability-test.sh
+```
+
+The test script uses temporary `HOME`/`XDG_STATE_HOME` and removes all test files on exit.
+
 ## Local Facts + Secrets (Override Inputs)
 
 This repo no longer uses Git clean/smudge filters. Machine-specific facts and secrets live outside Git and are injected at build time using flake overrides.
