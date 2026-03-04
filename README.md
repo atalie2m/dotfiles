@@ -138,16 +138,22 @@ See `docs/vscode.md` for details.
 
 Terminal.app profiles are managed as `.terminal` files in this repo (`apps/terminal/`), then imported during Home Manager activation.
 Runtime sync operations are implemented through the shared sync adapter core (`nix/scripts/sync-core.sh`) with a Terminal adapter in `nix/scripts/terminal.sh`.
+See `docs/reconciled-surfaces.md` for shared drift workflow and adapter contract.
 
 - Source of truth: `apps/terminal/*.terminal`
-- State guard: stores last-applied profile hashes under `~/.local/state/dotfiles/terminal-app/profiles/*.sha256`
-- Snapshot: stores last-applied profile snapshots under `~/.local/state/dotfiles/terminal-app/snapshots/*.plist`
-- Import behavior: when current hash matches last-applied, repo updates are imported without force
-- Selection: `tools.terminal.terminalApp.defaultProfile` / `startupProfile`
-- Drift guard: apply aborts when current Terminal profile differs from last-applied (`failOnDrift = true`)
-- Missing/failed import guard: apply aborts when managed profiles are still missing after import
-- Backup: saves `com.apple.Terminal.plist` snapshots before import under `~/.local/state/dotfiles/terminal-app/backups/`
-- Forced re-import: enable `tools.terminal.terminalApp.forceImport = true` or use one-shot `DOTFILES_TERMINAL_FORCE_IMPORT=1`
+- Managed directory option: `tools.terminal.terminalApp.managedDir` (default: `apps/terminal`)
+- State guard: stores last-applied profile hashes under `~/.local/state/dotfiles/sync/terminal-app/profiles/*.sha256`
+- Import behavior: when current hash matches last-applied, repo updates apply safely without `--force`
+- Selection: `tools.terminal.terminalApp.defaultProfile` / `tools.terminal.terminalApp.startupProfile`
+- Drift guard: apply aborts when current Terminal profile differs from last-applied (`tools.terminal.terminalApp.failOnDrift = true`)
+- Force behavior: `tools.terminal.terminalApp.forceImport = true` adds `--force` during activation apply
+
+State migration (old -> new layout):
+
+```bash
+nix run .#dotfiles -- migrate-state --dry-run
+nix run .#dotfiles -- migrate-state --force
+```
 
 Current managed profiles:
 - `Atalie Standard` (`apps/terminal/Atalie-Standard.terminal`)
@@ -158,10 +164,6 @@ Current managed profiles:
 
 Current default profile:
 - `Atalie Standard`
-
-To add more profiles later, add more entries under:
-- `tools.terminal.terminalApp.profiles`
-- or `tools.terminal.terminalApp.extraProfiles`
 
 Drift handling workflow:
 
@@ -184,11 +186,11 @@ nix run .#dotfiles -- terminal sync --adopt --in-place --force
 nix run .#dotfiles -- terminal sync --forget
 nix run .#dotfiles -- terminal sync --forget --profile "Atalie Standard"
 
-# 3) Apply (repo-only updates are imported without force when current == lastApplied)
-nix run .#apply -- --host a2m_mac
+# 3) Apply from CLI (same reconciler used by activation)
+nix run .#dotfiles -- terminal sync --apply
 
 # 4) Use force only when you intentionally want to overwrite external edits
-DOTFILES_TERMINAL_FORCE_IMPORT=1 nix run .#apply -- --host a2m_mac
+nix run .#dotfiles -- terminal sync --apply --force
 ```
 
 ### Shell sync (lastApplied 3-way)
@@ -208,9 +210,8 @@ Runtime sync operations are implemented through the shared sync adapter core (`n
   - `~/.config/fish/config.fish` (managed block only; runtime fish entrypoint)
   - `~/.bashrc.local` (managed block only)
   - `~/.config/fish/conf.d/00-dotfiles.fish` (whole file)
-- State guard: `~/.local/state/dotfiles/shell/blocks/*.sha256`
-- Compatibility link:
-  - `shell sync --apply` ensures `~/.zshrc -> .nix/.zshrc`
+- State guard: `~/.local/state/dotfiles/sync/shell/blocks/*.sha256`
+- `shell sync` only manages declared targets; it does not mutate `~/.zshrc` directly.
 
 Managed block markers:
 
@@ -251,12 +252,11 @@ nix run .#dotfiles -- shell sync --forget --target bash-rc
 nix run .#dotfiles -- shell sync --forget --target fish-config
 ```
 
-`nix run .#apply -- --host <host>` now runs `shell sync --apply` before `darwin-rebuild switch`.
-To skip this pre-step intentionally, set:
+`nix run .#apply -- --host <host>` triggers shell reconciliation during Home Manager activation.
+By default activation runs `shell sync --apply` (with drift/conflict failures), and can be tuned via:
 
-```bash
-DOTFILES_SKIP_SHELL_SYNC=1 nix run .#apply -- --host a2m_mac
-```
+- `tools.shell.sync.forceApply = true` to pass `--force`
+- `tools.shell.sync.failOnDrift = false` to run `shell sync --check --details` and continue on drift
 
 Shell entrypoint writeability regression tests (isolated + auto cleanup):
 
@@ -525,12 +525,20 @@ nix run .#bootstrap -- --host a2m_mac --rice full --yes
 # Basic checks
 nix run .#doctor -- --host a2m_mac
 
-# Strict checks (includes nix flake check)
+# Strict checks (includes nix flake check + enabled sync drift checks)
 nix run .#doctor -- --host a2m_mac --strict
 
 # JSON output for CI
 nix run .#doctor -- --json
 ```
+
+`doctor` also warns when legacy sync state directories are still populated and points to:
+
+```bash
+nix run .#dotfiles -- migrate-state --dry-run
+```
+
+For strict sync drift checks, pass `--host` so `doctor` can gate checks by target tool enablement.
 
 ### Apply (build/switch)
 ```bash

@@ -7,6 +7,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/load-lib.sh"
 # shellcheck source=sync-core.sh
 source_dotfiles_script "sync-core.sh"
+# shellcheck disable=SC2317
 
 usage() {
   cat <<'USAGE'
@@ -34,7 +35,7 @@ Options:
   --details            Print concise per-target details
   --diff               Print unified diff (desired vs current)
   --managed-dir <path> Desired managed content directory (default: <repo>/apps/shell/managed)
-  --state-dir <path>   Last-applied hash directory (default: $XDG_STATE_HOME/dotfiles/shell/blocks)
+  --state-dir <path>   Last-applied hash directory (default: $XDG_STATE_HOME/dotfiles/sync/shell/blocks)
   --in-place           With --adopt, overwrite desired files in place
   --force              With --apply, allow overwrite on drift/conflict; with --adopt --in-place, allow conflict overwrite
   --output-dir <path>  With --adopt (staging mode), directory for exported managed content
@@ -65,7 +66,7 @@ default_managed_dir=1
 
 set_repo_root
 managed_dir="$ROOT/apps/shell/managed"
-state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/shell/blocks"
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/sync/shell/blocks"
 
 append_shell_filter() {
   local shell_name="$1"
@@ -596,46 +597,6 @@ write_target_from_desired() {
   write_block_to_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
 }
 
-ensure_zshrc_compat_link() {
-  local zshrc="$HOME/.zshrc"
-  local zdotdir_zshrc="$HOME/.nix/.zshrc"
-  local desired_rel=".nix/.zshrc"
-  local desired_abs="$zdotdir_zshrc"
-  local link_target
-
-  if [[ ! -e $zdotdir_zshrc && ! -L $zdotdir_zshrc ]]; then
-    return 0
-  fi
-
-  if [[ -L $zshrc ]]; then
-    link_target="$(readlink "$zshrc" || true)"
-    if [[ $link_target == "$desired_rel" || $link_target == "$desired_abs" ]]; then
-      return 0
-    fi
-
-    rm -f "$zshrc"
-    if ln -s "$desired_rel" "$zshrc"; then
-      log "updated ~/.zshrc compat symlink -> $desired_rel"
-      return 0
-    fi
-    log "failed to update ~/.zshrc compat symlink"
-    return 1
-  fi
-
-  if [[ -e $zshrc ]]; then
-    log "skipped ~/.zshrc compat link: existing file is not a symlink"
-    return 0
-  fi
-
-  if ln -s "$desired_rel" "$zshrc"; then
-    log "created ~/.zshrc compat symlink -> $desired_rel"
-    return 0
-  fi
-
-  log "failed to create ~/.zshrc compat symlink"
-  return 1
-}
-
 sync_adapter_list_items() {
   local id desired_path actual_path
 
@@ -753,14 +714,6 @@ sync_adapter_on_no_selection() {
   die "no shell targets selected"
 }
 
-sync_adapter_after_apply() {
-  if target_selected "zsh-zdotdir"; then
-    ensure_zshrc_compat_link
-    return $?
-  fi
-  return 0
-}
-
 sync_adapter_print_summary() {
   if [[ $mode == "forget" ]]; then
     log "summary: forgotten=$sync_core_forgotten missing_state=$sync_core_missing_state"
@@ -771,6 +724,7 @@ sync_adapter_print_summary() {
   log "managed dir: $managed_dir"
   log "state dir: $state_dir"
   [[ -n ${sync_core_resolved_output_dir:-} ]] && log "staging dir: $sync_core_resolved_output_dir"
+  return 0
 }
 
 sync_core_mode="$mode"

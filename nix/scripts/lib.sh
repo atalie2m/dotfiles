@@ -140,8 +140,10 @@ resolve_repo_worktree_root_for() {
 source_dotfiles_script() {
   local script_name="$1"
   local primary="${DOTFILES_SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/$script_name"
-  local fallback="$(pwd)/nix/scripts/$script_name"
+  local fallback
   local target="$primary"
+
+  fallback="$(pwd)/nix/scripts/$script_name"
 
   if [[ ! -f $target ]]; then
     if [[ -f $fallback ]]; then

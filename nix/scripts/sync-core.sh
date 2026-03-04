@@ -410,8 +410,7 @@ sync_core_log_action() {
   invalid)
     log "invalid state for '$1' ($2)"
     ;;
-  *)
-    ;;
+  *) ;;
   esac
 }
 
@@ -854,13 +853,13 @@ sync_core_run_sync() {
     sync_adapter_on_no_selection
   fi
 
-  sync_core_print_summary
-
   if [[ $sync_core_mode == "apply" ]] && _sync_core_has_function sync_adapter_after_apply; then
     if ! sync_adapter_after_apply; then
       sync_core_errors=$((sync_core_errors + 1))
     fi
   fi
+
+  sync_core_print_summary
 
   sync_core_exit_for_mode
 }

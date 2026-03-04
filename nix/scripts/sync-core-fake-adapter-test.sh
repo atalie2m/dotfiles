@@ -39,7 +39,7 @@ sha_file() {
 assert_eq() {
   local expected="$1"
   local actual="$2"
-  if [[ "$expected" != "$actual" ]]; then
+  if [[ $expected != "$actual" ]]; then
     return 1
   fi
   return 0

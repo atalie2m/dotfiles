@@ -195,6 +195,9 @@
                 -e SC1091 \
                 -e SC2016 \
                 -e SC2034 \
+                -e SC2129 \
+                -e SC2154 \
+                -e SC2317 \
                 "''${files[@]}"
               touch "$out"
             '';
@@ -226,7 +229,7 @@
               export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
               exec ${scripts}/dotfiles.sh "$@"
             ''}";
-              meta.description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/list-tools).";
+              meta.description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/migrate-state/list-tools).";
             };
             update = {
               type = "app";

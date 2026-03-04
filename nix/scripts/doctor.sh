@@ -93,6 +93,49 @@ record_check() {
   fi
 }
 
+state_dir_has_entries() {
+  local dir="$1"
+  local entry
+
+  [[ -d $dir ]] || return 1
+  entry="$(find "$dir" -mindepth 1 -print -quit 2>/dev/null || true)"
+  [[ -n $entry ]]
+}
+
+eval_darwin_target_bool() {
+  local target_name="$1"
+  local option_path="$2"
+
+  nix eval --raw "$ROOT#darwinConfigurations.${target_name}.config.${option_path}" \
+    --apply 'x: if x then "true" else "false"' \
+    --override-input local "$FACTS" \
+    --override-input secrets "$SECRETS" \
+    2>/dev/null || true
+}
+
+state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+legacy_shell_state_dir="$state_home/dotfiles/shell/blocks"
+legacy_terminal_state_dir="$state_home/dotfiles/terminal-app/profiles"
+legacy_terminal_fallback_state_dir="$state_home/dotfiles/terminal/profiles"
+
+if state_dir_has_entries "$legacy_shell_state_dir"; then
+  record_check "state.migration.shell" "warn" "legacy shell sync state found: $legacy_shell_state_dir (run: nix run .#dotfiles -- migrate-state --dry-run)"
+else
+  record_check "state.migration.shell" "ok" "no legacy shell sync state detected"
+fi
+
+if state_dir_has_entries "$legacy_terminal_state_dir"; then
+  record_check "state.migration.terminalApp" "warn" "legacy terminal-app sync state found: $legacy_terminal_state_dir (run: nix run .#dotfiles -- migrate-state --dry-run)"
+else
+  record_check "state.migration.terminalApp" "ok" "no legacy terminal-app sync state detected"
+fi
+
+if state_dir_has_entries "$legacy_terminal_fallback_state_dir"; then
+  record_check "state.migration.terminalLegacy" "warn" "legacy terminal sync state found: $legacy_terminal_fallback_state_dir (run: nix run .#dotfiles -- migrate-state --dry-run)"
+else
+  record_check "state.migration.terminalLegacy" "ok" "no legacy terminal sync state detected"
+fi
+
 facts_file="$FACTS_DIR/facts.nix"
 if [[ -f $facts_file ]]; then
   record_check "facts.exists" "ok" "$facts_file"
@@ -260,6 +303,8 @@ else
   record_check "darwin.rosetta" "ok" "Not required on $machine_arch"
 fi
 
+resolved_target=""
+
 if command -v nix >/dev/null 2>&1; then
   if targets=$(list_darwin_targets "$ROOT" "$FACTS" "$SECRETS"); then
     if [[ -z $targets ]]; then
@@ -271,6 +316,7 @@ if command -v nix >/dev/null 2>&1; then
         target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS" || true)
       fi
       if [[ -n $target ]]; then
+        resolved_target="$target"
         if nix eval --raw "$ROOT#darwinConfigurations.${target}.system.drvPath" \
           --override-input local "$FACTS" \
           --override-input secrets "$SECRETS" \
@@ -305,25 +351,69 @@ if [[ $strict -eq 1 ]]; then
 
   if [[ $(uname -s 2>/dev/null || true) == "Darwin" ]]; then
     terminal_script="$SCRIPT_DIR/terminal.sh"
-    if [[ -x $terminal_script ]]; then
-      if "$terminal_script" sync --check >/dev/null 2>&1; then
-        record_check "terminal.sync" "ok" "terminal sync check passed"
-      else
-        record_check "terminal.sync" "fail" "terminal sync check failed (run: nix run .#dotfiles -- terminal sync --check)"
-      fi
-    else
-      record_check "terminal.sync" "warn" "terminal sync script not found; skipped"
-    fi
-
     shell_script="$SCRIPT_DIR/shell.sh"
-    if [[ -x $shell_script ]]; then
-      if "$shell_script" sync --check >/dev/null 2>&1; then
-        record_check "shell.sync" "ok" "shell sync check passed"
-      else
-        record_check "shell.sync" "fail" "shell sync check failed (run: nix run .#dotfiles -- shell sync --check)"
-      fi
+
+    if [[ -z $resolved_target ]]; then
+      record_check "terminal.sync" "warn" "strict drift check skipped (pass --host to resolve target)"
+      record_check "shell.sync" "warn" "strict drift check skipped (pass --host to resolve target)"
     else
-      record_check "shell.sync" "warn" "shell sync script not found; skipped"
+      terminal_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.terminal.terminalApp.enable")"
+      if [[ -z $terminal_enabled ]]; then
+        terminal_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.terminal.enable")"
+      fi
+      case "$terminal_enabled" in
+      true)
+        if [[ -x $terminal_script ]]; then
+          if terminal_output="$("$terminal_script" sync --check --details 2>&1)"; then
+            record_check "terminal.sync" "ok" "terminal sync check passed"
+          else
+            terminal_summary="$(printf '%s\n' "$terminal_output" | /usr/bin/awk '/summary:/ { print; exit }')"
+            if [[ -n $terminal_summary ]]; then
+              record_check "terminal.sync" "fail" "terminal drift check failed: $terminal_summary (inspect: nix run .#dotfiles -- terminal sync --check --details --diff)"
+            else
+              record_check "terminal.sync" "fail" "terminal drift check failed (inspect: nix run .#dotfiles -- terminal sync --check --details --diff)"
+            fi
+          fi
+        else
+          record_check "terminal.sync" "warn" "terminal sync script not found; skipped"
+        fi
+        ;;
+      false)
+        record_check "terminal.sync" "ok" "disabled in target $resolved_target; skipped"
+        ;;
+      *)
+        record_check "terminal.sync" "warn" "unable to resolve terminal enablement for target $resolved_target; skipped"
+        ;;
+      esac
+
+      shell_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.sync.enable")"
+      if [[ -z $shell_enabled ]]; then
+        shell_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.enable")"
+      fi
+      case "$shell_enabled" in
+      true)
+        if [[ -x $shell_script ]]; then
+          if shell_output="$("$shell_script" sync --check --details 2>&1)"; then
+            record_check "shell.sync" "ok" "shell sync check passed"
+          else
+            shell_summary="$(printf '%s\n' "$shell_output" | /usr/bin/awk '/summary:/ { print; exit }')"
+            if [[ -n $shell_summary ]]; then
+              record_check "shell.sync" "fail" "shell drift check failed: $shell_summary (inspect: nix run .#dotfiles -- shell sync --check --details --diff)"
+            else
+              record_check "shell.sync" "fail" "shell drift check failed (inspect: nix run .#dotfiles -- shell sync --check --details --diff)"
+            fi
+          fi
+        else
+          record_check "shell.sync" "warn" "shell sync script not found; skipped"
+        fi
+        ;;
+      false)
+        record_check "shell.sync" "ok" "disabled in target $resolved_target; skipped"
+        ;;
+      *)
+        record_check "shell.sync" "warn" "unable to resolve shell enablement for target $resolved_target; skipped"
+        ;;
+      esac
     fi
   else
     record_check "terminal.sync" "ok" "skipped on non-Darwin host"

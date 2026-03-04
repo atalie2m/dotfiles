@@ -85,15 +85,6 @@ resolve_inputs
 
 target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
 
-if [[ $action == "switch" && ${DOTFILES_SKIP_SHELL_SYNC:-0} != "1" ]]; then
-  shell_sync_script="$SCRIPT_DIR/shell.sh"
-  if [[ -x $shell_sync_script ]]; then
-    "$shell_sync_script" sync --apply
-  else
-    log "shell sync script not found or not executable; skipping shell managed-block apply"
-  fi
-fi
-
 if command -v darwin-rebuild >/dev/null 2>&1; then
   rebuild_cmd=(darwin-rebuild)
 else
@@ -109,13 +100,6 @@ rebuild_args=("$action"
 
 if [[ ${#passthrough[@]} -gt 0 ]]; then
   rebuild_args+=("${passthrough[@]}")
-fi
-
-force_import_flag="/tmp/dotfiles-terminal-force-import"
-if [[ ${DOTFILES_TERMINAL_FORCE_IMPORT:-0} == "1" ]]; then
-  printf '1\n' >"$force_import_flag"
-  chmod 0644 "$force_import_flag" >/dev/null 2>&1 || true
-  trap 'rm -f "$force_import_flag"' EXIT
 fi
 
 if [[ $EUID -eq 0 || $no_sudo -eq 1 ]]; then

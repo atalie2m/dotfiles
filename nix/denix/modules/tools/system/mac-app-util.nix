@@ -38,7 +38,7 @@ delib.module {
       toDir = cfg.homeTrampolines.toDir;
     in
     {
-      services.mac-app-util.enable = lib.mkForce false;
+      services.mac-app-util.enable = lib.mkDefault false;
       system.activationScripts.macAppUtilTrampolines = lib.mkIf cfg.systemService.enable {
         deps = [ "applications" ];
         text = ''

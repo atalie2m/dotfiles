@@ -7,11 +7,13 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$SCRIPT_DIR/load-lib.sh"
 # shellcheck source=sync-core.sh
 source_dotfiles_script "sync-core.sh"
+# shellcheck disable=SC2317
 
 usage() {
   cat <<'USAGE'
 Usage:
   nix run .#dotfiles -- terminal sync --check [--details] [--diff] [--profile <name>] [--dir <path>] [--state-dir <path>]
+  nix run .#dotfiles -- terminal sync --apply [--details] [--diff] [--profile <name>] [--dir <path>] [--state-dir <path>] [--force] [--default-profile <name>] [--startup-profile <name>]
   nix run .#dotfiles -- terminal sync --adopt [--details] [--diff] [--profile <name>] [--dir <path>] [--state-dir <path>] [--in-place] [--force] [--output-dir <path>]
   nix run .#dotfiles -- terminal sync --forget [--profile <name>] [--dir <path>] [--state-dir <path>]
 
@@ -21,15 +23,18 @@ Description:
 
 Options:
   --check             Detect drift/missing/invalid (default mode)
+  --apply             Apply repo profiles into Terminal preferences
   --adopt             Export current Terminal.app values for drifted profiles
   --forget            Remove last-applied hash state (all managed profiles or one via --profile)
   --details           Print concise per-profile drift details (font/cursor-related keys)
   --diff              Print unified diff (repo desired vs current actual)
   --profile <name>    Restrict to one profile name
   --dir <path>        Profiles directory (default: <repo>/apps/terminal)
-  --state-dir <path>  Last-applied hash directory (default: $XDG_STATE_HOME/dotfiles/terminal-app/profiles)
+  --state-dir <path>  Last-applied hash directory (default: $XDG_STATE_HOME/dotfiles/sync/terminal-app/profiles)
   --in-place          With --adopt, overwrite repo files in place (default is staging output)
-  --force             With --adopt --in-place, allow overwrite for 3-way conflicts
+  --force             With --apply, force overwrite on unresolved drift; with --adopt --in-place, allow conflict overwrite
+  --default-profile   With --apply, set "Default Window Settings" to profile name
+  --startup-profile   With --apply, set "Startup Window Settings" to profile name
   --output-dir <path> With --adopt (staging mode), directory for exported .terminal files
 USAGE
 }
@@ -53,22 +58,26 @@ show_diff=0
 in_place=0
 force=0
 output_dir=""
+default_profile=""
+startup_profile=""
 default_profiles_dir=1
 
 set_repo_root
 profiles_dir="$ROOT/apps/terminal"
 real_plist="$HOME/Library/Preferences/com.apple.Terminal.plist"
 plist="$real_plist"
-state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/terminal-app/profiles"
-legacy_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/terminal/profiles"
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/sync/terminal-app/profiles"
 work_plist=""
 profile_index=""
+state_update_list=""
 profile_file_count=0
 profile_invalid_seed=0
 
 cleanup() {
   [[ -n ${work_plist:-} ]] && rm -f "$work_plist"
   [[ -n ${profile_index:-} ]] && rm -f "$profile_index"
+  [[ -n ${state_update_list:-} ]] && rm -f "$state_update_list"
+  return 0
 }
 trap cleanup EXIT
 
@@ -93,15 +102,30 @@ sync_cli_parse_script_option() {
     sync_core_cli_consumed=2
     return 0
     ;;
+  --default-profile)
+    [[ $# -lt 2 ]] && die "missing value for --default-profile"
+    default_profile="$2"
+    sync_core_cli_consumed=2
+    return 0
+    ;;
+  --startup-profile)
+    [[ $# -lt 2 ]] && die "missing value for --startup-profile"
+    startup_profile="$2"
+    sync_core_cli_consumed=2
+    return 0
+    ;;
   esac
 
   return 1
 }
 
-sync_core_parse_cli_args 0 "$@"
+sync_core_parse_cli_args 1 "$@"
 
 sync_core_validate_adopt_flags "$mode" "$in_place" "$output_dir"
-sync_core_validate_force_usage "$mode" "$in_place" "$force" 0 "--in-place/--force/--output-dir are only valid with --adopt"
+sync_core_validate_force_usage "$mode" "$in_place" "$force" 1 "--force is only valid with --apply or --adopt --in-place"
+if [[ $mode != "apply" && (-n $default_profile || -n $startup_profile) ]]; then
+  die "--default-profile/--startup-profile are only valid with --apply"
+fi
 
 if [[ $default_profiles_dir -eq 1 ]]; then
   worktree_root="$(resolve_repo_worktree_root_for "apps/terminal" || true)"
@@ -118,13 +142,16 @@ fi
 if [[ $mode != "forget" ]]; then
   [[ -d $profiles_dir ]] || die "profiles directory not found: $profiles_dir"
 
+  work_plist="$(mktemp "${TMPDIR:-/tmp}/terminal-sync.XXXXXX.plist")"
+
   if [[ -n ${DOTFILES_TERMINAL_SYNC_PLIST:-} ]]; then
     if [[ ! -f ${DOTFILES_TERMINAL_SYNC_PLIST} ]]; then
       die "plist override does not exist: $DOTFILES_TERMINAL_SYNC_PLIST"
     fi
-    plist="$DOTFILES_TERMINAL_SYNC_PLIST"
+    if ! cp "$DOTFILES_TERMINAL_SYNC_PLIST" "$work_plist"; then
+      die "failed to initialize work plist from override: $DOTFILES_TERMINAL_SYNC_PLIST"
+    fi
   else
-    work_plist="$(mktemp "${TMPDIR:-/tmp}/terminal-sync.XXXXXX.plist")"
     if ! /usr/bin/defaults export com.apple.Terminal - >"$work_plist" 2>/dev/null; then
       if [[ -f $real_plist ]]; then
         cp "$real_plist" "$work_plist"
@@ -132,7 +159,12 @@ if [[ $mode != "forget" ]]; then
         /usr/libexec/PlistBuddy -c "Clear dict" "$work_plist" >/dev/null 2>&1 || true
       fi
     fi
-    plist="$work_plist"
+  fi
+
+  plist="$work_plist"
+
+  if [[ $mode == "apply" ]]; then
+    state_update_list="$(mktemp "${TMPDIR:-/tmp}/terminal-sync-state.XXXXXX")"
   fi
 fi
 
@@ -154,14 +186,6 @@ profile_state_key() {
   printf '%s.%s\n' "$prefix" "$short_hash"
 }
 
-legacy_state_file() {
-  local name="$1"
-  local full_hash
-
-  full_hash="$(printf '%s' "$name" | /usr/bin/shasum -a 256 | /usr/bin/awk '{print $1}')"
-  printf '%s/%s.sha256\n' "$legacy_state_dir" "$full_hash"
-}
-
 profile_name_from_file() {
   local file="$1"
   /usr/bin/plutil -extract name raw "$file" 2>/dev/null || true
@@ -172,6 +196,81 @@ has_profile() {
   local escaped_name
   escaped_name="$(escape_plist_key "$name")"
   /usr/libexec/PlistBuddy -c "Print :\"Window Settings\":\"$escaped_name\":name" "$plist" >/dev/null 2>&1
+}
+
+ensure_window_settings_dict() {
+  if [[ ! -f $plist ]]; then
+    /usr/libexec/PlistBuddy -c "Clear dict" "$plist" >/dev/null 2>&1 || true
+  fi
+
+  if ! /usr/libexec/PlistBuddy -c 'Print :"Window Settings"' "$plist" >/dev/null 2>&1; then
+    /usr/libexec/PlistBuddy -c 'Add :"Window Settings" dict' "$plist" >/dev/null 2>&1
+  fi
+}
+
+set_global_profile_setting() {
+  local key="$1"
+  local profile_name="$2"
+  local escaped_profile
+
+  escaped_profile="$(escape_plist_key "$profile_name")"
+  /usr/libexec/PlistBuddy -c "Delete :\"$key\"" "$plist" >/dev/null 2>&1 || true
+  /usr/libexec/PlistBuddy -c "Add :\"$key\" string \"$escaped_profile\"" "$plist" >/dev/null 2>&1
+}
+
+canonical_hash_from_profile_in_plist() {
+  local plist_path="$1"
+  local name="$2"
+  local escaped_name tmp_xml tmp_bin hash
+
+  escaped_name="$(escape_plist_key "$name")"
+  tmp_xml="$(mktemp)"
+  tmp_bin="$(mktemp)"
+
+  if ! /usr/libexec/PlistBuddy -x -c "Print :\"Window Settings\":\"$escaped_name\"" "$plist_path" >"$tmp_xml" 2>/dev/null; then
+    rm -f "$tmp_xml" "$tmp_bin"
+    return 1
+  fi
+
+  if ! /usr/bin/plutil -convert binary1 -o "$tmp_bin" "$tmp_xml" >/dev/null 2>&1; then
+    rm -f "$tmp_xml" "$tmp_bin"
+    return 1
+  fi
+
+  hash="$(sync_core_hash_file "$tmp_bin" || true)"
+  rm -f "$tmp_xml" "$tmp_bin"
+
+  [[ -n $hash ]] || return 1
+  printf '%s\n' "$hash"
+}
+
+canonical_hash_from_profile() {
+  local name="$1"
+  canonical_hash_from_profile_in_plist "$plist" "$name"
+}
+
+write_last_applied_hash_now() {
+  local id="$1"
+  local hash="$2"
+  local key state_file
+
+  [[ -n $hash ]] || return 1
+
+  key="$(profile_state_key "$id")"
+  state_file="$(sync_core_state_file_for_key "$key")"
+  mkdir -p "$sync_core_state_dir"
+  printf '%s\n' "$hash" >"$state_file"
+}
+
+queue_state_update() {
+  local id="$1"
+
+  [[ -n $state_update_list ]] || return 1
+  if /usr/bin/grep -Fxq "$id" "$state_update_list" 2>/dev/null; then
+    return 0
+  fi
+
+  printf '%s\n' "$id" >>"$state_update_list"
 }
 
 extract_profile_binary() {
@@ -422,37 +521,25 @@ sync_adapter_state_key() {
 
 sync_adapter_read_last_applied_hash() {
   local id="$1"
-  local state_file legacy_file
+  local state_file
 
   state_file="$(sync_core_state_file_for_key "$(profile_state_key "$id")")"
   if [[ -f $state_file ]]; then
     head -n 1 "$state_file" | tr -d '[:space:]'
-    return 0
-  fi
-
-  legacy_file="$(legacy_state_file "$id")"
-  if [[ -f $legacy_file ]]; then
-    head -n 1 "$legacy_file" | tr -d '[:space:]'
   fi
 }
 
 sync_adapter_forget_last_applied_hash() {
   local id="$1"
-  local state_file legacy_file removed=0
+  local state_file
 
   state_file="$(sync_core_state_file_for_key "$(profile_state_key "$id")")"
   if [[ -f $state_file ]]; then
     rm -f "$state_file"
-    removed=1
+    return 0
   fi
 
-  legacy_file="$(legacy_state_file "$id")"
-  if [[ -f $legacy_file ]]; then
-    rm -f "$legacy_file"
-    removed=1
-  fi
-
-  return $((1 - removed))
+  return 1
 }
 
 sync_adapter_extract_desired() {
@@ -476,7 +563,209 @@ sync_adapter_extract_actual() {
 }
 
 sync_adapter_write_desired_to_actual() {
-  return 1
+  local id="$1"
+  local desired_meta="$2"
+  local _actual_meta="$3"
+  local escaped_id desired_tmp actual_tmp desired_hash actual_hash
+
+  escaped_id="$(escape_plist_key "$id")"
+
+  if ! ensure_window_settings_dict; then
+    log "failed to ensure Window Settings container in plist"
+    return 1
+  fi
+
+  /usr/libexec/PlistBuddy -c "Delete :\"Window Settings\":\"$escaped_id\"" "$plist" >/dev/null 2>&1 || true
+
+  if ! /usr/libexec/PlistBuddy -c "Add :\"Window Settings\":\"$escaped_id\" dict" "$plist" >/dev/null 2>&1; then
+    log "failed to create profile container: $id"
+    return 1
+  fi
+
+  if ! /usr/libexec/PlistBuddy -c "Merge \"$desired_meta\" :\"Window Settings\":\"$escaped_id\"" "$plist" >/dev/null 2>&1; then
+    log "failed to merge desired profile into plist: $id ($desired_meta)"
+    return 1
+  fi
+
+  if ! has_profile "$id"; then
+    log "profile still missing after merge: $id"
+    return 1
+  fi
+
+  desired_tmp="$(mktemp)"
+  actual_tmp="$(mktemp)"
+
+  if ! sync_adapter_extract_desired "$id" "$desired_tmp" "$desired_meta"; then
+    rm -f "$desired_tmp" "$actual_tmp"
+    log "failed to extract desired profile after merge: $id"
+    return 1
+  fi
+
+  if ! extract_profile_binary "$id" "$actual_tmp"; then
+    rm -f "$desired_tmp" "$actual_tmp"
+    log "failed to extract merged profile: $id"
+    return 1
+  fi
+
+  desired_hash="$(sync_core_hash_file "$desired_tmp" || true)"
+  actual_hash="$(sync_core_hash_file "$actual_tmp" || true)"
+  rm -f "$desired_tmp" "$actual_tmp"
+
+  if [[ -z $desired_hash || -z $actual_hash || $desired_hash != "$actual_hash" ]]; then
+    log "merged profile hash mismatch: $id"
+    return 1
+  fi
+
+  return 0
+}
+
+sync_adapter_write_last_applied_hash() {
+  local id="$1"
+  local hash="$2"
+
+  if [[ $mode == "apply" ]]; then
+    queue_state_update "$id"
+    return $?
+  fi
+
+  write_last_applied_hash_now "$id" "$hash"
+}
+
+sync_adapter_after_apply() {
+  local needs_commit=0
+  local verify_plist state_name applied_hash current_default current_startup
+  local state_failures=0
+
+  if [[ $mode != "apply" ]]; then
+    return 0
+  fi
+
+  if [[ ${sync_core_errors:-0} -gt 0 || ${sync_core_unresolved:-0} -gt 0 ]]; then
+    log "skipping apply commit due to pre-commit errors or unresolved drift"
+    return 0
+  fi
+
+  if [[ ${sync_core_applied:-0} -gt 0 ]]; then
+    needs_commit=1
+  fi
+
+  if [[ -n $default_profile ]]; then
+    if ! has_profile "$default_profile"; then
+      log "default profile not found in Terminal settings: $default_profile"
+      return 1
+    fi
+
+    if ! set_global_profile_setting "Default Window Settings" "$default_profile"; then
+      log "failed to set Default Window Settings in plist: $default_profile"
+      return 1
+    fi
+    needs_commit=1
+  fi
+
+  if [[ -n $startup_profile ]]; then
+    if ! has_profile "$startup_profile"; then
+      log "startup profile not found in Terminal settings: $startup_profile"
+      return 1
+    fi
+
+    if ! set_global_profile_setting "Startup Window Settings" "$startup_profile"; then
+      log "failed to set Startup Window Settings in plist: $startup_profile"
+      return 1
+    fi
+    needs_commit=1
+  fi
+
+  if [[ $needs_commit -eq 0 && (! -f $state_update_list || ! -s $state_update_list) ]]; then
+    return 0
+  fi
+
+  if [[ $needs_commit -eq 1 ]]; then
+    if [[ ${DOTFILES_TERMINAL_SYNC_FAIL_COMMIT:-0} == "1" ]]; then
+      log "failed to commit Terminal preferences (test hook)"
+      return 1
+    fi
+
+    if [[ -n ${DOTFILES_TERMINAL_SYNC_PLIST:-} ]]; then
+      if ! cp "$work_plist" "$DOTFILES_TERMINAL_SYNC_PLIST"; then
+        log "failed to write committed plist: $DOTFILES_TERMINAL_SYNC_PLIST"
+        return 1
+      fi
+    elif ! /usr/bin/defaults import com.apple.Terminal "$work_plist"; then
+      log "failed to import committed Terminal preferences"
+      return 1
+    fi
+  fi
+
+  verify_plist="$(mktemp "${TMPDIR:-/tmp}/terminal-sync-verify.XXXXXX.plist")"
+  if [[ $needs_commit -eq 1 ]]; then
+    if [[ -n ${DOTFILES_TERMINAL_SYNC_PLIST:-} ]]; then
+      if ! cp "$DOTFILES_TERMINAL_SYNC_PLIST" "$verify_plist"; then
+        rm -f "$verify_plist"
+        log "failed to load committed plist for verification: $DOTFILES_TERMINAL_SYNC_PLIST"
+        return 1
+      fi
+    elif ! /usr/bin/defaults export com.apple.Terminal - >"$verify_plist" 2>/dev/null; then
+      if [[ -f $real_plist ]]; then
+        cp "$real_plist" "$verify_plist"
+      else
+        rm -f "$verify_plist"
+        log "failed to export Terminal preferences after import"
+        return 1
+      fi
+    fi
+  elif ! cp "$work_plist" "$verify_plist"; then
+    rm -f "$verify_plist"
+    log "failed to prepare verification plist"
+    return 1
+  fi
+
+  if [[ -n $default_profile ]]; then
+    current_default="$(
+      /usr/libexec/PlistBuddy -c 'Print :"Default Window Settings"' "$verify_plist" 2>/dev/null || true
+    )"
+    if [[ $current_default != "$default_profile" ]]; then
+      rm -f "$verify_plist"
+      log "failed to apply Default Window Settings to $default_profile (current: ${current_default:-<missing>})"
+      return 1
+    fi
+  fi
+
+  if [[ -n $startup_profile ]]; then
+    current_startup="$(
+      /usr/libexec/PlistBuddy -c 'Print :"Startup Window Settings"' "$verify_plist" 2>/dev/null || true
+    )"
+    if [[ $current_startup != "$startup_profile" ]]; then
+      rm -f "$verify_plist"
+      log "failed to apply Startup Window Settings to $startup_profile (current: ${current_startup:-<missing>})"
+      return 1
+    fi
+  fi
+
+  if [[ -f $state_update_list ]]; then
+    while IFS= read -r state_name; do
+      [[ -z $state_name ]] && continue
+
+      applied_hash="$(canonical_hash_from_profile_in_plist "$verify_plist" "$state_name" || true)"
+      if [[ -z $applied_hash ]]; then
+        log "failed to hash applied profile for state update: $state_name"
+        state_failures=1
+        continue
+      fi
+
+      if ! write_last_applied_hash_now "$state_name" "$applied_hash"; then
+        log "failed to write lastApplied state for profile: $state_name"
+        state_failures=1
+      fi
+    done <"$state_update_list"
+  fi
+
+  rm -f "$verify_plist"
+
+  if [[ $needs_commit -eq 1 ]]; then
+    /usr/bin/killall cfprefsd >/dev/null 2>&1 || true
+  fi
+
+  [[ $state_failures -eq 0 ]]
 }
 
 sync_adapter_export_actual() {
@@ -561,13 +850,14 @@ sync_adapter_on_no_selection() {
 
 sync_adapter_print_summary() {
   if [[ $mode == "forget" ]]; then
-    log "summary: forgotten=$sync_core_forgotten missing_state=$sync_core_missing_state invalid=$sync_core_invalid"
+    log "summary: forgotten=${sync_core_forgotten:-0} missing_state=${sync_core_missing_state:-0} invalid=${sync_core_invalid:-0}"
     return 0
   fi
 
-  log "summary: checked=$sync_core_checked in_sync=$sync_core_in_sync pending=$sync_core_pending state_stale=$sync_core_state_stale drift=$sync_core_drift conflicts=$sync_core_conflicts drift_missing=$sync_core_drift_missing missing=$sync_core_missing untracked=$sync_core_untracked staged=$sync_core_staged adopted=$sync_core_adopted refused=$sync_core_refused invalid=$sync_core_invalid errors=$sync_core_errors"
+  log "summary: checked=${sync_core_checked:-0} in_sync=${sync_core_in_sync:-0} pending=${sync_core_pending:-0} state_stale=${sync_core_state_stale:-0} drift=${sync_core_drift:-0} conflicts=${sync_core_conflicts:-0} drift_missing=${sync_core_drift_missing:-0} missing=${sync_core_missing:-0} untracked=${sync_core_untracked:-0} staged=${sync_core_staged:-0} adopted=${sync_core_adopted:-0} refused=${sync_core_refused:-0} invalid=${sync_core_invalid:-0} errors=${sync_core_errors:-0}"
   log "state dir: $state_dir"
   [[ -n ${sync_core_resolved_output_dir:-} ]] && log "staging dir: $sync_core_resolved_output_dir"
+  return 0
 }
 
 sync_core_mode="$mode"

@@ -41,11 +41,11 @@ delib.module {
       # Enable brew-nix
       brew-nix.enable = true;
 
-      # Keep Nix apps discoverable via Spotlight and Dock pins stable
-      services.mac-app-util.enable = lib.mkIf (cfg.autoTrampolines.enable && !cfg.appLinks.enable) true;
-      home-manager.sharedModules = lib.mkIf (cfg.autoTrampolines.enable && !cfg.appLinks.enable) [
-        inputs.mac-app-util.homeManagerModules.default
-      ];
+      # Dependency signal only: mac-app-util ownership lives in tools.system.macAppUtil.
+      myconfig.tools.system.macAppUtil = lib.mkIf (cfg.autoTrampolines.enable && !cfg.appLinks.enable) {
+        enable = lib.mkOverride 900 true;
+        systemService.enable = lib.mkOverride 900 true;
+      };
 
       # Install casks as system packages
       environment.systemPackages = map (cask: pkgs.brewCasks.${cask}) caskNames;

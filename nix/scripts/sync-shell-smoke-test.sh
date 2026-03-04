@@ -48,8 +48,8 @@ run_shell_sync() {
   HOME="$home_dir" \
     XDG_STATE_HOME="$state_dir" \
     "$SHELL_SYNC_SCRIPT" sync "$@" \
-      --managed-dir "$managed_dir" \
-      --state-dir "$state_dir/blocks"
+    --managed-dir "$managed_dir" \
+    --state-dir "$state_dir/blocks"
 }
 
 printf 'test: running shell sync smoke test\n'
