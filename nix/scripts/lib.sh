@@ -36,16 +36,24 @@ resolve_inputs() {
   SECRETS="${SECRETS:-path:${SECRETS_DIR}}"
 }
 
+flake_ref_for_root() {
+  local root="$1"
+  printf 'path:%s\n' "$root"
+}
+
 list_darwin_targets() {
   local root="$1"
   local facts="$2"
   local secrets="$3"
+  local root_ref
 
   if ! command -v nix >/dev/null 2>&1; then
     return 1
   fi
 
-  nix eval --raw "$root#darwinConfigurations" \
+  root_ref="$(flake_ref_for_root "$root")"
+
+  nix eval --raw "$root_ref#darwinConfigurations" \
     --apply 'x: builtins.concatStringsSep "\n" (builtins.attrNames x)' \
     --override-input local "$facts" \
     --override-input secrets "$secrets" \
@@ -135,6 +143,93 @@ resolve_repo_worktree_root_for() {
   fi
 
   return 1
+}
+
+parse_target_args() {
+  local value_options="${PARSE_TARGET_VALUE_OPTIONS:-}"
+
+  PARSED_HOST=""
+  PARSED_RICE=""
+  PARSED_ARGS=()
+  PARSED_PASSTHROUGH=()
+  PARSED_HAS_PASSTHROUGH=0
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --host)
+      [[ $# -lt 2 ]] && die "missing value for --host"
+      PARSED_HOST="$2"
+      shift 2
+      ;;
+    --rice)
+      [[ $# -lt 2 ]] && die "missing value for --rice"
+      PARSED_RICE="$2"
+      shift 2
+      ;;
+    --)
+      shift
+      PARSED_HAS_PASSTHROUGH=1
+      PARSED_PASSTHROUGH=("$@")
+      break
+      ;;
+    *)
+      if [[ $1 == --* ]]; then
+        if [[ -n $value_options && " $value_options " == *" $1 "* ]]; then
+          [[ $# -lt 2 ]] && die "missing value for $1"
+          PARSED_ARGS+=("$1" "$2")
+          shift 2
+          continue
+        fi
+        PARSED_ARGS+=("$1")
+      elif [[ -z $PARSED_HOST ]]; then
+        PARSED_HOST="$1"
+      else
+        PARSED_ARGS+=("$1")
+      fi
+      shift
+      ;;
+    esac
+  done
+}
+
+require_writable_checkout() {
+  local root="$1"
+  local start_dir="${2:-$PWD}"
+  local resolved_root="$root"
+
+  if [[ $resolved_root == /nix/store/* ]]; then
+    if [[ -f "$start_dir/flake.nix" && -f "$start_dir/flake.lock" && -w "$start_dir/flake.nix" && -w "$start_dir/flake.lock" ]]; then
+      log "resolved store root for CLI; using writable checkout at $start_dir for update"
+      resolved_root="$start_dir"
+    fi
+  fi
+
+  if [[ ! -f "$resolved_root/flake.lock" ]]; then
+    die "flake.lock not found under $resolved_root (update requires a writable checkout)"
+  fi
+
+  if [[ ! -w "$resolved_root/flake.nix" || ! -w "$resolved_root/flake.lock" ]]; then
+    die "update requires a writable flake checkout (current root: $resolved_root)"
+  fi
+
+  printf '%s\n' "$resolved_root"
+}
+
+ensure_inputs_dirs() {
+  local facts_dir="$1"
+  local secrets_dir="$2"
+
+  if [[ ! -d $facts_dir ]]; then
+    mkdir -p "$facts_dir"
+    log "created $facts_dir"
+  fi
+  chmod 700 "$facts_dir"
+
+  if [[ ! -d $secrets_dir ]]; then
+    mkdir -p "$secrets_dir"
+    log "created $secrets_dir"
+  fi
+  chmod 700 "$secrets_dir"
 }
 
 source_dotfiles_script() {

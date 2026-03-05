@@ -1,7 +1,7 @@
 args@{ ... }:
 
 let
-  mkNixosHost = import ../../lib/mk-nixos-host.nix args;
+  mkNixosHost = import ../../../lib/mk-nixos-host.nix args;
 in
 mkNixosHost {
   name = "a2m_nixos";

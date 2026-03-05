@@ -28,10 +28,6 @@ delib.module {
         if [[ -f "$HOME/.config/shell/common.sh" ]]; then
           source "$HOME/.config/shell/common.sh"
         fi
-
-        if [[ -f "$HOME/.bashrc.local" ]]; then
-          source "$HOME/.bashrc.local"
-        fi
       '';
     };
 

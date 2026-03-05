@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, pkgs, ... }:
+{ delib, lib, dotlib, pkgs, inputs, ... }:
 
 # VS Code: isolated instances by purpose with mutable extensions
 
@@ -28,6 +28,7 @@ delib.module {
       defaultExtensionsPath = appsDir + "/_default/extensions.txt";
       defaultExtensionsDisabledPath = appsDir + "/_default/extensions-disabled.txt";
       defaultIconPath = appsDir + "/_default/icon.icns";
+      vscodeInstancesScript = "${inputs.self}/nix/scripts/vscode-instances.sh";
 
       homeDir = myconfig.facts.user.homeDirectory
         or myconfig.constants.homeDirectory
@@ -162,65 +163,27 @@ delib.module {
           baselineId = "${settingsJson}:${extensionsTxt}";
           baselineMarkerId = "${baselineId}:settings-v2";
 
+          commonScriptArgs = [
+            "--name"
+            name
+            "--base-dir"
+            baseDir
+            "--code-bin"
+            codeBin
+            "--settings-json"
+            settingsJson
+            "--extensions-txt"
+            extensionsTxt
+            "--baseline-id"
+            baselineMarkerId
+          ];
+
           bootstrap = pkgs.writeShellApplication {
             name = "code-${name}-bootstrap";
             runtimeInputs = [ pkgs.jq ];
             text = ''
               set -euo pipefail
-              data="${baseDir}/${name}/user-data"
-              exts="${baseDir}/${name}/extensions"
-              userDir="$data/User"
-              marker="$data/.dotfiles-baseline"
-              wanted="${baselineMarkerId}"
-              mkdir -p "$userDir" "$exts"
-
-              if [ -f "$userDir/settings.json" ]; then
-                cp "$userDir/settings.json" "$userDir/settings.json.bak.$(date +%s)"
-                tmpdir="''${TMPDIR:-/tmp}"
-                tmp="$(mktemp "$tmpdir/vscode-settings.XXXXXX")"
-                # Merge baseline + existing settings, but keep instance identity keys (title + bar colors)
-                # always controlled by baseline to avoid "seeded value becomes user override" drift.
-                jq -s '
-                  def force($base; $path):
-                    ($base | getpath($path)) as $v
-                    | if $v == null then . else setpath($path; $v) end;
-
-                  .[0] as $base | .[1] as $user
-                  | ($base * $user)
-                  | force($base; ["window.title"])
-                  | force($base; ["window.titleSeparator"])
-                  | force($base; ["workbench.colorCustomizations","titleBar.activeBackground"])
-                  | force($base; ["workbench.colorCustomizations","titleBar.inactiveBackground"])
-                  | force($base; ["workbench.colorCustomizations","statusBar.background"])
-                  | force($base; ["workbench.colorCustomizations","statusBar.noFolderBackground"])
-                ' "${settingsJson}" "$userDir/settings.json" > "$tmp"
-                mv "$tmp" "$userDir/settings.json"
-              else
-                cp "${settingsJson}" "$userDir/settings.json"
-              fi
-
-              installed="$("${codeBin}" --user-data-dir "$data" --extensions-dir "$exts" --list-extensions 2>/dev/null || true)"
-              force="''${VSCODE_FORCE_EXTENSIONS:-0}"
-
-              while IFS= read -r ext; do
-                [ -z "$ext" ] && continue
-                case "$ext" in
-                  \#*) continue ;;
-                esac
-
-                if [ "$force" = "1" ]; then
-                  "${codeBin}" --user-data-dir "$data" --extensions-dir "$exts" --install-extension "$ext" --force || true
-                  continue
-                fi
-
-                if printf '%s\n' "$installed" | grep -Fxq "$ext"; then
-                  continue
-                fi
-
-                "${codeBin}" --user-data-dir "$data" --extensions-dir "$exts" --install-extension "$ext" || true
-              done < "${extensionsTxt}"
-
-              printf "%s" "$wanted" > "$marker"
+              exec ${vscodeInstancesScript} bootstrap ${lib.escapeShellArgs commonScriptArgs}
             '';
           };
 
@@ -228,32 +191,7 @@ delib.module {
             name = "code-${name}";
             text = ''
               set -euo pipefail
-              data="${baseDir}/${name}/user-data"
-              exts="${baseDir}/${name}/extensions"
-              marker="$data/.dotfiles-baseline"
-              wanted="${baselineMarkerId}"
-              disable_args=()
-
-              if [ "''${VSCODE_SKIP_BOOTSTRAP:-0}" != "1" ]; then
-                if [ ! -f "$marker" ] || [ "$(cat "$marker" 2>/dev/null || true)" != "$wanted" ]; then
-                  "${bootstrap}/bin/code-${name}-bootstrap"
-                fi
-              fi
-
-              while IFS= read -r ext; do
-                [ -z "$ext" ] && continue
-                case "$ext" in
-                  \#*) continue ;;
-                esac
-                disable_args+=(--disable-extension "$ext")
-              done < "${disabledExtensionsTxt}"
-
-              exec "${codeBin}" \
-                --user-data-dir "$data" \
-                --extensions-dir "$exts" \
-                --new-window \
-                "''${disable_args[@]}" \
-                "$@"
+              exec ${vscodeInstancesScript} launch ${lib.escapeShellArgs (commonScriptArgs ++ [ "--disabled-extensions-txt" disabledExtensionsTxt ])} -- "$@"
             '';
           };
 
@@ -263,18 +201,13 @@ delib.module {
 
           reset = pkgs.writeShellApplication {
             name = "code-${name}-reset";
+            runtimeInputs = [ pkgs.jq ];
             text = ''
               set -euo pipefail
-              base="${baseDir}/${name}"
-              if [ -d "$base" ]; then
-                ts="$(date +%Y%m%d-%H%M%S)"
-                backup="$base.backup-$ts"
-                mv "$base" "$backup"
-                echo "Backed up $base to $backup"
-              fi
-              exec "${bootstrap}/bin/code-${name}-bootstrap"
+              exec ${vscodeInstancesScript} reset ${lib.escapeShellArgs commonScriptArgs}
             '';
           };
+
           appBundle =
             if appLaunchersEnabled
             then mkAppBundle name appDisplayName appExecName appLauncher iconPath iconName

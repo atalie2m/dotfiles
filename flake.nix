@@ -78,7 +78,7 @@
     let
       localStub = builtins.pathExists (inputs.local + "/STUB");
       dotlib = import ./nix/lib { lib = inputs.nixpkgs.lib; };
-      mkConfigurations = { moduleSystem, paths, exclude ? [ ] }:
+      mkConfigurations = { moduleSystem, paths }:
         let
           facts = import (inputs.local + "/facts.nix");
           user = facts.user or { };
@@ -92,7 +92,7 @@
         builtins.seq _ (denix.lib.configurations {
           inherit moduleSystem;
           homeManagerUser = username;
-          inherit paths exclude;
+          inherit paths;
           extensions = with denix.lib.extensions; [
             args
             (base.withConfig { args.enable = true; })
@@ -100,38 +100,75 @@
           specialArgs = { inherit inputs dotlib; };
         });
 
+      configurationPaths = {
+        darwin = [
+          ./nix/denix/modules
+          ./nix/denix/darwin/hosts
+          ./nix/denix/darwin/rices
+        ];
+        nixos = [
+          ./nix/denix/modules
+          ./nix/denix/nixos/hosts
+          ./nix/denix/nixos/rices
+        ];
+        home = [
+          ./nix/denix/modules
+          ./nix/denix/home/hosts
+          ./nix/denix/home/rices
+        ];
+      };
+
       mkLatestConfigurations = moduleSystem:
         mkConfigurations {
           inherit moduleSystem;
-          paths = [ ./nix/denix ];
-          exclude = [
-            ./nix/denix/lib/mk-darwin-host.nix
-            ./nix/denix/lib/mk-nixos-host.nix
-          ] ++ (
-            if moduleSystem == "nixos" then
-              [
-                ./nix/denix/hosts/a2m_nixos
-                ./nix/denix/hosts/a2m_mac
-                ./nix/denix/hosts/mn_mac
-                ./nix/denix/rices/darwin
-                ./nix/denix/rices/dev
-                ./nix/denix/rices/full
-              ]
-            else if moduleSystem == "darwin" then
-              [ ./nix/denix/hosts/a2m_nixos ]
-            else
-              [ ]
-          );
+          paths = configurationPaths.${moduleSystem}
+            or (throw "unsupported moduleSystem '${moduleSystem}'");
         };
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ inputs.treefmt-nix.flakeModule ];
       systems = [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux" ];
 
-      perSystem = { pkgs, config, ... }:
+      perSystem = { pkgs, config, lib, ... }:
         let
           scripts = ./nix/scripts;
           dotfilesRoot = ./.;
+          nixCatalog = import ./nix/data/tools/catalog-data.nix;
+          brewCatalog = import ./nix/data/tools/brew-catalog-data.nix;
+          catalogIds = catalog:
+            builtins.map (name: "${catalog.${name}.group}.${name}") (builtins.attrNames catalog);
+          catalogOverlap = lib.intersectLists (catalogIds nixCatalog) (catalogIds brewCatalog);
+          catalogOverlapText =
+            if catalogOverlap == [ ] then "(none)"
+            else lib.concatStringsSep ", " catalogOverlap;
+
+          mkDotfilesApp = { name, subcommand ? null, description }:
+            let
+              execLine =
+                if subcommand == null
+                then "exec ${scripts}/dotfiles.sh \"$@\""
+                else "exec ${scripts}/dotfiles.sh ${subcommand} \"$@\"";
+            in
+            {
+              type = "app";
+              program = "${pkgs.writeShellScript "dotfiles-${name}" ''
+                if [[ -z "''${DOTFILES_ROOT:-}" ]]; then
+                  pwd_root="$(pwd)"
+                  if [[ -f "$pwd_root/flake.nix" && -d "$pwd_root/nix/scripts" ]]; then
+                    export DOTFILES_ROOT="$pwd_root"
+                  fi
+                fi
+                if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
+                  candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+                  if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
+                    export DOTFILES_ROOT="$candidate_root"
+                  fi
+                fi
+                export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
+                ${execLine}
+              ''}";
+              meta.description = description;
+            };
         in
         {
           treefmt = {
@@ -147,6 +184,40 @@
           formatter = config.treefmt.build.wrapper;
 
           checks = {
+            treefmt = lib.mkForce (pkgs.runCommand "treefmt-check"
+              {
+                nativeBuildInputs = [ pkgs.git config.treefmt.build.wrapper ];
+                src = inputs.self;
+              } ''
+                            set -euo pipefail
+                            project_dir="$TMPDIR/project"
+                            cp -r "$src" "$project_dir"
+                            chmod -R u+w "$project_dir"
+                            cd "$project_dir"
+
+                            export HOME="$TMPDIR/home"
+                            mkdir -p "$HOME"
+                            cat >"$HOME/.gitconfig" <<'EOF'
+              [user]
+                name = Nix
+                email = nix@localhost
+              [init]
+                defaultBranch = main
+              EOF
+                            export GIT_CONFIG_NOSYSTEM=1
+                            export LANG=en_US.UTF-8
+                            export LC_ALL=en_US.UTF-8
+
+              git init --quiet
+              git add .
+              git -c commit.gpgSign=false commit -m init --quiet
+
+                            treefmt --version
+                            treefmt --no-cache
+                            git --no-pager diff --exit-code
+                            touch "$out"
+            '');
+
             statix = pkgs.runCommand "statix-check"
               {
                 nativeBuildInputs = [ pkgs.statix ];
@@ -201,6 +272,71 @@
                 "''${files[@]}"
               touch "$out"
             '';
+
+            toolOwnership = pkgs.runCommand "tool-ownership-check" { } ''
+              if [ ${toString (builtins.length catalogOverlap)} -ne 0 ]; then
+                echo "Duplicate tool ownership detected between Nix and Homebrew catalogs." >&2
+                echo "Overlaps: ${catalogOverlapText}" >&2
+                exit 1
+              fi
+              touch "$out"
+            '';
+
+            syncCoreFakeAdapter = pkgs.runCommand "sync-core-fake-adapter-test"
+              {
+                nativeBuildInputs = [ pkgs.bash ];
+                src = inputs.self;
+              } ''
+              cd "$src"
+              bash nix/scripts/sync-core-fake-adapter-test.sh
+              touch "$out"
+            '';
+
+            syncShellSmoke = pkgs.runCommand "sync-shell-smoke-test"
+              {
+                nativeBuildInputs = [ pkgs.bash ];
+                src = inputs.self;
+              } ''
+              cd "$src"
+              bash nix/scripts/sync-shell-smoke-test.sh
+              touch "$out"
+            '';
+
+            shellEntrypointWriteability = pkgs.runCommand "shell-zsh-writeability-test"
+              {
+                nativeBuildInputs = [ pkgs.bash ];
+                src = inputs.self;
+              } ''
+              cd "$src"
+              bash nix/scripts/shell-zsh-writeability-test.sh
+              touch "$out"
+            '';
+
+            vscodeInstancesSmoke = pkgs.runCommand "vscode-instances-smoke-test"
+              {
+                nativeBuildInputs = [ pkgs.bash pkgs.jq ];
+                src = inputs.self;
+              } ''
+              cd "$src"
+              bash nix/scripts/vscode-instances-smoke-test.sh
+              touch "$out"
+            '';
+
+            syncTerminalSmoke =
+              if pkgs.stdenv.isDarwin then
+                pkgs.runCommand "sync-terminal-smoke-test"
+                  {
+                    nativeBuildInputs = [ pkgs.bash ];
+                    src = inputs.self;
+                  } ''
+                  cd "$src"
+                  bash nix/scripts/sync-terminal-smoke-test.sh
+                  touch "$out"
+                ''
+              else
+                pkgs.runCommand "sync-terminal-smoke-test-skipped" { } ''
+                  touch "$out"
+                '';
           };
 
           devShells.default = pkgs.mkShell {
@@ -217,89 +353,34 @@
           };
 
           apps = {
-            dotfiles = {
-              type = "app";
-              program = "${pkgs.writeShellScript "dotfiles-cli" ''
-              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
-                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
-                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
-                  export DOTFILES_ROOT="$candidate_root"
-                fi
-              fi
-              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
-              exec ${scripts}/dotfiles.sh "$@"
-            ''}";
-              meta.description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/list-tools).";
+            dotfiles = mkDotfilesApp {
+              name = "cli";
+              description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/list-tools).";
             };
-            update = {
-              type = "app";
-              program = "${pkgs.writeShellScript "dotfiles-update" ''
-              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
-                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
-                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
-                  export DOTFILES_ROOT="$candidate_root"
-                fi
-              fi
-              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
-              exec ${scripts}/dotfiles.sh update "$@"
-            ''}";
-              meta.description = "Update flake inputs, run checks, and build host targets.";
+            update = mkDotfilesApp {
+              name = "update";
+              subcommand = "update";
+              description = "Update flake inputs, run checks, and build host targets.";
             };
-            list-tools = {
-              type = "app";
-              program = "${pkgs.writeShellScript "dotfiles-list-tools" ''
-              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
-                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
-                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
-                  export DOTFILES_ROOT="$candidate_root"
-                fi
-              fi
-              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
-              exec ${scripts}/dotfiles.sh list-tools "$@"
-            ''}";
-              meta.description = "List effective myconfig.tools values for a host/rice.";
+            list-tools = mkDotfilesApp {
+              name = "list-tools";
+              subcommand = "list-tools";
+              description = "List effective myconfig.tools values for a host/rice.";
             };
-            apply = {
-              type = "app";
-              program = "${pkgs.writeShellScript "dotfiles-apply" ''
-              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
-                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
-                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
-                  export DOTFILES_ROOT="$candidate_root"
-                fi
-              fi
-              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
-              exec ${scripts}/dotfiles.sh apply "$@"
-            ''}";
-              meta.description = "Build or switch nix-darwin configurations.";
+            apply = mkDotfilesApp {
+              name = "apply";
+              subcommand = "apply";
+              description = "Build or switch nix-darwin configurations.";
             };
-            doctor = {
-              type = "app";
-              program = "${pkgs.writeShellScript "dotfiles-doctor" ''
-              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
-                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
-                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
-                  export DOTFILES_ROOT="$candidate_root"
-                fi
-              fi
-              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
-              exec ${scripts}/dotfiles.sh doctor "$@"
-            ''}";
-              meta.description = "Run dotfiles health checks.";
+            doctor = mkDotfilesApp {
+              name = "doctor";
+              subcommand = "doctor";
+              description = "Run dotfiles health checks.";
             };
-            bootstrap = {
-              type = "app";
-              program = "${pkgs.writeShellScript "dotfiles-bootstrap" ''
-              if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
-                candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
-                if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
-                  export DOTFILES_ROOT="$candidate_root"
-                fi
-              fi
-              export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
-              exec ${scripts}/dotfiles.sh bootstrap "$@"
-            ''}";
-              meta.description = "Initialize local facts/secrets and optionally apply.";
+            bootstrap = mkDotfilesApp {
+              name = "bootstrap";
+              subcommand = "bootstrap";
+              description = "Initialize local facts/secrets and optionally apply.";
             };
             format = {
               type = "app";

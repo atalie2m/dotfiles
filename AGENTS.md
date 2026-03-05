@@ -4,13 +4,15 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 
 ## Project Structure & Module Organization
 - `flake.nix` — flake inputs/outputs; exposes `darwinConfigurations` and `homeConfigurations` and a `templates/web-dev` flake template.
-- `nix/denix/hosts/*/` — host profiles and system-level options.
+- `nix/denix/darwin/{hosts,rices}/` — Darwin host/rice profiles.
+- `nix/denix/nixos/{hosts,rices}/` — NixOS host/rice profiles.
+- `nix/denix/home/{hosts,rices}/` — dedicated Home Manager host/rice profiles.
 - `nix/denix/modules/` — reusable modules (programs, packages, shells, services, etc.).
-- `nix/denix/rices/` — higher‑level bundles (e.g., `full`, `minimum`).
 - `nix/local/` — stub local facts input (`facts.nix`, `STUB`) for public evaluation.
 - `nix/secrets/` — stub local secrets input (`secrets.nix`, `STUB`) for public evaluation.
 - `nix/scripts/` — CLI entrypoints (`apply`, `update`, `doctor`, `bootstrap`) and shared helpers.
 - `apps/` — user app configs (e.g., `apps/starship.toml`, `apps/vscode/...`).
+- `surfaces/` — reconciled mutable-surface desired state (`surfaces/shell/desired`, `surfaces/terminal/desired`).
 - `keyboards/` — Karabiner complex modifications JSON.
 - Local facts live at `~/.config/dotfiles/facts.nix` (not in Git).
 - Local secrets live at `~/.config/dotfiles/secrets.nix` and `~/.config/dotfiles/files/` (not in Git).

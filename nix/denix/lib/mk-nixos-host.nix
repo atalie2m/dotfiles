@@ -81,6 +81,14 @@ delib.host {
         imports = [ inputs.sops-nix.nixosModules.sops ];
         system.stateVersion = nixosStateVersion;
         nixpkgs.hostPlatform = platform;
+        fileSystems."/" = lib.mkDefault {
+          device = "/dev/disk/by-label/nixos";
+          fsType = "ext4";
+        };
+        boot.loader.grub = {
+          enable = lib.mkDefault true;
+          devices = lib.mkDefault [ "/dev/sda" ];
+        };
 
         users.users.${username} = {
           isNormalUser = true;

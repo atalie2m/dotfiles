@@ -29,7 +29,7 @@ Options:
   --details           Print concise per-profile drift details (font/cursor-related keys)
   --diff              Print unified diff (repo desired vs current actual)
   --profile <name>    Restrict to one profile name
-  --dir <path>        Profiles directory (default: <repo>/apps/terminal)
+  --dir <path>        Profiles directory (default: <repo>/surfaces/terminal/desired)
   --state-dir <path>  Last-applied hash directory (default: $XDG_STATE_HOME/dotfiles/sync/terminal-app/profiles)
   --in-place          With --adopt, overwrite repo files in place (default is staging output)
   --force             With --apply, force overwrite on unresolved drift; with --adopt --in-place, allow conflict overwrite
@@ -63,7 +63,7 @@ startup_profile=""
 default_profiles_dir=1
 
 set_repo_root
-profiles_dir="$ROOT/apps/terminal"
+profiles_dir="$ROOT/surfaces/terminal/desired"
 real_plist="$HOME/Library/Preferences/com.apple.Terminal.plist"
 plist="$real_plist"
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/sync/terminal-app/profiles"
@@ -128,10 +128,10 @@ if [[ $mode != "apply" && (-n $default_profile || -n $startup_profile) ]]; then
 fi
 
 if [[ $default_profiles_dir -eq 1 ]]; then
-  worktree_root="$(resolve_repo_worktree_root_for "apps/terminal" || true)"
+  worktree_root="$(resolve_repo_worktree_root_for "surfaces/terminal/desired" || true)"
   if [[ -n $worktree_root ]]; then
     ROOT="$worktree_root"
-    profiles_dir="$ROOT/apps/terminal"
+    profiles_dir="$ROOT/surfaces/terminal/desired"
   fi
 fi
 

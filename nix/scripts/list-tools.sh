@@ -26,39 +26,47 @@ host=""
 rice=""
 format=""
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
+if [[ $# -gt 0 ]]; then
+  case "${1:-}" in
   -h | --help)
     usage
     exit 0
     ;;
-  --host)
-    [[ $# -lt 2 ]] && die "missing value for --host"
-    host="$2"
-    shift 2
-    ;;
-  --rice)
-    [[ $# -lt 2 ]] && die "missing value for --rice"
-    rice="$2"
-    shift 2
-    ;;
+  esac
+fi
+
+PARSE_TARGET_VALUE_OPTIONS="--format"
+parse_target_args "$@"
+unset PARSE_TARGET_VALUE_OPTIONS
+
+if [[ $PARSED_HAS_PASSTHROUGH -eq 1 ]]; then
+  die "unexpected -- (no passthrough supported)"
+fi
+
+host="$PARSED_HOST"
+rice="$PARSED_RICE"
+
+idx=0
+while [[ $idx -lt ${#PARSED_ARGS[@]} ]]; do
+  arg="${PARSED_ARGS[$idx]}"
+  case "$arg" in
   --format)
-    [[ $# -lt 2 ]] && die "missing value for --format"
-    format="$2"
-    shift 2
+    idx=$((idx + 1))
+    [[ $idx -lt ${#PARSED_ARGS[@]} ]] || die "missing value for --format"
+    format="${PARSED_ARGS[$idx]}"
+    ;;
+  -h | --help)
+    usage
+    exit 0
     ;;
   --*)
-    die "unknown option: $1"
+    die "unknown option: $arg"
     ;;
   *)
-    if [[ -z $host ]]; then
-      host="$1"
-      shift
-    else
-      die "unexpected argument: $1"
-    fi
+    die "unexpected argument: $arg"
     ;;
   esac
+  idx=$((idx + 1))
 done
 
 host="${host:-${HOST:-a2m_mac}}"
@@ -73,10 +81,11 @@ esac
 set_repo_root
 cd "$ROOT"
 resolve_inputs
+flake_ref="$(flake_ref_for_root "$ROOT")"
 
 target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
 
-attr="$ROOT#darwinConfigurations.${target}.config"
+attr="${flake_ref}#darwinConfigurations.${target}.config"
 tools_expr_path="./nix/scripts/list-tools.nix"
 
 if [[ $format == "json" ]]; then

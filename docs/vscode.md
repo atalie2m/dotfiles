@@ -84,3 +84,12 @@ These are simple wrappers around `code-<name>` (no upstream VS Code.app
 modification). As a result, Dock/menubar app identity may still show as "Code",
 but the instance is visually identified via the window title badge and bar
 colors.
+
+## Runtime Script
+
+Operational behavior for `bootstrap`, `launch`, and `reset` lives in:
+
+- `nix/scripts/vscode-instances.sh`
+
+The Nix module (`nix/denix/modules/tools/editor/vscode.nix`) is responsible for
+declarative instance data and thin command wiring only.

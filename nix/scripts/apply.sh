@@ -27,48 +27,47 @@ action="switch"
 no_sudo=0
 passthrough=()
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
+if [[ $# -gt 0 ]]; then
+  case "${1:-}" in
   -h | --help)
     usage
     exit 0
     ;;
-  --host)
-    [[ $# -lt 2 ]] && die "missing value for --host"
-    host="$2"
-    shift 2
-    ;;
-  --rice)
-    [[ $# -lt 2 ]] && die "missing value for --rice"
-    rice="$2"
-    shift 2
-    ;;
+  esac
+fi
+
+PARSE_TARGET_VALUE_OPTIONS="--action"
+parse_target_args "$@"
+unset PARSE_TARGET_VALUE_OPTIONS
+
+host="$PARSED_HOST"
+rice="$PARSED_RICE"
+passthrough=("${PARSED_PASSTHROUGH[@]}")
+
+idx=0
+while [[ $idx -lt ${#PARSED_ARGS[@]} ]]; do
+  arg="${PARSED_ARGS[$idx]}"
+  case "$arg" in
   --action)
-    [[ $# -lt 2 ]] && die "missing value for --action"
-    action="$2"
-    shift 2
+    idx=$((idx + 1))
+    [[ $idx -lt ${#PARSED_ARGS[@]} ]] || die "missing value for --action"
+    action="${PARSED_ARGS[$idx]}"
     ;;
   --no-sudo)
     no_sudo=1
-    shift
     ;;
-  --)
-    shift
-    passthrough=("$@")
-    break
+  -h | --help)
+    usage
+    exit 0
     ;;
   --*)
-    die "unknown option: $1"
+    die "unknown option: $arg"
     ;;
   *)
-    if [[ -z $host ]]; then
-      host="$1"
-      shift
-    else
-      die "unexpected argument: $1 (use -- to pass through to darwin-rebuild)"
-    fi
+    die "unexpected argument: $arg (use -- to pass through to darwin-rebuild)"
     ;;
   esac
+  idx=$((idx + 1))
 done
 
 host="${host:-${HOST:-a2m_mac}}"
@@ -82,6 +81,7 @@ esac
 set_repo_root
 cd "$ROOT"
 resolve_inputs
+flake_ref="$(flake_ref_for_root "$ROOT")"
 
 target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
 
@@ -93,7 +93,7 @@ else
 fi
 
 rebuild_args=("$action"
-  --flake "$ROOT#${target}"
+  --flake "${flake_ref}#${target}"
   --override-input local "$FACTS"
   --override-input secrets "$SECRETS"
 )

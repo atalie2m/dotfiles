@@ -6,11 +6,11 @@ Each surface compares three values per item: desired (repo), actual (local machi
 ## Active Surfaces
 
 - Shell managed blocks (`nix/scripts/shell.sh`)
-  - Desired: `apps/shell/managed/*`
-  - Actual: `~/.nix/.zshrc`, `~/.bashrc`, `~/.bashrc.local`, `~/.config/fish/config.fish`, `~/.config/fish/conf.d/00-dotfiles.fish`
+  - Desired: `surfaces/shell/desired/*`
+  - Actual: `~/.nix/.zshrc`, `~/.bashrc`, `~/.config/fish/config.fish`, `~/.config/fish/conf.d/00-dotfiles.fish`
   - State: `~/.local/state/dotfiles/sync/shell/blocks/*.sha256`
 - Terminal.app profiles (`nix/scripts/terminal.sh`)
-  - Desired: `apps/terminal/*.terminal`
+  - Desired: `surfaces/terminal/desired/*.terminal`
   - Actual: `~/Library/Preferences/com.apple.Terminal.plist`
   - State: `~/.local/state/dotfiles/sync/terminal-app/profiles/*.sha256`
 
@@ -37,11 +37,14 @@ nix run .#dotfiles -- terminal sync --adopt --in-place
 nix run .#dotfiles -- shell sync --adopt --in-place --force
 nix run .#dotfiles -- terminal sync --adopt --in-place --force
 
-# 4) Apply repo to local state
+# 4) For shell entrypoints, run one-time migration when shape/type is invalid
+nix run .#dotfiles -- shell sync --migrate
+
+# 5) Apply repo to local state
 nix run .#dotfiles -- shell sync --apply
 nix run .#dotfiles -- terminal sync --apply
 
-# 5) Force apply only when intentionally overwriting local drift
+# 6) Force apply only when intentionally overwriting local drift
 nix run .#dotfiles -- shell sync --apply --force
 nix run .#dotfiles -- terminal sync --apply --force
 ```

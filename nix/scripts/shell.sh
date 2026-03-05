@@ -15,13 +15,13 @@ Usage:
   nix run .#dotfiles -- shell sync --check [--details] [--diff] [--shell <zsh|bash|fish|all>] [--target <id>] [--managed-dir <path>] [--state-dir <path>]
   nix run .#dotfiles -- shell sync --apply [--details] [--diff] [--shell <zsh|bash|fish|all>] [--target <id>] [--managed-dir <path>] [--state-dir <path>] [--force]
   nix run .#dotfiles -- shell sync --adopt [--details] [--diff] [--shell <zsh|bash|fish|all>] [--target <id>] [--managed-dir <path>] [--state-dir <path>] [--in-place] [--force] [--output-dir <path>]
+  nix run .#dotfiles -- shell sync --migrate [--shell <zsh|bash|fish|all>] [--target <id>] [--managed-dir <path>]
   nix run .#dotfiles -- shell sync --forget [--shell <zsh|bash|fish|all>] [--target <id>] [--state-dir <path>]
 
 Description:
   Manage shell config with lastApplied 3-way status.
   - zsh-zdotdir: managed block in ~/.nix/.zshrc (runtime entrypoint)
   - bash-rc: managed block in ~/.bashrc (runtime entrypoint)
-  - bash-local: managed block in ~/.bashrc.local
   - fish-config: managed block in ~/.config/fish/config.fish (runtime entrypoint)
   - fish-core: whole file at ~/.config/fish/conf.d/00-dotfiles.fish
 
@@ -29,12 +29,13 @@ Options:
   --check              Detect drift/missing/invalid (default mode)
   --apply              Apply desired managed content to local targets
   --adopt              Export current local managed content for drifted targets
+  --migrate            Convert legacy/invalid entrypoint targets to writable expected shape
   --forget             Remove last-applied hash state
   --shell <name>       Filter targets by shell (repeatable, default: all)
-  --target <id>        Filter one target id (zsh-zdotdir, bash-rc, bash-local, fish-config, fish-core)
+  --target <id>        Filter one target id (zsh-zdotdir, bash-rc, fish-config, fish-core)
   --details            Print concise per-target details
   --diff               Print unified diff (desired vs current)
-  --managed-dir <path> Desired managed content directory (default: <repo>/apps/shell/managed)
+  --managed-dir <path> Desired managed content directory (default: <repo>/surfaces/shell/desired)
   --state-dir <path>   Last-applied hash directory (default: $XDG_STATE_HOME/dotfiles/sync/shell/blocks)
   --in-place           With --adopt, overwrite desired files in place
   --force              With --apply, allow overwrite on drift/conflict; with --adopt --in-place, allow conflict overwrite
@@ -63,9 +64,10 @@ in_place=0
 force=0
 output_dir=""
 default_managed_dir=1
+migrate_requested=0
 
 set_repo_root
-managed_dir="$ROOT/apps/shell/managed"
+managed_dir="$ROOT/surfaces/shell/desired"
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/sync/shell/blocks"
 
 append_shell_filter() {
@@ -112,6 +114,11 @@ sync_cli_parse_script_option() {
     sync_core_cli_consumed=2
     return 0
     ;;
+  --migrate)
+    migrate_requested=1
+    sync_core_cli_consumed=1
+    return 0
+    ;;
   --managed-dir)
     [[ $# -lt 2 ]] && die "missing value for --managed-dir"
     managed_dir="$2"
@@ -132,16 +139,29 @@ sync_cli_parse_script_option() {
 
 sync_core_parse_cli_args 1 "$@"
 
+if [[ $migrate_requested -eq 1 ]]; then
+  if [[ $mode != "check" ]]; then
+    die "--migrate cannot be combined with --check/--apply/--adopt/--forget"
+  fi
+  mode="migrate"
+fi
+
 if [[ $default_managed_dir -eq 1 ]]; then
-  worktree_root="$(resolve_repo_worktree_root_for "apps/shell/managed" || true)"
+  worktree_root="$(resolve_repo_worktree_root_for "surfaces/shell/desired" || true)"
   if [[ -n $worktree_root ]]; then
     ROOT="$worktree_root"
-    managed_dir="$ROOT/apps/shell/managed"
+    managed_dir="$ROOT/surfaces/shell/desired"
   fi
 fi
 
-sync_core_validate_adopt_flags "$mode" "$in_place" "$output_dir"
-sync_core_validate_force_usage "$mode" "$in_place" "$force" 1 "--force is only valid with --apply or --adopt --in-place"
+if [[ $mode != "migrate" ]]; then
+  sync_core_validate_adopt_flags "$mode" "$in_place" "$output_dir"
+  sync_core_validate_force_usage "$mode" "$in_place" "$force" 1 "--force is only valid with --apply or --adopt --in-place"
+else
+  if [[ $in_place -eq 1 || -n $output_dir || $force -eq 1 ]]; then
+    die "--in-place/--output-dir/--force are not valid with --migrate"
+  fi
+fi
 
 if [[ $mode != "forget" && ! -d $managed_dir ]]; then
   die "managed dir not found: $managed_dir"
@@ -150,7 +170,6 @@ fi
 list_target_ids() {
   printf '%s\n' "zsh-zdotdir"
   printf '%s\n' "bash-rc"
-  printf '%s\n' "bash-local"
   printf '%s\n' "fish-config"
   printf '%s\n' "fish-core"
 }
@@ -159,7 +178,6 @@ target_shell_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "zsh" ;;
   bash-rc) printf '%s\n' "bash" ;;
-  bash-local) printf '%s\n' "bash" ;;
   fish-config) printf '%s\n' "fish" ;;
   fish-core) printf '%s\n' "fish" ;;
   *)
@@ -171,7 +189,7 @@ target_shell_for_id() {
 target_type_for_id() {
   case "$1" in
   fish-core) printf '%s\n' "file" ;;
-  zsh-zdotdir | bash-rc | bash-local | fish-config) printf '%s\n' "block" ;;
+  zsh-zdotdir | bash-rc | fish-config) printf '%s\n' "block" ;;
   *)
     return 1
     ;;
@@ -182,7 +200,6 @@ target_actual_path_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "$HOME/.nix/.zshrc" ;;
   bash-rc) printf '%s\n' "$HOME/.bashrc" ;;
-  bash-local) printf '%s\n' "$HOME/.bashrc.local" ;;
   fish-config) printf '%s\n' "$HOME/.config/fish/config.fish" ;;
   fish-core) printf '%s\n' "$HOME/.config/fish/conf.d/00-dotfiles.fish" ;;
   *)
@@ -195,7 +212,6 @@ target_desired_path_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "$managed_dir/zdotdir.zshrc.block.sh" ;;
   bash-rc) printf '%s\n' "$managed_dir/bashrc.entrypoint.block.sh" ;;
-  bash-local) printf '%s\n' "$managed_dir/bashrc.local.block.sh" ;;
   fish-config) printf '%s\n' "$managed_dir/fish.config.block.fish" ;;
   fish-core) printf '%s\n' "$managed_dir/00-dotfiles.fish" ;;
   *)
@@ -208,7 +224,6 @@ target_begin_marker_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "# >>> dotfiles-managed:zdotdir.zshrc >>>" ;;
   bash-rc) printf '%s\n' "# >>> dotfiles-managed:bashrc >>>" ;;
-  bash-local) printf '%s\n' "# >>> dotfiles-managed:bashrc.local >>>" ;;
   fish-config) printf '%s\n' "# >>> dotfiles-managed:fish.config >>>" ;;
   fish-core) printf '%s\n' "" ;;
   *)
@@ -221,7 +236,6 @@ target_end_marker_for_id() {
   case "$1" in
   zsh-zdotdir) printf '%s\n' "# <<< dotfiles-managed:zdotdir.zshrc <<<" ;;
   bash-rc) printf '%s\n' "# <<< dotfiles-managed:bashrc <<<" ;;
-  bash-local) printf '%s\n' "# <<< dotfiles-managed:bashrc.local <<<" ;;
   fish-config) printf '%s\n' "# <<< dotfiles-managed:fish.config <<<" ;;
   fish-core) printf '%s\n' "" ;;
   *)
@@ -517,9 +531,19 @@ write_entrypoint_file() {
   local desired_file="$2"
   local begin_marker="$3"
   local end_marker="$4"
-  local tmp_out tmp_replaced rc link_target preserve_existing
+  local tmp_out tmp_replaced rc link_target preserve_existing attempt_replace
 
-  if [[ -f $target_file || -L $target_file ]]; then
+  attempt_replace=0
+  if [[ -f $target_file ]]; then
+    attempt_replace=1
+  elif [[ -L $target_file ]]; then
+    link_target="$(readlink "$target_file" || true)"
+    if [[ $link_target != /nix/store/* && -f $target_file ]]; then
+      attempt_replace=1
+    fi
+  fi
+
+  if [[ $attempt_replace -eq 1 ]]; then
     tmp_replaced="$(mktemp)"
     if replace_managed_block_in_file "$target_file" "$desired_file" "$begin_marker" "$end_marker" "$tmp_replaced"; then
       mkdir -p "$(dirname "$target_file")"
@@ -543,7 +567,6 @@ write_entrypoint_file() {
   if [[ -f $target_file ]]; then
     preserve_existing=1
   elif [[ -L $target_file ]]; then
-    link_target="$(readlink "$target_file" || true)"
     if [[ $link_target != /nix/store/* && -f $target_file ]]; then
       preserve_existing=1
     fi
@@ -559,9 +582,45 @@ write_entrypoint_file() {
   return 0
 }
 
+target_is_entrypoint_id() {
+  case "$1" in
+  zsh-zdotdir | bash-rc | fish-config) return 0 ;;
+  *) return 1 ;;
+  esac
+}
+
+apply_shape_error() {
+  local id="$1"
+  local reason="$2"
+  log "apply refused for '$id': $reason"
+  log "  run: nix run .#dotfiles -- shell sync --migrate (use the same --target/--shell filters)"
+}
+
+validate_entrypoint_shape_for_apply() {
+  local id="$1"
+  local actual_path="$2"
+
+  if [[ -L $actual_path ]]; then
+    apply_shape_error "$id" "target is a symlink: $actual_path"
+    return 1
+  fi
+
+  if [[ -e $actual_path && ! -f $actual_path ]]; then
+    apply_shape_error "$id" "target is not a regular file: $actual_path"
+    return 1
+  fi
+
+  if [[ ! -e $actual_path ]]; then
+    apply_shape_error "$id" "target is missing: $actual_path"
+    return 1
+  fi
+
+  return 0
+}
+
 write_target_from_desired() {
   local id="$1"
-  local target_type desired_path actual_path begin_marker end_marker tmp_desired link_target
+  local target_type desired_path actual_path begin_marker end_marker tmp_desired
 
   target_type="$(target_type_for_id "$id")"
   desired_path="$(target_desired_path_for_id "$id")"
@@ -581,20 +640,91 @@ write_target_from_desired() {
   begin_marker="$(target_begin_marker_for_id "$id")"
   end_marker="$(target_end_marker_for_id "$id")"
 
-  if [[ $id == "zsh-zdotdir" || $id == "bash-rc" || $id == "fish-config" ]]; then
-    if [[ -L $actual_path ]]; then
-      link_target="$(readlink "$actual_path" || true)"
-      if [[ $link_target == /nix/store/* ]]; then
-        write_fresh_block_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
-        return $?
-      fi
+  if target_is_entrypoint_id "$id"; then
+    if ! validate_entrypoint_shape_for_apply "$id" "$actual_path"; then
+      return 1
     fi
-
     write_entrypoint_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
     return $?
   fi
 
   write_block_to_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
+}
+
+migrate_entrypoint_target() {
+  local id="$1"
+  local desired_path actual_path begin_marker end_marker
+
+  desired_path="$(target_desired_path_for_id "$id")"
+  actual_path="$(target_actual_path_for_id "$id")"
+  begin_marker="$(target_begin_marker_for_id "$id")"
+  end_marker="$(target_end_marker_for_id "$id")"
+
+  if [[ -e $actual_path && ! -f $actual_path && ! -L $actual_path ]]; then
+    log "migrate refused for '$id': target is not a regular file or symlink: $actual_path"
+    return 1
+  fi
+
+  if [[ ! -e $actual_path && ! -L $actual_path ]]; then
+    write_fresh_block_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
+    log "migrated missing entrypoint: $id"
+    return 0
+  fi
+
+  if write_entrypoint_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"; then
+    log "migrated entrypoint target: $id"
+    return 0
+  fi
+
+  log "failed to migrate entrypoint target: $id"
+  return 1
+}
+
+run_migrate_mode() {
+  local id selected_count migrated_count errors
+  selected_count=0
+  migrated_count=0
+  errors=0
+
+  while IFS= read -r id; do
+    [[ -z $id ]] && continue
+    if ! target_selected "$id"; then
+      continue
+    fi
+
+    selected_count=$((selected_count + 1))
+
+    if target_is_entrypoint_id "$id"; then
+      if migrate_entrypoint_target "$id"; then
+        migrated_count=$((migrated_count + 1))
+      else
+        errors=$((errors + 1))
+      fi
+      continue
+    fi
+
+    if [[ $id == "fish-core" ]]; then
+      if [[ -e "$(target_actual_path_for_id "$id")" && ! -f "$(target_actual_path_for_id "$id")" ]]; then
+        log "migrate refused for '$id': target is not a regular file"
+        errors=$((errors + 1))
+      elif [[ ! -f "$(target_actual_path_for_id "$id")" ]]; then
+        if write_target_from_desired "$id"; then
+          log "migrated missing target: $id"
+          migrated_count=$((migrated_count + 1))
+        else
+          log "failed to migrate target: $id"
+          errors=$((errors + 1))
+        fi
+      fi
+    fi
+  done < <(list_target_ids)
+
+  if [[ $selected_count -eq 0 ]]; then
+    sync_adapter_on_no_selection
+  fi
+
+  log "summary: migrated=$migrated_count selected=$selected_count errors=$errors"
+  [[ $errors -eq 0 ]]
 }
 
 sync_adapter_list_items() {
@@ -726,6 +856,13 @@ sync_adapter_print_summary() {
   [[ -n ${sync_core_resolved_output_dir:-} ]] && log "staging dir: $sync_core_resolved_output_dir"
   return 0
 }
+
+if [[ $mode == "migrate" ]]; then
+  if run_migrate_mode; then
+    exit 0
+  fi
+  exit 1
+fi
 
 sync_core_mode="$mode"
 sync_core_details="$details"

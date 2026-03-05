@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SHELL_SYNC_SCRIPT="$ROOT/nix/scripts/shell.sh"
-SOURCE_MANAGED_DIR="$ROOT/apps/shell/managed"
+SOURCE_MANAGED_DIR="$ROOT/surfaces/shell/desired"
 
 usage() {
   cat <<'USAGE'
@@ -43,6 +43,7 @@ state_dir="$tmp_root/state"
 managed_dir="$tmp_root/managed"
 mkdir -p "$home_dir" "$state_dir"
 cp -R "$SOURCE_MANAGED_DIR" "$managed_dir"
+chmod -R u+w "$managed_dir"
 
 run_shell_sync() {
   HOME="$home_dir" \
@@ -55,8 +56,18 @@ run_shell_sync() {
 printf 'test: running shell sync smoke test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
+if run_shell_sync --apply --target bash-rc >/dev/null; then
+  echo "FAIL: apply unexpectedly succeeded before migrate" >&2
+  exit 1
+fi
+
+if ! run_shell_sync --migrate --target bash-rc >/dev/null; then
+  echo "FAIL: migrate failed for missing bash entrypoint" >&2
+  exit 1
+fi
+
 if ! run_shell_sync --apply --target bash-rc >/dev/null; then
-  echo "FAIL: initial apply failed" >&2
+  echo "FAIL: apply failed after migrate" >&2
   exit 1
 fi
 

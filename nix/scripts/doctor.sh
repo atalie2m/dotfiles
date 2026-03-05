@@ -25,38 +25,40 @@ rice=""
 strict=0
 json=0
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
+if [[ $# -gt 0 ]]; then
+  case "${1:-}" in
   -h | --help)
     usage
     exit 0
     ;;
-  --host)
-    [[ $# -lt 2 ]] && die "missing value for --host"
-    host="$2"
-    shift 2
-    ;;
-  --rice)
-    [[ $# -lt 2 ]] && die "missing value for --rice"
-    rice="$2"
-    shift 2
-    ;;
+  esac
+fi
+
+parse_target_args "$@"
+if [[ $PARSED_HAS_PASSTHROUGH -eq 1 ]]; then
+  die "unexpected -- (no passthrough supported)"
+fi
+
+host="$PARSED_HOST"
+rice="$PARSED_RICE"
+
+for arg in "${PARSED_ARGS[@]}"; do
+  case "$arg" in
   --strict)
     strict=1
-    shift
     ;;
   --json)
     json=1
-    shift
     ;;
-  --)
-    die "unexpected -- (no passthrough supported)"
+  -h | --help)
+    usage
+    exit 0
     ;;
   --*)
-    die "unknown option: $1"
+    die "unknown option: $arg"
     ;;
   *)
-    die "unexpected argument: $1"
+    die "unexpected argument: $arg"
     ;;
   esac
 done
@@ -67,6 +69,7 @@ rice="${rice:-${RICE:-}}"
 set_repo_root
 cd "$ROOT"
 resolve_inputs
+flake_ref="$(flake_ref_for_root "$ROOT")"
 
 CHECK_NAMES=()
 CHECK_STATUS=()
@@ -97,7 +100,7 @@ eval_darwin_target_bool() {
   local target_name="$1"
   local option_path="$2"
 
-  nix eval --raw "$ROOT#darwinConfigurations.${target_name}.config.${option_path}" \
+  nix eval --raw "${flake_ref}#darwinConfigurations.${target_name}.config.${option_path}" \
     --apply 'x: if x then "true" else "false"' \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS" \
@@ -285,7 +288,7 @@ if command -v nix >/dev/null 2>&1; then
       fi
       if [[ -n $target ]]; then
         resolved_target="$target"
-        if nix eval --raw "$ROOT#darwinConfigurations.${target}.system.drvPath" \
+        if nix eval --raw "${flake_ref}#darwinConfigurations.${target}.system.drvPath" \
           --override-input local "$FACTS" \
           --override-input secrets "$SECRETS" \
           >/dev/null 2>&1; then
@@ -308,7 +311,7 @@ else
 fi
 
 if [[ $strict -eq 1 ]]; then
-  if nix flake check \
+  if nix flake check "$flake_ref" \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS" \
     >/dev/null 2>&1; then
@@ -361,7 +364,28 @@ if [[ $strict -eq 1 ]]; then
       case "$shell_enabled" in
       true)
         if [[ -x $shell_script ]]; then
-          if shell_output="$("$shell_script" sync --check --details 2>&1)"; then
+          shell_zsh_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.zsh.enable")"
+          shell_bash_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.bash.enable")"
+          shell_fish_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.fish.enable")"
+
+          shell_check_args=(sync --check --details)
+          shell_enabled_count=0
+          if [[ $shell_zsh_enabled == "true" ]]; then
+            shell_check_args+=(--shell zsh)
+            shell_enabled_count=$((shell_enabled_count + 1))
+          fi
+          if [[ $shell_bash_enabled == "true" ]]; then
+            shell_check_args+=(--shell bash)
+            shell_enabled_count=$((shell_enabled_count + 1))
+          fi
+          if [[ $shell_fish_enabled == "true" ]]; then
+            shell_check_args+=(--shell fish)
+            shell_enabled_count=$((shell_enabled_count + 1))
+          fi
+
+          if [[ $shell_enabled_count -eq 0 ]]; then
+            record_check "shell.sync" "ok" "shell sync enabled but no shell targets are enabled; skipped"
+          elif shell_output="$("$shell_script" "${shell_check_args[@]}" 2>&1)"; then
             record_check "shell.sync" "ok" "shell sync check passed"
           else
             shell_summary="$(printf '%s\n' "$shell_output" | /usr/bin/awk '/summary:/ { print; exit }')"

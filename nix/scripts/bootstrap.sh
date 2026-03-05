@@ -28,47 +28,47 @@ auto_yes=0
 no_sudo=0
 strict=0
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
+if [[ $# -gt 0 ]]; then
+  case "${1:-}" in
   -h | --help)
     usage
     exit 0
     ;;
-  --host)
-    [[ $# -lt 2 ]] && die "missing value for --host"
-    host="$2"
-    shift 2
-    ;;
-  --rice)
-    [[ $# -lt 2 ]] && die "missing value for --rice"
-    rice="$2"
-    shift 2
-    ;;
+  esac
+fi
+
+parse_target_args "$@"
+if [[ $PARSED_HAS_PASSTHROUGH -eq 1 ]]; then
+  die "unexpected -- (no passthrough supported)"
+fi
+
+host="$PARSED_HOST"
+rice="$PARSED_RICE"
+
+for arg in "${PARSED_ARGS[@]}"; do
+  case "$arg" in
   --apply)
     apply_after=1
-    shift
     ;;
   --yes)
     apply_after=1
     auto_yes=1
-    shift
     ;;
   --no-sudo)
     no_sudo=1
-    shift
     ;;
   --strict)
     strict=1
-    shift
     ;;
-  --)
-    die "unexpected -- (no passthrough supported)"
+  -h | --help)
+    usage
+    exit 0
     ;;
   --*)
-    die "unknown option: $1"
+    die "unknown option: $arg"
     ;;
   *)
-    die "unexpected argument: $1"
+    die "unexpected argument: $arg"
     ;;
   esac
 done
@@ -79,18 +79,7 @@ rice="${rice:-${RICE:-}}"
 set_repo_root
 cd "$ROOT"
 resolve_inputs
-
-if [[ ! -d $FACTS_DIR ]]; then
-  mkdir -p "$FACTS_DIR"
-  log "created $FACTS_DIR"
-fi
-chmod 700 "$FACTS_DIR"
-
-if [[ ! -d $SECRETS_DIR ]]; then
-  mkdir -p "$SECRETS_DIR"
-  log "created $SECRETS_DIR"
-fi
-chmod 700 "$SECRETS_DIR"
+ensure_inputs_dirs "$FACTS_DIR" "$SECRETS_DIR"
 
 facts_file="$FACTS_DIR/facts.nix"
 if [[ ! -f $facts_file ]]; then

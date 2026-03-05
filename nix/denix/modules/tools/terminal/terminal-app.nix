@@ -7,10 +7,12 @@ delib.module {
 
   options = with delib; moduleOptions {
     enable = boolOption false;
-    managedDir = strOption "${inputs.self}/apps/terminal";
+    managedDir = strOption "${inputs.self}/surfaces/terminal/desired";
+    stateDir = strOption "";
+    force = boolOption false;
+    extraArgs = listOfOption str [ ];
     defaultProfile = strOption "";
     startupProfile = strOption "";
-    forceImport = boolOption false;
     failOnDrift = boolOption true;
   };
 
@@ -21,12 +23,17 @@ delib.module {
   darwin.ifEnabled = { cfg, ... }:
     let
       terminalSyncScript = "${inputs.self}/nix/scripts/terminal.sh";
+      commonArgs =
+        [ terminalSyncScript "sync" "--dir" cfg.managedDir ]
+        ++ lib.optionals (cfg.stateDir != "") [ "--state-dir" cfg.stateDir ]
+        ++ cfg.extraArgs;
       applyArgs =
-        [ terminalSyncScript "sync" "--apply" "--dir" cfg.managedDir ]
-        ++ lib.optional cfg.forceImport "--force"
+        commonArgs
+        ++ [ "--apply" ]
+        ++ lib.optional cfg.force "--force"
         ++ lib.optionals (cfg.defaultProfile != "") [ "--default-profile" cfg.defaultProfile ]
         ++ lib.optionals (cfg.startupProfile != "") [ "--startup-profile" cfg.startupProfile ];
-      checkArgs = [ terminalSyncScript "sync" "--check" "--details" "--dir" cfg.managedDir ];
+      checkArgs = commonArgs ++ [ "--check" "--details" ];
     in
     {
       home-manager.sharedModules = [

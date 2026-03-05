@@ -30,35 +30,34 @@ USAGE
 host=""
 rice=""
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
+if [[ $# -gt 0 ]]; then
+  case "${1:-}" in
   -h | --help)
     usage
     exit 0
     ;;
-  --host)
-    [[ $# -lt 2 ]] && die "missing value for --host"
-    host="$2"
-    shift 2
-    ;;
-  --rice)
-    [[ $# -lt 2 ]] && die "missing value for --rice"
-    rice="$2"
-    shift 2
-    ;;
-  --)
-    die "unexpected -- (no passthrough supported)"
+  esac
+fi
+
+parse_target_args "$@"
+if [[ $PARSED_HAS_PASSTHROUGH -eq 1 ]]; then
+  die "unexpected -- (no passthrough supported)"
+fi
+
+host="$PARSED_HOST"
+rice="$PARSED_RICE"
+
+for arg in "${PARSED_ARGS[@]}"; do
+  case "$arg" in
+  -h | --help)
+    usage
+    exit 0
     ;;
   --*)
-    die "unknown option: $1"
+    die "unknown option: $arg"
     ;;
   *)
-    if [[ -z $host ]]; then
-      host="$1"
-      shift
-    else
-      die "unexpected argument: $1"
-    fi
+    die "unexpected argument: $arg"
     ;;
   esac
 done
@@ -68,24 +67,11 @@ rice="${rice:-${RICE:-}}"
 start_dir="$PWD"
 
 set_repo_root
-
-if [[ $ROOT == /nix/store/* ]]; then
-  if [[ -f "$start_dir/flake.nix" && -f "$start_dir/flake.lock" && -w "$start_dir/flake.nix" && -w "$start_dir/flake.lock" ]]; then
-    log "resolved store root for CLI; using writable checkout at $start_dir for update"
-    ROOT="$start_dir"
-  fi
-fi
-
-if [[ ! -f "$ROOT/flake.lock" ]]; then
-  die "flake.lock not found under $ROOT (update requires a writable checkout)"
-fi
-
-if [[ ! -w "$ROOT/flake.nix" || ! -w "$ROOT/flake.lock" ]]; then
-  die "update requires a writable flake checkout (current root: $ROOT)"
-fi
+ROOT="$(require_writable_checkout "$ROOT" "$start_dir")"
 
 cd "$ROOT"
 resolve_inputs
+flake_ref="$(flake_ref_for_root "$ROOT")"
 
 update_inputs=(
   nixpkgs
@@ -120,7 +106,7 @@ darwin_rebuild() {
 }
 
 if [[ ${UPDATE_FORMAT:-0} == "1" ]]; then
-  nix run "$ROOT#format"
+  nix run "${flake_ref}#format"
 fi
 
 run_checks=1
@@ -140,7 +126,7 @@ fi
 if [[ ${UPDATE_SKIP_BUILD:-0} != "1" ]]; then
   target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
   darwin_rebuild build \
-    --flake "$ROOT#${target}" \
+    --flake "${flake_ref}#${target}" \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS"
 fi

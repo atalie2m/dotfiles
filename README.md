@@ -18,7 +18,11 @@ It provides:
 
 ## Profiles (Denix hosts/rices)
 
-This flake uses [Denix](https://github.com/yunfachi/denix) to build macOS configurations.
+This flake uses [Denix](https://github.com/yunfachi/denix) with system-scoped trees:
+
+- `nix/denix/darwin/{hosts,rices}`
+- `nix/denix/nixos/{hosts,rices}`
+- `nix/denix/home/{hosts,rices}`
 
 - Hosts: `a2m_mac` (default rice: `full`), `mn_mac` (default rice: `full`).
 - Rices: `base`, `darwin`, `dev`, `full`, `minimum`.
@@ -26,7 +30,7 @@ This flake uses [Denix](https://github.com/yunfachi/denix) to build macOS config
   - `darwin`: macOS base integrations (Homebrew + hostnames/fonts).
   - `dev`: editor/terminal/workstation stack.
   - `full`: composition of `base + darwin + dev`.
-  - `minimum`: compatibility alias for `base`.
+  - `minimum`: minimal base profile alias.
 
 CLI usage examples (recommended):
 
@@ -49,6 +53,9 @@ Manual attribute examples (still valid):
 
 When `--rice` is provided, the CLI resolves only `host-rice` (no implicit fallback to `host`).
 
+Home Manager outputs are dedicated one-per-host profiles:
+`<user>@a2m_mac`, `<user>@mn_mac`, `<user>@a2m_nixos`.
+
 ## Application Source Policy
 
 Application/tool sourcing priority is:
@@ -56,7 +63,7 @@ Application/tool sourcing priority is:
 - Detailed policy: [`docs/homebrew-policy.md`](docs/homebrew-policy.md)
 
 1. `tools.system.homebrewNative` (nix-darwin managed Homebrew) for items that should stay "always latest".
-2. `tools.system.brewNix` for pure-Nix/pinned/verified casks. Currently unused by default, but kept for fallback.
+2. `tools.system.brewNix` for pure-Nix/pinned/verified casks.
 3. Custom implementation (for example `mk-node-cli-overlay`) only when both paths above are unsuitable.
 
 ## Terraform / OpenTofu Policy
@@ -136,24 +143,24 @@ See `docs/vscode.md` for details.
 
 ### Terminal.app profile management (without AppleScript)
 
-Terminal.app profiles are managed as `.terminal` files in this repo (`apps/terminal/`), then imported during Home Manager activation.
+Terminal.app profiles are managed as `.terminal` files in this repo (`surfaces/terminal/desired/`), then imported during Home Manager activation.
 Runtime sync operations are implemented through the shared sync adapter core (`nix/scripts/sync-core.sh`) with a Terminal adapter in `nix/scripts/terminal.sh`.
 See `docs/reconciled-surfaces.md` for shared drift workflow and adapter contract.
 
-- Source of truth: `apps/terminal/*.terminal`
-- Managed directory option: `tools.terminal.terminalApp.managedDir` (default: `apps/terminal`)
+- Source of truth: `surfaces/terminal/desired/*.terminal`
+- Managed directory option: `tools.terminal.terminalApp.managedDir` (default: `surfaces/terminal/desired`)
 - State guard: stores last-applied profile hashes under `~/.local/state/dotfiles/sync/terminal-app/profiles/*.sha256`
 - Import behavior: when current hash matches last-applied, repo updates apply safely without `--force`
 - Selection: `tools.terminal.terminalApp.defaultProfile` / `tools.terminal.terminalApp.startupProfile`
 - Drift guard: apply aborts when current Terminal profile differs from last-applied (`tools.terminal.terminalApp.failOnDrift = true`)
-- Force behavior: `tools.terminal.terminalApp.forceImport = true` adds `--force` during activation apply
+- Force behavior: `tools.terminal.terminalApp.force = true` adds `--force` during activation apply
 
 Current managed profiles:
-- `Atalie Standard` (`apps/terminal/Atalie-Standard.terminal`)
-- `Atalie Dark` (`apps/terminal/Atalie-Dark.terminal`)
-- `Atalie Glass` (`apps/terminal/Atalie-Glass.terminal`)
-- `Atalie Glass Dark` (`apps/terminal/Atalie-Glass-Dark.terminal`)
-- `Atalie Glass Light` (`apps/terminal/Atalie-Glass-Light.terminal`)
+- `Atalie Standard` (`surfaces/terminal/desired/Atalie-Standard.terminal`)
+- `Atalie Dark` (`surfaces/terminal/desired/Atalie-Dark.terminal`)
+- `Atalie Glass` (`surfaces/terminal/desired/Atalie-Glass.terminal`)
+- `Atalie Glass Dark` (`surfaces/terminal/desired/Atalie-Glass-Dark.terminal`)
+- `Atalie Glass Light` (`surfaces/terminal/desired/Atalie-Glass-Light.terminal`)
 
 Current default profile:
 - `Atalie Standard`
@@ -192,16 +199,14 @@ Shell local overrides are managed with lastApplied state:
 Runtime sync operations are implemented through the shared sync adapter core (`nix/scripts/sync-core.sh`) with a shell adapter in `nix/scripts/shell.sh`.
 
 - Desired source:
-  - `apps/shell/managed/zdotdir.zshrc.block.sh`
-  - `apps/shell/managed/bashrc.entrypoint.block.sh`
-  - `apps/shell/managed/fish.config.block.fish`
-  - `apps/shell/managed/bashrc.local.block.sh`
-  - `apps/shell/managed/00-dotfiles.fish`
+  - `surfaces/shell/desired/zdotdir.zshrc.block.sh`
+  - `surfaces/shell/desired/bashrc.entrypoint.block.sh`
+  - `surfaces/shell/desired/fish.config.block.fish`
+  - `surfaces/shell/desired/00-dotfiles.fish`
 - Local targets:
   - `~/.nix/.zshrc` (managed block only; runtime ZDOTDIR entrypoint)
   - `~/.bashrc` (managed block only; runtime bash entrypoint)
   - `~/.config/fish/config.fish` (managed block only; runtime fish entrypoint)
-  - `~/.bashrc.local` (managed block only)
   - `~/.config/fish/conf.d/00-dotfiles.fish` (whole file)
 - State guard: `~/.local/state/dotfiles/sync/shell/blocks/*.sha256`
 - `shell sync` only manages declared targets; it does not mutate `~/.zshrc` directly.
@@ -212,10 +217,6 @@ Managed block markers:
 # >>> dotfiles-managed:bashrc >>>
 # ... managed content ...
 # <<< dotfiles-managed:bashrc <<<
-
-# >>> dotfiles-managed:bashrc.local >>>
-# ... managed content ...
-# <<< dotfiles-managed:bashrc.local <<<
 
 # >>> dotfiles-managed:fish.config >>>
 # ... managed content ...
@@ -238,7 +239,10 @@ nix run .#dotfiles -- shell sync --adopt
 nix run .#dotfiles -- shell sync --adopt --in-place
 nix run .#dotfiles -- shell sync --adopt --in-place --force
 
-# Optional: clear lastApplied state
+# 3) Migrate legacy or invalid shell entrypoint shapes (explicit one-time step)
+nix run .#dotfiles -- shell sync --migrate
+
+# 4) Optional: clear lastApplied state
 nix run .#dotfiles -- shell sync --forget
 nix run .#dotfiles -- shell sync --forget --target zsh-zdotdir
 nix run .#dotfiles -- shell sync --forget --target bash-rc
@@ -248,7 +252,7 @@ nix run .#dotfiles -- shell sync --forget --target fish-config
 `nix run .#apply -- --host <host>` triggers shell reconciliation during Home Manager activation.
 By default activation runs `shell sync --apply` (with drift/conflict failures), and can be tuned via:
 
-- `tools.shell.sync.forceApply = true` to pass `--force`
+- `tools.shell.sync.force = true` to pass `--force`
 - `tools.shell.sync.failOnDrift = false` to run `shell sync --check --details` and continue on drift
 
 Shell entrypoint writeability regression tests (isolated + auto cleanup):
@@ -265,6 +269,7 @@ Additional sync adapter/core tests:
 nix/scripts/sync-core-fake-adapter-test.sh
 nix/scripts/sync-shell-smoke-test.sh
 nix/scripts/sync-terminal-smoke-test.sh
+nix/scripts/vscode-instances-smoke-test.sh
 ```
 
 ## Local Facts + Secrets (Override Inputs)
@@ -327,6 +332,7 @@ These machine values are used to set macOS system naming via `tools.system.hostn
 - Create `~/.config/dotfiles/secrets.nix`
 - Store encrypted files under `~/.config/dotfiles/files/` (sops+age recommended)
 - Define `secrets.nix` and encrypted files (sops+age recommended)
+- Detailed setup notes: [`docs/secrets-local.md`](docs/secrets-local.md)
 
 Example `secrets.nix`:
 ```nix

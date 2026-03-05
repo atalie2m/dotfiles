@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SHELL_SYNC_SCRIPT="$ROOT/nix/scripts/shell.sh"
-MANAGED_DIR="$ROOT/apps/shell/managed"
+MANAGED_DIR="$ROOT/surfaces/shell/desired"
 
 usage() {
   cat <<'USAGE'
@@ -83,15 +83,25 @@ new_test_env() {
   printf '%s|%s\n' "$home_dir" "$state_dir"
 }
 
-test_fresh_apply_creates_writable_wrapper_only() {
-  local name="fresh-apply"
+test_fresh_apply_requires_migrate_then_succeeds() {
+  local name="fresh-apply-requires-migrate"
   local env_data home_dir state_dir first_line
   env_data="$(new_test_env "$name")"
   home_dir="${env_data%%|*}"
   state_dir="${env_data##*|}"
 
+  if run_shell_sync "$home_dir" "$state_dir" --apply --shell zsh >/dev/null; then
+    fail "$name" "apply unexpectedly succeeded before migrate"
+    return
+  fi
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --shell zsh >/dev/null; then
+    fail "$name" "shell sync migrate failed"
+    return
+  fi
+
   if ! run_shell_sync "$home_dir" "$state_dir" --apply --shell zsh >/dev/null; then
-    fail "$name" "shell sync apply failed"
+    fail "$name" "shell sync apply failed after migrate"
     return
   fi
 
@@ -170,8 +180,13 @@ test_legacy_store_symlink_is_replaced_with_regular_file() {
   mkdir -p "$home_dir/.nix"
   ln -s "/nix/store/fake-legacy-zshrc" "$wrapper_file"
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target zsh-zdotdir >/dev/null; then
-    fail "$name" "shell sync apply failed"
+  if run_shell_sync "$home_dir" "$state_dir" --apply --target zsh-zdotdir >/dev/null; then
+    fail "$name" "apply unexpectedly succeeded with store symlink"
+    return
+  fi
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target zsh-zdotdir >/dev/null; then
+    fail "$name" "shell sync migrate failed"
     return
   fi
 
@@ -187,6 +202,11 @@ test_legacy_store_symlink_is_replaced_with_regular_file() {
 
   if ! grep -Fqx '# >>> dotfiles-managed:zdotdir.zshrc >>>' "$wrapper_file"; then
     fail "$name" "managed block marker missing after migration"
+    return
+  fi
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target zsh-zdotdir >/dev/null; then
+    fail "$name" "apply failed after migrate"
     return
   fi
 
@@ -206,8 +226,13 @@ test_apply_does_not_modify_existing_zshrc_link() {
 EOF
   ln -s ".zshrc.local" "$home_dir/.zshrc"
 
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target zsh-zdotdir >/dev/null; then
+    fail "$name" "shell sync migrate failed"
+    return
+  fi
+
   if ! run_shell_sync "$home_dir" "$state_dir" --apply --target zsh-zdotdir >/dev/null; then
-    fail "$name" "shell sync apply failed"
+    fail "$name" "shell sync apply failed after migrate"
     return
   fi
 
@@ -232,8 +257,18 @@ test_bash_entrypoint_fresh_apply() {
   home_dir="${env_data%%|*}"
   state_dir="${env_data##*|}"
 
+  if run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+    fail "$name" "apply unexpectedly succeeded before migrate"
+    return
+  fi
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target bash-rc >/dev/null; then
+    fail "$name" "shell sync migrate failed"
+    return
+  fi
+
   if ! run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
-    fail "$name" "shell sync apply failed"
+    fail "$name" "shell sync apply failed after migrate"
     return
   fi
 
@@ -294,8 +329,13 @@ test_bash_entrypoint_store_symlink_migration() {
 
   ln -s "/nix/store/fake-hm-bashrc" "$rc_file"
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
-    fail "$name" "shell sync apply failed"
+  if run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+    fail "$name" "apply unexpectedly succeeded with store symlink"
+    return
+  fi
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target bash-rc >/dev/null; then
+    fail "$name" "shell sync migrate failed"
     return
   fi
 
@@ -306,6 +346,11 @@ test_bash_entrypoint_store_symlink_migration() {
 
   if [[ ! -f $rc_file ]]; then
     fail "$name" "bash entrypoint regular file missing after migration"
+    return
+  fi
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+    fail "$name" "apply failed after migrate"
     return
   fi
 
@@ -320,8 +365,18 @@ test_fish_entrypoint_fresh_apply() {
   state_dir="${env_data##*|}"
   cfg_file="$home_dir/.config/fish/config.fish"
 
+  if run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+    fail "$name" "apply unexpectedly succeeded before migrate"
+    return
+  fi
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target fish-config >/dev/null; then
+    fail "$name" "shell sync migrate failed"
+    return
+  fi
+
   if ! run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
-    fail "$name" "shell sync apply failed"
+    fail "$name" "shell sync apply failed after migrate"
     return
   fi
 
@@ -384,8 +439,13 @@ test_fish_entrypoint_store_symlink_migration() {
   mkdir -p "$(dirname "$cfg_file")"
   ln -s "/nix/store/fake-hm-fish-config" "$cfg_file"
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
-    fail "$name" "shell sync apply failed"
+  if run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+    fail "$name" "apply unexpectedly succeeded with store symlink"
+    return
+  fi
+
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target fish-config >/dev/null; then
+    fail "$name" "shell sync migrate failed"
     return
   fi
 
@@ -399,6 +459,11 @@ test_fish_entrypoint_store_symlink_migration() {
     return
   fi
 
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+    fail "$name" "apply failed after migrate"
+    return
+  fi
+
   pass "$name"
 }
 
@@ -406,7 +471,7 @@ main() {
   echo "test: running shell entrypoint writeability integration tests"
   echo "test: temp root = $tmp_root"
 
-  test_fresh_apply_creates_writable_wrapper_only
+  test_fresh_apply_requires_migrate_then_succeeds
   test_existing_mutable_wrapper_preserves_installer_tail
   test_legacy_store_symlink_is_replaced_with_regular_file
   test_apply_does_not_modify_existing_zshrc_link
