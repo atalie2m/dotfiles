@@ -13,8 +13,7 @@ Subcommands:
   doctor
   bootstrap
   list-tools
-  terminal
-  shell
+  sync
 USAGE
 }
 
@@ -27,7 +26,7 @@ subcommand="$1"
 shift
 
 case "$subcommand" in
-apply | update | doctor | bootstrap | list-tools | terminal | shell)
+apply | update | doctor | bootstrap | list-tools | sync)
   target="$SCRIPT_DIR/${subcommand}.sh"
   if [[ ! -f $target ]]; then
     cwd_target="$(pwd)/nix/scripts/${subcommand}.sh"

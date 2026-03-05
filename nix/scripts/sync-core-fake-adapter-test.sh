@@ -49,6 +49,7 @@ run_core() {
   local mode="$1"
   local in_place="$2"
   local force="$3"
+  local item_filter="${4:-}"
 
   sync_core_mode="$mode"
   sync_core_details=0
@@ -56,6 +57,7 @@ run_core() {
   sync_core_in_place="$in_place"
   sync_core_force="$force"
   sync_core_output_dir="$out_dir"
+  sync_core_item_filter="$item_filter"
   sync_core_root="$tmp_root"
   sync_core_state_dir="$state_dir"
   sync_core_staging_subdir="fake-adopt"
@@ -70,14 +72,6 @@ run_core() {
 
 sync_adapter_list_items() {
   printf 'demo|%s|%s\n' "$desired_file" "$actual_file"
-}
-
-sync_adapter_is_selected() {
-  return 0
-}
-
-sync_adapter_state_key() {
-  printf '%s\n' "$1"
 }
 
 sync_adapter_extract_desired() {
@@ -127,14 +121,6 @@ sync_adapter_log_status() {
 }
 
 sync_adapter_log_action() {
-  return 0
-}
-
-sync_adapter_on_no_selection() {
-  die "no fake adapter items"
-}
-
-sync_adapter_print_summary() {
   return 0
 }
 
@@ -250,6 +236,31 @@ test_forget_state() {
   pass "$name"
 }
 
+test_default_item_selection() {
+  local name="default-item-selection"
+  local output
+
+  printf 'beta\n' >"$desired_file"
+  printf 'beta\n' >"$actual_file"
+
+  if output="$(run_core check 0 0 "missing-item" 2>&1)"; then
+    fail "$name" "check unexpectedly succeeded for unmatched --item"
+    return
+  fi
+
+  if [[ $output != *"no item matched --item 'missing-item'"* ]]; then
+    fail "$name" "default no-selection message did not include --item"
+    return
+  fi
+
+  if ! run_core check 0 0 "demo" >/dev/null 2>&1; then
+    fail "$name" "check failed for matching --item"
+    return
+  fi
+
+  pass "$name"
+}
+
 main() {
   printf 'test: running sync-core fake adapter tests\n'
   printf 'test: temp root = %s\n' "$tmp_root"
@@ -258,6 +269,7 @@ main() {
   test_apply_force_for_drift
   test_adopt_conflict_in_place
   test_forget_state
+  test_default_item_selection
 
   printf 'test: summary pass=%s fail=%s\n' "$pass_count" "$fail_count"
 

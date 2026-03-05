@@ -1,6 +1,6 @@
 { delib, lib, dotlib, inputs, ... }:
 
-# macOS Terminal.app profile reconciliation via nix/scripts/terminal.sh.
+# macOS Terminal.app profile reconciliation via nix/scripts/sync.sh.
 
 delib.module {
   name = "tools.terminal.terminalApp";
@@ -22,9 +22,9 @@ delib.module {
 
   darwin.ifEnabled = { cfg, ... }:
     let
-      terminalSyncScript = "${inputs.self}/nix/scripts/terminal.sh";
+      syncScript = "${inputs.self}/nix/scripts/sync.sh";
       commonArgs =
-        [ terminalSyncScript "sync" "--dir" cfg.managedDir ]
+        [ "bash" syncScript "terminal" "--profiles-dir" cfg.managedDir ]
         ++ lib.optionals (cfg.stateDir != "") [ "--state-dir" cfg.stateDir ]
         ++ cfg.extraArgs;
       applyArgs =

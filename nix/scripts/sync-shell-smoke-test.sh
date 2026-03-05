@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SHELL_SYNC_SCRIPT="$ROOT/nix/scripts/shell.sh"
+SYNC_SCRIPT="$ROOT/nix/scripts/sync.sh"
 SOURCE_MANAGED_DIR="$ROOT/surfaces/shell/desired"
 
 usage() {
@@ -22,8 +22,8 @@ if [[ ${1:-} == "-h" || ${1:-} == "--help" ]]; then
   exit 0
 fi
 
-if [[ ! -x $SHELL_SYNC_SCRIPT ]]; then
-  echo "test: shell sync script not executable: $SHELL_SYNC_SCRIPT" >&2
+if [[ ! -f $SYNC_SCRIPT ]]; then
+  echo "test: sync script not found: $SYNC_SCRIPT" >&2
   exit 1
 fi
 
@@ -48,7 +48,7 @@ chmod -R u+w "$managed_dir"
 run_shell_sync() {
   HOME="$home_dir" \
     XDG_STATE_HOME="$state_dir" \
-    "$SHELL_SYNC_SCRIPT" sync "$@" \
+    bash "$SYNC_SCRIPT" shell "$@" \
     --managed-dir "$managed_dir" \
     --state-dir "$state_dir/blocks"
 }
@@ -56,22 +56,22 @@ run_shell_sync() {
 printf 'test: running shell sync smoke test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
-if run_shell_sync --apply --target bash-rc >/dev/null; then
+if run_shell_sync --apply --item bash-rc >/dev/null; then
   echo "FAIL: apply unexpectedly succeeded before migrate" >&2
   exit 1
 fi
 
-if ! run_shell_sync --migrate --target bash-rc >/dev/null; then
+if ! run_shell_sync --migrate --item bash-rc >/dev/null; then
   echo "FAIL: migrate failed for missing bash entrypoint" >&2
   exit 1
 fi
 
-if ! run_shell_sync --apply --target bash-rc >/dev/null; then
+if ! run_shell_sync --apply --item bash-rc >/dev/null; then
   echo "FAIL: apply failed after migrate" >&2
   exit 1
 fi
 
-if ! run_shell_sync --check --target bash-rc >/dev/null; then
+if ! run_shell_sync --check --item bash-rc >/dev/null; then
   echo "FAIL: check after apply failed" >&2
   exit 1
 fi
@@ -97,12 +97,12 @@ tmp_mutated="$tmp_root/bashrc.mutated"
 ' "$bash_rc" >"$tmp_mutated"
 mv "$tmp_mutated" "$bash_rc"
 
-if run_shell_sync --check --target bash-rc >/dev/null; then
+if run_shell_sync --check --item bash-rc >/dev/null; then
   echo "FAIL: check unexpectedly passed after drift" >&2
   exit 1
 fi
 
-if ! run_shell_sync --adopt --in-place --target bash-rc >/dev/null; then
+if ! run_shell_sync --adopt --in-place --item bash-rc >/dev/null; then
   echo "FAIL: in-place adopt failed" >&2
   exit 1
 fi
@@ -112,7 +112,7 @@ if ! grep -Fq '.nix/hm-bash/.bashrc.smoke' "$managed_dir/bashrc.entrypoint.block
   exit 1
 fi
 
-if ! run_shell_sync --check --target bash-rc >/dev/null; then
+if ! run_shell_sync --check --item bash-rc >/dev/null; then
   echo "FAIL: final check failed after adopt" >&2
   exit 1
 fi

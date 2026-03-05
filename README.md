@@ -144,7 +144,7 @@ See `docs/vscode.md` for details.
 ### Terminal.app profile management (without AppleScript)
 
 Terminal.app profiles are managed as `.terminal` files in this repo (`surfaces/terminal/desired/`), then imported during Home Manager activation.
-Runtime sync operations are implemented through the shared sync adapter core (`nix/scripts/sync-core.sh`) with a Terminal adapter in `nix/scripts/terminal.sh`.
+Runtime sync operations are implemented through `nix/scripts/sync.sh` (surface: `terminal`) with a Terminal adapter in `nix/scripts/sync-adapters/terminal.sh`.
 See `docs/reconciled-surfaces.md` for shared drift workflow and adapter contract.
 
 - Source of truth: `surfaces/terminal/desired/*.terminal`
@@ -169,34 +169,34 @@ Drift handling workflow:
 
 ```bash
 # 1) Check drift
-nix run .#dotfiles -- terminal sync --check
+nix run .#dotfiles -- sync terminal --check
 # (returns non-zero when drift/missing/invalid profiles are detected)
 
 # Optional: show concise per-profile diff details
-nix run .#dotfiles -- terminal sync --check --diff
+nix run .#dotfiles -- sync terminal --check --diff
 
 # 2) If drift is intentional, stage current Terminal.app values (does not overwrite repo)
-nix run .#dotfiles -- terminal sync --adopt
+nix run .#dotfiles -- sync terminal --adopt
 
 # Optional: overwrite repo files directly (conflicts need --force)
-nix run .#dotfiles -- terminal sync --adopt --in-place
-nix run .#dotfiles -- terminal sync --adopt --in-place --force
+nix run .#dotfiles -- sync terminal --adopt --in-place
+nix run .#dotfiles -- sync terminal --adopt --in-place --force
 
 # Optional: clear lastApplied state (all or one profile)
-nix run .#dotfiles -- terminal sync --forget
-nix run .#dotfiles -- terminal sync --forget --profile "Atalie Standard"
+nix run .#dotfiles -- sync terminal --forget
+nix run .#dotfiles -- sync terminal --forget --item "Atalie Standard"
 
 # 3) Apply from CLI (same reconciler used by activation)
-nix run .#dotfiles -- terminal sync --apply
+nix run .#dotfiles -- sync terminal --apply
 
 # 4) Use force only when you intentionally want to overwrite external edits
-nix run .#dotfiles -- terminal sync --apply --force
+nix run .#dotfiles -- sync terminal --apply --force
 ```
 
 ### Shell sync (lastApplied 3-way)
 
 Shell local overrides are managed with lastApplied state:
-Runtime sync operations are implemented through the shared sync adapter core (`nix/scripts/sync-core.sh`) with a shell adapter in `nix/scripts/shell.sh`.
+Runtime sync operations are implemented through `nix/scripts/sync.sh` (surface: `shell`) with a shell adapter in `nix/scripts/sync-adapters/shell.sh`.
 
 - Desired source:
   - `surfaces/shell/desired/zdotdir.zshrc.block.sh`
@@ -209,7 +209,7 @@ Runtime sync operations are implemented through the shared sync adapter core (`n
   - `~/.config/fish/config.fish` (managed block only; runtime fish entrypoint)
   - `~/.config/fish/conf.d/00-dotfiles.fish` (whole file)
 - State guard: `~/.local/state/dotfiles/sync/shell/blocks/*.sha256`
-- `shell sync` only manages declared targets; it does not mutate `~/.zshrc` directly.
+- `sync shell` only manages declared targets; it does not mutate `~/.zshrc` directly.
 
 Managed block markers:
 
@@ -227,33 +227,43 @@ Workflow:
 
 ```bash
 # 1) Check drift/conflict
-nix run .#dotfiles -- shell sync --check
+nix run .#dotfiles -- sync shell --check
 
 # Optional: show diff for drifted targets
-nix run .#dotfiles -- shell sync --check --diff
+nix run .#dotfiles -- sync shell --check --diff
 
 # 2) If local edits are intentional, stage adopt output
-nix run .#dotfiles -- shell sync --adopt
+nix run .#dotfiles -- sync shell --adopt
 
 # Optional: overwrite desired managed files directly (conflicts require --force)
-nix run .#dotfiles -- shell sync --adopt --in-place
-nix run .#dotfiles -- shell sync --adopt --in-place --force
+nix run .#dotfiles -- sync shell --adopt --in-place
+nix run .#dotfiles -- sync shell --adopt --in-place --force
 
 # 3) Migrate legacy or invalid shell entrypoint shapes (explicit one-time step)
-nix run .#dotfiles -- shell sync --migrate
+nix run .#dotfiles -- sync shell --migrate
 
 # 4) Optional: clear lastApplied state
-nix run .#dotfiles -- shell sync --forget
-nix run .#dotfiles -- shell sync --forget --target zsh-zdotdir
-nix run .#dotfiles -- shell sync --forget --target bash-rc
-nix run .#dotfiles -- shell sync --forget --target fish-config
+nix run .#dotfiles -- sync shell --forget
+nix run .#dotfiles -- sync shell --forget --item zsh-zdotdir
+nix run .#dotfiles -- sync shell --forget --item bash-rc
+nix run .#dotfiles -- sync shell --forget --item fish-config
 ```
 
+CLI migration (`shell/terminal` subcommands removed):
+
+| Old command | New command |
+| --- | --- |
+| `nix run .#dotfiles -- shell sync ...` | `nix run .#dotfiles -- sync shell ...` |
+| `nix run .#dotfiles -- terminal sync ...` | `nix run .#dotfiles -- sync terminal ...` |
+| `--target <id>` / `--profile <name>` | `--item <id-or-name>` |
+| `--shell <name>` | `--group <name>` |
+| `--dir <path>` (terminal) | `--profiles-dir <path>` |
+
 `nix run .#apply -- --host <host>` triggers shell reconciliation during Home Manager activation.
-By default activation runs `shell sync --apply` (with drift/conflict failures), and can be tuned via:
+By default activation runs `sync shell --apply` (with drift/conflict failures), and can be tuned via:
 
 - `tools.shell.sync.force = true` to pass `--force`
-- `tools.shell.sync.failOnDrift = false` to run `shell sync --check --details` and continue on drift
+- `tools.shell.sync.failOnDrift = false` to run `sync shell --check --details` and continue on drift
 
 Shell entrypoint writeability regression tests (isolated + auto cleanup):
 
@@ -267,6 +277,8 @@ Additional sync adapter/core tests:
 
 ```bash
 nix/scripts/sync-core-fake-adapter-test.sh
+nix/scripts/sync-cli-migration-test.sh
+nix/scripts/sync-cli-common-parse-test.sh
 nix/scripts/sync-shell-smoke-test.sh
 nix/scripts/sync-terminal-smoke-test.sh
 nix/scripts/vscode-instances-smoke-test.sh

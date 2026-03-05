@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_SCRIPT_LABEL="shell"
+DOTFILES_SCRIPT_LABEL="sync-shell"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=load-lib.sh
-source "$SCRIPT_DIR/load-lib.sh"
+source "$SCRIPT_DIR/../load-lib.sh"
 # shellcheck source=sync-core.sh
 source_dotfiles_script "sync-core.sh"
 # shellcheck disable=SC2317
@@ -12,11 +12,11 @@ source_dotfiles_script "sync-core.sh"
 usage() {
   cat <<'USAGE'
 Usage:
-  nix run .#dotfiles -- shell sync --check [--details] [--diff] [--shell <zsh|bash|fish|all>] [--target <id>] [--managed-dir <path>] [--state-dir <path>]
-  nix run .#dotfiles -- shell sync --apply [--details] [--diff] [--shell <zsh|bash|fish|all>] [--target <id>] [--managed-dir <path>] [--state-dir <path>] [--force]
-  nix run .#dotfiles -- shell sync --adopt [--details] [--diff] [--shell <zsh|bash|fish|all>] [--target <id>] [--managed-dir <path>] [--state-dir <path>] [--in-place] [--force] [--output-dir <path>]
-  nix run .#dotfiles -- shell sync --migrate [--shell <zsh|bash|fish|all>] [--target <id>] [--managed-dir <path>]
-  nix run .#dotfiles -- shell sync --forget [--shell <zsh|bash|fish|all>] [--target <id>] [--state-dir <path>]
+  nix run .#dotfiles -- sync shell --check [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>] [--state-dir <path>]
+  nix run .#dotfiles -- sync shell --apply [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>] [--state-dir <path>] [--force]
+  nix run .#dotfiles -- sync shell --adopt [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>] [--state-dir <path>] [--in-place] [--force] [--output-dir <path>]
+  nix run .#dotfiles -- sync shell --migrate [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>]
+  nix run .#dotfiles -- sync shell --forget [--group <zsh|bash|fish|all>] [--item <id>] [--state-dir <path>]
 
 Description:
   Manage shell config with lastApplied 3-way status.
@@ -31,8 +31,8 @@ Options:
   --adopt              Export current local managed content for drifted targets
   --migrate            Convert legacy/invalid entrypoint targets to writable expected shape
   --forget             Remove last-applied hash state
-  --shell <name>       Filter targets by shell (repeatable, default: all)
-  --target <id>        Filter one target id (zsh-zdotdir, bash-rc, fish-config, fish-core)
+  --group <name>       Filter targets by shell group (repeatable, default: all)
+  --item <id>          Filter one target id (zsh-zdotdir, bash-rc, fish-config, fish-core)
   --details            Print concise per-target details
   --diff               Print unified diff (desired vs current)
   --managed-dir <path> Desired managed content directory (default: <repo>/surfaces/shell/desired)
@@ -43,74 +43,51 @@ Options:
 USAGE
 }
 
-if [[ $# -lt 1 ]]; then
-  usage >&2
-  exit 1
-fi
-
-subcommand="$1"
-shift
-
-if [[ $subcommand != "sync" ]]; then
-  die "unknown shell subcommand: $subcommand"
-fi
-
-mode="check"
-shell_filter=""
-target_filter=""
-details=0
-show_diff=0
-in_place=0
-force=0
-output_dir=""
+group_filter=""
 default_managed_dir=1
 migrate_requested=0
 
 set_repo_root
+sync_core_init_cli_defaults
+sync_core_root="$ROOT"
 managed_dir="$ROOT/surfaces/shell/desired"
-state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/sync/shell/blocks"
+sync_core_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/sync/shell/blocks"
 
 append_shell_filter() {
   local shell_name="$1"
 
-  if [[ $shell_filter == "all" ]]; then
+  if [[ $group_filter == "all" ]]; then
     return 0
   fi
 
-  if [[ -z $shell_filter ]]; then
-    shell_filter="$shell_name"
+  if [[ -z $group_filter ]]; then
+    group_filter="$shell_name"
     return 0
   fi
 
-  case ",$shell_filter," in
+  case ",$group_filter," in
   *",$shell_name,"*) ;;
   *)
-    shell_filter="$shell_filter,$shell_name"
+    group_filter="$group_filter,$shell_name"
     ;;
   esac
 }
 
 sync_cli_parse_script_option() {
   case "$1" in
-  --shell)
-    [[ $# -lt 2 ]] && die "missing value for --shell"
+  --group)
+    [[ $# -lt 2 ]] && die "missing value for --group"
     case "$2" in
     zsh | bash | fish)
       append_shell_filter "$2"
       ;;
     all)
-      shell_filter="all"
+      group_filter="all"
       ;;
     *)
-      die "invalid --shell value: $2 (expected zsh, bash, fish, all)"
+      die "invalid --group value: $2 (expected zsh, bash, fish, all)"
       ;;
     esac
-    sync_core_cli_consumed=2
-    return 0
-    ;;
-  --target)
-    [[ $# -lt 2 ]] && die "missing value for --target"
-    target_filter="$2"
     sync_core_cli_consumed=2
     return 0
     ;;
@@ -126,12 +103,6 @@ sync_cli_parse_script_option() {
     sync_core_cli_consumed=2
     return 0
     ;;
-  --state-dir)
-    [[ $# -lt 2 ]] && die "missing value for --state-dir"
-    state_dir="$2"
-    sync_core_cli_consumed=2
-    return 0
-    ;;
   esac
 
   return 1
@@ -140,30 +111,25 @@ sync_cli_parse_script_option() {
 sync_core_parse_cli_args 1 "$@"
 
 if [[ $migrate_requested -eq 1 ]]; then
-  if [[ $mode != "check" ]]; then
+  if [[ $sync_core_mode != "check" ]]; then
     die "--migrate cannot be combined with --check/--apply/--adopt/--forget"
   fi
-  mode="migrate"
+  sync_core_mode="migrate"
 fi
 
-if [[ $default_managed_dir -eq 1 ]]; then
-  worktree_root="$(resolve_repo_worktree_root_for "surfaces/shell/desired" || true)"
-  if [[ -n $worktree_root ]]; then
-    ROOT="$worktree_root"
-    managed_dir="$ROOT/surfaces/shell/desired"
-  fi
-fi
+managed_dir="$(sync_core_resolve_surface_dir "surfaces/shell/desired" "$managed_dir" "$default_managed_dir")"
+ROOT="$sync_core_root"
 
-if [[ $mode != "migrate" ]]; then
-  sync_core_validate_adopt_flags "$mode" "$in_place" "$output_dir"
-  sync_core_validate_force_usage "$mode" "$in_place" "$force" 1 "--force is only valid with --apply or --adopt --in-place"
+if [[ $sync_core_mode != "migrate" ]]; then
+  sync_core_validate_adopt_flags "$sync_core_mode" "$sync_core_in_place" "$sync_core_output_dir"
+  sync_core_validate_force_usage "$sync_core_mode" "$sync_core_in_place" "$sync_core_force" 1 "--force is only valid with --apply or --adopt --in-place"
 else
-  if [[ $in_place -eq 1 || -n $output_dir || $force -eq 1 ]]; then
+  if [[ $sync_core_in_place -eq 1 || -n $sync_core_output_dir || $sync_core_force -eq 1 ]]; then
     die "--in-place/--output-dir/--force are not valid with --migrate"
   fi
 fi
 
-if [[ $mode != "forget" && ! -d $managed_dir ]]; then
+if [[ $sync_core_mode != "forget" && ! -d $managed_dir ]]; then
   die "managed dir not found: $managed_dir"
 fi
 
@@ -174,85 +140,90 @@ list_target_ids() {
   printf '%s\n' "fish-core"
 }
 
-target_shell_for_id() {
+target_meta_for_id() {
   case "$1" in
-  zsh-zdotdir) printf '%s\n' "zsh" ;;
-  bash-rc) printf '%s\n' "bash" ;;
-  fish-config) printf '%s\n' "fish" ;;
-  fish-core) printf '%s\n' "fish" ;;
+  zsh-zdotdir)
+    printf '%s|%s|%s|%s|%s|%s\n' \
+      "zsh" "block" "$HOME/.nix/.zshrc" "$managed_dir/zdotdir.zshrc.block.sh" \
+      "# >>> dotfiles-managed:zdotdir.zshrc >>>" "# <<< dotfiles-managed:zdotdir.zshrc <<<"
+    ;;
+  bash-rc)
+    printf '%s|%s|%s|%s|%s|%s\n' \
+      "bash" "block" "$HOME/.bashrc" "$managed_dir/bashrc.entrypoint.block.sh" \
+      "# >>> dotfiles-managed:bashrc >>>" "# <<< dotfiles-managed:bashrc <<<"
+    ;;
+  fish-config)
+    printf '%s|%s|%s|%s|%s|%s\n' \
+      "fish" "block" "$HOME/.config/fish/config.fish" "$managed_dir/fish.config.block.fish" \
+      "# >>> dotfiles-managed:fish.config >>>" "# <<< dotfiles-managed:fish.config <<<"
+    ;;
+  fish-core)
+    printf '%s|%s|%s|%s|%s|%s\n' \
+      "fish" "file" "$HOME/.config/fish/conf.d/00-dotfiles.fish" "$managed_dir/00-dotfiles.fish" "" ""
+    ;;
   *)
     return 1
     ;;
   esac
+}
+
+target_read_meta() {
+  local id="$1"
+  local shell_name type_name actual_path desired_path begin_marker end_marker
+
+  IFS='|' read -r shell_name type_name actual_path desired_path begin_marker end_marker \
+    <<<"$(target_meta_for_id "$id")" || return 1
+
+  printf '%s|%s|%s|%s|%s|%s\n' "$shell_name" "$type_name" "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
+}
+
+target_shell_for_id() {
+  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
+  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
+    <<<"$(target_read_meta "$1")" || return 1
+  printf '%s\n' "$_shell_name"
 }
 
 target_type_for_id() {
-  case "$1" in
-  fish-core) printf '%s\n' "file" ;;
-  zsh-zdotdir | bash-rc | fish-config) printf '%s\n' "block" ;;
-  *)
-    return 1
-    ;;
-  esac
+  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
+  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
+    <<<"$(target_read_meta "$1")" || return 1
+  printf '%s\n' "$_type_name"
 }
 
 target_actual_path_for_id() {
-  case "$1" in
-  zsh-zdotdir) printf '%s\n' "$HOME/.nix/.zshrc" ;;
-  bash-rc) printf '%s\n' "$HOME/.bashrc" ;;
-  fish-config) printf '%s\n' "$HOME/.config/fish/config.fish" ;;
-  fish-core) printf '%s\n' "$HOME/.config/fish/conf.d/00-dotfiles.fish" ;;
-  *)
-    return 1
-    ;;
-  esac
+  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
+  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
+    <<<"$(target_read_meta "$1")" || return 1
+  printf '%s\n' "$_actual_path"
 }
 
 target_desired_path_for_id() {
-  case "$1" in
-  zsh-zdotdir) printf '%s\n' "$managed_dir/zdotdir.zshrc.block.sh" ;;
-  bash-rc) printf '%s\n' "$managed_dir/bashrc.entrypoint.block.sh" ;;
-  fish-config) printf '%s\n' "$managed_dir/fish.config.block.fish" ;;
-  fish-core) printf '%s\n' "$managed_dir/00-dotfiles.fish" ;;
-  *)
-    return 1
-    ;;
-  esac
+  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
+  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
+    <<<"$(target_read_meta "$1")" || return 1
+  printf '%s\n' "$_desired_path"
 }
 
 target_begin_marker_for_id() {
-  case "$1" in
-  zsh-zdotdir) printf '%s\n' "# >>> dotfiles-managed:zdotdir.zshrc >>>" ;;
-  bash-rc) printf '%s\n' "# >>> dotfiles-managed:bashrc >>>" ;;
-  fish-config) printf '%s\n' "# >>> dotfiles-managed:fish.config >>>" ;;
-  fish-core) printf '%s\n' "" ;;
-  *)
-    return 1
-    ;;
-  esac
+  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
+  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
+    <<<"$(target_read_meta "$1")" || return 1
+  printf '%s\n' "$_begin_marker"
 }
 
 target_end_marker_for_id() {
-  case "$1" in
-  zsh-zdotdir) printf '%s\n' "# <<< dotfiles-managed:zdotdir.zshrc <<<" ;;
-  bash-rc) printf '%s\n' "# <<< dotfiles-managed:bashrc <<<" ;;
-  fish-config) printf '%s\n' "# <<< dotfiles-managed:fish.config <<<" ;;
-  fish-core) printf '%s\n' "" ;;
-  *)
-    return 1
-    ;;
-  esac
+  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
+  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
+    <<<"$(target_read_meta "$1")" || return 1
+  printf '%s\n' "$_end_marker"
 }
 
 target_selected() {
   local id="$1"
   local shell_name
 
-  if [[ -n $target_filter && $id != "$target_filter" ]]; then
-    return 1
-  fi
-
-  if [[ -z $shell_filter || $shell_filter == "all" ]]; then
+  if [[ -z $group_filter || $group_filter == "all" ]]; then
     return 0
   fi
 
@@ -261,10 +232,16 @@ target_selected() {
     return 1
   fi
 
-  case ",$shell_filter," in
+  case ",$group_filter," in
   *",$shell_name,"*) return 0 ;;
   *) return 1 ;;
   esac
+}
+
+migrate_target_selected() {
+  local id="$1"
+  sync_core_is_selected_default "$id" || return 1
+  target_selected "$id"
 }
 
 canonicalize_text_to_file() {
@@ -593,7 +570,7 @@ apply_shape_error() {
   local id="$1"
   local reason="$2"
   log "apply refused for '$id': $reason"
-  log "  run: nix run .#dotfiles -- shell sync --migrate (use the same --target/--shell filters)"
+  log "  run: nix run .#dotfiles -- sync shell --migrate (use the same --item/--group filters)"
 }
 
 validate_entrypoint_shape_for_apply() {
@@ -688,7 +665,7 @@ run_migrate_mode() {
 
   while IFS= read -r id; do
     [[ -z $id ]] && continue
-    if ! target_selected "$id"; then
+    if ! migrate_target_selected "$id"; then
       continue
     fi
 
@@ -792,86 +769,28 @@ sync_adapter_print_diff() {
   print_target_diff "$id"
 }
 
-sync_adapter_log_status() {
-  local id="$1"
-  local status="$2"
-  local _desired_meta="$3"
-  local actual_meta="$4"
-  local last_hash="$5"
-
-  case "$status" in
-  safe-update)
-    log "safe update pending: $id"
-    log "  desired changed; current still matches lastApplied, apply can overwrite safely"
-    ;;
-  in-sync-untracked)
-    log "in sync but no lastApplied state: $id"
-    ;;
-  state-stale)
-    log "state stale (desired==actual, lastApplied is old): $id"
-    ;;
-  missing)
-    log "missing managed content in local target: $id ($actual_meta)"
-    ;;
-  drift-untracked | drift-missing | drift-external | conflict)
-    log "drift detected: $id"
-    [[ -n $last_hash ]] && log "  lastApplied: $last_hash"
-    case "$status" in
-    drift-untracked)
-      log "  reason: managed content exists without lastApplied and differs from desired"
-      ;;
-    drift-missing)
-      log "  reason: managed content missing locally but lastApplied exists"
-      ;;
-    drift-external)
-      log "  reason: local managed content changed outside dotfiles (desired==lastApplied, actual!=lastApplied)"
-      ;;
-    conflict)
-      log "  reason: both desired and local changed from lastApplied"
-      ;;
-    esac
-    ;;
-  esac
-}
-
 sync_adapter_on_no_selection() {
-  if [[ -n $target_filter ]]; then
-    die "no target matched --target '$target_filter'"
+  if [[ -n ${sync_core_item_filter:-} ]]; then
+    die "no item matched --item '$sync_core_item_filter'"
   fi
-  if [[ -n $shell_filter && $shell_filter != "all" ]]; then
-    die "no target matched --shell '$shell_filter'"
+  if [[ -n $group_filter && $group_filter != "all" ]]; then
+    die "no item matched --group '$group_filter'"
   fi
   die "no shell targets selected"
 }
 
-sync_adapter_print_summary() {
-  if [[ $mode == "forget" ]]; then
-    log "summary: forgotten=$sync_core_forgotten missing_state=$sync_core_missing_state"
-    return 0
-  fi
-
-  log "summary: checked=$sync_core_checked in_sync=$sync_core_in_sync pending=$sync_core_pending state_stale=$sync_core_state_stale drift=$sync_core_drift conflicts=$sync_core_conflicts drift_missing=$sync_core_drift_missing missing=$sync_core_missing untracked=$sync_core_untracked applied=$sync_core_applied staged=$sync_core_staged adopted=$sync_core_adopted refused=$sync_core_refused unresolved=$sync_core_unresolved invalid=$sync_core_invalid errors=$sync_core_errors"
+sync_adapter_print_summary_extra() {
   log "managed dir: $managed_dir"
-  log "state dir: $state_dir"
-  [[ -n ${sync_core_resolved_output_dir:-} ]] && log "staging dir: $sync_core_resolved_output_dir"
-  return 0
 }
 
-if [[ $mode == "migrate" ]]; then
+if [[ $sync_core_mode == "migrate" ]]; then
   if run_migrate_mode; then
     exit 0
   fi
   exit 1
 fi
 
-sync_core_mode="$mode"
-sync_core_details="$details"
-sync_core_show_diff="$show_diff"
-sync_core_in_place="$in_place"
-sync_core_force="$force"
-sync_core_output_dir="$output_dir"
 sync_core_root="$ROOT"
-sync_core_state_dir="$state_dir"
 sync_core_staging_subdir="shell-adopt"
 sync_core_invalid_desired_status="invalid-desired"
 sync_core_invalid_actual_status="actual-invalid"

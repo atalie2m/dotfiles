@@ -20,19 +20,19 @@ delib.module {
 
   darwin.ifEnabled = { cfg, myconfig, ... }:
     let
-      shellSyncScript = "${inputs.self}/nix/scripts/shell.sh";
+      syncScript = "${inputs.self}/nix/scripts/sync.sh";
       shellCfg = ((myconfig.tools or { }).shell or { });
       zshEnabled = ((shellCfg.zsh or { }).enable or false);
       bashEnabled = ((shellCfg.bash or { }).enable or false);
       fishEnabled = ((shellCfg.fish or { }).enable or false);
       shellFilters = lib.concatLists [
-        (lib.optionals zshEnabled [ "--shell" "zsh" ])
-        (lib.optionals bashEnabled [ "--shell" "bash" ])
-        (lib.optionals fishEnabled [ "--shell" "fish" ])
+        (lib.optionals zshEnabled [ "--group" "zsh" ])
+        (lib.optionals bashEnabled [ "--group" "bash" ])
+        (lib.optionals fishEnabled [ "--group" "fish" ])
       ];
       noSelectedShells = shellFilters == [ ];
       commonArgs =
-        [ shellSyncScript "sync" "--managed-dir" cfg.managedDir ]
+        [ "bash" syncScript "shell" "--managed-dir" cfg.managedDir ]
         ++ lib.optionals (cfg.stateDir != "") [ "--state-dir" cfg.stateDir ]
         ++ shellFilters
         ++ cfg.extraArgs;

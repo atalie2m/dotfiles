@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SHELL_SYNC_SCRIPT="$ROOT/nix/scripts/shell.sh"
+SYNC_SCRIPT="$ROOT/nix/scripts/sync.sh"
 MANAGED_DIR="$ROOT/surfaces/shell/desired"
 
 usage() {
@@ -22,8 +22,8 @@ if [[ ${1:-} == "-h" || ${1:-} == "--help" ]]; then
   exit 0
 fi
 
-if [[ ! -x $SHELL_SYNC_SCRIPT ]]; then
-  echo "test: shell sync script not executable: $SHELL_SYNC_SCRIPT" >&2
+if [[ ! -f $SYNC_SCRIPT ]]; then
+  echo "test: sync script not found: $SYNC_SCRIPT" >&2
   exit 1
 fi
 
@@ -70,7 +70,7 @@ run_shell_sync() {
 
   HOME="$home_dir" \
     XDG_STATE_HOME="$state_dir" \
-    "$SHELL_SYNC_SCRIPT" sync "$@" \
+    bash "$SYNC_SCRIPT" shell "$@" \
     --managed-dir "$MANAGED_DIR" \
     --state-dir "$state_dir/blocks"
 }
@@ -90,17 +90,17 @@ test_fresh_apply_requires_migrate_then_succeeds() {
   home_dir="${env_data%%|*}"
   state_dir="${env_data##*|}"
 
-  if run_shell_sync "$home_dir" "$state_dir" --apply --shell zsh >/dev/null; then
+  if run_shell_sync "$home_dir" "$state_dir" --apply --group zsh >/dev/null; then
     fail "$name" "apply unexpectedly succeeded before migrate"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --shell zsh >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --group zsh >/dev/null; then
     fail "$name" "shell sync migrate failed"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --shell zsh >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --group zsh >/dev/null; then
     fail "$name" "shell sync apply failed after migrate"
     return
   fi
@@ -121,7 +121,7 @@ test_fresh_apply_requires_migrate_then_succeeds() {
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --check --shell zsh >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --check --group zsh >/dev/null; then
     fail "$name" "post-apply check failed"
     return
   fi
@@ -143,7 +143,7 @@ export SDKMAN_DIR="$HOME/.sdkman"
 # installer line
 EOF
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target zsh-zdotdir >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item zsh-zdotdir >/dev/null; then
     fail "$name" "shell sync apply failed"
     return
   fi
@@ -180,12 +180,12 @@ test_legacy_store_symlink_is_replaced_with_regular_file() {
   mkdir -p "$home_dir/.nix"
   ln -s "/nix/store/fake-legacy-zshrc" "$wrapper_file"
 
-  if run_shell_sync "$home_dir" "$state_dir" --apply --target zsh-zdotdir >/dev/null; then
+  if run_shell_sync "$home_dir" "$state_dir" --apply --item zsh-zdotdir >/dev/null; then
     fail "$name" "apply unexpectedly succeeded with store symlink"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target zsh-zdotdir >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item zsh-zdotdir >/dev/null; then
     fail "$name" "shell sync migrate failed"
     return
   fi
@@ -205,7 +205,7 @@ test_legacy_store_symlink_is_replaced_with_regular_file() {
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target zsh-zdotdir >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item zsh-zdotdir >/dev/null; then
     fail "$name" "apply failed after migrate"
     return
   fi
@@ -226,12 +226,12 @@ test_apply_does_not_modify_existing_zshrc_link() {
 EOF
   ln -s ".zshrc.local" "$home_dir/.zshrc"
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target zsh-zdotdir >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item zsh-zdotdir >/dev/null; then
     fail "$name" "shell sync migrate failed"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target zsh-zdotdir >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item zsh-zdotdir >/dev/null; then
     fail "$name" "shell sync apply failed after migrate"
     return
   fi
@@ -257,17 +257,17 @@ test_bash_entrypoint_fresh_apply() {
   home_dir="${env_data%%|*}"
   state_dir="${env_data##*|}"
 
-  if run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+  if run_shell_sync "$home_dir" "$state_dir" --apply --item bash-rc >/dev/null; then
     fail "$name" "apply unexpectedly succeeded before migrate"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target bash-rc >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item bash-rc >/dev/null; then
     fail "$name" "shell sync migrate failed"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item bash-rc >/dev/null; then
     fail "$name" "shell sync apply failed after migrate"
     return
   fi
@@ -299,7 +299,7 @@ export PATH="$HOME/.local/bin:$PATH"
 # installer line
 EOF
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item bash-rc >/dev/null; then
     fail "$name" "shell sync apply failed"
     return
   fi
@@ -329,12 +329,12 @@ test_bash_entrypoint_store_symlink_migration() {
 
   ln -s "/nix/store/fake-hm-bashrc" "$rc_file"
 
-  if run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+  if run_shell_sync "$home_dir" "$state_dir" --apply --item bash-rc >/dev/null; then
     fail "$name" "apply unexpectedly succeeded with store symlink"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target bash-rc >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item bash-rc >/dev/null; then
     fail "$name" "shell sync migrate failed"
     return
   fi
@@ -349,7 +349,7 @@ test_bash_entrypoint_store_symlink_migration() {
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target bash-rc >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item bash-rc >/dev/null; then
     fail "$name" "apply failed after migrate"
     return
   fi
@@ -365,17 +365,17 @@ test_fish_entrypoint_fresh_apply() {
   state_dir="${env_data##*|}"
   cfg_file="$home_dir/.config/fish/config.fish"
 
-  if run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+  if run_shell_sync "$home_dir" "$state_dir" --apply --item fish-config >/dev/null; then
     fail "$name" "apply unexpectedly succeeded before migrate"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target fish-config >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item fish-config >/dev/null; then
     fail "$name" "shell sync migrate failed"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item fish-config >/dev/null; then
     fail "$name" "shell sync apply failed after migrate"
     return
   fi
@@ -408,7 +408,7 @@ set -gx FNM_DIR "$HOME/.fnm"
 # installer line
 EOF
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item fish-config >/dev/null; then
     fail "$name" "shell sync apply failed"
     return
   fi
@@ -439,12 +439,12 @@ test_fish_entrypoint_store_symlink_migration() {
   mkdir -p "$(dirname "$cfg_file")"
   ln -s "/nix/store/fake-hm-fish-config" "$cfg_file"
 
-  if run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+  if run_shell_sync "$home_dir" "$state_dir" --apply --item fish-config >/dev/null; then
     fail "$name" "apply unexpectedly succeeded with store symlink"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --target fish-config >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item fish-config >/dev/null; then
     fail "$name" "shell sync migrate failed"
     return
   fi
@@ -459,7 +459,7 @@ test_fish_entrypoint_store_symlink_migration() {
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --target fish-config >/dev/null; then
+  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item fish-config >/dev/null; then
     fail "$name" "apply failed after migrate"
     return
   fi

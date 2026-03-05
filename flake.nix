@@ -302,6 +302,26 @@
               touch "$out"
             '';
 
+            syncCliMigration = pkgs.runCommand "sync-cli-migration-test"
+              {
+                nativeBuildInputs = [ pkgs.bash ];
+                src = inputs.self;
+              } ''
+              cd "$src"
+              bash nix/scripts/sync-cli-migration-test.sh
+              touch "$out"
+            '';
+
+            syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
+              {
+                nativeBuildInputs = [ pkgs.bash ];
+                src = inputs.self;
+              } ''
+              cd "$src"
+              bash nix/scripts/sync-cli-common-parse-test.sh
+              touch "$out"
+            '';
+
             shellEntrypointWriteability = pkgs.runCommand "shell-zsh-writeability-test"
               {
                 nativeBuildInputs = [ pkgs.bash ];

@@ -3,7 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-TERMINAL_SYNC_SCRIPT="$ROOT/nix/scripts/terminal.sh"
+SYNC_SCRIPT="$ROOT/nix/scripts/sync.sh"
+TERMINAL_LIB="$ROOT/nix/scripts/sync-adapters/terminal-lib.sh"
 
 usage() {
   cat <<'USAGE'
@@ -21,10 +22,17 @@ if [[ ${1:-} == "-h" || ${1:-} == "--help" ]]; then
   exit 0
 fi
 
-if [[ ! -x $TERMINAL_SYNC_SCRIPT ]]; then
-  echo "test: terminal sync script not executable: $TERMINAL_SYNC_SCRIPT" >&2
+if [[ ! -f $SYNC_SCRIPT ]]; then
+  echo "test: sync script not found: $SYNC_SCRIPT" >&2
   exit 1
 fi
+if [[ ! -f $TERMINAL_LIB ]]; then
+  echo "test: terminal lib not found: $TERMINAL_LIB" >&2
+  exit 1
+fi
+
+# shellcheck source=sync-adapters/terminal-lib.sh
+source "$TERMINAL_LIB"
 
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/terminal-smoke.XXXXXX")"
 cleanup() {
@@ -97,16 +105,6 @@ read_startup_profile_setting() {
   /usr/libexec/PlistBuddy -c 'Print :"Startup Window Settings"' "$plist_file" 2>/dev/null || true
 }
 
-profile_state_key() {
-  local name="$1"
-  local short_hash prefix
-
-  short_hash="$(printf '%s' "$name" | /usr/bin/shasum -a 256 | /usr/bin/awk '{print substr($1, 1, 12)}')"
-  prefix="$(printf '%s' "$name" | /usr/bin/tr '[:space:]' '-' | /usr/bin/tr -cd '[:alnum:]._-')"
-  [[ -z $prefix ]] && prefix="profile"
-  printf '%s.%s\n' "$prefix" "$short_hash"
-}
-
 desired_hash() {
   local tmp_bin
   tmp_bin="$(mktemp)"
@@ -117,16 +115,16 @@ desired_hash() {
 
 run_terminal_sync() {
   DOTFILES_TERMINAL_SYNC_PLIST="$plist_file" \
-    "$TERMINAL_SYNC_SCRIPT" sync "$@" \
-    --dir "$profiles_dir" \
+    bash "$SYNC_SCRIPT" terminal "$@" \
+    --profiles-dir "$profiles_dir" \
     --state-dir "$state_dir"
 }
 
 run_terminal_sync_fail_commit() {
   DOTFILES_TERMINAL_SYNC_PLIST="$plist_file" \
     DOTFILES_TERMINAL_SYNC_FAIL_COMMIT=1 \
-    "$TERMINAL_SYNC_SCRIPT" sync "$@" \
-    --dir "$profiles_dir" \
+    bash "$SYNC_SCRIPT" terminal "$@" \
+    --profiles-dir "$profiles_dir" \
     --state-dir "$state_dir"
 }
 
@@ -150,7 +148,7 @@ if run_terminal_sync --check >/dev/null; then
   exit 1
 fi
 
-if ! run_terminal_sync --adopt --in-place --profile "$profile_name" >/dev/null; then
+if ! run_terminal_sync --adopt --in-place --item "$profile_name" >/dev/null; then
   echo "FAIL: adopt in-place failed" >&2
   exit 1
 fi

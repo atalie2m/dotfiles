@@ -50,15 +50,12 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 
 ## Adding a Sync Adapter
 - Runtime reconciler core lives in `nix/scripts/sync-core.sh`.
-- Each adapter script (for example `nix/scripts/shell.sh`, `nix/scripts/terminal.sh`) must define these required functions:
+- Adapter scripts live under `nix/scripts/sync-adapters/` (for example `nix/scripts/sync-adapters/shell.sh`, `nix/scripts/sync-adapters/terminal.sh`).
+- Each adapter script must define these required functions:
   - `sync_adapter_list_items`
-  - `sync_adapter_is_selected`
-  - `sync_adapter_state_key`
   - `sync_adapter_extract_desired`
   - `sync_adapter_extract_actual`
   - `sync_adapter_write_desired_to_actual`
   - `sync_adapter_export_actual`
-  - `sync_adapter_on_no_selection`
-  - `sync_adapter_print_summary`
-- Optional hooks (`sync_adapter_print_diff`, `sync_adapter_print_details`, `sync_adapter_after_apply`, etc.) should be added only when they provide concrete UX or transactional value.
+- Optional hooks (`sync_adapter_is_selected`, `sync_adapter_state_key`, `sync_adapter_read_last_applied_hash`, `sync_adapter_write_last_applied_hash`, `sync_adapter_forget_last_applied_hash`, `sync_adapter_print_diff`, `sync_adapter_print_details`, `sync_adapter_after_apply`, `sync_adapter_on_no_selection`, `sync_adapter_print_summary_extra`, etc.) should be added only when they provide concrete UX or transactional value.
 - Add/update smoke tests under `nix/scripts/` and document drift workflow in `docs/reconciled-surfaces.md` and `README.md`.
