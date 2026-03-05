@@ -148,13 +148,6 @@ See `docs/reconciled-surfaces.md` for shared drift workflow and adapter contract
 - Drift guard: apply aborts when current Terminal profile differs from last-applied (`tools.terminal.terminalApp.failOnDrift = true`)
 - Force behavior: `tools.terminal.terminalApp.forceImport = true` adds `--force` during activation apply
 
-State migration (old -> new layout):
-
-```bash
-nix run .#dotfiles -- migrate-state --dry-run
-nix run .#dotfiles -- migrate-state --force
-```
-
 Current managed profiles:
 - `Atalie Standard` (`apps/terminal/Atalie-Standard.terminal`)
 - `Atalie Dark` (`apps/terminal/Atalie-Dark.terminal`)
@@ -530,12 +523,6 @@ nix run .#doctor -- --host a2m_mac --strict
 
 # JSON output for CI
 nix run .#doctor -- --json
-```
-
-`doctor` also warns when legacy sync state directories are still populated and points to:
-
-```bash
-nix run .#dotfiles -- migrate-state --dry-run
 ```
 
 For strict sync drift checks, pass `--host` so `doctor` can gate checks by target tool enablement.

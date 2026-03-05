@@ -46,14 +46,7 @@ nix run .#dotfiles -- shell sync --apply --force
 nix run .#dotfiles -- terminal sync --apply --force
 ```
 
-## State Migration
-
-Legacy state directories are no longer read by adapters. Migrate explicitly:
-
-```bash
-nix run .#dotfiles -- migrate-state --dry-run
-nix run .#dotfiles -- migrate-state --force
-```
+Legacy state directories are no longer read by adapters and are intentionally ignored.
 
 ## Adapter Contract
 
@@ -70,4 +63,3 @@ Every adapter that uses `sync-core.sh` must define:
 - `sync_adapter_print_summary`
 
 Optional hooks (`sync_adapter_after_apply`, `sync_adapter_print_details`, `sync_adapter_print_diff`, etc.) are for adapter-specific behavior only and should stay minimal.
-

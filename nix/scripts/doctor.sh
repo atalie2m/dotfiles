@@ -93,15 +93,6 @@ record_check() {
   fi
 }
 
-state_dir_has_entries() {
-  local dir="$1"
-  local entry
-
-  [[ -d $dir ]] || return 1
-  entry="$(find "$dir" -mindepth 1 -print -quit 2>/dev/null || true)"
-  [[ -n $entry ]]
-}
-
 eval_darwin_target_bool() {
   local target_name="$1"
   local option_path="$2"
@@ -112,29 +103,6 @@ eval_darwin_target_bool() {
     --override-input secrets "$SECRETS" \
     2>/dev/null || true
 }
-
-state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
-legacy_shell_state_dir="$state_home/dotfiles/shell/blocks"
-legacy_terminal_state_dir="$state_home/dotfiles/terminal-app/profiles"
-legacy_terminal_fallback_state_dir="$state_home/dotfiles/terminal/profiles"
-
-if state_dir_has_entries "$legacy_shell_state_dir"; then
-  record_check "state.migration.shell" "warn" "legacy shell sync state found: $legacy_shell_state_dir (run: nix run .#dotfiles -- migrate-state --dry-run)"
-else
-  record_check "state.migration.shell" "ok" "no legacy shell sync state detected"
-fi
-
-if state_dir_has_entries "$legacy_terminal_state_dir"; then
-  record_check "state.migration.terminalApp" "warn" "legacy terminal-app sync state found: $legacy_terminal_state_dir (run: nix run .#dotfiles -- migrate-state --dry-run)"
-else
-  record_check "state.migration.terminalApp" "ok" "no legacy terminal-app sync state detected"
-fi
-
-if state_dir_has_entries "$legacy_terminal_fallback_state_dir"; then
-  record_check "state.migration.terminalLegacy" "warn" "legacy terminal sync state found: $legacy_terminal_fallback_state_dir (run: nix run .#dotfiles -- migrate-state --dry-run)"
-else
-  record_check "state.migration.terminalLegacy" "ok" "no legacy terminal sync state detected"
-fi
 
 facts_file="$FACTS_DIR/facts.nix"
 if [[ -f $facts_file ]]; then

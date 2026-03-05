@@ -12,7 +12,6 @@ Subcommands:
   update
   doctor
   bootstrap
-  migrate-state
   list-tools
   terminal
   shell
@@ -28,7 +27,7 @@ subcommand="$1"
 shift
 
 case "$subcommand" in
-apply | update | doctor | bootstrap | migrate-state | list-tools | terminal | shell)
+apply | update | doctor | bootstrap | list-tools | terminal | shell)
   target="$SCRIPT_DIR/${subcommand}.sh"
   if [[ ! -f $target ]]; then
     cwd_target="$(pwd)/nix/scripts/${subcommand}.sh"

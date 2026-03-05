@@ -44,9 +44,7 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 ## Reconciled State Paths
 - Shell sync state: `~/.local/state/dotfiles/sync/shell/blocks/*.sha256`
 - Terminal.app sync state: `~/.local/state/dotfiles/sync/terminal-app/profiles/*.sha256`
-- Legacy state paths should be migrated explicitly with:
-  - `nix run .#dotfiles -- migrate-state --dry-run`
-  - `nix run .#dotfiles -- migrate-state --force`
+- Legacy state paths are intentionally ignored.
 
 ## Adding a Sync Adapter
 - Runtime reconciler core lives in `nix/scripts/sync-core.sh`.

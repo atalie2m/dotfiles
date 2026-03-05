@@ -229,7 +229,7 @@
               export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
               exec ${scripts}/dotfiles.sh "$@"
             ''}";
-              meta.description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/migrate-state/list-tools).";
+              meta.description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/list-tools).";
             };
             update = {
               type = "app";
