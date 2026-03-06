@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SYNC_SCRIPT="$ROOT/nix/scripts/sync.sh"
-SOURCE_MANAGED_DIR="$ROOT/surfaces/shell/desired"
+MANAGED_DIR="$ROOT/surfaces/shell/desired"
 
 usage() {
   cat <<'USAGE'
@@ -12,8 +12,7 @@ Usage:
   nix/scripts/sync-shell-smoke-test.sh
 
 Description:
-  Runs a lightweight shell sync smoke test with temporary HOME/XDG_STATE_HOME
-  and a temporary managed-dir copy.
+  Runs a lightweight shell sync smoke test with a temporary HOME.
 USAGE
 }
 
@@ -27,8 +26,8 @@ if [[ ! -f $SYNC_SCRIPT ]]; then
   exit 1
 fi
 
-if [[ ! -d $SOURCE_MANAGED_DIR ]]; then
-  echo "test: managed dir not found: $SOURCE_MANAGED_DIR" >&2
+if [[ ! -d $MANAGED_DIR ]]; then
+  echo "test: managed dir not found: $MANAGED_DIR" >&2
   exit 1
 fi
 
@@ -39,46 +38,28 @@ cleanup() {
 trap cleanup EXIT
 
 home_dir="$tmp_root/home"
-state_dir="$tmp_root/state"
-managed_dir="$tmp_root/managed"
-mkdir -p "$home_dir" "$state_dir"
-cp -R "$SOURCE_MANAGED_DIR" "$managed_dir"
-chmod -R u+w "$managed_dir"
+mkdir -p "$home_dir"
 
 run_shell_sync() {
-  HOME="$home_dir" \
-    XDG_STATE_HOME="$state_dir" \
-    bash "$SYNC_SCRIPT" shell "$@" \
-    --managed-dir "$managed_dir" \
-    --state-dir "$state_dir/blocks"
+  HOME="$home_dir" bash "$SYNC_SCRIPT" shell "$@" --managed-dir "$MANAGED_DIR"
 }
 
 printf 'test: running shell sync smoke test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
-if run_shell_sync --apply --item bash-rc >/dev/null; then
-  echo "FAIL: apply unexpectedly succeeded before migrate" >&2
-  exit 1
-fi
-
-if ! run_shell_sync --migrate --item bash-rc >/dev/null; then
-  echo "FAIL: migrate failed for missing bash entrypoint" >&2
-  exit 1
-fi
-
 if ! run_shell_sync --apply --item bash-rc >/dev/null; then
-  echo "FAIL: apply failed after migrate" >&2
-  exit 1
-fi
-
-if ! run_shell_sync --check --item bash-rc >/dev/null; then
-  echo "FAIL: check after apply failed" >&2
+  echo "FAIL: apply failed for missing bash entrypoint" >&2
   exit 1
 fi
 
 bash_rc="$home_dir/.bashrc"
-if [[ ! -f $bash_rc ]]; then
-  echo "FAIL: missing bashrc after apply" >&2
+if [[ ! -f $bash_rc || -L $bash_rc ]]; then
+  echo "FAIL: missing writable bashrc after apply" >&2
+  exit 1
+fi
+
+if ! run_shell_sync --check --item bash-rc >/dev/null; then
+  echo "FAIL: check after initial apply failed" >&2
   exit 1
 fi
 
@@ -98,22 +79,33 @@ tmp_mutated="$tmp_root/bashrc.mutated"
 mv "$tmp_mutated" "$bash_rc"
 
 if run_shell_sync --check --item bash-rc >/dev/null; then
-  echo "FAIL: check unexpectedly passed after drift" >&2
+  echo "FAIL: check unexpectedly passed after managed block drift" >&2
   exit 1
 fi
 
-if ! run_shell_sync --adopt --in-place --item bash-rc >/dev/null; then
-  echo "FAIL: in-place adopt failed" >&2
-  exit 1
-fi
-
-if ! grep -Fq '.nix/hm-bash/.bashrc.smoke' "$managed_dir/bashrc.entrypoint.block.sh"; then
-  echo "FAIL: adopt did not update managed desired file" >&2
+if ! run_shell_sync --apply --item bash-rc >/dev/null; then
+  echo "FAIL: apply failed to repair managed block drift" >&2
   exit 1
 fi
 
 if ! run_shell_sync --check --item bash-rc >/dev/null; then
-  echo "FAIL: final check failed after adopt" >&2
+  echo "FAIL: check failed after repair apply" >&2
+  exit 1
+fi
+
+printf '\n# smoke tail\n' >>"$bash_rc"
+if ! run_shell_sync --apply --item bash-rc >/dev/null; then
+  echo "FAIL: apply failed after adding unmanaged tail" >&2
+  exit 1
+fi
+
+if ! grep -Fqx '# smoke tail' "$bash_rc"; then
+  echo "FAIL: unmanaged tail was not preserved" >&2
+  exit 1
+fi
+
+if ! run_shell_sync --check --item bash-rc >/dev/null; then
+  echo "FAIL: final check failed" >&2
   exit 1
 fi
 

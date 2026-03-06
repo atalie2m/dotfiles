@@ -5,53 +5,50 @@ DOTFILES_SCRIPT_LABEL="sync-shell"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=load-lib.sh
 source "$SCRIPT_DIR/../load-lib.sh"
-# shellcheck source=sync-core.sh
-source_dotfiles_script "sync-core.sh"
-# shellcheck disable=SC2317
 
 usage() {
   cat <<'USAGE'
 Usage:
-  nix run .#dotfiles -- sync shell --check [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>] [--state-dir <path>]
-  nix run .#dotfiles -- sync shell --apply [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>] [--state-dir <path>] [--force]
-  nix run .#dotfiles -- sync shell --adopt [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>] [--state-dir <path>] [--in-place] [--force] [--output-dir <path>]
-  nix run .#dotfiles -- sync shell --migrate [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>]
-  nix run .#dotfiles -- sync shell --forget [--group <zsh|bash|fish|all>] [--item <id>] [--state-dir <path>]
+  nix run .#dotfiles -- sync shell --check [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>]
+  nix run .#dotfiles -- sync shell --apply [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>]
 
 Description:
-  Manage shell config with lastApplied 3-way status.
-  - zsh-zdotdir: managed block in ~/.nix/.zshrc (runtime entrypoint)
-  - bash-rc: managed block in ~/.bashrc (runtime entrypoint)
-  - fish-config: managed block in ~/.config/fish/config.fish (runtime entrypoint)
+  Keep writable shell entrypoints aligned with repo-managed blocks/files.
+  - zsh-zdotdir: managed block in ~/.nix/.zshrc
+  - bash-rc: managed block in ~/.bashrc
+  - fish-config: managed block in ~/.config/fish/config.fish
   - fish-core: whole file at ~/.config/fish/conf.d/00-dotfiles.fish
 
 Options:
-  --check              Detect drift/missing/invalid (default mode)
-  --apply              Apply desired managed content to local targets
-  --adopt              Export current local managed content for drifted targets
-  --migrate            Convert legacy/invalid entrypoint targets to writable expected shape
-  --forget             Remove last-applied hash state
-  --group <name>       Filter targets by shell group (repeatable, default: all)
-  --item <id>          Filter one target id (zsh-zdotdir, bash-rc, fish-config, fish-core)
+  --check              Report in-sync / needs-apply / missing / invalid (default mode)
+  --apply              Repair writable entrypoints and update managed content
   --details            Print concise per-target details
-  --diff               Print unified diff (desired vs current)
+  --diff               Print unified diff for targets that need apply
+  --group <name>       Filter targets by shell group (repeatable, default: all)
+  --item <id>          Restrict to one target id
   --managed-dir <path> Desired managed content directory (default: <repo>/surfaces/shell/desired)
-  --state-dir <path>   Last-applied hash directory (default: $XDG_STATE_HOME/dotfiles/sync/shell/blocks)
-  --in-place           With --adopt, overwrite desired files in place
-  --force              With --apply, allow overwrite on drift/conflict; with --adopt --in-place, allow conflict overwrite
-  --output-dir <path>  With --adopt (staging mode), directory for exported managed content
+  --help               Show this help
 USAGE
 }
 
-group_filter=""
-default_managed_dir=1
-migrate_requested=0
-
 set_repo_root
-sync_core_init_cli_defaults
-sync_core_root="$ROOT"
 managed_dir="$ROOT/surfaces/shell/desired"
-sync_core_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/sync/shell/blocks"
+mode="check"
+mode_explicit=0
+details=0
+diff_output=0
+group_filter=""
+item_filter=""
+
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/sync-shell.XXXXXX")"
+cleanup() {
+  rm -rf "$tmp_dir"
+}
+trap cleanup EXIT
+
+new_tmp_file() {
+  mktemp "$tmp_dir/file.XXXXXX"
+}
 
 append_shell_filter() {
   local shell_name="$1"
@@ -73,8 +70,40 @@ append_shell_filter() {
   esac
 }
 
-sync_cli_parse_script_option() {
+set_mode() {
+  local next_mode="$1"
+
+  if [[ $mode_explicit -eq 1 && $mode != "$next_mode" ]]; then
+    die "choose only one of --check or --apply"
+  fi
+
+  mode="$next_mode"
+  mode_explicit=1
+}
+
+removed_option_error() {
+  local option_name="$1"
+  die "$option_name is no longer supported for sync shell"
+}
+
+while [[ $# -gt 0 ]]; do
   case "$1" in
+  --check)
+    set_mode "check"
+    shift
+    ;;
+  --apply)
+    set_mode "apply"
+    shift
+    ;;
+  --details)
+    details=1
+    shift
+    ;;
+  --diff)
+    diff_output=1
+    shift
+    ;;
   --group)
     [[ $# -lt 2 ]] && die "missing value for --group"
     case "$2" in
@@ -88,50 +117,32 @@ sync_cli_parse_script_option() {
       die "invalid --group value: $2 (expected zsh, bash, fish, all)"
       ;;
     esac
-    sync_core_cli_consumed=2
-    return 0
+    shift 2
     ;;
-  --migrate)
-    migrate_requested=1
-    sync_core_cli_consumed=1
-    return 0
+  --item)
+    [[ $# -lt 2 ]] && die "missing value for --item"
+    item_filter="$2"
+    shift 2
     ;;
   --managed-dir)
     [[ $# -lt 2 ]] && die "missing value for --managed-dir"
     managed_dir="$2"
-    default_managed_dir=0
-    sync_core_cli_consumed=2
-    return 0
+    shift 2
+    ;;
+  --help | -h)
+    usage
+    exit 0
+    ;;
+  --adopt | --forget | --migrate | --state-dir | --force | --in-place | --output-dir)
+    removed_option_error "$1"
+    ;;
+  *)
+    die "unknown option for sync shell: $1"
     ;;
   esac
+done
 
-  return 1
-}
-
-sync_core_parse_cli_args 1 "$@"
-
-if [[ $migrate_requested -eq 1 ]]; then
-  if [[ $sync_core_mode != "check" ]]; then
-    die "--migrate cannot be combined with --check/--apply/--adopt/--forget"
-  fi
-  sync_core_mode="migrate"
-fi
-
-managed_dir="$(sync_core_resolve_surface_dir "surfaces/shell/desired" "$managed_dir" "$default_managed_dir")"
-ROOT="$sync_core_root"
-
-if [[ $sync_core_mode != "migrate" ]]; then
-  sync_core_validate_adopt_flags "$sync_core_mode" "$sync_core_in_place" "$sync_core_output_dir"
-  sync_core_validate_force_usage "$sync_core_mode" "$sync_core_in_place" "$sync_core_force" 1 "--force is only valid with --apply or --adopt --in-place"
-else
-  if [[ $sync_core_in_place -eq 1 || -n $sync_core_output_dir || $sync_core_force -eq 1 ]]; then
-    die "--in-place/--output-dir/--force are not valid with --migrate"
-  fi
-fi
-
-if [[ $sync_core_mode != "forget" && ! -d $managed_dir ]]; then
-  die "managed dir not found: $managed_dir"
-fi
+[[ -d $managed_dir ]] || die "managed dir not found: $managed_dir"
 
 list_target_ids() {
   printf '%s\n' "zsh-zdotdir"
@@ -167,69 +178,16 @@ target_meta_for_id() {
   esac
 }
 
-target_read_meta() {
-  local id="$1"
-  local shell_name type_name actual_path desired_path begin_marker end_marker
-
-  IFS='|' read -r shell_name type_name actual_path desired_path begin_marker end_marker \
-    <<<"$(target_meta_for_id "$id")" || return 1
-
-  printf '%s|%s|%s|%s|%s|%s\n' "$shell_name" "$type_name" "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
-}
-
-target_shell_for_id() {
-  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
-  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
-    <<<"$(target_read_meta "$1")" || return 1
-  printf '%s\n' "$_shell_name"
-}
-
-target_type_for_id() {
-  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
-  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
-    <<<"$(target_read_meta "$1")" || return 1
-  printf '%s\n' "$_type_name"
-}
-
-target_actual_path_for_id() {
-  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
-  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
-    <<<"$(target_read_meta "$1")" || return 1
-  printf '%s\n' "$_actual_path"
-}
-
-target_desired_path_for_id() {
-  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
-  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
-    <<<"$(target_read_meta "$1")" || return 1
-  printf '%s\n' "$_desired_path"
-}
-
-target_begin_marker_for_id() {
-  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
-  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
-    <<<"$(target_read_meta "$1")" || return 1
-  printf '%s\n' "$_begin_marker"
-}
-
-target_end_marker_for_id() {
-  local _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker
-  IFS='|' read -r _shell_name _type_name _actual_path _desired_path _begin_marker _end_marker \
-    <<<"$(target_read_meta "$1")" || return 1
-  printf '%s\n' "$_end_marker"
-}
-
 target_selected() {
   local id="$1"
-  local shell_name
+  local shell_name="$2"
+
+  if [[ -n $item_filter && $id != "$item_filter" ]]; then
+    return 1
+  fi
 
   if [[ -z $group_filter || $group_filter == "all" ]]; then
     return 0
-  fi
-
-  shell_name="$(target_shell_for_id "$id" || true)"
-  if [[ -z $shell_name ]]; then
-    return 1
   fi
 
   case ",$group_filter," in
@@ -238,15 +196,11 @@ target_selected() {
   esac
 }
 
-migrate_target_selected() {
-  local id="$1"
-  sync_core_is_selected_default "$id" || return 1
-  target_selected "$id"
-}
-
 canonicalize_text_to_file() {
   local source_file="$1"
   local output_file="$2"
+
+  [[ -f $source_file ]] || return 1
   /usr/bin/awk '{ sub(/\r$/, ""); print }' "$source_file" >"$output_file"
 }
 
@@ -303,96 +257,6 @@ extract_managed_block() {
   fi
 }
 
-extract_desired_content_for_target() {
-  local id="$1"
-  local output_file="$2"
-  local desired_path
-
-  desired_path="$(target_desired_path_for_id "$id")"
-  [[ -f $desired_path ]] || return 1
-  canonicalize_text_to_file "$desired_path" "$output_file"
-}
-
-extract_actual_content_for_target() {
-  local id="$1"
-  local output_file="$2"
-  local target_type actual_path begin_marker end_marker tmp_block
-
-  target_type="$(target_type_for_id "$id")"
-  actual_path="$(target_actual_path_for_id "$id")"
-
-  if [[ $target_type == "file" ]]; then
-    [[ -f $actual_path ]] || return 2
-    canonicalize_text_to_file "$actual_path" "$output_file"
-    return 0
-  fi
-
-  begin_marker="$(target_begin_marker_for_id "$id")"
-  end_marker="$(target_end_marker_for_id "$id")"
-  tmp_block="$(mktemp)"
-  if extract_managed_block "$actual_path" "$begin_marker" "$end_marker" "$tmp_block"; then
-    canonicalize_text_to_file "$tmp_block" "$output_file"
-    rm -f "$tmp_block"
-    return 0
-  else
-    local rc=$?
-    rm -f "$tmp_block"
-    return "$rc"
-  fi
-}
-
-print_target_diff() {
-  local id="$1"
-  local desired_tmp actual_tmp
-
-  desired_tmp="$(mktemp)"
-  actual_tmp="$(mktemp)"
-
-  if ! extract_desired_content_for_target "$id" "$desired_tmp"; then
-    rm -f "$desired_tmp" "$actual_tmp"
-    return 1
-  fi
-
-  if ! extract_actual_content_for_target "$id" "$actual_tmp"; then
-    rm -f "$desired_tmp" "$actual_tmp"
-    return 1
-  fi
-
-  log "diff: $id"
-  /usr/bin/diff -u "$desired_tmp" "$actual_tmp" || true
-  rm -f "$desired_tmp" "$actual_tmp"
-  return 0
-}
-
-print_target_details() {
-  local id="$1"
-  local desired_path="$2"
-  local actual_path="$3"
-  local target_type
-
-  target_type="$(target_type_for_id "$id")"
-  log "details: $id"
-  log "  type: $target_type"
-  log "  desired: $desired_path"
-  log "  actual: $actual_path"
-}
-
-export_actual_to_path() {
-  local id="$1"
-  local destination="$2"
-  local tmp_actual
-
-  tmp_actual="$(mktemp)"
-  if ! extract_actual_content_for_target "$id" "$tmp_actual"; then
-    rm -f "$tmp_actual"
-    return 1
-  fi
-
-  mkdir -p "$(dirname "$destination")"
-  mv "$tmp_actual" "$destination"
-  return 0
-}
-
 replace_managed_block_in_file() {
   local source_file="$1"
   local desired_file="$2"
@@ -444,63 +308,15 @@ replace_managed_block_in_file() {
   ' "$source_file" >"$output_file"
 }
 
-write_block_to_file() {
-  local target_file="$1"
+write_managed_block_file() {
+  local output_file="$1"
   local desired_file="$2"
   local begin_marker="$3"
   local end_marker="$4"
-  local tmp_out rc last_char
 
-  tmp_out="$(mktemp)"
-
-  if [[ -f $target_file ]]; then
-    if replace_managed_block_in_file "$target_file" "$desired_file" "$begin_marker" "$end_marker" "$tmp_out"; then
-      :
-    else
-      rc=$?
-      if [[ $rc -eq 2 ]]; then
-        cat "$target_file" >"$tmp_out"
-        if [[ -s $target_file ]]; then
-          last_char="$(tail -c 1 "$target_file" 2>/dev/null || true)"
-          if [[ $last_char != $'\n' ]]; then
-            printf '\n' >>"$tmp_out"
-          fi
-          printf '\n' >>"$tmp_out"
-        fi
-        printf '%s\n' "$begin_marker" >>"$tmp_out"
-        /usr/bin/awk '{ sub(/\r$/, ""); print }' "$desired_file" >>"$tmp_out"
-        printf '%s\n' "$end_marker" >>"$tmp_out"
-      else
-        rm -f "$tmp_out"
-        return 1
-      fi
-    fi
-  else
-    printf '%s\n' "$begin_marker" >"$tmp_out"
-    /usr/bin/awk '{ sub(/\r$/, ""); print }' "$desired_file" >>"$tmp_out"
-    printf '%s\n' "$end_marker" >>"$tmp_out"
-  fi
-
-  mkdir -p "$(dirname "$target_file")"
-  mv "$tmp_out" "$target_file"
-  return 0
-}
-
-write_fresh_block_file() {
-  local target_file="$1"
-  local desired_file="$2"
-  local begin_marker="$3"
-  local end_marker="$4"
-  local tmp_out
-
-  tmp_out="$(mktemp)"
-  printf '%s\n' "$begin_marker" >"$tmp_out"
-  /usr/bin/awk '{ sub(/\r$/, ""); print }' "$desired_file" >>"$tmp_out"
-  printf '%s\n' "$end_marker" >>"$tmp_out"
-
-  mkdir -p "$(dirname "$target_file")"
-  mv "$tmp_out" "$target_file"
-  return 0
+  printf '%s\n' "$begin_marker" >"$output_file"
+  /usr/bin/awk '{ sub(/\r$/, ""); print }' "$desired_file" >>"$output_file"
+  printf '%s\n' "$end_marker" >>"$output_file"
 }
 
 write_entrypoint_file() {
@@ -508,297 +324,381 @@ write_entrypoint_file() {
   local desired_file="$2"
   local begin_marker="$3"
   local end_marker="$4"
-  local tmp_out tmp_replaced rc link_target preserve_existing attempt_replace
+  local tmp_out rc
 
-  attempt_replace=0
+  tmp_out="$(new_tmp_file)"
+
   if [[ -f $target_file ]]; then
-    attempt_replace=1
-  elif [[ -L $target_file ]]; then
-    link_target="$(readlink "$target_file" || true)"
-    if [[ $link_target != /nix/store/* && -f $target_file ]]; then
-      attempt_replace=1
-    fi
-  fi
-
-  if [[ $attempt_replace -eq 1 ]]; then
-    tmp_replaced="$(mktemp)"
-    if replace_managed_block_in_file "$target_file" "$desired_file" "$begin_marker" "$end_marker" "$tmp_replaced"; then
-      mkdir -p "$(dirname "$target_file")"
-      mv "$tmp_replaced" "$target_file"
-      return 0
+    if replace_managed_block_in_file "$target_file" "$desired_file" "$begin_marker" "$end_marker" "$tmp_out"; then
+      :
     else
       rc=$?
-      rm -f "$tmp_replaced"
-      if [[ $rc -ne 2 ]]; then
+      if [[ $rc -eq 2 ]]; then
+        write_managed_block_file "$tmp_out" "$desired_file" "$begin_marker" "$end_marker"
+        if [[ -s $target_file ]]; then
+          printf '\n' >>"$tmp_out"
+          /usr/bin/awk '{ sub(/\r$/, ""); print }' "$target_file" >>"$tmp_out"
+        fi
+      else
+        rm -f "$tmp_out"
         return 1
       fi
     fi
-  fi
-
-  tmp_out="$(mktemp)"
-  printf '%s\n' "$begin_marker" >"$tmp_out"
-  /usr/bin/awk '{ sub(/\r$/, ""); print }' "$desired_file" >>"$tmp_out"
-  printf '%s\n' "$end_marker" >>"$tmp_out"
-
-  preserve_existing=0
-  if [[ -f $target_file ]]; then
-    preserve_existing=1
-  elif [[ -L $target_file ]]; then
-    if [[ $link_target != /nix/store/* && -f $target_file ]]; then
-      preserve_existing=1
-    fi
-  fi
-
-  if [[ $preserve_existing -eq 1 ]]; then
-    printf '\n' >>"$tmp_out"
-    /usr/bin/awk '{ sub(/\r$/, ""); print }' "$target_file" >>"$tmp_out"
+  else
+    write_managed_block_file "$tmp_out" "$desired_file" "$begin_marker" "$end_marker"
   fi
 
   mkdir -p "$(dirname "$target_file")"
   mv "$tmp_out" "$target_file"
-  return 0
 }
 
-target_is_entrypoint_id() {
-  case "$1" in
-  zsh-zdotdir | bash-rc | fish-config) return 0 ;;
-  *) return 1 ;;
+write_whole_file_target() {
+  local target_file="$1"
+  local desired_file="$2"
+  local tmp_out
+
+  tmp_out="$(new_tmp_file)"
+  canonicalize_text_to_file "$desired_file" "$tmp_out"
+  mkdir -p "$(dirname "$target_file")"
+  mv "$tmp_out" "$target_file"
+}
+
+path_shape_for_target() {
+  local path="$1"
+  local link_target=""
+
+  if [[ -L $path ]]; then
+    link_target="$(readlink "$path" || true)"
+    if [[ $link_target == /nix/store/* ]]; then
+      printf '%s|%s\n' "symlink-store" "$link_target"
+      return 0
+    fi
+    if [[ -f $path ]]; then
+      printf '%s|%s\n' "symlink-regular" "$link_target"
+      return 0
+    fi
+    if [[ -d $path ]]; then
+      printf '%s|%s\n' "symlink-directory" "$link_target"
+      return 0
+    fi
+    if [[ -e $path ]]; then
+      printf '%s|%s\n' "symlink-special" "$link_target"
+      return 0
+    fi
+    printf '%s|%s\n' "symlink-broken" "$link_target"
+    return 0
+  fi
+
+  if [[ -f $path ]]; then
+    printf 'regular|\n'
+    return 0
+  fi
+  if [[ -d $path ]]; then
+    printf 'directory|\n'
+    return 0
+  fi
+  if [[ -e $path ]]; then
+    printf 'special|\n'
+    return 0
+  fi
+
+  printf 'missing|\n'
+}
+
+classify_target() {
+  local id="$1"
+  local shell_name="$2"
+  local target_type="$3"
+  local actual_path="$4"
+  local desired_path="$5"
+  local begin_marker="$6"
+  local end_marker="$7"
+  local actual_kind actual_detail extract_rc
+
+  TARGET_STATUS=""
+  TARGET_REASON=""
+  TARGET_ACTUAL_KIND=""
+  TARGET_ACTUAL_DETAIL=""
+  TARGET_SHAPE_NEEDS_REWRITE=0
+  TARGET_DESIRED_TMP="$(new_tmp_file)"
+  TARGET_ACTUAL_TMP="$(new_tmp_file)"
+
+  canonicalize_text_to_file "$desired_path" "$TARGET_DESIRED_TMP" || die "desired file not found: $desired_path"
+
+  IFS='|' read -r actual_kind actual_detail <<<"$(path_shape_for_target "$actual_path")"
+  TARGET_ACTUAL_KIND="$actual_kind"
+  TARGET_ACTUAL_DETAIL="$actual_detail"
+
+  case "$target_type" in
+  file)
+    case "$actual_kind" in
+    missing | symlink-broken)
+      : >"$TARGET_ACTUAL_TMP"
+      TARGET_STATUS="missing"
+      TARGET_REASON="target is missing"
+      return 0
+      ;;
+    directory | special | symlink-directory | symlink-special)
+      TARGET_STATUS="invalid"
+      TARGET_REASON="target is not a regular file"
+      return 0
+      ;;
+    regular | symlink-regular | symlink-store)
+      if canonicalize_text_to_file "$actual_path" "$TARGET_ACTUAL_TMP"; then
+        if cmp -s "$TARGET_DESIRED_TMP" "$TARGET_ACTUAL_TMP"; then
+          TARGET_STATUS="in-sync"
+          TARGET_REASON="whole file matches desired"
+        else
+          TARGET_STATUS="needs-apply"
+          TARGET_REASON="whole file differs from desired"
+        fi
+      else
+        : >"$TARGET_ACTUAL_TMP"
+        TARGET_STATUS="missing"
+        TARGET_REASON="target contents are unreadable"
+      fi
+      return 0
+      ;;
+    *)
+      die "unhandled file target shape '$actual_kind' for $id"
+      ;;
+    esac
+    ;;
+  block)
+    case "$actual_kind" in
+    missing)
+      : >"$TARGET_ACTUAL_TMP"
+      TARGET_STATUS="missing"
+      TARGET_REASON="target is missing"
+      return 0
+      ;;
+    directory | special | symlink-directory | symlink-special)
+      TARGET_STATUS="invalid"
+      TARGET_REASON="target is not a regular file"
+      return 0
+      ;;
+    symlink-broken)
+      TARGET_STATUS="invalid"
+      TARGET_REASON="non-store symlink does not resolve to a regular file"
+      return 0
+      ;;
+    symlink-store)
+      TARGET_SHAPE_NEEDS_REWRITE=1
+      ;;
+    symlink-regular)
+      TARGET_SHAPE_NEEDS_REWRITE=1
+      ;;
+    regular) ;;
+    *)
+      die "unhandled block target shape '$actual_kind' for $id"
+      ;;
+    esac
+
+    if extract_managed_block "$actual_path" "$begin_marker" "$end_marker" "$TARGET_ACTUAL_TMP"; then
+      if [[ $TARGET_SHAPE_NEEDS_REWRITE -eq 1 ]]; then
+        TARGET_STATUS="needs-apply"
+        TARGET_REASON="target should be materialized as a writable regular file"
+      elif cmp -s "$TARGET_DESIRED_TMP" "$TARGET_ACTUAL_TMP"; then
+        TARGET_STATUS="in-sync"
+        TARGET_REASON="managed block matches desired"
+      else
+        TARGET_STATUS="needs-apply"
+        TARGET_REASON="managed block differs from desired"
+      fi
+      return 0
+    else
+      extract_rc=$?
+    fi
+
+    case "$extract_rc" in
+    2)
+      : >"$TARGET_ACTUAL_TMP"
+      if [[ $TARGET_SHAPE_NEEDS_REWRITE -eq 1 ]]; then
+        TARGET_STATUS="needs-apply"
+        TARGET_REASON="target should be materialized as a writable regular file"
+      else
+        TARGET_STATUS="needs-apply"
+        TARGET_REASON="managed block is missing"
+      fi
+      ;;
+    3)
+      TARGET_STATUS="invalid"
+      TARGET_REASON="managed block markers are duplicated or malformed"
+      ;;
+    *)
+      TARGET_STATUS="invalid"
+      TARGET_REASON="failed to inspect managed block"
+      ;;
+    esac
+    return 0
+    ;;
+  *)
+    die "unknown target type for $id: $target_type"
+    ;;
   esac
 }
 
-apply_shape_error() {
+print_target_details() {
   local id="$1"
-  local reason="$2"
-  log "apply refused for '$id': $reason"
-  log "  run: nix run .#dotfiles -- sync shell --migrate (use the same --item/--group filters)"
+  local shell_name="$2"
+  local target_type="$3"
+  local actual_path="$4"
+  local desired_path="$5"
+
+  log "details: $id"
+  log "  shell: $shell_name"
+  log "  type: $target_type"
+  log "  status: $TARGET_STATUS"
+  log "  target: $actual_path"
+  log "  desired: $desired_path"
+  if [[ -n $TARGET_ACTUAL_DETAIL ]]; then
+    log "  actual-type: $TARGET_ACTUAL_KIND ($TARGET_ACTUAL_DETAIL)"
+  else
+    log "  actual-type: $TARGET_ACTUAL_KIND"
+  fi
+  log "  reason: $TARGET_REASON"
 }
 
-validate_entrypoint_shape_for_apply() {
+print_target_diff() {
   local id="$1"
-  local actual_path="$2"
 
-  if [[ -L $actual_path ]]; then
-    apply_shape_error "$id" "target is a symlink: $actual_path"
-    return 1
-  fi
-
-  if [[ -e $actual_path && ! -f $actual_path ]]; then
-    apply_shape_error "$id" "target is not a regular file: $actual_path"
-    return 1
-  fi
-
-  if [[ ! -e $actual_path ]]; then
-    apply_shape_error "$id" "target is missing: $actual_path"
-    return 1
-  fi
-
-  return 0
+  log "diff: $id"
+  /usr/bin/diff -u "$TARGET_DESIRED_TMP" "$TARGET_ACTUAL_TMP" || true
 }
 
-write_target_from_desired() {
+apply_target() {
   local id="$1"
-  local target_type desired_path actual_path begin_marker end_marker tmp_desired
+  local target_type="$2"
+  local actual_path="$3"
+  local desired_path="$4"
+  local begin_marker="$5"
+  local end_marker="$6"
 
-  target_type="$(target_type_for_id "$id")"
-  desired_path="$(target_desired_path_for_id "$id")"
-  actual_path="$(target_actual_path_for_id "$id")"
-
-  if [[ $target_type == "file" ]]; then
-    tmp_desired="$(mktemp)"
-    if ! extract_desired_content_for_target "$id" "$tmp_desired"; then
-      rm -f "$tmp_desired"
+  case "$target_type" in
+  block)
+    case "$TARGET_ACTUAL_KIND" in
+    missing | regular | symlink-store | symlink-regular)
+      write_entrypoint_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
+      return 0
+      ;;
+    *)
       return 1
-    fi
-    mkdir -p "$(dirname "$actual_path")"
-    mv "$tmp_desired" "$actual_path"
-    return 0
-  fi
-
-  begin_marker="$(target_begin_marker_for_id "$id")"
-  end_marker="$(target_end_marker_for_id "$id")"
-
-  if target_is_entrypoint_id "$id"; then
-    if ! validate_entrypoint_shape_for_apply "$id" "$actual_path"; then
+      ;;
+    esac
+    ;;
+  file)
+    case "$TARGET_ACTUAL_KIND" in
+    missing | regular | symlink-store | symlink-regular | symlink-broken)
+      write_whole_file_target "$actual_path" "$desired_path"
+      return 0
+      ;;
+    *)
       return 1
-    fi
-    write_entrypoint_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
-    return $?
-  fi
+      ;;
+    esac
+    ;;
+  esac
 
-  write_block_to_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
-}
-
-migrate_entrypoint_target() {
-  local id="$1"
-  local desired_path actual_path begin_marker end_marker
-
-  desired_path="$(target_desired_path_for_id "$id")"
-  actual_path="$(target_actual_path_for_id "$id")"
-  begin_marker="$(target_begin_marker_for_id "$id")"
-  end_marker="$(target_end_marker_for_id "$id")"
-
-  if [[ -e $actual_path && ! -f $actual_path && ! -L $actual_path ]]; then
-    log "migrate refused for '$id': target is not a regular file or symlink: $actual_path"
-    return 1
-  fi
-
-  if [[ ! -e $actual_path && ! -L $actual_path ]]; then
-    write_fresh_block_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
-    log "migrated missing entrypoint: $id"
-    return 0
-  fi
-
-  if write_entrypoint_file "$actual_path" "$desired_path" "$begin_marker" "$end_marker"; then
-    log "migrated entrypoint target: $id"
-    return 0
-  fi
-
-  log "failed to migrate entrypoint target: $id"
   return 1
 }
 
-run_migrate_mode() {
-  local id selected_count migrated_count errors
-  selected_count=0
-  migrated_count=0
-  errors=0
+selected_count=0
+checked=0
+in_sync=0
+needs_apply=0
+missing=0
+invalid=0
+applied=0
+errors=0
 
-  while IFS= read -r id; do
-    [[ -z $id ]] && continue
-    if ! migrate_target_selected "$id"; then
-      continue
-    fi
+while IFS= read -r id; do
+  [[ -z $id ]] && continue
 
-    selected_count=$((selected_count + 1))
-
-    if target_is_entrypoint_id "$id"; then
-      if migrate_entrypoint_target "$id"; then
-        migrated_count=$((migrated_count + 1))
-      else
-        errors=$((errors + 1))
-      fi
-      continue
-    fi
-
-    if [[ $id == "fish-core" ]]; then
-      if [[ -e "$(target_actual_path_for_id "$id")" && ! -f "$(target_actual_path_for_id "$id")" ]]; then
-        log "migrate refused for '$id': target is not a regular file"
-        errors=$((errors + 1))
-      elif [[ ! -f "$(target_actual_path_for_id "$id")" ]]; then
-        if write_target_from_desired "$id"; then
-          log "migrated missing target: $id"
-          migrated_count=$((migrated_count + 1))
-        else
-          log "failed to migrate target: $id"
-          errors=$((errors + 1))
-        fi
-      fi
-    fi
-  done < <(list_target_ids)
-
-  if [[ $selected_count -eq 0 ]]; then
-    sync_adapter_on_no_selection
+  if ! meta="$(target_meta_for_id "$id")"; then
+    die "unknown shell target id: $id"
   fi
 
-  log "summary: migrated=$migrated_count selected=$selected_count errors=$errors"
-  [[ $errors -eq 0 ]]
-}
+  IFS='|' read -r shell_name target_type actual_path desired_path begin_marker end_marker <<<"$meta"
 
-sync_adapter_list_items() {
-  local id desired_path actual_path
+  if ! target_selected "$id" "$shell_name"; then
+    continue
+  fi
 
-  while IFS= read -r id; do
-    [[ -z $id ]] && continue
-    desired_path="$(target_desired_path_for_id "$id")"
-    actual_path="$(target_actual_path_for_id "$id")"
-    printf '%s|%s|%s\n' "$id" "$desired_path" "$actual_path"
-  done < <(list_target_ids)
-}
+  selected_count=$((selected_count + 1))
+  checked=$((checked + 1))
 
-sync_adapter_is_selected() {
-  local id="$1"
-  target_selected "$id"
-}
+  classify_target "$id" "$shell_name" "$target_type" "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
 
-sync_adapter_state_key() {
-  local id="$1"
-  printf '%s\n' "$id"
-}
+  case "$TARGET_STATUS" in
+  in-sync)
+    in_sync=$((in_sync + 1))
+    ;;
+  needs-apply)
+    needs_apply=$((needs_apply + 1))
+    ;;
+  missing)
+    missing=$((missing + 1))
+    ;;
+  invalid)
+    invalid=$((invalid + 1))
+    ;;
+  *)
+    errors=$((errors + 1))
+    log "unexpected status for '$id': $TARGET_STATUS"
+    ;;
+  esac
 
-sync_adapter_extract_desired() {
-  local id="$1"
-  local output_file="$2"
-  extract_desired_content_for_target "$id" "$output_file"
-}
+  if [[ $details -eq 1 ]]; then
+    print_target_details "$id" "$shell_name" "$target_type" "$actual_path" "$desired_path"
+  fi
 
-sync_adapter_extract_actual() {
-  local id="$1"
-  local output_file="$2"
-  extract_actual_content_for_target "$id" "$output_file"
-}
+  if [[ $diff_output -eq 1 && $TARGET_STATUS == "needs-apply" ]]; then
+    print_target_diff "$id"
+  fi
 
-sync_adapter_write_desired_to_actual() {
-  local id="$1"
-  write_target_from_desired "$id"
-}
+  if [[ $mode == "apply" ]]; then
+    case "$TARGET_STATUS" in
+    in-sync) ;;
+    missing | needs-apply)
+      if apply_target "$id" "$target_type" "$actual_path" "$desired_path" "$begin_marker" "$end_marker"; then
+        classify_target "$id" "$shell_name" "$target_type" "$actual_path" "$desired_path" "$begin_marker" "$end_marker"
+        if [[ $TARGET_STATUS == "in-sync" ]]; then
+          applied=$((applied + 1))
+        else
+          errors=$((errors + 1))
+          log "apply failed to converge '$id': status=$TARGET_STATUS"
+        fi
+      else
+        errors=$((errors + 1))
+        log "apply failed for '$id': $TARGET_REASON"
+      fi
+      ;;
+    invalid)
+      errors=$((errors + 1))
+      log "apply refused for '$id': $TARGET_REASON"
+      ;;
+    esac
+  fi
+done < <(list_target_ids)
 
-sync_adapter_export_actual() {
-  local id="$1"
-  local destination="$2"
-  export_actual_to_path "$id" "$destination"
-}
-
-sync_adapter_stage_fallback_basename() {
-  local id="$1"
-  printf '%s.block\n' "$id"
-}
-
-sync_adapter_print_details() {
-  local id="$1"
-  local _status="$2"
-  local _desired_hash="$3"
-  local _actual_hash="$4"
-  local _last_hash="$5"
-  local desired_meta="$6"
-  local actual_meta="$7"
-  print_target_details "$id" "$desired_meta" "$actual_meta"
-}
-
-sync_adapter_print_diff() {
-  local id="$1"
-  print_target_diff "$id"
-}
-
-sync_adapter_on_no_selection() {
-  if [[ -n ${sync_core_item_filter:-} ]]; then
-    die "no item matched --item '$sync_core_item_filter'"
+if [[ $selected_count -eq 0 ]]; then
+  if [[ -n $item_filter ]]; then
+    die "no item matched --item '$item_filter'"
   fi
   if [[ -n $group_filter && $group_filter != "all" ]]; then
     die "no item matched --group '$group_filter'"
   fi
   die "no shell targets selected"
-}
-
-sync_adapter_print_summary_extra() {
-  log "managed dir: $managed_dir"
-}
-
-if [[ $sync_core_mode == "migrate" ]]; then
-  if run_migrate_mode; then
-    exit 0
-  fi
-  exit 1
 fi
 
-sync_core_root="$ROOT"
-sync_core_staging_subdir="shell-adopt"
-sync_core_invalid_desired_status="invalid-desired"
-sync_core_invalid_actual_status="actual-invalid"
-sync_core_error_status="error"
-sync_core_invalid_seed=0
-sync_core_forget_invalid_seed=0
+log "summary: checked=$checked in_sync=$in_sync needs_apply=$needs_apply missing=$missing invalid=$invalid applied=$applied errors=$errors"
 
-if sync_core_run; then
+if [[ $mode == "apply" ]]; then
+  [[ $errors -eq 0 ]]
+  exit $?
+fi
+
+if [[ $needs_apply -eq 0 && $missing -eq 0 && $invalid -eq 0 && $errors -eq 0 ]]; then
   exit 0
 fi
 

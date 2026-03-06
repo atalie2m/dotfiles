@@ -13,7 +13,7 @@ Usage:
 
 Description:
   Runs isolated integration tests for shell entrypoint writeability.
-  Uses temporary HOME/XDG_STATE_HOME and removes all test files on exit.
+  Uses temporary HOME and removes all test files on exit.
 USAGE
 }
 
@@ -54,74 +54,57 @@ fail() {
   fail_count=$((fail_count + 1))
 }
 
-assert_eq() {
-  local expected="$1"
-  local actual="$2"
-  if [[ $expected != "$actual" ]]; then
-    return 1
-  fi
-  return 0
+assert_regular_file() {
+  local path="$1"
+  [[ -f $path && ! -L $path ]]
 }
 
 run_shell_sync() {
   local home_dir="$1"
-  local state_dir="$2"
-  shift 2
+  shift
 
-  HOME="$home_dir" \
-    XDG_STATE_HOME="$state_dir" \
-    bash "$SYNC_SCRIPT" shell "$@" \
-    --managed-dir "$MANAGED_DIR" \
-    --state-dir "$state_dir/blocks"
+  HOME="$home_dir" bash "$SYNC_SCRIPT" shell "$@" --managed-dir "$MANAGED_DIR"
 }
 
-new_test_env() {
+new_test_home() {
   local name="$1"
   local home_dir="$tmp_root/$name/home"
-  local state_dir="$tmp_root/$name/state"
-  mkdir -p "$home_dir" "$state_dir"
-  printf '%s|%s\n' "$home_dir" "$state_dir"
+  mkdir -p "$home_dir"
+  printf '%s\n' "$home_dir"
 }
 
-test_fresh_apply_requires_migrate_then_succeeds() {
-  local name="fresh-apply-requires-migrate"
-  local env_data home_dir state_dir first_line
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
+fresh_apply_case() {
+  local name="$1"
+  local item_id="$2"
+  local target_path="$3"
+  local begin_marker="$4"
+  local verify_zshrc="$5"
+  local home_dir first_line
 
-  if run_shell_sync "$home_dir" "$state_dir" --apply --group zsh >/dev/null; then
-    fail "$name" "apply unexpectedly succeeded before migrate"
+  home_dir="$(new_test_home "$name")"
+
+  if ! run_shell_sync "$home_dir" --apply --item "$item_id" >/dev/null; then
+    fail "$name" "shell sync apply failed"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --group zsh >/dev/null; then
-    fail "$name" "shell sync migrate failed"
+  if ! assert_regular_file "$target_path"; then
+    fail "$name" "target is not a writable regular file: $target_path"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --group zsh >/dev/null; then
-    fail "$name" "shell sync apply failed after migrate"
+  first_line="$(head -n 1 "$target_path" || true)"
+  if [[ $first_line != "$begin_marker" ]]; then
+    fail "$name" "managed block marker missing at top"
     return
   fi
 
-  if [[ ! -f "$home_dir/.nix/.zshrc" ]]; then
-    fail "$name" "wrapper file missing: $home_dir/.nix/.zshrc"
-    return
-  fi
-
-  if [[ -e "$home_dir/.zshrc" || -L "$home_dir/.zshrc" ]]; then
+  if [[ $verify_zshrc == "yes" && (-e "$home_dir/.zshrc" || -L "$home_dir/.zshrc") ]]; then
     fail "$name" "unexpected side effect: $home_dir/.zshrc was modified"
     return
   fi
 
-  first_line="$(head -n 1 "$home_dir/.nix/.zshrc" || true)"
-  if ! assert_eq "# >>> dotfiles-managed:zdotdir.zshrc >>>" "$first_line"; then
-    fail "$name" "managed block marker missing at top of wrapper"
-    return
-  fi
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --check --group zsh >/dev/null; then
+  if ! run_shell_sync "$home_dir" --check --item "$item_id" >/dev/null; then
     fail "$name" "post-apply check failed"
     return
   fi
@@ -129,110 +112,87 @@ test_fresh_apply_requires_migrate_then_succeeds() {
   pass "$name"
 }
 
-test_existing_mutable_wrapper_preserves_installer_tail() {
-  local name="mutable-wrapper-preserve-tail"
-  local env_data home_dir state_dir wrapper_file first_line end_line installer_line
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
-  wrapper_file="$home_dir/.nix/.zshrc"
+preserve_tail_case() {
+  local name="$1"
+  local item_id="$2"
+  local target_path="$3"
+  local end_marker="$4"
+  local seed_content="$5"
+  local expected_line="$6"
+  local home_dir end_line tail_line
 
-  mkdir -p "$home_dir/.nix"
-  cat >"$wrapper_file" <<'EOF'
-export SDKMAN_DIR="$HOME/.sdkman"
-# installer line
-EOF
+  home_dir="$(new_test_home "$name")"
+  mkdir -p "$(dirname "$target_path")"
+  cat >"$target_path" <<<"$seed_content"
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item zsh-zdotdir >/dev/null; then
+  if ! run_shell_sync "$home_dir" --apply --item "$item_id" >/dev/null; then
     fail "$name" "shell sync apply failed"
     return
   fi
 
-  first_line="$(head -n 1 "$wrapper_file" || true)"
-  if ! assert_eq "# >>> dotfiles-managed:zdotdir.zshrc >>>" "$first_line"; then
-    fail "$name" "managed block marker missing at top"
+  if ! grep -Fqx "$expected_line" "$target_path"; then
+    fail "$name" "unmanaged line was not preserved"
     return
   fi
 
-  if ! grep -Fqx 'export SDKMAN_DIR="$HOME/.sdkman"' "$wrapper_file"; then
-    fail "$name" "installer line was not preserved"
-    return
-  fi
-
-  end_line="$(grep -n '^# <<< dotfiles-managed:zdotdir.zshrc <<<$' "$wrapper_file" | head -n 1 | cut -d: -f1 || true)"
-  installer_line="$(grep -n '^export SDKMAN_DIR="\$HOME/.sdkman"$' "$wrapper_file" | head -n 1 | cut -d: -f1 || true)"
-  if [[ -z $end_line || -z $installer_line || $installer_line -le $end_line ]]; then
-    fail "$name" "installer lines are not in unmanaged tail"
+  end_line="$(grep -Fxn "$end_marker" "$target_path" | head -n 1 | cut -d: -f1 || true)"
+  tail_line="$(grep -n -F "$expected_line" "$target_path" | head -n 1 | cut -d: -f1 || true)"
+  if [[ -z $end_line || -z $tail_line || $tail_line -le $end_line ]]; then
+    fail "$name" "unmanaged content was not preserved after the managed block"
     return
   fi
 
   pass "$name"
 }
 
-test_legacy_store_symlink_is_replaced_with_regular_file() {
-  local name="store-symlink-migration"
-  local env_data home_dir state_dir wrapper_file
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
-  wrapper_file="$home_dir/.nix/.zshrc"
+store_symlink_case() {
+  local name="$1"
+  local item_id="$2"
+  local target_path="$3"
+  local begin_marker="$4"
+  local fake_target="$5"
+  local home_dir first_line
 
-  mkdir -p "$home_dir/.nix"
-  ln -s "/nix/store/fake-legacy-zshrc" "$wrapper_file"
+  home_dir="$(new_test_home "$name")"
+  mkdir -p "$(dirname "$target_path")"
+  ln -s "$fake_target" "$target_path"
 
-  if run_shell_sync "$home_dir" "$state_dir" --apply --item zsh-zdotdir >/dev/null; then
-    fail "$name" "apply unexpectedly succeeded with store symlink"
+  if ! run_shell_sync "$home_dir" --apply --item "$item_id" >/dev/null; then
+    fail "$name" "shell sync apply failed"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item zsh-zdotdir >/dev/null; then
-    fail "$name" "shell sync migrate failed"
+  if ! assert_regular_file "$target_path"; then
+    fail "$name" "target is still not a regular file"
     return
   fi
 
-  if [[ -L $wrapper_file ]]; then
-    fail "$name" "wrapper is still a symlink"
+  first_line="$(head -n 1 "$target_path" || true)"
+  if [[ $first_line != "$begin_marker" ]]; then
+    fail "$name" "managed block marker missing after repair"
     return
   fi
 
-  if [[ ! -f $wrapper_file ]]; then
-    fail "$name" "wrapper regular file missing after migration"
-    return
-  fi
-
-  if ! grep -Fqx '# >>> dotfiles-managed:zdotdir.zshrc >>>' "$wrapper_file"; then
-    fail "$name" "managed block marker missing after migration"
-    return
-  fi
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item zsh-zdotdir >/dev/null; then
-    fail "$name" "apply failed after migrate"
+  if ! run_shell_sync "$home_dir" --check --item "$item_id" >/dev/null; then
+    fail "$name" "post-repair check failed"
     return
   fi
 
   pass "$name"
 }
 
-test_apply_does_not_modify_existing_zshrc_link() {
+test_existing_zshrc_link_remains_untouched() {
   local name="preserve-existing-zshrc-link"
-  local env_data home_dir state_dir link_target
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
+  local home_dir link_target
 
-  mkdir -p "$home_dir"
-  cat >"$home_dir/.zshrc.local" <<'EOF'
+  home_dir="$(new_test_home "$name")"
+  cat >"$home_dir/.zshrc.local" <<'EOF_LOCAL'
 # local
-EOF
+EOF_LOCAL
   ln -s ".zshrc.local" "$home_dir/.zshrc"
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item zsh-zdotdir >/dev/null; then
-    fail "$name" "shell sync migrate failed"
-    return
-  fi
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item zsh-zdotdir >/dev/null; then
-    fail "$name" "shell sync apply failed after migrate"
+  if ! run_shell_sync "$home_dir" --apply --item zsh-zdotdir >/dev/null; then
+    fail "$name" "shell sync apply failed"
     return
   fi
 
@@ -242,7 +202,7 @@ EOF
   fi
 
   link_target="$(readlink "$home_dir/.zshrc" || true)"
-  if ! assert_eq ".zshrc.local" "$link_target"; then
+  if [[ $link_target != ".zshrc.local" ]]; then
     fail "$name" "existing symlink target changed unexpectedly: $link_target"
     return
   fi
@@ -250,217 +210,21 @@ EOF
   pass "$name"
 }
 
-test_bash_entrypoint_fresh_apply() {
-  local name="bash-entrypoint-fresh-apply"
-  local env_data home_dir state_dir first_line
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
+test_directory_target_is_rejected() {
+  local name="directory-target-is-invalid"
+  local home_dir err_file
 
-  if run_shell_sync "$home_dir" "$state_dir" --apply --item bash-rc >/dev/null; then
-    fail "$name" "apply unexpectedly succeeded before migrate"
+  home_dir="$(new_test_home "$name")"
+  mkdir -p "$home_dir/.nix/.zshrc"
+  err_file="$tmp_root/$name.err"
+
+  if run_shell_sync "$home_dir" --apply --item zsh-zdotdir >"$tmp_root/$name.out" 2>"$err_file"; then
+    fail "$name" "apply unexpectedly succeeded for directory target"
     return
   fi
 
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item bash-rc >/dev/null; then
-    fail "$name" "shell sync migrate failed"
-    return
-  fi
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item bash-rc >/dev/null; then
-    fail "$name" "shell sync apply failed after migrate"
-    return
-  fi
-
-  if [[ ! -f "$home_dir/.bashrc" ]]; then
-    fail "$name" "bash entrypoint missing: $home_dir/.bashrc"
-    return
-  fi
-
-  first_line="$(head -n 1 "$home_dir/.bashrc" || true)"
-  if ! assert_eq "# >>> dotfiles-managed:bashrc >>>" "$first_line"; then
-    fail "$name" "managed block marker missing at top of bash entrypoint"
-    return
-  fi
-
-  pass "$name"
-}
-
-test_bash_entrypoint_preserves_installer_tail() {
-  local name="bash-entrypoint-preserve-tail"
-  local env_data home_dir state_dir rc_file end_line installer_line
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
-  rc_file="$home_dir/.bashrc"
-
-  cat >"$rc_file" <<'EOF'
-export PATH="$HOME/.local/bin:$PATH"
-# installer line
-EOF
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item bash-rc >/dev/null; then
-    fail "$name" "shell sync apply failed"
-    return
-  fi
-
-  if ! grep -Fqx 'export PATH="$HOME/.local/bin:$PATH"' "$rc_file"; then
-    fail "$name" "installer line was not preserved"
-    return
-  fi
-
-  end_line="$(grep -n '^# <<< dotfiles-managed:bashrc <<<$' "$rc_file" | head -n 1 | cut -d: -f1 || true)"
-  installer_line="$(grep -n '^export PATH="\$HOME/.local/bin:\$PATH"$' "$rc_file" | head -n 1 | cut -d: -f1 || true)"
-  if [[ -z $end_line || -z $installer_line || $installer_line -le $end_line ]]; then
-    fail "$name" "installer lines are not in unmanaged tail"
-    return
-  fi
-
-  pass "$name"
-}
-
-test_bash_entrypoint_store_symlink_migration() {
-  local name="bash-entrypoint-store-symlink-migration"
-  local env_data home_dir state_dir rc_file
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
-  rc_file="$home_dir/.bashrc"
-
-  ln -s "/nix/store/fake-hm-bashrc" "$rc_file"
-
-  if run_shell_sync "$home_dir" "$state_dir" --apply --item bash-rc >/dev/null; then
-    fail "$name" "apply unexpectedly succeeded with store symlink"
-    return
-  fi
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item bash-rc >/dev/null; then
-    fail "$name" "shell sync migrate failed"
-    return
-  fi
-
-  if [[ -L $rc_file ]]; then
-    fail "$name" "bash entrypoint is still a symlink"
-    return
-  fi
-
-  if [[ ! -f $rc_file ]]; then
-    fail "$name" "bash entrypoint regular file missing after migration"
-    return
-  fi
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item bash-rc >/dev/null; then
-    fail "$name" "apply failed after migrate"
-    return
-  fi
-
-  pass "$name"
-}
-
-test_fish_entrypoint_fresh_apply() {
-  local name="fish-entrypoint-fresh-apply"
-  local env_data home_dir state_dir cfg_file first_line
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
-  cfg_file="$home_dir/.config/fish/config.fish"
-
-  if run_shell_sync "$home_dir" "$state_dir" --apply --item fish-config >/dev/null; then
-    fail "$name" "apply unexpectedly succeeded before migrate"
-    return
-  fi
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item fish-config >/dev/null; then
-    fail "$name" "shell sync migrate failed"
-    return
-  fi
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item fish-config >/dev/null; then
-    fail "$name" "shell sync apply failed after migrate"
-    return
-  fi
-
-  if [[ ! -f $cfg_file ]]; then
-    fail "$name" "fish entrypoint missing: $cfg_file"
-    return
-  fi
-
-  first_line="$(head -n 1 "$cfg_file" || true)"
-  if ! assert_eq "# >>> dotfiles-managed:fish.config >>>" "$first_line"; then
-    fail "$name" "managed block marker missing at top of fish entrypoint"
-    return
-  fi
-
-  pass "$name"
-}
-
-test_fish_entrypoint_preserves_installer_tail() {
-  local name="fish-entrypoint-preserve-tail"
-  local env_data home_dir state_dir cfg_file end_line installer_line
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
-  cfg_file="$home_dir/.config/fish/config.fish"
-
-  mkdir -p "$(dirname "$cfg_file")"
-  cat >"$cfg_file" <<'EOF'
-set -gx FNM_DIR "$HOME/.fnm"
-# installer line
-EOF
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item fish-config >/dev/null; then
-    fail "$name" "shell sync apply failed"
-    return
-  fi
-
-  if ! grep -Fqx 'set -gx FNM_DIR "$HOME/.fnm"' "$cfg_file"; then
-    fail "$name" "installer line was not preserved"
-    return
-  fi
-
-  end_line="$(grep -n '^# <<< dotfiles-managed:fish.config <<<$' "$cfg_file" | head -n 1 | cut -d: -f1 || true)"
-  installer_line="$(grep -n '^set -gx FNM_DIR "\$HOME/.fnm"$' "$cfg_file" | head -n 1 | cut -d: -f1 || true)"
-  if [[ -z $end_line || -z $installer_line || $installer_line -le $end_line ]]; then
-    fail "$name" "installer lines are not in unmanaged tail"
-    return
-  fi
-
-  pass "$name"
-}
-
-test_fish_entrypoint_store_symlink_migration() {
-  local name="fish-entrypoint-store-symlink-migration"
-  local env_data home_dir state_dir cfg_file
-  env_data="$(new_test_env "$name")"
-  home_dir="${env_data%%|*}"
-  state_dir="${env_data##*|}"
-  cfg_file="$home_dir/.config/fish/config.fish"
-
-  mkdir -p "$(dirname "$cfg_file")"
-  ln -s "/nix/store/fake-hm-fish-config" "$cfg_file"
-
-  if run_shell_sync "$home_dir" "$state_dir" --apply --item fish-config >/dev/null; then
-    fail "$name" "apply unexpectedly succeeded with store symlink"
-    return
-  fi
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --migrate --item fish-config >/dev/null; then
-    fail "$name" "shell sync migrate failed"
-    return
-  fi
-
-  if [[ -L $cfg_file ]]; then
-    fail "$name" "fish entrypoint is still a symlink"
-    return
-  fi
-
-  if [[ ! -f $cfg_file ]]; then
-    fail "$name" "fish entrypoint regular file missing after migration"
-    return
-  fi
-
-  if ! run_shell_sync "$home_dir" "$state_dir" --apply --item fish-config >/dev/null; then
-    fail "$name" "apply failed after migrate"
+  if ! grep -Fq "apply refused for 'zsh-zdotdir': target is not a regular file" "$err_file"; then
+    fail "$name" "failure message did not describe the invalid directory target"
     return
   fi
 
@@ -471,16 +235,20 @@ main() {
   echo "test: running shell entrypoint writeability integration tests"
   echo "test: temp root = $tmp_root"
 
-  test_fresh_apply_requires_migrate_then_succeeds
-  test_existing_mutable_wrapper_preserves_installer_tail
-  test_legacy_store_symlink_is_replaced_with_regular_file
-  test_apply_does_not_modify_existing_zshrc_link
-  test_bash_entrypoint_fresh_apply
-  test_bash_entrypoint_preserves_installer_tail
-  test_bash_entrypoint_store_symlink_migration
-  test_fish_entrypoint_fresh_apply
-  test_fish_entrypoint_preserves_installer_tail
-  test_fish_entrypoint_store_symlink_migration
+  fresh_apply_case "fresh-zsh-apply" "zsh-zdotdir" "$tmp_root/fresh-zsh-apply/home/.nix/.zshrc" "# >>> dotfiles-managed:zdotdir.zshrc >>>" "yes"
+  preserve_tail_case "zsh-preserve-tail" "zsh-zdotdir" "$tmp_root/zsh-preserve-tail/home/.nix/.zshrc" "# <<< dotfiles-managed:zdotdir.zshrc <<<" $'export SDKMAN_DIR="$HOME/.sdkman"\n# installer line' 'export SDKMAN_DIR="$HOME/.sdkman"'
+  store_symlink_case "zsh-store-symlink-repair" "zsh-zdotdir" "$tmp_root/zsh-store-symlink-repair/home/.nix/.zshrc" "# >>> dotfiles-managed:zdotdir.zshrc >>>" "/nix/store/fake-legacy-zshrc"
+
+  fresh_apply_case "fresh-bash-apply" "bash-rc" "$tmp_root/fresh-bash-apply/home/.bashrc" "# >>> dotfiles-managed:bashrc >>>" "no"
+  preserve_tail_case "bash-preserve-tail" "bash-rc" "$tmp_root/bash-preserve-tail/home/.bashrc" "# <<< dotfiles-managed:bashrc <<<" $'export PATH="$HOME/.local/bin:$PATH"\n# installer line' 'export PATH="$HOME/.local/bin:$PATH"'
+  store_symlink_case "bash-store-symlink-repair" "bash-rc" "$tmp_root/bash-store-symlink-repair/home/.bashrc" "# >>> dotfiles-managed:bashrc >>>" "/nix/store/fake-hm-bashrc"
+
+  fresh_apply_case "fresh-fish-apply" "fish-config" "$tmp_root/fresh-fish-apply/home/.config/fish/config.fish" "# >>> dotfiles-managed:fish.config >>>" "no"
+  preserve_tail_case "fish-preserve-tail" "fish-config" "$tmp_root/fish-preserve-tail/home/.config/fish/config.fish" "# <<< dotfiles-managed:fish.config <<<" $'set -gx FNM_DIR "$HOME/.fnm"\n# installer line' 'set -gx FNM_DIR "$HOME/.fnm"'
+  store_symlink_case "fish-store-symlink-repair" "fish-config" "$tmp_root/fish-store-symlink-repair/home/.config/fish/config.fish" "# >>> dotfiles-managed:fish.config >>>" "/nix/store/fake-hm-fish-config"
+
+  test_existing_zshrc_link_remains_untouched
+  test_directory_target_is_rejected
 
   echo "test: summary pass=$pass_count fail=$fail_count"
 

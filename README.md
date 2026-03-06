@@ -145,7 +145,7 @@ See `docs/vscode.md` for details.
 
 Terminal.app profiles are managed as `.terminal` files in this repo (`surfaces/terminal/desired/`), then imported during Home Manager activation.
 Runtime sync operations are implemented through `nix/scripts/sync.sh` (surface: `terminal`) with a Terminal adapter in `nix/scripts/sync-adapters/terminal.sh`.
-See `docs/reconciled-surfaces.md` for shared drift workflow and adapter contract.
+See `docs/reconciled-surfaces.md` for the terminal reconciler model and the shell/terminal split.
 
 - Source of truth: `surfaces/terminal/desired/*.terminal`
 - Managed directory option: `tools.terminal.terminalApp.managedDir` (default: `surfaces/terminal/desired`)
@@ -193,10 +193,11 @@ nix run .#dotfiles -- sync terminal --apply
 nix run .#dotfiles -- sync terminal --apply --force
 ```
 
-### Shell sync (lastApplied 3-way)
+### Shell sync (writable entrypoints)
 
-Shell local overrides are managed with lastApplied state:
-Runtime sync operations are implemented through `nix/scripts/sync.sh` (surface: `shell`) with a shell adapter in `nix/scripts/sync-adapters/shell.sh`.
+Shell sync is intentionally smaller than Terminal sync.
+Runtime sync operations are implemented through `nix/scripts/sync.sh` (surface: `shell`) with `nix/scripts/sync-adapters/shell.sh`.
+Its job is to keep writable shell entrypoints in place and update only repo-managed blocks/files.
 
 - Desired source:
   - `surfaces/shell/desired/zdotdir.zshrc.block.sh`
@@ -208,8 +209,14 @@ Runtime sync operations are implemented through `nix/scripts/sync.sh` (surface: 
   - `~/.bashrc` (managed block only; runtime bash entrypoint)
   - `~/.config/fish/config.fish` (managed block only; runtime fish entrypoint)
   - `~/.config/fish/conf.d/00-dotfiles.fish` (whole file)
-- State guard: `~/.local/state/dotfiles/sync/shell/blocks/*.sha256`
 - `sync shell` only manages declared targets; it does not mutate `~/.zshrc` directly.
+- `sync shell --apply` automatically normalizes common entrypoint shapes:
+  - missing files
+  - writable regular files
+  - `/nix/store/...` symlinks
+  - readable non-store symlinks, which are materialized back into writable regular files
+- Content outside the managed markers is preserved.
+- Shell sync does not keep machine-local `lastApplied` state and does not adopt local changes back into the repo.
 
 Managed block markers:
 
@@ -226,27 +233,19 @@ Managed block markers:
 Workflow:
 
 ```bash
-# 1) Check drift/conflict
+# 1) Check whether any target needs apply
 nix run .#dotfiles -- sync shell --check
 
-# Optional: show diff for drifted targets
-nix run .#dotfiles -- sync shell --check --diff
+# Optional: show details or a managed-content diff
+nix run .#dotfiles -- sync shell --check --details
+nix run .#dotfiles -- sync shell --check --details --diff
 
-# 2) If local edits are intentional, stage adopt output
-nix run .#dotfiles -- sync shell --adopt
+# 2) Repair or create writable entrypoints in place
+nix run .#dotfiles -- sync shell --apply
 
-# Optional: overwrite desired managed files directly (conflicts require --force)
-nix run .#dotfiles -- sync shell --adopt --in-place
-nix run .#dotfiles -- sync shell --adopt --in-place --force
-
-# 3) Migrate legacy or invalid shell entrypoint shapes (explicit one-time step)
-nix run .#dotfiles -- sync shell --migrate
-
-# 4) Optional: clear lastApplied state
-nix run .#dotfiles -- sync shell --forget
-nix run .#dotfiles -- sync shell --forget --item zsh-zdotdir
-nix run .#dotfiles -- sync shell --forget --item bash-rc
-nix run .#dotfiles -- sync shell --forget --item fish-config
+# Optional: restrict to one shell group or one target
+nix run .#dotfiles -- sync shell --apply --group zsh
+nix run .#dotfiles -- sync shell --check --item bash-rc
 ```
 
 CLI migration (`shell/terminal` subcommands removed):
@@ -259,11 +258,7 @@ CLI migration (`shell/terminal` subcommands removed):
 | `--shell <name>` | `--group <name>` |
 | `--dir <path>` (terminal) | `--profiles-dir <path>` |
 
-`nix run .#apply -- --host <host>` triggers shell reconciliation during Home Manager activation.
-By default activation runs `sync shell --apply` (with drift/conflict failures), and can be tuned via:
-
-- `tools.shell.sync.force = true` to pass `--force`
-- `tools.shell.sync.failOnDrift = false` to run `sync shell --check --details` and continue on drift
+`nix run .#apply -- --host <host>` triggers shell reconciliation during Home Manager activation by running `sync shell --apply` for the enabled shell groups.
 
 Shell entrypoint writeability regression tests (isolated + auto cleanup):
 
@@ -271,7 +266,7 @@ Shell entrypoint writeability regression tests (isolated + auto cleanup):
 nix/scripts/shell-zsh-writeability-test.sh
 ```
 
-The test script uses temporary `HOME`/`XDG_STATE_HOME` and removes all test files on exit.
+The test script uses a temporary `HOME` and removes all test files on exit.
 
 Additional sync adapter/core tests:
 

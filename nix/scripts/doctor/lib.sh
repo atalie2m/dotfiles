@@ -212,9 +212,9 @@ record_strict_sync_checks() {
       else
         shell_summary="$(printf '%s\n' "$shell_output" | awk '/summary:/ { print; exit }')"
         if [[ -n $shell_summary ]]; then
-          record_check "shell.sync" "fail" "shell drift check failed: $shell_summary (inspect: nix run .#dotfiles -- sync shell --check --details --diff)"
+          record_check "shell.sync" "fail" "shell sync check failed: $shell_summary (inspect: nix run .#dotfiles -- sync shell --check --details --diff)"
         else
-          record_check "shell.sync" "fail" "shell drift check failed (inspect: nix run .#dotfiles -- sync shell --check --details --diff)"
+          record_check "shell.sync" "fail" "shell sync check failed (inspect: nix run .#dotfiles -- sync shell --check --details --diff)"
         fi
       fi
     else

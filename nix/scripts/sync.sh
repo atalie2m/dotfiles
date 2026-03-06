@@ -12,17 +12,18 @@ Usage:
   nix run .#dotfiles -- sync <surface> [options]
 
 Surfaces:
-  shell      Reconcile shell managed blocks/files
+  shell      Keep writable shell entrypoints aligned with managed blocks/files
   terminal   Reconcile Terminal.app profiles
 
-Common options:
-  --check --apply --adopt --forget --details --diff --in-place --force --output-dir <path> --item <id> --state-dir <path>
+Shell usage:
+  nix run .#dotfiles -- sync shell --check [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>]
+  nix run .#dotfiles -- sync shell --apply [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>]
 
-Shell-specific options:
-  --group <zsh|bash|fish|all> --managed-dir <path> --migrate
-
-Terminal-specific options:
-  --profiles-dir <path> --default-profile <name> --startup-profile <name>
+Terminal usage:
+  nix run .#dotfiles -- sync terminal --check [--details] [--diff] [--item <name>] [--profiles-dir <path>] [--state-dir <path>]
+  nix run .#dotfiles -- sync terminal --apply [--details] [--diff] [--item <name>] [--profiles-dir <path>] [--state-dir <path>] [--force] [--default-profile <name>] [--startup-profile <name>]
+  nix run .#dotfiles -- sync terminal --adopt [--details] [--diff] [--item <name>] [--profiles-dir <path>] [--state-dir <path>] [--in-place] [--force] [--output-dir <path>]
+  nix run .#dotfiles -- sync terminal --forget [--item <name>] [--profiles-dir <path>] [--state-dir <path>]
 USAGE
 }
 

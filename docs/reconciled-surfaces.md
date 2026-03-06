@@ -1,59 +1,79 @@
 # Reconciled Surfaces
 
-This repository uses a shared reconciler core (`nix/scripts/sync-core.sh`) for user-writable runtime state.
-Each surface compares three values per item: desired (repo), actual (local machine), and lastApplied (state hash).
+This repository has two different runtime sync models.
+They intentionally do not share the same abstraction anymore.
 
-## Active Surfaces
+## Terminal.app
 
-- Shell managed blocks (`nix/scripts/sync.sh shell`, adapter: `nix/scripts/sync-adapters/shell.sh`)
-  - Desired: `surfaces/shell/desired/*`
-  - Actual: `~/.nix/.zshrc`, `~/.bashrc`, `~/.config/fish/config.fish`, `~/.config/fish/conf.d/00-dotfiles.fish`
-  - State: `~/.local/state/dotfiles/sync/shell/blocks/*.sha256`
-- Terminal.app profiles (`nix/scripts/sync.sh terminal`, adapter: `nix/scripts/sync-adapters/terminal.sh`)
-  - Desired: `surfaces/terminal/desired/*.terminal`
-  - Actual: `~/Library/Preferences/com.apple.Terminal.plist`
-  - State: `~/.local/state/dotfiles/sync/terminal-app/profiles/*.sha256`
+Terminal.app remains a reconciled mutable surface.
+It uses the shared reconciler core in `nix/scripts/sync-core.sh` through `nix/scripts/sync-adapters/terminal.sh`.
 
-## Drift Workflow
+- Desired: `surfaces/terminal/desired/*.terminal`
+- Actual: `~/Library/Preferences/com.apple.Terminal.plist`
+- State: `~/.local/state/dotfiles/sync/terminal-app/profiles/*.sha256`
+- Model: compare desired, actual, and lastApplied
 
-Use the same workflow for both adapters.
+Terminal workflow:
 
 ```bash
 # 1) Detect drift
-nix run .#dotfiles -- sync shell --check
 nix run .#dotfiles -- sync terminal --check
 
 # 2) Inspect details and diff
-nix run .#dotfiles -- sync shell --check --details --diff
 nix run .#dotfiles -- sync terminal --check --details --diff
 
-# 3a) Adopt current local changes into staged files (safe default)
-nix run .#dotfiles -- sync shell --adopt
+# 3) Adopt current local changes when they are intentional
 nix run .#dotfiles -- sync terminal --adopt
-
-# 3b) Adopt directly into repo files (conflicts require --force)
-nix run .#dotfiles -- sync shell --adopt --in-place
 nix run .#dotfiles -- sync terminal --adopt --in-place
-nix run .#dotfiles -- sync shell --adopt --in-place --force
 nix run .#dotfiles -- sync terminal --adopt --in-place --force
 
-# 4) For shell entrypoints, run one-time migration when shape/type is invalid
-nix run .#dotfiles -- sync shell --migrate
-
-# 5) Apply repo to local state
-nix run .#dotfiles -- sync shell --apply
+# 4) Apply repo state back into Terminal.app
 nix run .#dotfiles -- sync terminal --apply
-
-# 6) Force apply only when intentionally overwriting local drift
-nix run .#dotfiles -- sync shell --apply --force
 nix run .#dotfiles -- sync terminal --apply --force
+
+# 5) Forget lastApplied state when needed
+nix run .#dotfiles -- sync terminal --forget
 ```
 
-Legacy state directories are no longer read by adapters and are intentionally ignored.
+## Shell
+
+Shell is not treated as a generic reconciled surface.
+`nix/scripts/sync-adapters/shell.sh` is a standalone writable entrypoint manager.
+It does not use `sync-core.sh` and it does not keep shell-specific `lastApplied` state.
+
+- Desired: `surfaces/shell/desired/*`
+- Actual:
+  - `~/.nix/.zshrc`
+  - `~/.bashrc`
+  - `~/.config/fish/config.fish`
+  - `~/.config/fish/conf.d/00-dotfiles.fish`
+- State: none
+- Model: compare desired managed content against the current entrypoint/file and repair in place
+
+Shell behavior:
+
+- Block targets update only the managed marker block and preserve unmanaged content outside the markers.
+- `sync shell --apply` will create or restore writable regular files for common entrypoint shapes, including missing files and symlinks.
+- `sync shell --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid` based on the current target state.
+- Shell sync does not adopt local changes back into the repo.
+
+Shell workflow:
+
+```bash
+# 1) Check whether any target needs apply
+nix run .#dotfiles -- sync shell --check
+
+# 2) Inspect details and managed-content diffs
+nix run .#dotfiles -- sync shell --check --details --diff
+
+# 3) Repair writable entrypoints in place
+nix run .#dotfiles -- sync shell --apply
+```
 
 ## Adapter Contract
 
-Every adapter that uses `sync-core.sh` must define:
+Only Terminal currently uses the shared `sync-core.sh` adapter contract.
+That contract still requires functions such as:
 
 - `sync_adapter_list_items`
 - `sync_adapter_is_selected`
@@ -63,6 +83,5 @@ Every adapter that uses `sync-core.sh` must define:
 - `sync_adapter_write_desired_to_actual`
 - `sync_adapter_export_actual`
 - `sync_adapter_on_no_selection`
-- `sync_adapter_print_summary`
 
-Optional hooks (`sync_adapter_after_apply`, `sync_adapter_print_details`, `sync_adapter_print_diff`, etc.) are for adapter-specific behavior only and should stay minimal.
+Shell does not implement these hooks anymore.
