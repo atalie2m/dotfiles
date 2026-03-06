@@ -56,19 +56,17 @@ delib.module {
             fromDir="${fromDir}"
             toDir="${toDir}"
 
-            if [ ! -d "$fromDir" ]; then
-              exit 0
-            fi
-
-            if [ "${lib.boolToString cfg.homeTrampolines.syncDock}" = "true" ]; then
-              ${homeTimeoutCmd} ${macAppUtil}/bin/mac-app-util sync-trampolines "$fromDir" "$toDir" || true
-            else
-              rm -rf "$toDir"
-              mkdir -p "$toDir"
-              while IFS= read -r -d $'\\0' app; do
-                dest="$toDir/$(basename "$app")"
-                ${macAppUtil}/bin/mac-app-util mktrampoline "$app" "$dest"
-              done < <(find "$fromDir" -maxdepth 2 -type d -name "*.app" -print0)
+            if [ -d "$fromDir" ]; then
+              if [ "${lib.boolToString cfg.homeTrampolines.syncDock}" = "true" ]; then
+                ${homeTimeoutCmd} ${macAppUtil}/bin/mac-app-util sync-trampolines "$fromDir" "$toDir" || true
+              else
+                rm -rf "$toDir"
+                mkdir -p "$toDir"
+                while IFS= read -r -d $'\\0' app; do
+                  dest="$toDir/$(basename "$app")"
+                  ${macAppUtil}/bin/mac-app-util mktrampoline "$app" "$dest"
+                done < <(find "$fromDir" -maxdepth 2 -type d -name "*.app" -print0)
+              fi
             fi
           '';
         }

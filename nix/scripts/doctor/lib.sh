@@ -53,7 +53,7 @@ record_facts_checks() {
 }
 
 record_basic_system_checks() {
-  local secrets_file age_key_file xcode_path machine_arch
+  local secrets_file age_key_file xcode_path machine_arch system_name
 
   secrets_file="$SECRETS_DIR/secrets.nix"
   if [[ -f $secrets_file ]]; then
@@ -67,6 +67,13 @@ record_basic_system_checks() {
     record_check "sops.ageKey" "ok" "$age_key_file"
   else
     record_check "sops.ageKey" "warn" "$age_key_file missing"
+  fi
+
+  system_name="$(uname -s 2>/dev/null || true)"
+  if [[ $system_name != "Darwin" ]]; then
+    record_check "darwin.xcodeSelect" "ok" "skipped on non-Darwin host"
+    record_check "darwin.rosetta" "ok" "skipped on non-Darwin host"
+    return 0
   fi
 
   if command -v xcode-select >/dev/null 2>&1; then

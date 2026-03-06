@@ -38,7 +38,8 @@ Deeper toggles such as `system.brewNix.autoDock.enable` are intentionally omitte
 - `HOST` (default: `a2m_mac`)
 - `RICE` (default: empty)
 - `FORMAT` (`text` or `json`, default: `text`)
-- `FACTS`, `SECRETS`, `FACTS_DIR`, `SECRETS_DIR`
+- `FACTS_DIR`, `SECRETS_DIR`
+- `FACTS`, `SECRETS` (advanced overrides; default to `path:$FACTS_DIR` / `path:$SECRETS_DIR`)
 
 ## Implementation Notes
 

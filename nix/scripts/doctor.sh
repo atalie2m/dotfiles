@@ -15,10 +15,10 @@ Usage: nix run .#doctor -- [--host <host>] [--rice <rice>] [--strict] [--json]
 Environment:
   HOST=...        Host to inspect (default: none)
   RICE=...        Rice to inspect (default: none)
-  FACTS=...       Full local facts input (default: path:$HOME/.config/dotfiles)
-  SECRETS=...     Full local secrets input (default: path:$HOME/.config/dotfiles)
-  FACTS_DIR=...   Override local facts dir (default: $HOME/.config/dotfiles)
-  SECRETS_DIR=... Override local secrets dir (default: $HOME/.config/dotfiles)
+  FACTS_DIR=...   Local facts dir (default: $HOME/.config/dotfiles)
+  SECRETS_DIR=... Local secrets dir (default: $HOME/.config/dotfiles)
+  FACTS=...       Advanced local input override (default: path:$FACTS_DIR)
+  SECRETS=...     Advanced secrets input override (default: path:$SECRETS_DIR)
 USAGE
 }
 
@@ -72,6 +72,7 @@ rice="${rice:-${RICE:-}}"
 set_repo_root
 cd "$ROOT"
 resolve_inputs
+require_input_directories "doctor"
 flake_ref="$(flake_ref_for_root "$ROOT")"
 
 CHECK_NAMES=()

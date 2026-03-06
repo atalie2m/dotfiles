@@ -14,10 +14,10 @@ Usage: nix run .#bootstrap -- [--host <host>] [--rice <rice>] [--apply] [--yes] 
 Environment:
   HOST=...        Host to apply (default: none)
   RICE=...        Rice to apply (default: none)
-  FACTS=...       Full local facts input (default: path:$HOME/.config/dotfiles)
-  SECRETS=...     Full local secrets input (default: path:$HOME/.config/dotfiles)
-  FACTS_DIR=...   Override local facts dir (default: $HOME/.config/dotfiles)
-  SECRETS_DIR=... Override local secrets dir (default: $HOME/.config/dotfiles)
+  FACTS_DIR=...   Local facts dir (default: $HOME/.config/dotfiles)
+  SECRETS_DIR=... Local secrets dir (default: $HOME/.config/dotfiles)
+  FACTS=...       Advanced local input override (default: path:$FACTS_DIR)
+  SECRETS=...     Advanced secrets input override (default: path:$SECRETS_DIR)
 USAGE
 }
 
@@ -79,6 +79,7 @@ rice="${rice:-${RICE:-}}"
 set_repo_root
 cd "$ROOT"
 resolve_inputs
+require_input_directories "bootstrap"
 ensure_inputs_dirs "$FACTS_DIR" "$SECRETS_DIR"
 
 facts_file="$FACTS_DIR/facts.nix"

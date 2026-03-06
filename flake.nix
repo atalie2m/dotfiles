@@ -127,7 +127,7 @@
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ inputs.treefmt-nix.flakeModule ];
-      systems = [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux" ];
+      systems = [ "aarch64-darwin" "x86_64-darwin" ];
 
       perSystem = { pkgs, config, lib, ... }:
         let
@@ -187,7 +187,7 @@
             treefmt = lib.mkForce (pkgs.runCommand "treefmt-check"
               {
                 nativeBuildInputs = [ pkgs.git config.treefmt.build.wrapper ];
-                src = inputs.self;
+                src = dotfilesRoot;
               } ''
                             set -euo pipefail
                             project_dir="$TMPDIR/project"
@@ -221,18 +221,18 @@
             statix = pkgs.runCommand "statix-check"
               {
                 nativeBuildInputs = [ pkgs.statix ];
-                src = inputs.self;
+                src = dotfilesRoot;
               } ''
                           cd "$src"
                           config_file=$(mktemp)
                           cat >"$config_file" <<'EOF'
               disabled = [
-                "manual_inherit"
-                "manual_inherit_from"
-                "useless_parens"
-                "empty_pattern"
-                "useless_has_attr"
-                "repeated_keys"
+                "manual_inherit",
+                "manual_inherit_from",
+                "useless_parens",
+                "empty_pattern",
+                "useless_has_attr",
+                "repeated_keys",
               ]
               ignore = [ ".direnv", "result" ]
               nix_version = "2.4"
@@ -244,7 +244,7 @@
             deadnix = pkgs.runCommand "deadnix-check"
               {
                 nativeBuildInputs = [ pkgs.deadnix ];
-                src = inputs.self;
+                src = dotfilesRoot;
               } ''
               cd "$src"
               deadnix --fail -l -L .
@@ -254,7 +254,7 @@
             shellcheck = pkgs.runCommand "shellcheck-check"
               {
                 nativeBuildInputs = [ pkgs.findutils pkgs.shellcheck ];
-                src = inputs.self;
+                src = dotfilesRoot;
               } ''
               cd "$src"
               mapfile -t files < <(find nix/scripts -type f -name '*.sh' | sort)
@@ -285,7 +285,7 @@
             syncShellSmoke = pkgs.runCommand "sync-shell-smoke-test"
               {
                 nativeBuildInputs = [ pkgs.bash ];
-                src = inputs.self;
+                src = dotfilesRoot;
               } ''
               cd "$src"
               bash nix/scripts/sync-shell-smoke-test.sh
@@ -294,8 +294,8 @@
 
             syncCliMigration = pkgs.runCommand "sync-cli-migration-test"
               {
-                nativeBuildInputs = [ pkgs.bash ];
-                src = inputs.self;
+                nativeBuildInputs = [ pkgs.bash pkgs.git ];
+                src = dotfilesRoot;
               } ''
               cd "$src"
               bash nix/scripts/sync-cli-migration-test.sh
@@ -305,7 +305,7 @@
             syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
               {
                 nativeBuildInputs = [ pkgs.bash ];
-                src = inputs.self;
+                src = dotfilesRoot;
               } ''
               cd "$src"
               bash nix/scripts/sync-cli-common-parse-test.sh
@@ -315,7 +315,7 @@
             shellEntrypointWriteability = pkgs.runCommand "shell-zsh-writeability-test"
               {
                 nativeBuildInputs = [ pkgs.bash ];
-                src = inputs.self;
+                src = dotfilesRoot;
               } ''
               cd "$src"
               bash nix/scripts/shell-zsh-writeability-test.sh
@@ -325,7 +325,7 @@
             zshrcCompat = pkgs.runCommand "zshrc-compat-test"
               {
                 nativeBuildInputs = [ pkgs.bash ];
-                src = inputs.self;
+                src = dotfilesRoot;
               } ''
               cd "$src"
               bash nix/scripts/zshrc-compat-test.sh
@@ -335,7 +335,7 @@
             vscodeInstancesSmoke = pkgs.runCommand "vscode-instances-smoke-test"
               {
                 nativeBuildInputs = [ pkgs.bash pkgs.jq ];
-                src = inputs.self;
+                src = dotfilesRoot;
               } ''
               cd "$src"
               bash nix/scripts/vscode-instances-smoke-test.sh

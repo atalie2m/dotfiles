@@ -1,4 +1,4 @@
-args@{ ... }:
+args:
 
 let
   mkDarwinHost = import ../../../lib/mk-darwin-host.nix args;

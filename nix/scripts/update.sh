@@ -14,10 +14,10 @@ Usage: nix run .#update -- [--host <host>] [--rice <rice>]
 Environment:
   HOST=...                Host to build (default: a2m_mac)
   RICE=...                Rice to build (default: none)
-  FACTS=...               Full local facts input (default: path:$HOME/.config/dotfiles)
-  SECRETS=...             Full local secrets input (default: path:$HOME/.config/dotfiles)
-  FACTS_DIR=...           Override local facts dir (default: $HOME/.config/dotfiles)
-  SECRETS_DIR=...         Override local secrets dir (default: $HOME/.config/dotfiles)
+  FACTS_DIR=...           Local facts dir (default: $HOME/.config/dotfiles)
+  SECRETS_DIR=...         Local secrets dir (default: $HOME/.config/dotfiles)
+  FACTS=...               Advanced local input override (default: path:$FACTS_DIR)
+  SECRETS=...             Advanced secrets input override (default: path:$SECRETS_DIR)
   UPDATE_ALL=1            Update all flake inputs (default: selected inputs)
   UPDATE_SKIP_CHECK=1     Skip nix flake check
   UPDATE_SKIP_BUILD=1     Skip darwin-rebuild build
@@ -132,10 +132,10 @@ if [[ ${UPDATE_SKIP_BUILD:-0} != "1" ]]; then
 fi
 
 if [[ ${UPDATE_COMMIT:-0} == "1" ]]; then
-  if git diff --quiet && git diff --cached --quiet; then
-    echo "update: no changes to commit"
+  if git diff --quiet -- flake.lock && git diff --cached --quiet -- flake.lock; then
+    echo "update: no flake.lock changes to commit"
   else
-    git add flake.lock
-    git commit -m "chore(update): flake inputs"
+    git add -- flake.lock
+    git commit --only flake.lock -m "chore(update): flake inputs"
   fi
 fi

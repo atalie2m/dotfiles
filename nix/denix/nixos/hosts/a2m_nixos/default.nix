@@ -1,4 +1,4 @@
-args@{ ... }:
+args:
 
 let
   mkNixosHost = import ../../../lib/mk-nixos-host.nix args;

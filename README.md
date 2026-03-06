@@ -24,6 +24,8 @@ This flake uses [Denix](https://github.com/yunfachi/denix) with system-scoped tr
 - `nix/denix/nixos/{hosts,rices}`
 - `nix/denix/home/{hosts,rices}`
 
+Operational note: this repo keeps shared NixOS and standalone Home Manager trees, but the day-to-day CLI in this flake (`apply`, `update`, `list-tools`, and target-aware `doctor`) is Darwin-first and resolves `darwinConfigurations`.
+
 - Hosts: `a2m_mac` (default rice: `full`), `mn_mac` (default rice: `full`).
 - Rices: `base`, `darwin`, `dev`, `full`, `minimum`.
   - `base`: cross-platform essentials (`system.nix`, core CLI, shell, Git, GPG/SOPS).
@@ -32,7 +34,7 @@ This flake uses [Denix](https://github.com/yunfachi/denix) with system-scoped tr
   - `full`: composition of `base + darwin + dev`.
   - `minimum`: minimal base profile alias.
 
-CLI usage examples (recommended):
+CLI usage examples (recommended for macOS / nix-darwin):
 
 ```bash
 # Apply default rice for each host
@@ -333,12 +335,15 @@ fi
 
 ### Build with overrides
 
-All `nix run .#apply|.#update|.#doctor|.#bootstrap` commands pass overrides automatically. Manual invocations still need them:
+All `nix run .#apply|.#update|.#doctor|.#bootstrap|.#list-tools` commands derive `FACTS` and `SECRETS` from `FACTS_DIR` and `SECRETS_DIR` automatically. Manual invocations still need explicit overrides:
 
 ```bash
+FACTS_DIR="$HOME/.config/dotfiles"
+SECRETS_DIR="$HOME/.config/dotfiles"
+
 darwin-rebuild build --flake .#a2m_mac \
-  --override-input local path:$HOME/.config/dotfiles \
-  --override-input secrets path:$HOME/.config/dotfiles
+  --override-input local path:$FACTS_DIR \
+  --override-input secrets path:$SECRETS_DIR
 ```
 
 **Note**: `nix/local/` and `nix/secrets/` in the repo are stubs for public evaluation (templates only). Real configurations require `--override-input` and should not include a `STUB` file.
@@ -421,16 +426,16 @@ To use the keyboard configurations from this dotfiles repository:
 
 #### Option 1: Automated Setup with Nix (Recommended)
 
-If you're using this dotfiles repository with Nix and home-manager, the Karabiner-Elements configurations are automatically set up through symbolic links.
+If you're using this dotfiles repository with Nix and home-manager, the Karabiner-Elements configurations are set up declaratively through symbolic links.
 
-The configuration is managed in `nix/denix/modules/karabiner.nix` and will automatically:
+The configuration is managed in `nix/denix/modules/tools/system/karabiner.nix` and will automatically:
 1. Create the necessary directories
-2. Generate symbolic links for all configuration files
+2. Generate symbolic links for the managed rule files and `karabiner.json`
 3. Keep the links updated when you rebuild your configuration
 
 **Configuration Details:**
 - Configuration files are sourced from the `keyboards/` directory in this repo
-- All configuration files are automatically discovered and linked
+- The linked complex-modification set comes from the explicit `ruleFiles` list in the module
 - The setup is declarative and version-controlled
 - Changes take effect after running `darwin-rebuild switch --flake .`
 
@@ -479,11 +484,17 @@ See the LICENSE file for complete attribution information.
 All CLI commands automatically append:
 `--override-input local "$FACTS"` and `--override-input secrets "$SECRETS"`.
 
+These operational CLI commands are Darwin-first: they target `darwinConfigurations` and macOS-specific checks/builds.
+
 Defaults:
 - `FACTS_DIR=$HOME/.config/dotfiles`
 - `SECRETS_DIR=$HOME/.config/dotfiles`
 - `FACTS=path:$FACTS_DIR`
 - `SECRETS=path:$SECRETS_DIR`
+
+Advanced overrides:
+- `FACTS` and `SECRETS` may point to other flake input references when needed.
+- `doctor` and `bootstrap` still require matching `FACTS_DIR` / `SECRETS_DIR` when those overrides are not `path:...`, because they read or write local files directly.
 
 ### Bootstrap (first run)
 ```bash
@@ -560,19 +571,23 @@ nix develop
 ## Manual commands (darwin-rebuild / home-manager)
 ```bash
 # nix-darwin configuration
+FACTS_DIR="$HOME/.config/dotfiles"
+SECRETS_DIR="$HOME/.config/dotfiles"
+
 sudo darwin-rebuild switch --flake .#<PROFILE_NAME> \
-  --override-input local path:$HOME/.config/dotfiles \
-  --override-input secrets path:$HOME/.config/dotfiles
+  --override-input local path:$FACTS_DIR \
+  --override-input secrets path:$SECRETS_DIR
 
 # home-manager configuration (replace <HOSTNAME> with your actual hostname)
 nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME> \
-  --override-input local path:$HOME/.config/dotfiles \
-  --override-input secrets path:$HOME/.config/dotfiles
+  --override-input local path:$FACTS_DIR \
+  --override-input secrets path:$SECRETS_DIR
 ```
 
 ## Troubleshooting
 - **`attribute 'darwinConfigurations' missing`** → Your local inputs are stubbed (or missing). Ensure `~/.config/dotfiles/facts.nix` exists and remove any `STUB` file, then rerun `nix run .#doctor`.
 - **`target not found for host/rice`** → Run `nix run .#doctor -- --host <host> --rice <rice>` to see available targets.
+- **`FACTS_DIR is required ...` / `SECRETS_DIR is required ...`** → `doctor` and `bootstrap` need local file paths. If you override `FACTS` or `SECRETS` with a non-`path:` ref, also set the matching `*_DIR` variable.
 - **`darwin-rebuild: command not found`** → `nix run .#apply` uses the nix-darwin wrapper automatically; for manual runs install it with `nix profile install github:nix-darwin/nix-darwin#darwin-rebuild`.
 - **`error: unrecognised flag '--flake'`** → Ensure you invoke `nix run <flake>#<pkg> -- <cmd>`. Everything after `--` is passed through to `darwin-rebuild`.
 - **Using `sudo`** → macOS resets `PATH` under `sudo`; use the CLI (which calls `sudo -E`) or run `sudo -E darwin-rebuild …`.

@@ -108,27 +108,25 @@ delib.module {
 
       # Keep Dock pins in sync with current /run/current-system/Applications
       home.activation.brewCaskDockPins = lib.mkIf cfg.autoDock.enable (lib.mkOrder 850 ''
-        dockutil="$(command -v dockutil || true)"
-        if [ -z "$dockutil" ]; then
-          echo "brew-nix Dock pin: dockutil not found, skipping" >&2
-          exit 0
+        if [ -d /run/current-system/Applications ]; then
+          for entry in ${lib.escapeShellArgs appLinkSpecs}; do
+            cask="''${entry%%|*}"
+            appName="''${entry#*|}"
+            appPath=$(find -L /run/current-system/Applications -maxdepth 3 -type d -iname "$appName" | head -n 1)
+            if [ -z "$appPath" ]; then
+              echo "brew-nix Dock pin: app for cask ''${cask} (''${appName}) not found" >&2
+              continue
+            fi
+
+            ${pkgs.dockutil}/bin/dockutil --remove "$appPath" --no-restart >/dev/null 2>&1 || true
+            ${pkgs.dockutil}/bin/dockutil --add "$appPath" --replacing "$(basename "$appPath")" --no-restart || true
+          done
+
+          # Apply changes once after updates
+          killall Dock 2>/dev/null || true
+        else
+          echo "brew-nix Dock pin: /run/current-system/Applications missing, skipping" >&2
         fi
-
-        for entry in ${lib.escapeShellArgs appLinkSpecs}; do
-          cask="''${entry%%|*}"
-          appName="''${entry#*|}"
-          appPath=$(find -L /run/current-system/Applications -maxdepth 3 -type d -iname "$appName" | head -n 1)
-          if [ -z "$appPath" ]; then
-            echo "brew-nix Dock pin: app for cask ''${cask} (''${appName}) not found" >&2
-            continue
-          fi
-
-          $dockutil --remove "$appPath" --no-restart >/dev/null 2>&1 || true
-          $dockutil --add "$appPath" --replacing "$(basename "$appPath")" --no-restart || true
-        done
-
-        # Apply changes once after updates
-        killall Dock 2>/dev/null || true
       '');
     };
 }
