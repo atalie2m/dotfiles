@@ -1,63 +1,34 @@
-# Reconciled Surfaces
+# Runtime Sync Surfaces
 
-This repository has two different runtime sync models.
-They intentionally do not share the same abstraction anymore.
+This repository now has one runtime sync surface: shell entrypoints.
+The design is intentionally small and stateless.
 
-## Terminal.app
+## Shell entrypoints
 
-Terminal.app remains a reconciled mutable surface.
-It uses the shared reconciler core in `nix/scripts/sync-core.sh` through `nix/scripts/sync-adapters/terminal.sh`.
-
-- Desired: `surfaces/terminal/desired/*.terminal`
-- Actual: `~/Library/Preferences/com.apple.Terminal.plist`
-- State: `~/.local/state/dotfiles/sync/terminal-app/profiles/*.sha256`
-- Model: compare desired, actual, and lastApplied
-
-Terminal workflow:
-
-```bash
-# 1) Detect drift
-nix run .#dotfiles -- sync terminal --check
-
-# 2) Inspect details and diff
-nix run .#dotfiles -- sync terminal --check --details --diff
-
-# 3) Adopt current local changes when they are intentional
-nix run .#dotfiles -- sync terminal --adopt
-nix run .#dotfiles -- sync terminal --adopt --in-place
-nix run .#dotfiles -- sync terminal --adopt --in-place --force
-
-# 4) Apply repo state back into Terminal.app
-nix run .#dotfiles -- sync terminal --apply
-nix run .#dotfiles -- sync terminal --apply --force
-
-# 5) Forget lastApplied state when needed
-nix run .#dotfiles -- sync terminal --forget
-```
-
-## Shell
-
-Shell is not treated as a generic reconciled surface.
 `nix/scripts/sync-adapters/shell.sh` is a standalone writable entrypoint manager.
-It does not use `sync-core.sh` and it does not keep shell-specific `lastApplied` state.
+It compares desired managed content against the current file and repairs the file in place.
 
-- Desired: `surfaces/shell/desired/*`
+- Desired:
+  - `surfaces/shell/desired/zdotdir.zshrc.block.sh`
+  - `surfaces/shell/desired/bashrc.entrypoint.block.sh`
+  - `surfaces/shell/desired/fish.config.block.fish`
+  - `surfaces/shell/desired/00-dotfiles.fish`
 - Actual:
   - `~/.nix/.zshrc`
   - `~/.bashrc`
   - `~/.config/fish/config.fish`
   - `~/.config/fish/conf.d/00-dotfiles.fish`
 - State: none
-- Model: compare desired managed content against the current entrypoint/file and repair in place
+- Model: compare desired managed content against the current target and make the target writable when needed
 
-Shell behavior:
+Behavior:
 
 - Block targets update only the managed marker block and preserve unmanaged content outside the markers.
-- `sync shell --apply` will create or restore writable regular files for common entrypoint shapes, including missing files and symlinks.
-- `sync shell --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid` based on the current target state.
+- `sync shell --apply` will create or restore writable regular files for missing files, writable regular files, `/nix/store/...` symlinks, and readable non-store symlinks.
+- `sync shell --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`.
 - Shell sync does not adopt local changes back into the repo.
 
-Shell workflow:
+Workflow:
 
 ```bash
 # 1) Check whether any target needs apply
@@ -70,18 +41,39 @@ nix run .#dotfiles -- sync shell --check --details --diff
 nix run .#dotfiles -- sync shell --apply
 ```
 
-## Adapter Contract
+## zsh root compat
 
-Only Terminal currently uses the shared `sync-core.sh` adapter contract.
-That contract still requires functions such as:
+Runtime zsh uses `~/.nix/.zshrc`.
+Some installers still append to `~/.zshrc`, so there is an opt-in compat helper for that path:
 
-- `sync_adapter_list_items`
-- `sync_adapter_is_selected`
-- `sync_adapter_state_key`
-- `sync_adapter_extract_desired`
-- `sync_adapter_extract_actual`
-- `sync_adapter_write_desired_to_actual`
-- `sync_adapter_export_actual`
-- `sync_adapter_on_no_selection`
+- Script: `nix/scripts/zshrc-compat.sh`
+- Nix option: `tools.shell.zsh.rootZshrcCompat.enable`
+- Desired compat state: `~/.zshrc -> .nix/.zshrc`
 
-Shell does not implement these hooks anymore.
+Behavior:
+
+- `--check` reports whether `~/.zshrc` is the expected symlink.
+- `--apply` creates the symlink only when `~/.zshrc` is missing.
+- `--apply` refuses to overwrite a regular-file `~/.zshrc`, a different symlink, or a special file.
+- `--migrate` is the explicit path for moving an existing regular-file `~/.zshrc` into the unmanaged tail of `~/.nix/.zshrc`.
+
+Workflow:
+
+```bash
+bash nix/scripts/zshrc-compat.sh --check
+bash nix/scripts/zshrc-compat.sh --apply
+bash nix/scripts/zshrc-compat.sh --migrate
+```
+
+## Local extension points
+
+Shell-local customization should go in the per-shell local hook files, not in repo-managed blocks:
+
+- zsh: `~/.config/shell/zsh.local.sh`
+- bash: `~/.config/shell/bash.local.sh`
+- fish: `~/.config/shell/fish.local.fish`
+
+## Removed surface
+
+Terminal.app profile sync has been removed from this repository.
+Use a true-color terminal instead, or manage Terminal.app manually if you still need it.

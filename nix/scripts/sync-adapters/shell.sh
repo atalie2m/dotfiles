@@ -563,6 +563,10 @@ print_target_diff() {
   local id="$1"
 
   log "diff: $id"
+  if [[ $TARGET_SHAPE_NEEDS_REWRITE -eq 1 ]] && cmp -s "$TARGET_DESIRED_TMP" "$TARGET_ACTUAL_TMP"; then
+    log "  note: content matches desired, but target must be rewritten as a writable regular file"
+    return 0
+  fi
   /usr/bin/diff -u "$TARGET_DESIRED_TMP" "$TARGET_ACTUAL_TMP" || true
 }
 

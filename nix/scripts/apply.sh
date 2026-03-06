@@ -42,7 +42,9 @@ unset PARSE_TARGET_VALUE_OPTIONS
 
 host="$PARSED_HOST"
 rice="$PARSED_RICE"
-passthrough=("${PARSED_PASSTHROUGH[@]}")
+if [[ ${PARSED_HAS_PASSTHROUGH:-0} -eq 1 ]]; then
+  passthrough=("${PARSED_PASSTHROUGH[@]}")
+fi
 
 idx=0
 while [[ $idx -lt ${#PARSED_ARGS[@]} ]]; do

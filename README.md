@@ -139,63 +139,13 @@ See `docs/vscode.md` for details.
 - Kitty
 - Alacritty
 
-**Why this matters**: macOS Terminal.app only supports 256-color palette, which causes the Starship prompt colors to be approximated and appear different from the intended design. True Color terminals can display the full 16.7 million color spectrum, ensuring consistent visual appearance.
+**Why this matters**: macOS Terminal.app only supports a 256-color palette, which causes the Starship prompt colors to be approximated and appear different from the intended design. True Color terminals can display the full 16.7 million color spectrum, ensuring consistent visual appearance.
 
-### Terminal.app profile management (without AppleScript)
-
-Terminal.app profiles are managed as `.terminal` files in this repo (`surfaces/terminal/desired/`), then imported during Home Manager activation.
-Runtime sync operations are implemented through `nix/scripts/sync.sh` (surface: `terminal`) with a Terminal adapter in `nix/scripts/sync-adapters/terminal.sh`.
-See `docs/reconciled-surfaces.md` for the terminal reconciler model and the shell/terminal split.
-
-- Source of truth: `surfaces/terminal/desired/*.terminal`
-- Managed directory option: `tools.terminal.terminalApp.managedDir` (default: `surfaces/terminal/desired`)
-- State guard: stores last-applied profile hashes under `~/.local/state/dotfiles/sync/terminal-app/profiles/*.sha256`
-- Import behavior: when current hash matches last-applied, repo updates apply safely without `--force`
-- Selection: `tools.terminal.terminalApp.defaultProfile` / `tools.terminal.terminalApp.startupProfile`
-- Drift guard: apply aborts when current Terminal profile differs from last-applied (`tools.terminal.terminalApp.failOnDrift = true`)
-- Force behavior: `tools.terminal.terminalApp.force = true` adds `--force` during activation apply
-
-Current managed profiles:
-- `Atalie Standard` (`surfaces/terminal/desired/Atalie-Standard.terminal`)
-- `Atalie Dark` (`surfaces/terminal/desired/Atalie-Dark.terminal`)
-- `Atalie Glass` (`surfaces/terminal/desired/Atalie-Glass.terminal`)
-- `Atalie Glass Dark` (`surfaces/terminal/desired/Atalie-Glass-Dark.terminal`)
-- `Atalie Glass Light` (`surfaces/terminal/desired/Atalie-Glass-Light.terminal`)
-
-Current default profile:
-- `Atalie Standard`
-
-Drift handling workflow:
-
-```bash
-# 1) Check drift
-nix run .#dotfiles -- sync terminal --check
-# (returns non-zero when drift/missing/invalid profiles are detected)
-
-# Optional: show concise per-profile diff details
-nix run .#dotfiles -- sync terminal --check --diff
-
-# 2) If drift is intentional, stage current Terminal.app values (does not overwrite repo)
-nix run .#dotfiles -- sync terminal --adopt
-
-# Optional: overwrite repo files directly (conflicts need --force)
-nix run .#dotfiles -- sync terminal --adopt --in-place
-nix run .#dotfiles -- sync terminal --adopt --in-place --force
-
-# Optional: clear lastApplied state (all or one profile)
-nix run .#dotfiles -- sync terminal --forget
-nix run .#dotfiles -- sync terminal --forget --item "Atalie Standard"
-
-# 3) Apply from CLI (same reconciler used by activation)
-nix run .#dotfiles -- sync terminal --apply
-
-# 4) Use force only when you intentionally want to overwrite external edits
-nix run .#dotfiles -- sync terminal --apply --force
-```
+Terminal.app profile sync has been removed from this repo. Terminal.app is now an unmanaged compatibility fallback.
 
 ### Shell sync (writable entrypoints)
 
-Shell sync is intentionally smaller than Terminal sync.
+Shell sync is a small, stateless writable-entrypoint manager.
 Runtime sync operations are implemented through `nix/scripts/sync.sh` (surface: `shell`) with `nix/scripts/sync-adapters/shell.sh`.
 Its job is to keep writable shell entrypoints in place and update only repo-managed blocks/files.
 
@@ -209,7 +159,11 @@ Its job is to keep writable shell entrypoints in place and update only repo-mana
   - `~/.bashrc` (managed block only; runtime bash entrypoint)
   - `~/.config/fish/config.fish` (managed block only; runtime fish entrypoint)
   - `~/.config/fish/conf.d/00-dotfiles.fish` (whole file)
-- `sync shell` only manages declared targets; it does not mutate `~/.zshrc` directly.
+- Local extension points:
+  - zsh: `~/.config/shell/zsh.local.sh`
+  - bash: `~/.config/shell/bash.local.sh`
+  - fish: `~/.config/shell/fish.local.fish`
+- `sync shell` manages only the declared targets above.
 - `sync shell --apply` automatically normalizes common entrypoint shapes:
   - missing files
   - writable regular files
@@ -217,6 +171,14 @@ Its job is to keep writable shell entrypoints in place and update only repo-mana
   - readable non-store symlinks, which are materialized back into writable regular files
 - Content outside the managed markers is preserved.
 - Shell sync does not keep machine-local `lastApplied` state and does not adopt local changes back into the repo.
+
+Opt-in zsh root compatibility:
+
+- Runtime zsh still uses `~/.nix/.zshrc`.
+- If you enable `tools.shell.zsh.rootZshrcCompat.enable = true`, activation keeps `~/.zshrc` as a symlink to `.nix/.zshrc`.
+- This is for installers that append to `~/.zshrc`; the write lands in the writable runtime wrapper.
+- Existing regular-file `~/.zshrc` is never overwritten automatically.
+- If you need to migrate an existing regular-file `~/.zshrc`, use `bash nix/scripts/zshrc-compat.sh --migrate`.
 
 Managed block markers:
 
@@ -246,36 +208,38 @@ nix run .#dotfiles -- sync shell --apply
 # Optional: restrict to one shell group or one target
 nix run .#dotfiles -- sync shell --apply --group zsh
 nix run .#dotfiles -- sync shell --check --item bash-rc
+
+# Optional: inspect or repair the ~/.zshrc compat symlink when enabled
+bash nix/scripts/zshrc-compat.sh --check
+bash nix/scripts/zshrc-compat.sh --migrate
 ```
 
-CLI migration (`shell/terminal` subcommands removed):
+Legacy CLI migration:
 
 | Old command | New command |
 | --- | --- |
 | `nix run .#dotfiles -- shell sync ...` | `nix run .#dotfiles -- sync shell ...` |
-| `nix run .#dotfiles -- terminal sync ...` | `nix run .#dotfiles -- sync terminal ...` |
-| `--target <id>` / `--profile <name>` | `--item <id-or-name>` |
+| `--target <id>` | `--item <id>` |
 | `--shell <name>` | `--group <name>` |
-| `--dir <path>` (terminal) | `--profiles-dir <path>` |
 
 `nix run .#apply -- --host <host>` triggers shell reconciliation during Home Manager activation by running `sync shell --apply` for the enabled shell groups.
+If `tools.shell.zsh.rootZshrcCompat.enable = true`, activation also runs `bash nix/scripts/zshrc-compat.sh --apply`.
 
 Shell entrypoint writeability regression tests (isolated + auto cleanup):
 
 ```bash
 nix/scripts/shell-zsh-writeability-test.sh
+nix/scripts/zshrc-compat-test.sh
 ```
 
-The test script uses a temporary `HOME` and removes all test files on exit.
+These test scripts use a temporary `HOME` and remove all test files on exit.
 
-Additional sync adapter/core tests:
+Additional sync tests:
 
 ```bash
-nix/scripts/sync-core-fake-adapter-test.sh
 nix/scripts/sync-cli-migration-test.sh
 nix/scripts/sync-cli-common-parse-test.sh
 nix/scripts/sync-shell-smoke-test.sh
-nix/scripts/sync-terminal-smoke-test.sh
 nix/scripts/vscode-instances-smoke-test.sh
 ```
 
@@ -354,7 +318,13 @@ Example `secrets.nix`:
 }
 ```
 
-Optional shell sourcing (in `~/.zshrc`):
+Optional shell sourcing:
+
+- zsh: `~/.config/shell/zsh.local.sh`
+- bash: `~/.config/shell/bash.local.sh`
+- fish: `~/.config/shell/fish.local.fish`
+
+Example (`~/.config/shell/zsh.local.sh`):
 ```bash
 if [ -f "$HOME/.config/dotfiles/ai.env" ]; then
   source "$HOME/.config/dotfiles/ai.env"
@@ -531,14 +501,14 @@ nix run .#bootstrap -- --host a2m_mac --rice full --yes
 # Basic checks
 nix run .#doctor -- --host a2m_mac
 
-# Strict checks (includes nix flake check + enabled sync drift checks)
+# Strict checks (includes nix flake check + enabled sync checks)
 nix run .#doctor -- --host a2m_mac --strict
 
 # JSON output for CI
 nix run .#doctor -- --json
 ```
 
-For strict sync drift checks, pass `--host` so `doctor` can gate checks by target tool enablement.
+For strict sync checks, pass `--host` so `doctor` can gate checks by target tool enablement.
 
 ### Apply (build/switch)
 ```bash

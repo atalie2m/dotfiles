@@ -116,8 +116,8 @@ if [[ $strict -eq 1 ]]; then
   if [[ $(uname -s 2>/dev/null || true) == "Darwin" ]]; then
     record_strict_sync_checks
   else
-    record_check "terminal.sync" "ok" "skipped on non-Darwin host"
     record_check "shell.sync" "ok" "skipped on non-Darwin host"
+    record_check "shell.zsh.rootCompat" "ok" "skipped on non-Darwin host"
   fi
 fi
 

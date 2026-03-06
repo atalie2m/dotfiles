@@ -138,45 +138,21 @@ record_target_checks() {
 }
 
 record_strict_sync_checks() {
-  local sync_script terminal_enabled shell_enabled shell_output terminal_output shell_summary terminal_summary
-  local shell_zsh_enabled shell_bash_enabled shell_fish_enabled shell_check_args shell_enabled_count
+  local sync_script shell_enabled shell_output shell_summary
+  local shell_zsh_enabled="" shell_bash_enabled="" shell_fish_enabled="" shell_check_args shell_enabled_count
+  local root_compat_enabled="" root_compat_output root_compat_summary compat_script
 
   sync_script="$SCRIPT_DIR/sync.sh"
+  compat_script="$SCRIPT_DIR/zshrc-compat.sh"
   if [[ -z $resolved_target ]]; then
-    record_check "terminal.sync" "warn" "strict drift check skipped (pass --host to resolve target)"
-    record_check "shell.sync" "warn" "strict drift check skipped (pass --host to resolve target)"
+    record_check "shell.sync" "warn" "strict sync check skipped (pass --host to resolve target)"
+    record_check "shell.zsh.rootCompat" "warn" "strict root compat check skipped (pass --host to resolve target)"
     return 0
   fi
 
-  terminal_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.terminal.terminalApp.enable")"
-  if [[ -z $terminal_enabled ]]; then
-    terminal_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.terminal.enable")"
-  fi
-
-  case "$terminal_enabled" in
-  true)
-    if [[ -f $sync_script ]]; then
-      if terminal_output=$(bash "$sync_script" terminal --check --details 2>&1); then
-        record_check "terminal.sync" "ok" "terminal sync check passed"
-      else
-        terminal_summary="$(printf '%s\n' "$terminal_output" | awk '/summary:/ { print; exit }')"
-        if [[ -n $terminal_summary ]]; then
-          record_check "terminal.sync" "fail" "terminal drift check failed: $terminal_summary (inspect: nix run .#dotfiles -- sync terminal --check --details --diff)"
-        else
-          record_check "terminal.sync" "fail" "terminal drift check failed (inspect: nix run .#dotfiles -- sync terminal --check --details --diff)"
-        fi
-      fi
-    else
-      record_check "terminal.sync" "warn" "sync script not found; skipped"
-    fi
-    ;;
-  false)
-    record_check "terminal.sync" "ok" "disabled in target $resolved_target; skipped"
-    ;;
-  *)
-    record_check "terminal.sync" "warn" "unable to resolve terminal enablement for target $resolved_target; skipped"
-    ;;
-  esac
+  shell_zsh_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.zsh.enable")"
+  shell_bash_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.bash.enable")"
+  shell_fish_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.fish.enable")"
 
   shell_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.sync.enable")"
   if [[ -z $shell_enabled ]]; then
@@ -186,10 +162,6 @@ record_strict_sync_checks() {
   case "$shell_enabled" in
   true)
     if [[ -f $sync_script ]]; then
-      shell_zsh_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.zsh.enable")"
-      shell_bash_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.bash.enable")"
-      shell_fish_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.fish.enable")"
-
       shell_check_args=(shell --check --details)
       shell_enabled_count=0
       if [[ $shell_zsh_enabled == "true" ]]; then
@@ -226,6 +198,42 @@ record_strict_sync_checks() {
     ;;
   *)
     record_check "shell.sync" "warn" "unable to resolve shell enablement for target $resolved_target; skipped"
+    ;;
+  esac
+
+  case "$shell_zsh_enabled" in
+  true)
+    root_compat_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.zsh.rootZshrcCompat.enable")"
+    case "$root_compat_enabled" in
+    true)
+      if [[ -f $compat_script ]]; then
+        if root_compat_output=$(bash "$compat_script" --check 2>&1); then
+          record_check "shell.zsh.rootCompat" "ok" "zsh root compat check passed"
+        else
+          root_compat_summary="$(printf '%s\n' "$root_compat_output" | awk '/summary:/ { print; exit }')"
+          if [[ -n $root_compat_summary ]]; then
+            record_check "shell.zsh.rootCompat" "fail" "zsh root compat check failed: $root_compat_summary (inspect: bash nix/scripts/zshrc-compat.sh --check)"
+          else
+            record_check "shell.zsh.rootCompat" "fail" "zsh root compat check failed (inspect: bash nix/scripts/zshrc-compat.sh --check)"
+          fi
+        fi
+      else
+        record_check "shell.zsh.rootCompat" "warn" "zshrc compat script not found; skipped"
+      fi
+      ;;
+    false)
+      record_check "shell.zsh.rootCompat" "ok" "disabled in target $resolved_target"
+      ;;
+    *)
+      record_check "shell.zsh.rootCompat" "warn" "unable to resolve zsh root compat enablement for target $resolved_target; skipped"
+      ;;
+    esac
+    ;;
+  false)
+    record_check "shell.zsh.rootCompat" "ok" "zsh disabled in target $resolved_target; skipped"
+    ;;
+  *)
+    record_check "shell.zsh.rootCompat" "warn" "unable to resolve zsh enablement for target $resolved_target; skipped"
     ;;
   esac
 }

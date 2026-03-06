@@ -17,11 +17,6 @@ delib.rice {
     tools.system.karabiner.enable = true;
     tools.system.aerospace.enable = true;
     tools.terminal.rio.enable = true;
-    tools.terminal.terminalApp = {
-      enable = true;
-      defaultProfile = "Atalie Standard";
-      startupProfile = "Atalie Standard";
-    };
 
     tools.system.homebrewNative.casks = [
       "keyclu"

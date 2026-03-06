@@ -12,7 +12,7 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 - `nix/secrets/` — stub local secrets input (`secrets.nix`, `STUB`) for public evaluation.
 - `nix/scripts/` — CLI entrypoints (`apply`, `update`, `doctor`, `bootstrap`) and shared helpers.
 - `apps/` — user app configs (e.g., `apps/starship.toml`, `apps/vscode/...`).
-- `surfaces/` — reconciled mutable-surface desired state (`surfaces/shell/desired`, `surfaces/terminal/desired`).
+- `surfaces/` — desired state for writable shell entrypoints (`surfaces/shell/desired`).
 - `keyboards/` — Karabiner complex modifications JSON.
 - Local facts live at `~/.config/dotfiles/facts.nix` (not in Git).
 - Local secrets live at `~/.config/dotfiles/secrets.nix` and `~/.config/dotfiles/files/` (not in Git).
@@ -43,19 +43,8 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 ## Security & Configuration Tips
 - Never commit secrets or machine identifiers; keep them in local facts/secrets inputs.
 
-## Reconciled State Paths
-- Shell sync state: `~/.local/state/dotfiles/sync/shell/blocks/*.sha256`
-- Terminal.app sync state: `~/.local/state/dotfiles/sync/terminal-app/profiles/*.sha256`
-- Legacy state paths are intentionally ignored.
-
-## Adding a Sync Adapter
-- Runtime reconciler core lives in `nix/scripts/sync-core.sh`.
-- Adapter scripts live under `nix/scripts/sync-adapters/` (for example `nix/scripts/sync-adapters/shell.sh`, `nix/scripts/sync-adapters/terminal.sh`).
-- Each adapter script must define these required functions:
-  - `sync_adapter_list_items`
-  - `sync_adapter_extract_desired`
-  - `sync_adapter_extract_actual`
-  - `sync_adapter_write_desired_to_actual`
-  - `sync_adapter_export_actual`
-- Optional hooks (`sync_adapter_is_selected`, `sync_adapter_state_key`, `sync_adapter_read_last_applied_hash`, `sync_adapter_write_last_applied_hash`, `sync_adapter_forget_last_applied_hash`, `sync_adapter_print_diff`, `sync_adapter_print_details`, `sync_adapter_after_apply`, `sync_adapter_on_no_selection`, `sync_adapter_print_summary_extra`, etc.) should be added only when they provide concrete UX or transactional value.
-- Add/update smoke tests under `nix/scripts/` and document drift workflow in `docs/reconciled-surfaces.md` and `README.md`.
+## Runtime Sync
+- Shell sync is implemented directly in `nix/scripts/sync-adapters/shell.sh`.
+- The public entrypoint is `nix/scripts/sync.sh`, and it only dispatches the `shell` surface.
+- Shell sync is stateless: it does not keep `lastApplied` hashes or any shell-specific state directory.
+- Add/update smoke tests under `nix/scripts/` and keep `docs/reconciled-surfaces.md` and `README.md` aligned with the runtime model.

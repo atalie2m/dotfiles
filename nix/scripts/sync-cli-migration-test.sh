@@ -41,8 +41,13 @@ if ! grep -Fq 'sync' "$tmp_stderr"; then
 fi
 
 help_output="$(bash "$SYNC_SCRIPT" --help 2>&1 || true)"
-if [[ $help_output != *"sync <surface>"* ]]; then
-  echo "FAIL: sync help missing surface usage" >&2
+if [[ $help_output != *"sync shell"* ]]; then
+  echo "FAIL: sync help missing shell usage" >&2
+  printf '%s\n' "$help_output" >&2
+  exit 1
+fi
+if [[ $help_output == *"terminal --check"* ]]; then
+  echo "FAIL: sync help still advertises removed terminal surface" >&2
   printf '%s\n' "$help_output" >&2
   exit 1
 fi

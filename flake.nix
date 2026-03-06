@@ -282,16 +282,6 @@
               touch "$out"
             '';
 
-            syncCoreFakeAdapter = pkgs.runCommand "sync-core-fake-adapter-test"
-              {
-                nativeBuildInputs = [ pkgs.bash ];
-                src = inputs.self;
-              } ''
-              cd "$src"
-              bash nix/scripts/sync-core-fake-adapter-test.sh
-              touch "$out"
-            '';
-
             syncShellSmoke = pkgs.runCommand "sync-shell-smoke-test"
               {
                 nativeBuildInputs = [ pkgs.bash ];
@@ -332,6 +322,16 @@
               touch "$out"
             '';
 
+            zshrcCompat = pkgs.runCommand "zshrc-compat-test"
+              {
+                nativeBuildInputs = [ pkgs.bash ];
+                src = inputs.self;
+              } ''
+              cd "$src"
+              bash nix/scripts/zshrc-compat-test.sh
+              touch "$out"
+            '';
+
             vscodeInstancesSmoke = pkgs.runCommand "vscode-instances-smoke-test"
               {
                 nativeBuildInputs = [ pkgs.bash pkgs.jq ];
@@ -342,21 +342,6 @@
               touch "$out"
             '';
 
-            syncTerminalSmoke =
-              if pkgs.stdenv.isDarwin then
-                pkgs.runCommand "sync-terminal-smoke-test"
-                  {
-                    nativeBuildInputs = [ pkgs.bash ];
-                    src = inputs.self;
-                  } ''
-                  cd "$src"
-                  bash nix/scripts/sync-terminal-smoke-test.sh
-                  touch "$out"
-                ''
-              else
-                pkgs.runCommand "sync-terminal-smoke-test-skipped" { } ''
-                  touch "$out"
-                '';
           };
 
           devShells.default = pkgs.mkShell {
