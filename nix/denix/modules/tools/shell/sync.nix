@@ -20,11 +20,9 @@ delib.module {
       shellCfg = ((myconfig.tools or { }).shell or { });
       zshEnabled = ((shellCfg.zsh or { }).enable or false);
       bashEnabled = ((shellCfg.bash or { }).enable or false);
-      fishEnabled = ((shellCfg.fish or { }).enable or false);
       shellFilters = lib.concatLists [
         (lib.optionals zshEnabled [ "--group" "zsh" ])
         (lib.optionals bashEnabled [ "--group" "bash" ])
-        (lib.optionals fishEnabled [ "--group" "fish" ])
       ];
       noSelectedShells = shellFilters == [ ];
       applyArgs =

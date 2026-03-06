@@ -146,7 +146,7 @@ record_target_checks() {
 
 record_strict_sync_checks() {
   local sync_script shell_enabled shell_output shell_summary
-  local shell_zsh_enabled="" shell_bash_enabled="" shell_fish_enabled="" shell_check_args shell_enabled_count
+  local shell_zsh_enabled="" shell_bash_enabled="" shell_check_args shell_enabled_count
   local root_compat_enabled="" root_compat_output root_compat_summary compat_script
 
   sync_script="$SCRIPT_DIR/sync.sh"
@@ -159,7 +159,6 @@ record_strict_sync_checks() {
 
   shell_zsh_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.zsh.enable")"
   shell_bash_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.bash.enable")"
-  shell_fish_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.fish.enable")"
 
   shell_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.sync.enable")"
   if [[ -z $shell_enabled ]]; then
@@ -177,10 +176,6 @@ record_strict_sync_checks() {
       fi
       if [[ $shell_bash_enabled == "true" ]]; then
         shell_check_args+=(--group bash)
-        shell_enabled_count=$((shell_enabled_count + 1))
-      fi
-      if [[ $shell_fish_enabled == "true" ]]; then
-        shell_check_args+=(--group fish)
         shell_enabled_count=$((shell_enabled_count + 1))
       fi
 

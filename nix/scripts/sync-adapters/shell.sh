@@ -9,15 +9,13 @@ source "$SCRIPT_DIR/../load-lib.sh"
 usage() {
   cat <<'USAGE'
 Usage:
-  nix run .#dotfiles -- sync shell --check [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>]
-  nix run .#dotfiles -- sync shell --apply [--details] [--diff] [--group <zsh|bash|fish|all>] [--item <id>] [--managed-dir <path>]
+  nix run .#dotfiles -- sync shell --check [--details] [--diff] [--group <zsh|bash|all>] [--item <id>] [--managed-dir <path>]
+  nix run .#dotfiles -- sync shell --apply [--details] [--diff] [--group <zsh|bash|all>] [--item <id>] [--managed-dir <path>]
 
 Description:
   Keep writable shell entrypoints aligned with repo-managed blocks/files.
   - zsh-zdotdir: managed block in ~/.nix/.zshrc
   - bash-rc: managed block in ~/.bashrc
-  - fish-config: managed block in ~/.config/fish/config.fish
-  - fish-core: whole file at ~/.config/fish/conf.d/00-dotfiles.fish
 
 Options:
   --check              Report in-sync / needs-apply / missing / invalid (default mode)
@@ -107,14 +105,14 @@ while [[ $# -gt 0 ]]; do
   --group)
     [[ $# -lt 2 ]] && die "missing value for --group"
     case "$2" in
-    zsh | bash | fish)
+    zsh | bash)
       append_shell_filter "$2"
       ;;
     all)
       group_filter="all"
       ;;
     *)
-      die "invalid --group value: $2 (expected zsh, bash, fish, all)"
+      die "invalid --group value: $2 (expected zsh, bash, all)"
       ;;
     esac
     shift 2
@@ -147,8 +145,6 @@ done
 list_target_ids() {
   printf '%s\n' "zsh-zdotdir"
   printf '%s\n' "bash-rc"
-  printf '%s\n' "fish-config"
-  printf '%s\n' "fish-core"
 }
 
 target_meta_for_id() {
@@ -162,15 +158,6 @@ target_meta_for_id() {
     printf '%s|%s|%s|%s|%s|%s\n' \
       "bash" "block" "$HOME/.bashrc" "$managed_dir/bashrc.entrypoint.block.sh" \
       "# >>> dotfiles-managed:bashrc >>>" "# <<< dotfiles-managed:bashrc <<<"
-    ;;
-  fish-config)
-    printf '%s|%s|%s|%s|%s|%s\n' \
-      "fish" "block" "$HOME/.config/fish/config.fish" "$managed_dir/fish.config.block.fish" \
-      "# >>> dotfiles-managed:fish.config >>>" "# <<< dotfiles-managed:fish.config <<<"
-    ;;
-  fish-core)
-    printf '%s|%s|%s|%s|%s|%s\n' \
-      "fish" "file" "$HOME/.config/fish/conf.d/00-dotfiles.fish" "$managed_dir/00-dotfiles.fish" "" ""
     ;;
   *)
     return 1
