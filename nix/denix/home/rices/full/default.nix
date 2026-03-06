@@ -1,11 +1,13 @@
-{ delib, ... }:
+{ delib, dotlib, ... }:
 
+let
+  profile = dotlib.riceProfiles.full;
+in
 # Home full rice mirrors host defaults, but is inheritance-only to keep
-# homeConfigurations at one entry per host.
+  # homeConfigurations at one entry per host.
 delib.rice {
   name = "full";
-  inherits = [ "base" "darwin" "dev" ];
+  inherits = profile.inherits;
   inheritanceOnly = true;
-
-  myconfig = { };
+  inherit (profile) myconfig;
 }

@@ -3,8 +3,94 @@
 let
   getPlatform = myconfig:
     myconfig.facts.user.platform or myconfig.constants.platform or "";
+  mkHostContext = { inputs, name, machineKey, resolveHomeDirectory, resolvePlatform }:
+    let
+      facts = import (inputs.local + "/facts.nix");
+      user = facts.user or { };
+      machines = facts.machines or { };
+      machine = machines.${machineKey} or { };
+      username = user.username or "";
+      homeDirectory = resolveHomeDirectory {
+        inherit lib user machine username;
+      };
+      platform = resolvePlatform {
+        inherit lib user machine;
+      };
+      stateVersion = user.stateVersion or { };
+      effectiveUser = {
+        inherit username homeDirectory platform stateVersion;
+        fullName = user.fullName or "";
+        email = user.email or "";
+        configDirectory = user.configDirectory or ".config";
+        systemType = user.systemType or "";
+        architecture = user.architecture or "";
+      };
+    in
+    assert lib.assertMsg (username != "") "facts.user.username is required for ${name}";
+    {
+      inherit facts user machines machine username homeDirectory platform stateVersion effectiveUser;
+    };
+
+  riceProfiles = {
+    base = {
+      inherits = [ ];
+      myconfig = {
+        system.nix.enable = true;
+        tools.core.enable = true;
+        tools.shell.enable = true;
+        tools.dev.git.enable = true;
+        tools.security.enable = true;
+      };
+    };
+
+    darwin = {
+      inherits = [ "base" ];
+      myconfig = {
+        tools.system.nixHomebrew.enable = true;
+        tools.system.homebrewNative.enable = true;
+        tools.system.hostnames.enable = true;
+        tools.system.fonts.enable = true;
+      };
+    };
+
+    dev = {
+      inherits = [ "base" ];
+      myconfig = {
+        tools.aiCodingAgent.enable = true;
+        tools.dev.enable = true;
+        tools.editor.emacs.enable = true;
+        tools.editor.neovim.enable = true;
+        tools.editor.vscode.enable = true;
+        tools.shell.defaultShell = "zsh";
+        tools.system.karabiner.enable = true;
+        tools.system.aerospace.enable = true;
+        tools.terminal.rio.enable = true;
+
+        tools.system.homebrewNative.casks = [
+          "keyclu"
+          "latest"
+          "alacritty"
+          "ghostty"
+          "wezterm"
+          "xcodes-app"
+        ];
+      };
+    };
+
+    full = {
+      inherits = [ "base" "darwin" "dev" ];
+      myconfig = { };
+    };
+
+    minimum = {
+      inherits = [ "base" ];
+      myconfig = { };
+    };
+  };
 in
 {
+  inherit mkHostContext riceProfiles;
+
   mkEnableDefault = optionPath: { parent, ... }:
     lib.setAttrByPath (lib.splitString "." optionPath) (lib.mkDefault parent.enable);
 

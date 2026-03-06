@@ -22,6 +22,7 @@ delib.module {
       stateVersion = {
         home = strOption "25.05";
         darwin = intOption 6;
+        nixos = strOption "25.05";
       };
     };
 

@@ -3,10 +3,10 @@ name: "CI"
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -39,7 +39,7 @@ jobs:
         with:
           name: ${{ env.CACHIX_CACHE_NAME }}
           authToken: ${{ env.CACHIX_AUTH_TOKEN }}
-      
+
       - name: Prepare local inputs
         id: local_inputs
         run: |
@@ -67,6 +67,7 @@ jobs:
               stateVersion = {
                 home = "25.05";
                 darwin = 6;
+                nixos = "25.05";
               };
             };
             machines = {
@@ -79,6 +80,9 @@ jobs:
                 computerName = "CI Mac";
                 localHostName = "ci-mac";
                 hostName = "ci-mac.local";
+              };
+              a2m_nixos = {
+                platform = "x86_64-linux";
               };
             };
           }
@@ -114,6 +118,26 @@ jobs:
               --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
               >/dev/null
           done
+
+      - name: Evaluate auxiliary outputs
+        run: |
+          set -euo pipefail
+          nix eval --raw '.#homeConfigurations."runner@a2m_mac".activationPackage.drvPath' \
+            --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+            --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
+            >/dev/null
+          nix eval --raw '.#homeConfigurations."runner@mn_mac".activationPackage.drvPath' \
+            --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+            --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
+            >/dev/null
+          nix eval --raw '.#homeConfigurations."runner@a2m_nixos".activationPackage.drvPath' \
+            --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+            --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
+            >/dev/null
+          nix eval --raw '.#nixosConfigurations.a2m_nixos.config.system.build.toplevel.drvPath' \
+            --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+            --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
+            >/dev/null
 
       - name: Build representative minimum configuration (a2m_mac-minimum)
         run: >

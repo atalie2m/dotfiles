@@ -24,6 +24,7 @@ let
   stateVersion = if hasUser && builtins.hasAttr "stateVersion" user then user.stateVersion else null;
   stateHome = if builtins.isAttrs stateVersion && builtins.hasAttr "home" stateVersion then stateVersion.home else null;
   stateDarwin = if builtins.isAttrs stateVersion && builtins.hasAttr "darwin" stateVersion then stateVersion.darwin else null;
+  stateNixos = if builtins.isAttrs stateVersion && builtins.hasAttr "nixos" stateVersion then stateVersion.nixos else null;
 
   machines = if hasRoot && builtins.hasAttr "machines" x then x.machines else null;
   binaryCaches = if hasRoot && builtins.hasAttr "binaryCaches" x then x.binaryCaches else null;
@@ -81,6 +82,10 @@ builtins.concatStringsSep "\n" [
     (if stateDarwin == null then "facts.user.stateVersion.darwin not set (optional)"
     else if builtins.isInt stateDarwin then builtins.toString stateDarwin
     else "facts.user.stateVersion.darwin must be an integer"))
+  (mk "facts.stateVersion.nixos" (if optionalString stateNixos then "ok" else "fail")
+    (if stateNixos == null then "facts.user.stateVersion.nixos not set (optional)"
+    else if builtins.isString stateNixos then stateNixos
+    else "facts.user.stateVersion.nixos must be a string"))
   (mk "facts.machines" (if optionalAttrs machines then "ok" else "fail")
     (if machines == null then "facts.machines not set (optional)"
     else if builtins.isAttrs machines then "facts.machines set"

@@ -6,6 +6,9 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 LOAD_LIB="$ROOT/nix/scripts/load-lib.sh"
 SYNC_SCRIPT="$ROOT/nix/scripts/sync.sh"
 SOURCE_MANAGED_DIR="$ROOT/surfaces/shell/desired"
+APPLY_SCRIPT="$ROOT/nix/scripts/apply.sh"
+UPDATE_SCRIPT="$ROOT/nix/scripts/update.sh"
+LIST_TOOLS_SCRIPT="$ROOT/nix/scripts/list-tools.sh"
 DOCTOR_SCRIPT="$ROOT/nix/scripts/doctor.sh"
 BOOTSTRAP_SCRIPT="$ROOT/nix/scripts/bootstrap.sh"
 
@@ -21,6 +24,21 @@ fi
 
 if [[ ! -f $DOCTOR_SCRIPT ]]; then
   echo "test: doctor script not found: $DOCTOR_SCRIPT" >&2
+  exit 1
+fi
+
+if [[ ! -f $APPLY_SCRIPT ]]; then
+  echo "test: apply script not found: $APPLY_SCRIPT" >&2
+  exit 1
+fi
+
+if [[ ! -f $UPDATE_SCRIPT ]]; then
+  echo "test: update script not found: $UPDATE_SCRIPT" >&2
+  exit 1
+fi
+
+if [[ ! -f $LIST_TOOLS_SCRIPT ]]; then
+  echo "test: list-tools script not found: $LIST_TOOLS_SCRIPT" >&2
   exit 1
 fi
 
@@ -82,6 +100,24 @@ assert_line() {
   fi
 }
 
+assert_missing_host() {
+  local script="$1"
+  local command_name="$2"
+  local stdout_file="$3"
+  local stderr_file="$4"
+
+  if bash "$script" >"$stdout_file" 2>"$stderr_file"; then
+    echo "FAIL: $command_name unexpectedly accepted missing host" >&2
+    exit 1
+  fi
+
+  if ! grep -Fq "host is required for $command_name (pass --host <host>, a positional host, or HOST=...)" "$stderr_file"; then
+    echo "FAIL: $command_name missing-host message changed" >&2
+    cat "$stderr_file" >&2 || true
+    exit 1
+  fi
+}
+
 printf 'test: running sync cli common parse test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
@@ -136,6 +172,11 @@ if ! grep -Fq "unknown sync surface: terminal (expected: shell)" "$tmp_root/term
   exit 1
 fi
 
+assert_missing_host "$APPLY_SCRIPT" "apply" "$tmp_root/apply.out" "$tmp_root/apply.err"
+assert_missing_host "$UPDATE_SCRIPT" "update" "$tmp_root/update.out" "$tmp_root/update.err"
+assert_missing_host "$LIST_TOOLS_SCRIPT" "list-tools" "$tmp_root/list-tools.out" "$tmp_root/list-tools.err"
+assert_missing_host "$BOOTSTRAP_SCRIPT" "bootstrap" "$tmp_root/bootstrap-missing-host.out" "$tmp_root/bootstrap-missing-host.err"
+
 default_home="$tmp_root/default-home"
 default_out="$tmp_root/default.out"
 run_resolve_inputs "$default_home" >"$default_out"
@@ -185,7 +226,7 @@ fi
 
 if (
   unset FACTS FACTS_DIR SECRETS SECRETS_DIR
-  SECRETS="github:example/secrets" bash "$BOOTSTRAP_SCRIPT"
+  SECRETS="github:example/secrets" bash "$BOOTSTRAP_SCRIPT" --host a2m_mac
 ) >"$tmp_root/bootstrap.out" 2>"$tmp_root/bootstrap.err"; then
   echo "FAIL: bootstrap unexpectedly accepted SECRETS without SECRETS_DIR" >&2
   exit 1
@@ -195,5 +236,172 @@ if ! grep -Fq "SECRETS_DIR is required when SECRETS is not a path:... input (boo
   cat "$tmp_root/bootstrap.err" >&2 || true
   exit 1
 fi
+
+fake_bin="$tmp_root/fake-bin"
+mkdir -p "$fake_bin"
+
+cat >"$fake_bin/nix" <<'EOF_NIX'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ge 4 && $1 == "eval" && $2 == "--raw" && $3 == "--impure" && $4 == "--expr" ]]; then
+  cat <<'EOF_SCHEMA'
+facts.schema.root|ok|facts is an attrset
+facts.schema.user|ok|facts.user is an attrset
+facts.username|ok|tester
+facts.stateVersion|ok|facts.user.stateVersion set
+facts.stateVersion.home|ok|25.05
+facts.stateVersion.darwin|ok|6
+facts.stateVersion.nixos|ok|25.05
+EOF_SCHEMA
+  exit 0
+fi
+
+if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
+  printf 'a2m_mac\nmn_mac\n'
+  exit 0
+fi
+
+if [[ $# -ge 2 && $1 == "flake" && $2 == "check" ]]; then
+  exit 0
+fi
+
+echo "fake nix: unexpected invocation: $*" >&2
+exit 1
+EOF_NIX
+chmod +x "$fake_bin/nix"
+
+real_uname="$(command -v uname)"
+cat >"$fake_bin/uname" <<EOF_UNAME
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "\${1:-}" in
+  -s) printf 'Darwin\n' ;;
+  -m) printf 'x86_64\n' ;;
+  *) exec "$real_uname" "\$@" ;;
+esac
+EOF_UNAME
+chmod +x "$fake_bin/uname"
+
+cat >"$fake_bin/xcode-select" <<'EOF_XCODE'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ ${1:-} == "-p" ]]; then
+  printf '/Applications/Xcode.app/Contents/Developer\n'
+  exit 0
+fi
+
+exit 1
+EOF_XCODE
+chmod +x "$fake_bin/xcode-select"
+
+doctor_home="$tmp_root/doctor-home"
+mkdir -p "$doctor_home/.config/dotfiles"
+cat >"$doctor_home/.config/dotfiles/facts.nix" <<'EOF_FACTS'
+{
+  user = {
+    username = "tester";
+    stateVersion = {
+      home = "25.05";
+      darwin = 6;
+      nixos = "25.05";
+    };
+  };
+}
+EOF_FACTS
+cat >"$doctor_home/.config/dotfiles/secrets.nix" <<'EOF_SECRETS'
+{}
+EOF_SECRETS
+
+if ! (
+  HOME="$doctor_home" \
+    PATH="$fake_bin:$PATH" \
+    bash "$DOCTOR_SCRIPT" --strict
+) >"$tmp_root/doctor-strict.out" 2>"$tmp_root/doctor-strict.err"; then
+  echo "FAIL: doctor --strict unexpectedly failed without host" >&2
+  cat "$tmp_root/doctor-strict.out" >&2 || true
+  cat "$tmp_root/doctor-strict.err" >&2 || true
+  exit 1
+fi
+
+if ! grep -Fq "warn  shell.sync: strict sync check skipped (pass --host to resolve target)" "$tmp_root/doctor-strict.out"; then
+  echo "FAIL: doctor --strict did not warn about skipped host-aware sync checks" >&2
+  cat "$tmp_root/doctor-strict.out" >&2 || true
+  exit 1
+fi
+
+tool_path_bin="$tmp_root/tool-path-bin"
+tool_path_log="$tmp_root/tool-path.log"
+tool_path_home="$tmp_root/tool-path-home"
+tool_path_managed="$tmp_root/tool-path-managed"
+mkdir -p "$tool_path_bin" "$tool_path_home"
+cp -R "$SOURCE_MANAGED_DIR" "$tool_path_managed"
+chmod -R u+w "$tool_path_managed"
+
+real_awk="$(command -v awk)"
+real_diff="$(command -v diff)"
+real_grep="$(command -v grep)"
+
+cat >"$tool_path_bin/awk" <<EOF_AWK
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'awk\n' >>"$tool_path_log"
+exec "$real_awk" "\$@"
+EOF_AWK
+chmod +x "$tool_path_bin/awk"
+
+cat >"$tool_path_bin/diff" <<EOF_DIFF
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'diff\n' >>"$tool_path_log"
+exec "$real_diff" "\$@"
+EOF_DIFF
+chmod +x "$tool_path_bin/diff"
+
+cat >"$tool_path_bin/grep" <<EOF_GREP
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'grep\n' >>"$tool_path_log"
+exec "$real_grep" "\$@"
+EOF_GREP
+chmod +x "$tool_path_bin/grep"
+
+run_with_fake_tools() {
+  HOME="$tool_path_home" PATH="$tool_path_bin:$PATH" "$@"
+}
+
+if ! run_with_fake_tools bash "$SYNC_SCRIPT" shell --apply --item bash-rc --managed-dir "$tool_path_managed" >/dev/null; then
+  echo "FAIL: shell apply failed under fake PATH tools" >&2
+  exit 1
+fi
+
+cat >"$tool_path_home/.bashrc" <<'EOF_BASHRC'
+# >>> dotfiles-managed:bashrc >>>
+# drift
+# <<< dotfiles-managed:bashrc <<<
+EOF_BASHRC
+
+if run_with_fake_tools bash "$SYNC_SCRIPT" shell --check --diff --item bash-rc --managed-dir "$tool_path_managed" >"$tmp_root/tool-path-shell.out" 2>"$tmp_root/tool-path-shell.err"; then
+  echo "FAIL: shell diff unexpectedly succeeded for drifted content" >&2
+  exit 1
+fi
+
+printf '%s\n' '# user zshrc' >"$tool_path_home/.zshrc"
+if ! run_with_fake_tools bash "$ROOT/nix/scripts/zshrc-compat.sh" --migrate >"$tmp_root/tool-path-zshrc.out" 2>"$tmp_root/tool-path-zshrc.err"; then
+  echo "FAIL: zshrc migrate failed under fake PATH tools" >&2
+  cat "$tmp_root/tool-path-zshrc.out" >&2 || true
+  cat "$tmp_root/tool-path-zshrc.err" >&2 || true
+  exit 1
+fi
+
+for tool_name in awk diff grep; do
+  if ! grep -Fqx "$tool_name" "$tool_path_log"; then
+    echo "FAIL: expected PATH-resolved $tool_name wrapper was not used" >&2
+    cat "$tool_path_log" >&2 || true
+    exit 1
+  fi
+done
 
 echo "PASS: sync cli common parse"

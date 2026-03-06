@@ -53,14 +53,6 @@ set_mode() {
   mode_explicit=1
 }
 
-canonicalize_text_to_file() {
-  local source_file="$1"
-  local output_file="$2"
-
-  [[ -f $source_file ]] || return 1
-  /usr/bin/awk '{ sub(/\r$/, ""); print }' "$source_file" >"$output_file"
-}
-
 ensure_runtime_wrapper() {
   if bash "$SCRIPT_DIR/sync.sh" shell --apply --item zsh-zdotdir >/dev/null; then
     return 0
@@ -133,7 +125,7 @@ append_migrated_tail() {
     return 0
   fi
 
-  if [[ -f $compat_target_path ]] && /usr/bin/grep -Fqx "$migration_marker" "$compat_target_path"; then
+  if [[ -f $compat_target_path ]] && text_file_contains_exact_line "$migration_marker" "$compat_target_path"; then
     rm -f "$tmp_source"
     die "refusing to migrate: '$migration_marker' already exists in $compat_target_path"
   fi

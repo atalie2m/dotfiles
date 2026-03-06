@@ -45,36 +45,39 @@ fi
 host="$PARSED_HOST"
 rice="$PARSED_RICE"
 
-for arg in "${PARSED_ARGS[@]}"; do
-  case "$arg" in
-  --apply)
-    apply_after=1
-    ;;
-  --yes)
-    apply_after=1
-    auto_yes=1
-    ;;
-  --no-sudo)
-    no_sudo=1
-    ;;
-  --strict)
-    strict=1
-    ;;
-  -h | --help)
-    usage
-    exit 0
-    ;;
-  --*)
-    die "unknown option: $arg"
-    ;;
-  *)
-    die "unexpected argument: $arg"
-    ;;
-  esac
-done
+if [[ ${#PARSED_ARGS[@]} -gt 0 ]]; then
+  for arg in "${PARSED_ARGS[@]}"; do
+    case "$arg" in
+    --apply)
+      apply_after=1
+      ;;
+    --yes)
+      apply_after=1
+      auto_yes=1
+      ;;
+    --no-sudo)
+      no_sudo=1
+      ;;
+    --strict)
+      strict=1
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --*)
+      die "unknown option: $arg"
+      ;;
+    *)
+      die "unexpected argument: $arg"
+      ;;
+    esac
+  done
+fi
 
 host="${host:-${HOST:-}}"
 rice="${rice:-${RICE:-}}"
+require_host_argument "$host" "bootstrap"
 
 set_repo_root
 cd "$ROOT"
@@ -104,6 +107,11 @@ if [[ ! -f $facts_file ]]; then
     # Optional overrides:
     # homeDirectory = "/Users/${username}";
     # platform = "x86_64-darwin"; # default is aarch64-darwin
+    # stateVersion = {
+    #   home = "25.05";
+    #   darwin = 6;
+    #   # nixos = "25.05";
+    # };
   };
 
   # Optional machine metadata for tools.system.hostnames:

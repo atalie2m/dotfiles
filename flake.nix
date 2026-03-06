@@ -173,7 +173,14 @@
         {
           treefmt = {
             projectRootFile = "flake.nix";
-            settings.global.excludes = [ ".direnv/**" "result/**" ];
+            settings = {
+              global.excludes = [ ".direnv/**" "result/**" "flake.lock" ];
+              formatter.prettier-json = {
+                command = "${pkgs.nodePackages.prettier}/bin/prettier";
+                includes = [ "*.json" "**/*.json" ];
+                options = [ "--write" ];
+              };
+            };
             programs.nixpkgs-fmt.enable = true;
             programs.shfmt = {
               enable = true;
@@ -284,7 +291,7 @@
 
             syncShellSmoke = pkgs.runCommand "sync-shell-smoke-test"
               {
-                nativeBuildInputs = [ pkgs.bash ];
+                nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
                 src = dotfilesRoot;
               } ''
               cd "$src"
@@ -304,7 +311,7 @@
 
             syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
               {
-                nativeBuildInputs = [ pkgs.bash ];
+                nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
                 src = dotfilesRoot;
               } ''
               cd "$src"
@@ -314,7 +321,7 @@
 
             shellEntrypointWriteability = pkgs.runCommand "shell-zsh-writeability-test"
               {
-                nativeBuildInputs = [ pkgs.bash ];
+                nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
                 src = dotfilesRoot;
               } ''
               cd "$src"
@@ -324,7 +331,7 @@
 
             zshrcCompat = pkgs.runCommand "zshrc-compat-test"
               {
-                nativeBuildInputs = [ pkgs.bash ];
+                nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
                 src = dotfilesRoot;
               } ''
               cd "$src"

@@ -7,6 +7,7 @@ nix flake init -t github:atalie2m/dotfiles#web-dev
 ```
 
 It provides:
+
 - Dev shell with Node.js 22, pnpm, bun, AWS CLI v2, jq/yq, mkcert, just (`wrangler` is optional and commented by default)
 - Prettier formatting integrated via treefmt-nix and exposed as `apps.format`
 - `nix run .#dev` for development tasks and `nix flake check` hooks
@@ -14,6 +15,7 @@ It provides:
 # dotfiles
 
 ## Prerequisites
+
 - Nix(Lix or Determinate's vanilla)
 
 ## Profiles (Denix hosts/rices)
@@ -25,6 +27,7 @@ This flake uses [Denix](https://github.com/yunfachi/denix) with system-scoped tr
 - `nix/denix/home/{hosts,rices}`
 
 Operational note: this repo keeps shared NixOS and standalone Home Manager trees, but the day-to-day CLI in this flake (`apply`, `update`, `list-tools`, and target-aware `doctor`) is Darwin-first and resolves `darwinConfigurations`.
+`nixosConfigurations` and `homeConfigurations` remain available as auxiliary outputs for manual evaluation and targeted experiments; the operational CLI does not resolve them.
 
 - Hosts: `a2m_mac` (default rice: `full`), `mn_mac` (default rice: `full`).
 - Rices: `base`, `darwin`, `dev`, `full`, `minimum`.
@@ -98,6 +101,9 @@ Example (`flake.nix` for a Terraform repo):
 
 ## Tool Catalog (myconfig.tools)
 
+Group toggles such as `tools.dev.enable` are bundle switches, not just namespaces. Enabling a group fans out to the catalog-owned tool toggles under that group.
+Use `list-tools` as the canonical way to inspect the expanded toggle set for a host/rice, and see [`docs/tool-catalog.md`](docs/tool-catalog.md) for the catalog rules.
+
 List effective tool toggles for a target host/rice:
 
 ```bash
@@ -135,6 +141,7 @@ See `docs/vscode.md` for details.
 **For macOS users**: Please use a 24-bit True Color compatible terminal instead of the default Terminal.app. The Starship prompt configuration in this repository uses True Color (#RRGGBB) values that are only properly displayed in terminals with full color support.
 
 **Recommended terminals:**
+
 - VS Code integrated terminal
 - iTerm2
 - Rio
@@ -210,11 +217,11 @@ bash nix/scripts/zshrc-compat.sh --migrate
 
 Legacy CLI migration:
 
-| Old command | New command |
-| --- | --- |
+| Old command                            | New command                            |
+| -------------------------------------- | -------------------------------------- |
 | `nix run .#dotfiles -- shell sync ...` | `nix run .#dotfiles -- sync shell ...` |
-| `--target <id>` | `--item <id>` |
-| `--shell <name>` | `--group <name>` |
+| `--target <id>`                        | `--item <id>`                          |
+| `--shell <name>`                       | `--group <name>`                       |
 
 `nix run .#apply -- --host <host>` triggers shell reconciliation during Home Manager activation by running `sync shell --apply` for the enabled shell groups.
 If `tools.shell.zsh.rootZshrcCompat.enable = true`, activation also runs `bash nix/scripts/zshrc-compat.sh --apply`.
@@ -243,6 +250,7 @@ This repo no longer uses Git clean/smudge filters. Machine-specific facts and se
 Both inputs default to `~/.config/dotfiles/` (store `facts.nix` and `secrets.nix` side-by-side).
 
 Default layout:
+
 ```
 ~/.config/dotfiles/
 ├── facts.nix
@@ -261,6 +269,7 @@ Default layout:
   `user.homeDirectory` (auto-derived), `user.platform` (global default; defaults to `aarch64-darwin`), and `machines.<host>.platform` (per-host override, useful when mixing Intel and Apple Silicon Macs)
 
 Example `facts.nix`:
+
 ```nix
 {
   user = {
@@ -277,6 +286,7 @@ Example `facts.nix`:
     stateVersion = {
       home = "25.05";
       darwin = 6;
+      nixos = "25.05";
     };
   };
 
@@ -301,6 +311,7 @@ These machine values are used to set macOS system naming via `tools.system.hostn
 - Detailed setup notes: [`docs/secrets-local.md`](docs/secrets-local.md)
 
 Example `secrets.nix`:
+
 ```nix
 {
   files = {
@@ -319,6 +330,7 @@ Optional shell sourcing:
 - bash: `~/.config/shell/bash.local.sh`
 
 Example (`~/.config/shell/zsh.local.sh`):
+
 ```bash
 if [ -f "$HOME/.config/dotfiles/ai.env" ]; then
   source "$HOME/.config/dotfiles/ai.env"
@@ -347,6 +359,7 @@ nix run .#darwin-rebuild -- build --flake .#a2m_mac \
 This repo can pull from extra binary caches via your local facts.
 
 Add to `~/.config/dotfiles/facts.nix`:
+
 ```nix
 {
   binaryCaches = {
@@ -363,6 +376,7 @@ Add to `~/.config/dotfiles/facts.nix`:
 ```
 
 CI cache pushes are wired for Cachix. Set these in the GitHub repo:
+
 - `CACHIX_CACHE_NAME` (repository variable)
 - `CACHIX_AUTH_TOKEN` (repository secret, write-enabled)
 
@@ -373,6 +387,7 @@ Once set, the macOS CI job builds `darwinConfigurations.*.system` and pushes res
 This repo defaults `system.nix.acceptFlakeConfig = true` for convenience, so flake-level `nixConfig` is applied automatically.
 
 Tradeoff:
+
 - Pros: smoother day-to-day usage for this dotfiles flake (fewer manual flags).
 - Cons: evaluating unknown third-party flakes can apply their `nixConfig` (for example cache/substituter settings).
 
@@ -391,22 +406,26 @@ This repository includes comprehensive keyboard layouts and input method configu
 ### Available Configurations
 
 1. **japanese-input-toggle.json**: Japanese input method switching configurations
+
    - Command/Control/Option/Shift keys for 英数・かな switching
    - Caps Lock toggle functionality
    - Vim-friendly ESC key behavior
    - Based on KE-complex_modifications
 
 2. **spacebar-to-shift.json**: Space-and-Shift (SandS) functionality
+
    - Spacebar acts as Left Shift when held with other keys
    - Normal space character when pressed alone
    - Based on KE-complex_modifications
 
 3. **vylet-alt-layout.json**: Vylet alternative keyboard layout
+
    - Complete keyboard layout remapping
    - Created by MightyAcas
    - Optimized for efficient typing
 
 4. **shingeta_en.json**: 新下駄配列 (Shingeta layout) for English typing games
+
    - Japanese keyboard layout optimized for typing games
    - Created by kouy, implemented by funatsufumiya
 
@@ -423,11 +442,13 @@ To use the keyboard configurations from this dotfiles repository:
 If you're using this dotfiles repository with Nix and home-manager, the Karabiner-Elements configurations are set up declaratively through symbolic links.
 
 The configuration is managed in `nix/denix/modules/tools/system/karabiner.nix` and will automatically:
+
 1. Create the necessary directories
 2. Generate symbolic links for the managed rule files and `karabiner.json`
 3. Keep the links updated when you rebuild your configuration
 
 **Configuration Details:**
+
 - Configuration files are sourced from the `keyboards/` directory in this repo
 - The linked complex-modification set comes from the explicit `ruleFiles` list in the module
 - The setup is declarative and version-controlled
@@ -438,11 +459,13 @@ The configuration is managed in `nix/denix/modules/tools/system/karabiner.nix` a
 For manual setup or if not using Nix:
 
 1. Create the Karabiner-Elements configuration directory:
+
    ```bash
    mkdir -p ~/.config/karabiner/assets/complex_modifications
    ```
 
 2. Create symbolic links to the JSON files in your dotfiles:
+
    ```bash
    # Replace /path/to/your/dotfiles with your actual dotfiles path
    DOTFILES_PATH="/path/to/your/dotfiles"
@@ -459,12 +482,12 @@ For manual setup or if not using Nix:
 
 4. Enable the desired rules in Karabiner-Elements Settings > Complex Modifications > Add rule.
 
-
 **Note**: Karabiner-Elements only reads JSON files directly from the `complex_modifications` directory and does not recursively search subdirectories. The symbolic links allow you to keep your configurations organized in your dotfiles while making them available to Karabiner-Elements.
 
 ### Credits
 
 These configurations are based on or include work from:
+
 - **KE-complex_modifications** (Unlicense)
 - **Shingeta Layout** by kouy and funatsufumiya (MIT License)
 - **Vylet Keyboard Layout** by MightyAcas
@@ -479,18 +502,22 @@ All CLI commands automatically append:
 `--override-input local "$FACTS"` and `--override-input secrets "$SECRETS"`.
 
 These operational CLI commands are Darwin-first: they target `darwinConfigurations` and macOS-specific checks/builds.
+`apply`, `update`, `list-tools`, and `bootstrap` require `--host`, a positional host, or `HOST=...`.
 
 Defaults:
+
 - `FACTS_DIR=$HOME/.config/dotfiles`
 - `SECRETS_DIR=$HOME/.config/dotfiles`
 - `FACTS=path:$FACTS_DIR`
 - `SECRETS=path:$SECRETS_DIR`
 
 Advanced overrides:
+
 - `FACTS` and `SECRETS` may point to other flake input references when needed.
 - `doctor` and `bootstrap` still require matching `FACTS_DIR` / `SECRETS_DIR` when those overrides are not `path:...`, because they read or write local files directly.
 
 ### Bootstrap (first run)
+
 ```bash
 # Generate minimal facts/secrets, run doctor, then optionally apply
 nix run .#bootstrap -- --host a2m_mac --rice full --apply
@@ -499,10 +526,14 @@ nix run .#bootstrap -- --host a2m_mac --rice full --apply
 nix run .#bootstrap -- --host a2m_mac --rice full --yes
 ```
 
-`bootstrap` creates a minimal `facts.nix` (`user.username` only) and leaves extra fields as opt-in comments.
+`bootstrap` creates a minimal `facts.nix` (`user.username` only) and leaves extra fields such as `stateVersion` as opt-in comments.
 
 ### Doctor (health checks)
+
 ```bash
+# Global facts/secrets/basic system checks
+nix run .#doctor
+
 # Basic checks
 nix run .#doctor -- --host a2m_mac
 
@@ -513,9 +544,11 @@ nix run .#doctor -- --host a2m_mac --strict
 nix run .#doctor -- --json
 ```
 
-For strict sync checks, pass `--host` so `doctor` can gate checks by target tool enablement.
+`doctor` can run without a host for global facts/secrets/basic system checks.
+For target evaluation and strict sync checks, pass `--host` so `doctor` can gate checks by target tool enablement.
 
 ### Apply (build/switch)
+
 ```bash
 # Apply default rice
 nix run .#apply -- --host a2m_mac
@@ -534,11 +567,12 @@ nix run .#apply -- --host a2m_mac -- --show-trace
 ```
 
 ### Update (flake inputs + checks/build)
+
 ```bash
-# Factory-style updates (flake inputs + checks/build)
+# Update all non-path root inputs from flake.lock, then run checks/build
 nix run .#update -- --host a2m_mac
 
-# Update all inputs
+# Full `nix flake update`
 UPDATE_ALL=1 nix run .#update -- --host a2m_mac
 
 # Force checks + formatter
@@ -546,6 +580,7 @@ UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host a2m_mac
 ```
 
 ### Formatter / Checks / Dev Shell
+
 ```bash
 # treefmt formatter (used by `nix fmt`)
 nix fmt
@@ -563,6 +598,7 @@ nix develop
 ```
 
 ## Manual commands (darwin-rebuild / home-manager)
+
 ```bash
 # nix-darwin configuration
 FACTS_DIR="$HOME/.config/dotfiles"
@@ -579,6 +615,7 @@ nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME> \
 ```
 
 ## Troubleshooting
+
 - **`attribute 'darwinConfigurations' missing`** → Your local inputs are stubbed (or missing). Ensure `~/.config/dotfiles/facts.nix` exists and remove any `STUB` file, then rerun `nix run .#doctor`.
 - **`target not found for host/rice`** → Run `nix run .#doctor -- --host <host> --rice <rice>` to see available targets.
 - **`FACTS_DIR is required ...` / `SECRETS_DIR is required ...`** → `doctor` and `bootstrap` need local file paths. If you override `FACTS` or `SECRETS` with a non-`path:` ref, also set the matching `*_DIR` variable.

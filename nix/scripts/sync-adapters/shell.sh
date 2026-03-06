@@ -2,9 +2,9 @@
 set -euo pipefail
 
 DOTFILES_SCRIPT_LABEL="sync-shell"
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ADAPTER_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=load-lib.sh
-source "$SCRIPT_DIR/../load-lib.sh"
+source "$ADAPTER_DIR/../load-lib.sh"
 
 usage() {
   cat <<'USAGE'
@@ -183,118 +183,6 @@ target_selected() {
   esac
 }
 
-canonicalize_text_to_file() {
-  local source_file="$1"
-  local output_file="$2"
-
-  [[ -f $source_file ]] || return 1
-  /usr/bin/awk '{ sub(/\r$/, ""); print }' "$source_file" >"$output_file"
-}
-
-extract_managed_block() {
-  local source_file="$1"
-  local begin_marker="$2"
-  local end_marker="$3"
-  local output_file="$4"
-
-  [[ -f $source_file ]] || return 2
-
-  if /usr/bin/awk -v begin="$begin_marker" -v end="$end_marker" '
-    BEGIN {
-      beginCount = 0
-      endCount = 0
-      inBlock = 0
-    }
-    $0 == begin {
-      beginCount++
-      if (beginCount > 1 || inBlock == 1) {
-        exit 3
-      }
-      inBlock = 1
-      next
-    }
-    $0 == end {
-      endCount++
-      if (inBlock == 0 || endCount > 1) {
-        exit 3
-      }
-      inBlock = 0
-      next
-    }
-    inBlock == 1 {
-      print
-    }
-    END {
-      if (beginCount == 0 && endCount == 0) {
-        exit 2
-      }
-      if (beginCount == 1 && endCount == 1 && inBlock == 0) {
-        exit 0
-      }
-      exit 3
-    }
-  ' "$source_file" >"$output_file"; then
-    return 0
-  else
-    case "$?" in
-    2) return 2 ;;
-    3) return 3 ;;
-    *) return 3 ;;
-    esac
-  fi
-}
-
-replace_managed_block_in_file() {
-  local source_file="$1"
-  local desired_file="$2"
-  local begin_marker="$3"
-  local end_marker="$4"
-  local output_file="$5"
-
-  /usr/bin/awk -v begin="$begin_marker" -v end="$end_marker" -v desired="$desired_file" '
-    BEGIN {
-      beginCount = 0
-      endCount = 0
-      inBlock = 0
-    }
-    $0 == begin {
-      beginCount++
-      if (beginCount > 1 || inBlock == 1) {
-        exit 3
-      }
-      print $0
-      while ((getline line < desired) > 0) {
-        sub(/\r$/, "", line)
-        print line
-      }
-      close(desired)
-      inBlock = 1
-      next
-    }
-    $0 == end {
-      endCount++
-      if (inBlock == 0 || endCount > 1) {
-        exit 3
-      }
-      inBlock = 0
-      print $0
-      next
-    }
-    inBlock == 0 {
-      print
-    }
-    END {
-      if (beginCount == 0 && endCount == 0) {
-        exit 2
-      }
-      if (beginCount == 1 && endCount == 1 && inBlock == 0) {
-        exit 0
-      }
-      exit 3
-    }
-  ' "$source_file" >"$output_file"
-}
-
 write_managed_block_file() {
   local output_file="$1"
   local desired_file="$2"
@@ -302,7 +190,7 @@ write_managed_block_file() {
   local end_marker="$4"
 
   printf '%s\n' "$begin_marker" >"$output_file"
-  /usr/bin/awk '{ sub(/\r$/, ""); print }' "$desired_file" >>"$output_file"
+  append_canonicalized_text_to_file "$desired_file" "$output_file"
   printf '%s\n' "$end_marker" >>"$output_file"
 }
 
@@ -324,7 +212,7 @@ write_entrypoint_file() {
         write_managed_block_file "$tmp_out" "$desired_file" "$begin_marker" "$end_marker"
         if [[ -s $target_file ]]; then
           printf '\n' >>"$tmp_out"
-          /usr/bin/awk '{ sub(/\r$/, ""); print }' "$target_file" >>"$tmp_out"
+          append_canonicalized_text_to_file "$target_file" "$tmp_out"
         fi
       else
         rm -f "$tmp_out"
@@ -554,7 +442,7 @@ print_target_diff() {
     log "  note: content matches desired, but target must be rewritten as a writable regular file"
     return 0
   fi
-  /usr/bin/diff -u "$TARGET_DESIRED_TMP" "$TARGET_ACTUAL_TMP" || true
+  print_unified_diff "$TARGET_DESIRED_TMP" "$TARGET_ACTUAL_TMP"
 }
 
 apply_target() {

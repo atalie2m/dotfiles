@@ -3,6 +3,8 @@
 This repository manages tool/group enablement under `myconfig.tools` using
 `*.enable` toggles. Denix modules follow a simple rule: when `enable = true`,
 the tool is installed/configured.
+Group toggles such as `tools.dev.enable` act as bundle switches for the
+catalog-owned tools in that group.
 
 ## Toggle Rules
 
@@ -35,7 +37,7 @@ Deeper toggles such as `system.brewNix.autoDock.enable` are intentionally omitte
 
 ### Environment Variables (Optional)
 
-- `HOST` (default: `a2m_mac`)
+- `HOST` (default: none; required unless passed positionally)
 - `RICE` (default: empty)
 - `FORMAT` (`text` or `json`, default: `text`)
 - `FACTS_DIR`, `SECRETS_DIR`

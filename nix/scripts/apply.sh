@@ -12,7 +12,7 @@ Usage: nix run .#apply -- [--host <host>] [--rice <rice>] [--action switch|build
        nix run .#apply -- [host]
 
 Environment:
-  HOST=...        Host to switch (default: a2m_mac)
+  HOST=...        Host to switch (default: none)
   RICE=...        Rice to apply (default: none)
   FACTS_DIR=...   Local facts dir (default: $HOME/.config/dotfiles)
   SECRETS_DIR=... Local secrets dir (default: $HOME/.config/dotfiles)
@@ -72,8 +72,9 @@ while [[ $idx -lt ${#PARSED_ARGS[@]} ]]; do
   idx=$((idx + 1))
 done
 
-host="${host:-${HOST:-a2m_mac}}"
+host="${host:-${HOST:-}}"
 rice="${rice:-${RICE:-}}"
+require_host_argument "$host" "apply"
 
 case "$action" in
 switch | build) ;;

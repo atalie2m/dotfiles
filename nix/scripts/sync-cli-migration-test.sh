@@ -66,7 +66,13 @@ cat >"$fake_bin/nix" <<'EOF_NIX'
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ $# -ge 4 && $1 == "eval" && $2 == "--raw" && $3 == "--impure" && $4 == "--expr" ]]; then
+  printf '%s' "${FAKE_UPDATEABLE_INPUTS:-}"
+  exit 0
+fi
+
 if [[ $# -ge 2 && $1 == "flake" && $2 == "update" ]]; then
+  printf '%s\n' "$*" >"${FAKE_UPDATE_LOG_FILE:-flake-update.log}"
   if [[ -n ${FAKE_FLAKE_LOCK_CONTENT:-} ]]; then
     printf '%s\n' "$FAKE_FLAKE_LOCK_CONTENT" > flake.lock
   fi
@@ -77,6 +83,8 @@ echo "fake nix: unexpected invocation: $*" >&2
 exit 1
 EOF_NIX
 chmod +x "$fake_bin/nix"
+
+fake_updateable_inputs=$'brew-api\nbrew-nix\ndenix\nflake-parts\nhome-manager\nmac-app-util\nnix-darwin\nnix-homebrew\nnixpkgs\nsops-nix\ntreefmt-nix'
 
 setup_repo() {
   local repo_dir="$1"
@@ -108,6 +116,8 @@ run_update() {
     export UPDATE_SKIP_CHECK=1
     export UPDATE_SKIP_BUILD=1
     export UPDATE_COMMIT=1
+    export FAKE_UPDATEABLE_INPUTS="$fake_updateable_inputs"
+    export FAKE_UPDATE_LOG_FILE="$repo_dir/update.log"
     mkdir -p "$HOME"
 
     while [[ $# -gt 0 ]]; do
@@ -128,6 +138,14 @@ if ! run_update "$commit_repo" "$tmp_root/commit.stdout" "$tmp_root/commit.stder
   echo "FAIL: update commit flow failed" >&2
   cat "$tmp_root/commit.stdout" >&2 || true
   cat "$tmp_root/commit.stderr" >&2 || true
+  exit 1
+fi
+
+commit_update_args="$(cat "$commit_repo/update.log")"
+expected_update_args="flake update --update-input brew-api --update-input brew-nix --update-input denix --update-input flake-parts --update-input home-manager --update-input mac-app-util --update-input nix-darwin --update-input nix-homebrew --update-input nixpkgs --update-input sops-nix --update-input treefmt-nix"
+if [[ $commit_update_args != "$expected_update_args" ]]; then
+  echo "FAIL: update did not target the expected root inputs" >&2
+  printf 'expected: %s\nactual:   %s\n' "$expected_update_args" "$commit_update_args" >&2
   exit 1
 fi
 

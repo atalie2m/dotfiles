@@ -12,7 +12,7 @@ Usage: nix run .#list-tools -- [--host <host>] [--rice <rice>] [--format json|te
        nix run .#list-tools -- [host]
 
 Environment:
-  HOST=...        Host to inspect (default: a2m_mac)
+  HOST=...        Host to inspect (default: none)
   RICE=...        Rice to inspect (default: none)
   FORMAT=...      Output format (json or text; default: text)
   FACTS_DIR=...   Local facts dir (default: $HOME/.config/dotfiles)
@@ -69,9 +69,10 @@ while [[ $idx -lt ${#PARSED_ARGS[@]} ]]; do
   idx=$((idx + 1))
 done
 
-host="${host:-${HOST:-a2m_mac}}"
+host="${host:-${HOST:-}}"
 rice="${rice:-${RICE:-}}"
 format="${format:-${FORMAT:-text}}"
+require_host_argument "$host" "list-tools"
 
 case "$format" in
 json | text) ;;

@@ -12,7 +12,7 @@ Usage: nix run .#update -- [--host <host>] [--rice <rice>]
        nix run .#update -- [host]
 
 Environment:
-  HOST=...                Host to build (default: a2m_mac)
+  HOST=...                Host to build (default: none)
   RICE=...                Rice to build (default: none)
   FACTS_DIR=...           Local facts dir (default: $HOME/.config/dotfiles)
   SECRETS_DIR=...         Local secrets dir (default: $HOME/.config/dotfiles)
@@ -47,23 +47,26 @@ fi
 host="$PARSED_HOST"
 rice="$PARSED_RICE"
 
-for arg in "${PARSED_ARGS[@]}"; do
-  case "$arg" in
-  -h | --help)
-    usage
-    exit 0
-    ;;
-  --*)
-    die "unknown option: $arg"
-    ;;
-  *)
-    die "unexpected argument: $arg"
-    ;;
-  esac
-done
+if [[ ${#PARSED_ARGS[@]} -gt 0 ]]; then
+  for arg in "${PARSED_ARGS[@]}"; do
+    case "$arg" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --*)
+      die "unknown option: $arg"
+      ;;
+    *)
+      die "unexpected argument: $arg"
+      ;;
+    esac
+  done
+fi
 
-host="${host:-${HOST:-a2m_mac}}"
+host="${host:-${HOST:-}}"
 rice="${rice:-${RICE:-}}"
+require_host_argument "$host" "update"
 start_dir="$PWD"
 
 set_repo_root
@@ -73,16 +76,14 @@ cd "$ROOT"
 resolve_inputs
 flake_ref="$(flake_ref_for_root "$ROOT")"
 
-update_inputs=(
-  nixpkgs
-  nix-darwin
-  home-manager
-  denix
-  sops-nix
-  brew-nix
-  brew-api
-  mac-app-util
-)
+update_inputs=()
+while IFS= read -r input || [[ -n $input ]]; do
+  [[ -n $input ]] || continue
+  update_inputs+=("$input")
+done < <(list_updateable_root_flake_inputs "$ROOT")
+if [[ ${#update_inputs[@]} -eq 0 ]]; then
+  die "unable to determine updateable flake inputs from $ROOT/flake.lock"
+fi
 
 if [[ ${UPDATE_ALL:-0} == "1" ]]; then
   nix flake update

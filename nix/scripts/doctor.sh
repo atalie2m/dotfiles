@@ -13,7 +13,7 @@ usage() {
 Usage: nix run .#doctor -- [--host <host>] [--rice <rice>] [--strict] [--json]
 
 Environment:
-  HOST=...        Host to inspect (default: none)
+  HOST=...        Host to inspect target-specific checks (default: none)
   RICE=...        Rice to inspect (default: none)
   FACTS_DIR=...   Local facts dir (default: $HOME/.config/dotfiles)
   SECRETS_DIR=... Local secrets dir (default: $HOME/.config/dotfiles)
@@ -45,26 +45,28 @@ fi
 host="$PARSED_HOST"
 rice="$PARSED_RICE"
 
-for arg in "${PARSED_ARGS[@]}"; do
-  case "$arg" in
-  --strict)
-    strict=1
-    ;;
-  --json)
-    json=1
-    ;;
-  -h | --help)
-    usage
-    exit 0
-    ;;
-  --*)
-    die "unknown option: $arg"
-    ;;
-  *)
-    die "unexpected argument: $arg"
-    ;;
-  esac
-done
+if [[ ${#PARSED_ARGS[@]} -gt 0 ]]; then
+  for arg in "${PARSED_ARGS[@]}"; do
+    case "$arg" in
+    --strict)
+      strict=1
+      ;;
+    --json)
+      json=1
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --*)
+      die "unknown option: $arg"
+      ;;
+    *)
+      die "unexpected argument: $arg"
+      ;;
+    esac
+  done
+fi
 
 host="${host:-${HOST:-}}"
 rice="${rice:-${RICE:-}}"
