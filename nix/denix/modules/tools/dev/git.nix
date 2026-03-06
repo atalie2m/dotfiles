@@ -14,6 +14,10 @@ delib.module {
     lfs = {
       enable = boolOption false;
     };
+    delta = {
+      enable = boolOption false;
+      options = attrsOption { };
+    };
     aliases = attrsOption {
       # Default useful aliases
       st = "status";
@@ -43,6 +47,10 @@ delib.module {
         enable = true;
 
         lfs.enable = cfg.lfs.enable;
+        delta = lib.mkIf cfg.delta.enable {
+          enable = true;
+          options = cfg.delta.options;
+        };
 
         extraConfig = lib.mkMerge [
           {

@@ -61,7 +61,13 @@ let
         tools.editor.emacs.enable = true;
         tools.editor.neovim.enable = true;
         tools.editor.vscode.enable = true;
+        tools.dev.git.delta.enable = true;
         tools.shell.defaultShell = "zsh";
+        tools.shell.atuin.enable = true;
+        tools.shell.direnv.enable = true;
+        tools.shell.fzf.enable = true;
+        tools.shell.fzfTab.enable = true;
+        tools.shell.zoxide.enable = true;
         tools.system.karabiner.enable = true;
         tools.system.aerospace.enable = true;
         tools.terminal.rio.enable = true;

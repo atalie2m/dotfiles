@@ -138,7 +138,7 @@ See `docs/vscode.md` for details.
 
 ## Terminal Compatibility
 
-**For macOS users**: Please use a 24-bit True Color compatible terminal instead of the default Terminal.app. The Starship prompt configuration in this repository uses True Color (#RRGGBB) values that are only properly displayed in terminals with full color support.
+Any modern terminal works with the current Zsh setup. Terminal.app profile sync has been removed from this repo, so Terminal.app is just an unmanaged fallback.
 
 **Recommended terminals:**
 
@@ -148,9 +148,16 @@ See `docs/vscode.md` for details.
 - Kitty
 - Alacritty
 
-**Why this matters**: macOS Terminal.app only supports a 256-color palette, which causes the Starship prompt colors to be approximated and appear different from the intended design. True Color terminals can display the full 16.7 million color spectrum, ensuring consistent visual appearance.
+## Zsh Stack
 
-Terminal.app profile sync has been removed from this repo. Terminal.app is now an unmanaged compatibility fallback.
+The default Zsh prompt is Pure. `base` / `minimum` keep that prompt-only setup, while `dev` / `full` also enable:
+
+- `fzf` keybindings: `CTRL-T` for file insert, `ALT-C` for directory jump
+- `fzf-tab` on `TAB`
+- `Atuin` on `CTRL-R`
+- `zoxide` via `z` and `zi`
+- `direnv` + `nix-direnv`
+- `delta` for Git paging
 
 ### Shell sync (writable entrypoints)
 

@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, ... }:
+{ delib, lib, pkgs, dotlib, ... }:
 
 # Zsh configuration
 
@@ -33,32 +33,34 @@ delib.module {
         ignoreSpace = true;
       };
 
-      initContent = ''
-        if [[ -f "$HOME/.config/shell/common.sh" ]]; then
-          source "$HOME/.config/shell/common.sh"
-        fi
+      initContent = lib.mkMerge [
+        (lib.mkOrder 500 ''
+          if [[ -f "$HOME/.config/shell/common.sh" ]]; then
+            source "$HOME/.config/shell/common.sh"
+          fi
 
-        # Avoid right-prompt artifacts on resize and when typing
-        # - transient_rprompt hides RPROMPT while typing
-        # - prompt_cr/prompt_sp improve redraw on wraps and partial lines
-        setopt TRANSIENT_RPROMPT
-        setopt PROMPT_CR
-        setopt PROMPT_SP
-        # keep a small gap from terminal edge to avoid wrap glitches
-        ZLE_RPROMPT_INDENT=1
-        # clear end-of-line mark to prevent leftovers on reflow
-        PROMPT_EOL_MARK=""
-        # full refresh on terminal resize
-        TRAPWINCH() { zle && zle -R }
+          # Avoid right-prompt artifacts on resize and when typing.
+          setopt TRANSIENT_RPROMPT
+          setopt PROMPT_CR
+          setopt PROMPT_SP
+          ZLE_RPROMPT_INDENT=1
+          PROMPT_EOL_MARK=""
+          TRAPWINCH() { zle && zle -R }
+        '')
+        (lib.mkIf cfg.enableAutosuggestions (lib.mkOrder 1100 ''
+          source ${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+        ''))
+        (lib.mkOrder 1150 ''
+          if [[ -f "$HOME/.config/shell/zsh.local.sh" ]]; then
+            source "$HOME/.config/shell/zsh.local.sh"
+          fi
+        '')
+        (lib.mkIf cfg.enableSyntaxHighlighting (lib.mkOrder 1200 ''
+          # Keep syntax highlighting last so late widgets are visible to it.
+          source ${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+        ''))
+      ];
 
-        # Load user-specific Zsh customizations if present
-        if [[ -f "$HOME/.config/shell/zsh.local.sh" ]]; then
-          source "$HOME/.config/shell/zsh.local.sh"
-        fi
-      '';
-
-      autosuggestion.enable = cfg.enableAutosuggestions;
-      syntaxHighlighting.enable = cfg.enableSyntaxHighlighting;
       inherit (cfg) enableCompletion;
     };
   };

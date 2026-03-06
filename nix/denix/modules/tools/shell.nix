@@ -86,14 +86,6 @@ delib.module {
           fi
         fi
 
-        if [[ $- == *i* ]] && [[ -n "''${IN_NIX_SHELL:-}" ]]; then
-          echo "Nix develop environment active"
-          if [[ -n "''${DEVENV_PROFILE:-}" ]]; then
-            echo "Environment: ''${DEVENV_PROFILE}"
-          elif [[ -n "''${NIX_SHELL_NAME:-}" ]]; then
-            echo "Environment: ''${NIX_SHELL_NAME}"
-          fi
-        fi
       '';
     };
   };

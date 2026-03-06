@@ -72,4 +72,4 @@ Shell-local customization should go in the per-shell local hook files, not in re
 ## Removed surface
 
 Terminal.app profile sync has been removed from this repository.
-Use a true-color terminal instead, or manage Terminal.app manually if you still need it.
+Manage Terminal.app manually if you still need it.
