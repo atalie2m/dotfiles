@@ -87,12 +87,8 @@ flake_ref="$(flake_ref_for_root "$ROOT")"
 
 target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
 
-if command -v darwin-rebuild >/dev/null 2>&1; then
-  rebuild_cmd=(darwin-rebuild)
-else
-  darwin_rebuild_bin="$(nix build --no-link --print-out-paths nix-darwin#darwin-rebuild)/bin/darwin-rebuild"
-  rebuild_cmd=("$darwin_rebuild_bin")
-fi
+darwin_rebuild_bin="$(resolve_pinned_darwin_rebuild_bin "$flake_ref")"
+rebuild_cmd=("$darwin_rebuild_bin")
 
 rebuild_args=("$action"
   --flake "${flake_ref}#${target}"

@@ -15,8 +15,12 @@ let
   username = user.username or "";
   defaultHomeDirectory = if username != "" then "/Users/${username}" else "";
   homeDirectory = user.homeDirectory or defaultHomeDirectory;
-  factsPlatform = user.platform or "";
-  platform = if factsPlatform != "" then factsPlatform else "aarch64-darwin";
+  machinePlatform = machine.platform or "";
+  userPlatform = user.platform or "";
+  platform =
+    if machinePlatform != "" then machinePlatform
+    else if userPlatform != "" then userPlatform
+    else "aarch64-darwin";
   effectiveUser = {
     inherit username homeDirectory platform;
     fullName = user.fullName or "";

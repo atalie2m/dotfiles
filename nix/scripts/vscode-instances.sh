@@ -130,6 +130,7 @@ bootstrap_instance() {
   }
 
   local data exts user_dir marker wanted installed force tmpdir tmp ext
+  local -a failed_extensions=()
   data="$(instance_data_dir)"
   exts="$(instance_extensions_dir)"
   user_dir="$data/User"
@@ -171,7 +172,9 @@ bootstrap_instance() {
     esac
 
     if [[ $force == "1" ]]; then
-      "$code_bin" --user-data-dir "$data" --extensions-dir "$exts" --install-extension "$ext" --force || true
+      if ! "$code_bin" --user-data-dir "$data" --extensions-dir "$exts" --install-extension "$ext" --force; then
+        failed_extensions+=("$ext")
+      fi
       continue
     fi
 
@@ -179,8 +182,15 @@ bootstrap_instance() {
       continue
     fi
 
-    "$code_bin" --user-data-dir "$data" --extensions-dir "$exts" --install-extension "$ext" || true
+    if ! "$code_bin" --user-data-dir "$data" --extensions-dir "$exts" --install-extension "$ext"; then
+      failed_extensions+=("$ext")
+    fi
   done <"$extensions_txt"
+
+  if [[ ${#failed_extensions[@]} -gt 0 ]]; then
+    log "failed to install required extensions: ${failed_extensions[*]}"
+    return 1
+  fi
 
   printf '%s' "$wanted" >"$marker"
 }

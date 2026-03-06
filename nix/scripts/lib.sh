@@ -98,6 +98,23 @@ flake_ref_for_root() {
   printf 'path:%s\n' "$root"
 }
 
+resolve_pinned_darwin_rebuild_bin() {
+  local flake_ref="$1"
+  local build_out=""
+
+  [[ -n $flake_ref ]] || die "flake_ref is required"
+
+  if [[ -n ${DARWIN_REBUILD_BIN:-} ]]; then
+    printf '%s\n' "$DARWIN_REBUILD_BIN"
+    return 0
+  fi
+
+  build_out="$(nix build --no-link --print-out-paths "${flake_ref}#darwin-rebuild")"
+  DARWIN_REBUILD_BIN="${build_out}/bin/darwin-rebuild"
+  [[ -x $DARWIN_REBUILD_BIN ]] || die "pinned darwin-rebuild not found at $DARWIN_REBUILD_BIN"
+  printf '%s\n' "$DARWIN_REBUILD_BIN"
+}
+
 list_darwin_targets() {
   local root="$1"
   local facts="$2"

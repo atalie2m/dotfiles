@@ -109,4 +109,36 @@ if ! run_shell_sync --check --item bash-rc >/dev/null; then
   exit 1
 fi
 
+if ! run_shell_sync --apply --group fish >/dev/null; then
+  echo "FAIL: apply failed for fish entrypoints" >&2
+  exit 1
+fi
+
+fish_config="$home_dir/.config/fish/config.fish"
+fish_core="$home_dir/.config/fish/conf.d/00-dotfiles.fish"
+if [[ ! -f $fish_config || -L $fish_config ]]; then
+  echo "FAIL: missing writable fish config after apply" >&2
+  exit 1
+fi
+
+if [[ ! -f $fish_core || -L $fish_core ]]; then
+  echo "FAIL: missing writable fish hook after apply" >&2
+  exit 1
+fi
+
+if ! grep -Fq '$HOME/.config/fish/hm-fish/config.fish' "$fish_config"; then
+  echo "FAIL: fish runtime wrapper does not source the immutable HM layer" >&2
+  exit 1
+fi
+
+if ! grep -Fq '$HOME/.config/shell/fish.local.fish' "$fish_core"; then
+  echo "FAIL: fish conf.d hook does not source the local extension point" >&2
+  exit 1
+fi
+
+if ! run_shell_sync --check --group fish >/dev/null; then
+  echo "FAIL: fish check failed after apply" >&2
+  exit 1
+fi
+
 echo "PASS: shell sync smoke"

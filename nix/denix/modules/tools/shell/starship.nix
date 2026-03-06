@@ -18,6 +18,7 @@ delib.module {
       enable = true;
       enableZshIntegration = (((myconfig.tools or { }).shell or { }).zsh or { }).enable or false;
       enableBashIntegration = (((myconfig.tools or { }).shell or { }).bash or { }).enable or false;
+      enableFishIntegration = (((myconfig.tools or { }).shell or { }).fish or { }).enable or false;
     };
 
     xdg.configFile."starship.toml" = {

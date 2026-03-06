@@ -46,6 +46,8 @@ baseline_id="baseline-smoke-v1"
 fake_code="$tmp_root/fake-code.sh"
 installed_file="$tmp_root/installed.txt"
 launch_log="$tmp_root/launch.log"
+install_log="$tmp_root/install.log"
+failing_extensions_file="$tmp_root/failing-extensions.txt"
 
 cat >"$settings_json" <<'EOF'
 {
@@ -76,6 +78,8 @@ set -euo pipefail
 
 installed_file="${FAKE_CODE_INSTALLED_FILE:?}"
 launch_log="${FAKE_CODE_LAUNCH_LOG:?}"
+install_log="${FAKE_CODE_INSTALL_LOG:?}"
+failing_extensions_file="${FAKE_CODE_FAIL_EXTENSIONS_FILE:-}"
 
 if [[ ${1:-} == "--user-data-dir" ]]; then
   :
@@ -99,6 +103,10 @@ if [[ " $* " == *" --install-extension "* ]]; then
     idx=$((idx + 1))
   done
   [[ -n $ext ]] || exit 1
+  printf '%s\n' "$ext" >>"$install_log"
+  if [[ -n $failing_extensions_file ]] && [[ -f $failing_extensions_file ]] && grep -Fxq "$ext" "$failing_extensions_file"; then
+    exit 1
+  fi
   grep -Fxq "$ext" "$installed_file" 2>/dev/null || echo "$ext" >>"$installed_file"
   exit 0
 fi
@@ -110,6 +118,7 @@ chmod +x "$fake_code"
 
 run_vscode() {
   FAKE_CODE_INSTALLED_FILE="$installed_file" \
+    FAKE_CODE_INSTALL_LOG="$install_log" \
     FAKE_CODE_LAUNCH_LOG="$launch_log" \
     "$VSCODE_SCRIPT" "$@"
 }
@@ -198,6 +207,66 @@ fi
 
 if [[ ! -f "$base_dir/$name/user-data/.dotfiles-baseline" ]]; then
   echo "FAIL: reset did not restore marker file" >&2
+  exit 1
+fi
+
+rm -f "$installed_file"
+
+failure_name="failure"
+failure_marker="$base_dir/$failure_name/user-data/.dotfiles-baseline"
+
+cat >"$failing_extensions_file" <<'EOF'
+ext.two
+EOF
+
+failed_attempts_before=$(grep -c '^ext.two$' "$install_log" 2>/dev/null || true)
+if FAKE_CODE_FAIL_EXTENSIONS_FILE="$failing_extensions_file" run_vscode launch \
+  --name "$failure_name" \
+  --base-dir "$base_dir" \
+  --code-bin "$fake_code" \
+  --settings-json "$settings_json" \
+  --extensions-txt "$extensions_txt" \
+  --disabled-extensions-txt "$disabled_extensions_txt" \
+  --baseline-id "$baseline_id" \
+  -- /tmp/failure-workspace; then
+  echo "FAIL: launch unexpectedly succeeded after extension install failure" >&2
+  exit 1
+fi
+
+if [[ -f $failure_marker ]]; then
+  echo "FAIL: marker file should not be written after failed bootstrap" >&2
+  exit 1
+fi
+
+failed_attempts_after=$(grep -c '^ext.two$' "$install_log" 2>/dev/null || true)
+if [[ $failed_attempts_after -lt $((failed_attempts_before + 1)) ]]; then
+  echo "FAIL: failed bootstrap did not attempt ext.two installation" >&2
+  exit 1
+fi
+
+rm -f "$failing_extensions_file"
+
+if ! run_vscode launch \
+  --name "$failure_name" \
+  --base-dir "$base_dir" \
+  --code-bin "$fake_code" \
+  --settings-json "$settings_json" \
+  --extensions-txt "$extensions_txt" \
+  --disabled-extensions-txt "$disabled_extensions_txt" \
+  --baseline-id "$baseline_id" \
+  -- /tmp/failure-workspace; then
+  echo "FAIL: launch did not retry bootstrap after failed markerless run" >&2
+  exit 1
+fi
+
+if [[ ! -f $failure_marker ]]; then
+  echo "FAIL: retry launch did not restore marker file" >&2
+  exit 1
+fi
+
+retried_attempts=$(grep -c '^ext.two$' "$install_log" 2>/dev/null || true)
+if [[ $retried_attempts -lt $((failed_attempts_after + 1)) ]]; then
+  echo "FAIL: retry launch did not reinstall missing extension" >&2
   exit 1
 fi
 

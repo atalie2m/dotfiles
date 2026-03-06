@@ -120,3 +120,9 @@ jobs:
           nix build --no-link .#darwinConfigurations.a2m_mac-minimum.system
           --override-input local path:${{ steps.local_inputs.outputs.local_dir }}
           --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
+
+      - name: Build representative full configuration (a2m_mac)
+        run: >
+          nix build --no-link .#darwinConfigurations.a2m_mac.system
+          --override-input local path:${{ steps.local_inputs.outputs.local_dir }}
+          --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}

@@ -112,6 +112,7 @@ if [[ ! -f $facts_file ]]; then
   #     computerName = "Your Mac";
   #     localHostName = "your-mac";
   #     hostName = "your-mac";
+  #     # platform = "x86_64-darwin"; # optional per-host override
   #   };
   # };
 }

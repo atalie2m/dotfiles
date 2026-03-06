@@ -95,14 +95,9 @@ else
 fi
 
 darwin_rebuild() {
-  if command -v darwin-rebuild >/dev/null 2>&1; then
-    darwin-rebuild "$@"
-  else
-    if [[ -z ${DARWIN_REBUILD_BIN:-} ]]; then
-      DARWIN_REBUILD_BIN="$(nix build --no-link --print-out-paths nix-darwin#darwin-rebuild)/bin/darwin-rebuild"
-    fi
-    "$DARWIN_REBUILD_BIN" "$@"
-  fi
+  local darwin_rebuild_bin
+  darwin_rebuild_bin="$(resolve_pinned_darwin_rebuild_bin "$flake_ref")"
+  "$darwin_rebuild_bin" "$@"
 }
 
 if [[ ${UPDATE_FORMAT:-0} == "1" ]]; then

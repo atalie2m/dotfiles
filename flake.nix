@@ -357,6 +357,10 @@
             ];
           };
 
+          packages = {
+            darwin-rebuild = inputs.nix-darwin.packages.${pkgs.system}.darwin-rebuild;
+          };
+
           apps = {
             dotfiles = mkDotfilesApp {
               name = "cli";
@@ -376,6 +380,11 @@
               name = "apply";
               subcommand = "apply";
               description = "Build or switch nix-darwin configurations.";
+            };
+            darwin-rebuild = {
+              type = "app";
+              program = "${inputs.nix-darwin.packages.${pkgs.system}.darwin-rebuild}/bin/darwin-rebuild";
+              meta.description = "Pinned nix-darwin rebuild wrapper from this flake lock.";
             };
             doctor = mkDotfilesApp {
               name = "doctor";
