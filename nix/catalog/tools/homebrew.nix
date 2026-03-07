@@ -27,10 +27,6 @@
     group = "terminal";
     casks = [ "ghostty" ];
   };
-  wezterm = {
-    group = "terminal";
-    casks = [ "wezterm" ];
-  };
 
   # AI coding agents
   claudeCode = {

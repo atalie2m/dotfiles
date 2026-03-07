@@ -9,4 +9,9 @@
     optionPath = [ "myconfig" "tools" "terminal" "rio" "enable" ];
     casks = [ "rio" ];
   };
+
+  "terminal.wezterm" = {
+    optionPath = [ "myconfig" "tools" "terminal" "wezterm" "enable" ];
+    casks = [ "wezterm" ];
+  };
 }
