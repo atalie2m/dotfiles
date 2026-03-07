@@ -45,11 +45,11 @@ Deeper toggles such as `system.brewNix.autoDock.enable` are intentionally omitte
 
 ## Implementation Notes
 
-- Nixpkgs install catalog: `nix/denix/modules/tools/catalog.nix`
-- Nixpkgs install catalog data: `nix/data/tools/catalog-data.nix`
-- Homebrew install catalog: `nix/denix/modules/tools/brew-catalog.nix`
-- Homebrew install catalog data: `nix/data/tools/brew-catalog-data.nix`
-- `nix/scripts/list-tools.sh`
+- Nixpkgs install catalog: `nix/modules/tools/catalog.nix`
+- Nixpkgs install catalog data: `nix/catalog/tools/nixpkgs.nix`
+- Homebrew install catalog: `nix/modules/tools/brew-catalog.nix`
+- Homebrew install catalog data: `nix/catalog/tools/homebrew.nix`
+- `scripts/list-tools.sh`
 - `nix/scripts/list-tools.nix`
 
 The toggle filtering logic lives in `list-tools.nix`, so both text and JSON

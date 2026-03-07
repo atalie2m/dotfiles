@@ -26,6 +26,15 @@ This flake uses [Denix](https://github.com/yunfachi/denix) with system-scoped tr
 - `nix/denix/nixos/{hosts,rices}`
 - `nix/denix/home/{hosts,rices}`
 
+Shared modules, catalogs, and operational scripts now live outside the Denix host trees:
+
+- `nix/modules/{shared,tools}`
+- `nix/catalog/tools/{nixpkgs.nix,homebrew.nix}`
+- `scripts/` for shell entrypoints, helpers, adapters, and smoke tests
+- `nix/scripts/` for Nix expressions used by the CLI
+
+See [`docs/architecture.md`](docs/architecture.md) for the current responsibility split.
+
 Operational note: this repo keeps shared NixOS and standalone Home Manager trees, but the day-to-day CLI in this flake (`apply`, `update`, `list-tools`, and target-aware `doctor`) is Darwin-first and resolves `darwinConfigurations`.
 `nixosConfigurations` and `homeConfigurations` remain available as auxiliary outputs for manual evaluation and targeted experiments; the operational CLI does not resolve them.
 
@@ -172,7 +181,7 @@ The default Zsh prompt is Pure. `base` / `minimum` keep that prompt-only setup, 
 ### Shell sync (writable entrypoints)
 
 Shell sync is a small, stateless writable-entrypoint manager.
-Runtime sync operations are implemented through `nix/scripts/sync.sh` (surface: `shell`) with `nix/scripts/sync-adapters/shell.sh`.
+Runtime sync operations are implemented through `scripts/sync.sh` (surface: `shell`) with `scripts/sync-adapters/shell.sh`.
 Its job is to keep writable shell entrypoints in place and update only repo-managed blocks/files.
 Shared shell helpers are shipped separately as `apps/shell/common.sh` and linked to `~/.config/shell/common.sh`; they are declarative Home Manager content, not part of runtime sync state.
 
@@ -201,7 +210,7 @@ Opt-in zsh root compatibility:
 - If you enable `tools.shell.zsh.rootZshrcCompat.enable = true`, activation keeps `~/.zshrc` as a symlink to `.nix/.zshrc`.
 - This is for installers that append to `~/.zshrc`; the write lands in the writable runtime wrapper.
 - Existing regular-file `~/.zshrc` is never overwritten automatically.
-- If you need to migrate an existing regular-file `~/.zshrc`, use `bash nix/scripts/zshrc-compat.sh --migrate`.
+- If you need to migrate an existing regular-file `~/.zshrc`, use `bash scripts/zshrc-compat.sh --migrate`.
 
 Managed block markers:
 
@@ -229,8 +238,8 @@ nix run .#dotfiles -- sync shell --apply --group zsh
 nix run .#dotfiles -- sync shell --check --item bash-rc
 
 # Optional: inspect or repair the ~/.zshrc compat symlink when enabled
-bash nix/scripts/zshrc-compat.sh --check
-bash nix/scripts/zshrc-compat.sh --migrate
+bash scripts/zshrc-compat.sh --check
+bash scripts/zshrc-compat.sh --migrate
 ```
 
 Legacy CLI migration:
@@ -242,13 +251,13 @@ Legacy CLI migration:
 | `--shell <name>`                       | `--group <name>`                       |
 
 `nix run .#apply -- --host <host>` triggers shell reconciliation during Home Manager activation by running `sync shell --apply` for the enabled shell groups.
-If `tools.shell.zsh.rootZshrcCompat.enable = true`, activation also runs `bash nix/scripts/zshrc-compat.sh --apply`.
+If `tools.shell.zsh.rootZshrcCompat.enable = true`, activation also runs `bash scripts/zshrc-compat.sh --apply`.
 
 Shell entrypoint writeability regression tests (isolated + auto cleanup):
 
 ```bash
-nix/scripts/shell-zsh-writeability-test.sh
-nix/scripts/zshrc-compat-test.sh
+scripts/tests/shell-zsh-writeability-test.sh
+scripts/tests/zshrc-compat-test.sh
 ```
 
 These test scripts use a temporary `HOME` and remove all test files on exit.
@@ -256,10 +265,10 @@ These test scripts use a temporary `HOME` and remove all test files on exit.
 Additional sync tests:
 
 ```bash
-nix/scripts/sync-cli-migration-test.sh
-nix/scripts/sync-cli-common-parse-test.sh
-nix/scripts/sync-shell-smoke-test.sh
-nix/scripts/vscode-instances-smoke-test.sh
+scripts/tests/sync-cli-migration-test.sh
+scripts/tests/sync-cli-common-parse-test.sh
+scripts/tests/sync-shell-smoke-test.sh
+scripts/tests/vscode-instances-smoke-test.sh
 ```
 
 ## Local Facts + Secrets (Override Inputs)
@@ -459,7 +468,7 @@ To use the keyboard configurations from this dotfiles repository:
 
 If you're using this dotfiles repository with Nix and home-manager, the Karabiner-Elements configurations are set up declaratively through symbolic links.
 
-The configuration is managed in `nix/denix/modules/tools/system/karabiner.nix` and will automatically:
+The configuration is managed in `nix/modules/tools/system/karabiner.nix` and will automatically:
 
 1. Create the necessary directories
 2. Generate symbolic links for the managed rule files and `karabiner.json`

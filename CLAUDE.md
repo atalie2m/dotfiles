@@ -33,9 +33,12 @@ This is a **Nix flake-based dotfiles repository** using nix-darwin and Home Mana
 
 ### Core Structure
 - **flake.nix**: Main flake definition with inputs (nixpkgs, nix-darwin, home-manager, brew-nix, sops-nix) and templates.
-- **nix/denix/**: Denix hosts/modules/rices for system and user configuration.
+- **nix/denix/**: Denix host/rice/lib orchestration for system and user configuration.
+- **nix/modules/**: Reusable shared/tool modules loaded by Denix.
+- **nix/catalog/**: Tool catalog data and ownership inputs.
 - **nix/local/** and **nix/secrets/**: Stub inputs for public evaluation.
-- **nix/scripts/**: CLI entrypoints (`apply`, `update`, `doctor`, `bootstrap`) and shared helpers.
+- **scripts/**: CLI entrypoints (`apply`, `update`, `doctor`, `bootstrap`), helpers, runtime adapters, and smoke tests.
+- **nix/scripts/**: Nix expressions used by CLI helpers (`list-tools.nix`, `doctor/facts-schema.nix`).
 
 ### Local Facts + Secrets
 - **Facts** live at `~/.config/dotfiles/facts.nix` and are injected with `--override-input local`.

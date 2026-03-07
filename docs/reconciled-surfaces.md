@@ -5,7 +5,7 @@ The design is intentionally small and stateless.
 
 ## Shell entrypoints
 
-`nix/scripts/sync-adapters/shell.sh` is a standalone writable entrypoint manager.
+`scripts/sync-adapters/shell.sh` is a standalone writable entrypoint manager.
 It compares desired managed content against the current file and repairs the file in place.
 Shared shell helpers still come from Home Manager at `~/.config/shell/common.sh`; that file is not part of the runtime sync surface.
 
@@ -44,7 +44,7 @@ nix run .#dotfiles -- sync shell --apply
 Runtime zsh uses `~/.nix/.zshrc`.
 Some installers still append to `~/.zshrc`, so there is an opt-in compat helper for that path:
 
-- Script: `nix/scripts/zshrc-compat.sh`
+- Script: `scripts/zshrc-compat.sh`
 - Nix option: `tools.shell.zsh.rootZshrcCompat.enable`
 - Desired compat state: `~/.zshrc -> .nix/.zshrc`
 
@@ -58,9 +58,9 @@ Behavior:
 Workflow:
 
 ```bash
-bash nix/scripts/zshrc-compat.sh --check
-bash nix/scripts/zshrc-compat.sh --apply
-bash nix/scripts/zshrc-compat.sh --migrate
+bash scripts/zshrc-compat.sh --check
+bash scripts/zshrc-compat.sh --apply
+bash scripts/zshrc-compat.sh --migrate
 ```
 
 ## Local extension points

@@ -78,8 +78,17 @@
     let
       localStub = builtins.pathExists (inputs.local + "/STUB");
       dotlib = import ./nix/lib { lib = inputs.nixpkgs.lib; };
-      nixCatalog = import ./nix/data/tools/catalog-data.nix;
-      brewCatalog = import ./nix/data/tools/brew-catalog-data.nix;
+      repoPaths = rec {
+        root = ./.;
+        apps = root + "/apps";
+        catalog = root + "/nix/catalog";
+        keyboards = root + "/keyboards";
+        nixScripts = root + "/nix/scripts";
+        scripts = root + "/scripts";
+        surfaces = root + "/surfaces";
+      };
+      nixCatalog = import ./nix/catalog/tools/nixpkgs.nix;
+      brewCatalog = import ./nix/catalog/tools/homebrew.nix;
       toolOwnershipLib = import ./nix/lib/tool-ownership.nix {
         lib = inputs.nixpkgs.lib;
         inherit nixCatalog brewCatalog;
@@ -113,22 +122,22 @@
             args
             (base.withConfig { args.enable = true; })
           ];
-          specialArgs = { inherit inputs dotlib; };
+          specialArgs = { inherit inputs dotlib repoPaths; };
         });
 
       configurationPaths = {
         darwin = [
-          ./nix/denix/modules
+          ./nix/modules
           ./nix/denix/darwin/hosts
           ./nix/denix/darwin/rices
         ];
         nixos = [
-          ./nix/denix/modules
+          ./nix/modules
           ./nix/denix/nixos/hosts
           ./nix/denix/nixos/rices
         ];
         home = [
-          ./nix/denix/modules
+          ./nix/modules
           ./nix/denix/home/hosts
           ./nix/denix/home/rices
         ];
@@ -151,8 +160,8 @@
 
       perSystem = { pkgs, config, lib, ... }:
         let
-          scripts = ./nix/scripts;
-          dotfilesRoot = ./.;
+          scripts = ./scripts;
+          dotfilesRoot = repoPaths.root;
           darwinTargetNames = lib.sort (a: b: a < b) (builtins.attrNames darwinConfigurations);
           toolOwnershipReports =
             map
@@ -173,13 +182,13 @@
               program = "${pkgs.writeShellScript "dotfiles-${name}" ''
                 if [[ -z "''${DOTFILES_ROOT:-}" ]]; then
                   pwd_root="$(pwd)"
-                  if [[ -f "$pwd_root/flake.nix" && -d "$pwd_root/nix/scripts" ]]; then
+                  if [[ -f "$pwd_root/flake.nix" && -d "$pwd_root/scripts" ]]; then
                     export DOTFILES_ROOT="$pwd_root"
                   fi
                 fi
                 if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
                   candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
-                  if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/nix/scripts" ]]; then
+                  if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/scripts" ]]; then
                     export DOTFILES_ROOT="$candidate_root"
                   fi
                 fi
@@ -283,7 +292,7 @@
                 src = dotfilesRoot;
               } ''
               cd "$src"
-              mapfile -t script_files < <(find nix/scripts -type f -name '*.sh' | sort)
+              mapfile -t script_files < <(find scripts -type f -name '*.sh' | sort)
               mapfile -t sourced_files < <(
                 {
                   if [[ -d surfaces/shell/desired ]]; then
@@ -341,7 +350,7 @@
                 src = dotfilesRoot;
               } ''
               cd "$src"
-              bash nix/scripts/sync-shell-smoke-test.sh
+              bash scripts/tests/sync-shell-smoke-test.sh
               touch "$out"
             '';
 
@@ -351,7 +360,7 @@
                 src = dotfilesRoot;
               } ''
               cd "$src"
-              bash nix/scripts/sync-cli-migration-test.sh
+              bash scripts/tests/sync-cli-migration-test.sh
               touch "$out"
             '';
 
@@ -361,7 +370,7 @@
                 src = dotfilesRoot;
               } ''
               cd "$src"
-              bash nix/scripts/sync-cli-common-parse-test.sh
+              bash scripts/tests/sync-cli-common-parse-test.sh
               touch "$out"
             '';
 
@@ -371,7 +380,7 @@
                 src = dotfilesRoot;
               } ''
               cd "$src"
-              bash nix/scripts/shell-zsh-writeability-test.sh
+              bash scripts/tests/shell-zsh-writeability-test.sh
               touch "$out"
             '';
 
@@ -381,7 +390,7 @@
                 src = dotfilesRoot;
               } ''
               cd "$src"
-              bash nix/scripts/zshrc-compat-test.sh
+              bash scripts/tests/zshrc-compat-test.sh
               touch "$out"
             '';
 
@@ -391,7 +400,7 @@
                 src = dotfilesRoot;
               } ''
               cd "$src"
-              bash nix/scripts/vscode-instances-smoke-test.sh
+              bash scripts/tests/vscode-instances-smoke-test.sh
               touch "$out"
             '';
 

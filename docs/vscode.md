@@ -93,7 +93,7 @@ colors.
 
 Operational behavior for `bootstrap`, `launch`, and `reset` lives in:
 
-- `nix/scripts/vscode-instances.sh`
+- `scripts/vscode-instances.sh`
 
-The Nix module (`nix/denix/modules/tools/editor/vscode.nix`) is responsible for
+The Nix module (`nix/modules/tools/editor/vscode.nix`) is responsible for
 declarative instance data and thin command wiring only.
