@@ -38,9 +38,12 @@ let
       myconfig =
         {
           always = dotlib.mkEnableDefault (lib.concatStringsSep "." optionPath);
-        }
-        // lib.optionalAttrs (spec ? unfree && spec.unfree != [ ]) {
-          ifEnabled = { ... }: dotlib.requireUnfree spec.unfree;
+          ifEnabled = { ... }:
+            lib.mkMerge [
+              (lib.optionalAttrs (spec ? unfree && spec.unfree != [ ]) (
+                dotlib.requireUnfree spec.unfree
+              ))
+            ];
         };
 
       home.ifEnabled = { ... }: {

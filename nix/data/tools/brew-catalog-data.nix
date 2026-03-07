@@ -5,6 +5,32 @@
     taps = [ "nikitabobko/tap" ];
     casks = [ "nikitabobko/tap/aerospace" ];
   };
+  keyclu = {
+    group = "system";
+    casks = [ "keyclu" ];
+  };
+  latestApp = {
+    group = "system";
+    casks = [ "latest" ];
+  };
+  xcodesApp = {
+    group = "system";
+    casks = [ "xcodes-app" ];
+  };
+
+  # Terminals
+  alacritty = {
+    group = "terminal";
+    casks = [ "alacritty" ];
+  };
+  ghostty = {
+    group = "terminal";
+    casks = [ "ghostty" ];
+  };
+  wezterm = {
+    group = "terminal";
+    casks = [ "wezterm" ];
+  };
 
   # AI coding agents
   claudeCode = {

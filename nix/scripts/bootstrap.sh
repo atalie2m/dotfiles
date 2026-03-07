@@ -28,6 +28,31 @@ auto_yes=0
 no_sudo=0
 strict=0
 
+detect_platform() {
+  local system_name machine_arch
+
+  system_name="$(uname -s 2>/dev/null || true)"
+  machine_arch="$(uname -m 2>/dev/null || true)"
+
+  case "${machine_arch}:${system_name}" in
+  arm64:Darwin | aarch64:Darwin)
+    printf '%s\n' "aarch64-darwin"
+    ;;
+  x86_64:Darwin)
+    printf '%s\n' "x86_64-darwin"
+    ;;
+  arm64:Linux | aarch64:Linux)
+    printf '%s\n' "aarch64-linux"
+    ;;
+  x86_64:Linux)
+    printf '%s\n' "x86_64-linux"
+    ;;
+  *)
+    printf '%s\n' "aarch64-darwin"
+    ;;
+  esac
+}
+
 if [[ $# -gt 0 ]]; then
   case "${1:-}" in
   -h | --help)
@@ -88,6 +113,7 @@ ensure_inputs_dirs "$FACTS_DIR" "$SECRETS_DIR"
 facts_file="$FACTS_DIR/facts.nix"
 if [[ ! -f $facts_file ]]; then
   username="${USER:-}"
+  detected_platform="$(detect_platform)"
   if [[ -z $username ]]; then
     username=$(id -un 2>/dev/null || true)
   fi
@@ -99,6 +125,7 @@ if [[ ! -f $facts_file ]]; then
 {
   user = {
     username = "${username}";
+    platform = "${detected_platform}";
 
     # Optional for Git identity:
     # fullName = "Your Name";
@@ -106,7 +133,6 @@ if [[ ! -f $facts_file ]]; then
 
     # Optional overrides:
     # homeDirectory = "/Users/${username}";
-    # platform = "x86_64-darwin"; # default is aarch64-darwin
     # stateVersion = {
     #   home = "25.05";
     #   darwin = 6;
@@ -120,7 +146,6 @@ if [[ ! -f $facts_file ]]; then
   #     computerName = "Your Mac";
   #     localHostName = "your-mac";
   #     hostName = "your-mac";
-  #     # platform = "x86_64-darwin"; # optional per-host override
   #   };
   # };
 }

@@ -55,5 +55,7 @@ Deeper toggles such as `system.brewNix.autoDock.enable` are intentionally omitte
 The toggle filtering logic lives in `list-tools.nix`, so both text and JSON
 outputs are produced from the same filtered view.
 
-`flake check` includes a tool-ownership overlap check. It fails when the same
-`group.tool` key is declared in both Nix and Homebrew catalogs.
+`flake check` includes a final-config tool-ownership check. It fails when a
+Darwin target contains the same `group.tool` key from multiple sources, or when
+its final Homebrew config contains a brew/cask/MAS item that is not claimed by
+the ownership registry.

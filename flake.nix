@@ -78,6 +78,22 @@
     let
       localStub = builtins.pathExists (inputs.local + "/STUB");
       dotlib = import ./nix/lib { lib = inputs.nixpkgs.lib; };
+      nixCatalog = import ./nix/data/tools/catalog-data.nix;
+      brewCatalog = import ./nix/data/tools/brew-catalog-data.nix;
+      toolOwnershipLib = import ./nix/lib/tool-ownership.nix {
+        lib = inputs.nixpkgs.lib;
+        inherit nixCatalog brewCatalog;
+        dedicatedHomebrew = {
+          "editor.emacs" = {
+            optionPath = [ "myconfig" "tools" "editor" "emacs" "enable" ];
+            casks = [ "emacs-plus-app" ];
+          };
+          "terminal.rio" = {
+            optionPath = [ "myconfig" "tools" "terminal" "rio" "enable" ];
+            casks = [ "rio" ];
+          };
+        };
+      };
       mkConfigurations = { moduleSystem, paths }:
         let
           facts = import (inputs.local + "/facts.nix");
@@ -124,6 +140,10 @@
           paths = configurationPaths.${moduleSystem}
             or (throw "unsupported moduleSystem '${moduleSystem}'");
         };
+
+      darwinConfigurations = if localStub then { } else mkLatestConfigurations "darwin";
+      homeConfigurations = if localStub then { } else mkLatestConfigurations "home";
+      nixosConfigurations = if localStub then { } else mkLatestConfigurations "nixos";
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ inputs.treefmt-nix.flakeModule ];
@@ -133,14 +153,13 @@
         let
           scripts = ./nix/scripts;
           dotfilesRoot = ./.;
-          nixCatalog = import ./nix/data/tools/catalog-data.nix;
-          brewCatalog = import ./nix/data/tools/brew-catalog-data.nix;
-          catalogIds = catalog:
-            builtins.map (name: "${catalog.${name}.group}.${name}") (builtins.attrNames catalog);
-          catalogOverlap = lib.intersectLists (catalogIds nixCatalog) (catalogIds brewCatalog);
-          catalogOverlapText =
-            if catalogOverlap == [ ] then "(none)"
-            else lib.concatStringsSep ", " catalogOverlap;
+          darwinTargetNames = lib.sort (a: b: a < b) (builtins.attrNames darwinConfigurations);
+          toolOwnershipReports =
+            map
+              (targetName: toolOwnershipLib.report targetName darwinConfigurations.${targetName}.config)
+              darwinTargetNames;
+          toolOwnershipFailures = lib.concatMap (report: report.failureMessages) toolOwnershipReports;
+          toolOwnershipFailureText = lib.concatStringsSep "\n" toolOwnershipFailures;
 
           mkDotfilesApp = { name, subcommand ? null, description }:
             let
@@ -264,29 +283,56 @@
                 src = dotfilesRoot;
               } ''
               cd "$src"
-              mapfile -t files < <(find nix/scripts -type f -name '*.sh' | sort)
-              if [[ "''${#files[@]}" -eq 0 ]]; then
+              mapfile -t script_files < <(find nix/scripts -type f -name '*.sh' | sort)
+              mapfile -t sourced_files < <(
+                {
+                  if [[ -d surfaces/shell/desired ]]; then
+                    find surfaces/shell/desired -type f -name '*.sh'
+                  fi
+                  if [[ -d apps/shell ]]; then
+                    find apps/shell -type f -name '*.sh'
+                  fi
+                } | sort
+              )
+
+              if [[ "''${#script_files[@]}" -eq 0 && "''${#sourced_files[@]}" -eq 0 ]]; then
                 touch "$out"
                 exit 0
               fi
-              shellcheck \
-                -e SC1091 \
-                -e SC2016 \
-                -e SC2034 \
-                -e SC2129 \
-                -e SC2154 \
-                -e SC2317 \
-                "''${files[@]}"
+
+              if [[ "''${#script_files[@]}" -gt 0 ]]; then
+                shellcheck \
+                  -e SC1091 \
+                  -e SC2016 \
+                  -e SC2034 \
+                  -e SC2129 \
+                  -e SC2154 \
+                  -e SC2317 \
+                  "''${script_files[@]}"
+              fi
+
+              if [[ "''${#sourced_files[@]}" -gt 0 ]]; then
+                shellcheck \
+                  --shell=bash \
+                  -e SC1091 \
+                  -e SC2016 \
+                  -e SC2034 \
+                  -e SC2129 \
+                  -e SC2154 \
+                  -e SC2317 \
+                  "''${sourced_files[@]}"
+              fi
               touch "$out"
             '';
 
             toolOwnership = pkgs.runCommand "tool-ownership-check" { } ''
-              if [ ${toString (builtins.length catalogOverlap)} -ne 0 ]; then
-                echo "Duplicate tool ownership detected between Nix and Homebrew catalogs." >&2
-                echo "Overlaps: ${catalogOverlapText}" >&2
-                exit 1
-              fi
-              touch "$out"
+                            if [ ${toString (builtins.length toolOwnershipFailures)} -ne 0 ]; then
+                              cat >&2 <<'EOF'
+              ${toolOwnershipFailureText}
+              EOF
+                              exit 1
+                            fi
+                            touch "$out"
             '';
 
             syncShellSmoke = pkgs.runCommand "sync-shell-smoke-test"
@@ -420,9 +466,7 @@
           };
         };
       } // (if localStub then { } else {
-        nixosConfigurations = mkLatestConfigurations "nixos";
-        homeConfigurations = mkLatestConfigurations "home";
-        darwinConfigurations = mkLatestConfigurations "darwin";
+        inherit nixosConfigurations homeConfigurations darwinConfigurations;
       });
     };
 }

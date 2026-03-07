@@ -70,16 +70,13 @@ let
         tools.shell.zoxide.enable = true;
         tools.system.karabiner.enable = true;
         tools.system.aerospace.enable = true;
+        tools.system.keyclu.enable = true;
+        tools.system.latestApp.enable = true;
+        tools.system.xcodesApp.enable = true;
+        tools.terminal.alacritty.enable = true;
+        tools.terminal.ghostty.enable = true;
+        tools.terminal.wezterm.enable = true;
         tools.terminal.rio.enable = true;
-
-        tools.system.homebrewNative.casks = [
-          "keyclu"
-          "latest"
-          "alacritty"
-          "ghostty"
-          "wezterm"
-          "xcodes-app"
-        ];
       };
     };
 
@@ -94,7 +91,7 @@ let
     };
   };
 in
-{
+rec {
   inherit mkHostContext riceProfiles;
 
   mkEnableDefault = optionPath: { parent, ... }:

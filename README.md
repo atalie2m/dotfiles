@@ -31,7 +31,7 @@ Operational note: this repo keeps shared NixOS and standalone Home Manager trees
 
 - Hosts: `a2m_mac` (default rice: `full`), `mn_mac` (default rice: `full`).
 - Rices: `base`, `darwin`, `dev`, `full`, `minimum`.
-  - `base`: cross-platform essentials (`system.nix`, core CLI, shell, Git, GPG/SOPS).
+  - `base`: shared essentials (`system.nix`, core CLI, shell, Git, GPG/SOPS).
   - `darwin`: macOS base integrations (Homebrew + hostnames/fonts).
   - `dev`: editor/terminal/workstation stack.
   - `full`: composition of `base + darwin + dev`.
@@ -67,9 +67,10 @@ Application/tool sourcing priority is:
 
 - Detailed policy: [`docs/homebrew-policy.md`](docs/homebrew-policy.md)
 
-1. `tools.system.homebrewNative` (nix-darwin managed Homebrew) for items that should stay "always latest".
-2. `tools.system.brewNix` for pure-Nix/pinned/verified casks.
-3. Custom implementation (for example `mk-node-cli-overlay`) only when both paths above are unsuitable.
+1. Use Nix packages by default for CLI tools and libraries.
+2. Use Homebrew for macOS-specific or intentionally latest-first software, preferably through catalog-backed `myconfig.tools` toggles.
+3. Use `tools.system.brewNix` only when native Homebrew integration is the wrong fit and a pinned cask path is needed.
+4. Direct `tools.system.homebrewNative.{brews,casks,masApps}` edits are for module internals; `flake check` validates the final Homebrew ownership set.
 
 ## Terraform / OpenTofu Policy
 
@@ -133,8 +134,17 @@ This repo uses "directory profiles" to run multiple isolated VS Code instances
   - `code-<name>`: self-bootstraps (if baseline changed) then launches the instance.
   - `code-<name>-bootstrap`: seed/merge settings and install baseline extensions.
   - `code-<name>-reset`: backup the instance dir and re-bootstrap.
+- Runtime boundary:
+  - Settings, launchers, baseline extension lists, and icons are repo-managed.
+  - Installed extensions remain intentionally mutable (`mutableExtensionsDir = true`); bootstrap adds missing baseline extensions but does not remove user-added ones.
 
 See `docs/vscode.md` for details.
+
+## Mutable Editor Tooling
+
+- Emacs app/config wiring is declarative, but package installation still happens through `package.el` against GNU ELPA / NonGNU ELPA / MELPA at runtime.
+- VS Code instance definitions are declarative, but extension state is intentionally mutable as described above.
+- This repo treats those editor runtimes as a convenience boundary: config is pinned here, packages/extensions are not.
 
 ## Terminal Compatibility
 
@@ -164,6 +174,7 @@ The default Zsh prompt is Pure. `base` / `minimum` keep that prompt-only setup, 
 Shell sync is a small, stateless writable-entrypoint manager.
 Runtime sync operations are implemented through `nix/scripts/sync.sh` (surface: `shell`) with `nix/scripts/sync-adapters/shell.sh`.
 Its job is to keep writable shell entrypoints in place and update only repo-managed blocks/files.
+Shared shell helpers are shipped separately as `apps/shell/common.sh` and linked to `~/.config/shell/common.sh`; they are declarative Home Manager content, not part of runtime sync state.
 
 - Desired source:
   - `surfaces/shell/desired/zdotdir.zshrc.block.sh`
@@ -273,7 +284,8 @@ Default layout:
 - Required: `user.username`
 - Recommended (for Git identity): `user.fullName`, `user.email`
 - Optional overrides:
-  `user.homeDirectory` (auto-derived), `user.platform` (global default; defaults to `aarch64-darwin`), and `machines.<host>.platform` (per-host override, useful when mixing Intel and Apple Silicon Macs)
+  `user.homeDirectory` (auto-derived) and `machines.<host>.platform` (per-host override when you truly need it).
+- Recommended: keep `user.platform` explicit. `bootstrap` auto-detects it and writes `aarch64-darwin` on Apple Silicon Macs.
 
 Example `facts.nix`:
 
@@ -281,6 +293,7 @@ Example `facts.nix`:
 {
   user = {
     username = "yourname";
+    platform = "aarch64-darwin";
 
     # Recommended (used by Git module)
     fullName = "Your Name";
@@ -288,7 +301,6 @@ Example `facts.nix`:
 
     # Optional overrides
     # homeDirectory = "/Users/yourname";
-    # platform = "x86_64-darwin"; # default is aarch64-darwin
 
     stateVersion = {
       home = "25.05";
@@ -302,7 +314,6 @@ Example `facts.nix`:
       computerName = "Your Mac";
       localHostName = "your-mac";
       hostName = "your-mac";
-      # platform = "x86_64-darwin"; # optional per-host override
     };
   };
 }

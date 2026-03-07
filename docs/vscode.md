@@ -9,6 +9,10 @@ CLI flags:
 This avoids brittle macOS app-bundle modifications (Info.plist patching,
 helper renames, re-signing).
 
+The instance wiring is declarative, but extensions remain intentionally
+mutable: bootstrap installs the declared baseline incrementally and does not
+remove extra user-installed extensions.
+
 ## Profile Layout
 
 Profiles live in `apps/vscode/<name>/`:

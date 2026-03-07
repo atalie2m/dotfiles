@@ -7,6 +7,7 @@ The design is intentionally small and stateless.
 
 `nix/scripts/sync-adapters/shell.sh` is a standalone writable entrypoint manager.
 It compares desired managed content against the current file and repairs the file in place.
+Shared shell helpers still come from Home Manager at `~/.config/shell/common.sh`; that file is not part of the runtime sync surface.
 
 - Desired:
   - `surfaces/shell/desired/zdotdir.zshrc.block.sh`

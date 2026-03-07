@@ -67,7 +67,7 @@ builtins.concatStringsSep "\n" [
     else if homeDirLooksAbsolute then "facts.user.homeDirectory is absolute"
     else "facts.user.homeDirectory should be an absolute path"))
   (mk "facts.platform" (if optionalString platform then "ok" else "fail")
-    (if platform == null then "facts.user.platform not set (defaults to aarch64-darwin)"
+    (if platform == null then "facts.user.platform not set (recommended: set explicitly; bootstrap auto-detects it)"
     else if builtins.isString platform then platform
     else "facts.user.platform must be a string"))
   (mk "facts.stateVersion" (if optionalAttrs stateVersion then "ok" else "fail")

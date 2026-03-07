@@ -11,7 +11,7 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 - `nix/local/` — stub local facts input (`facts.nix`, `STUB`) for public evaluation.
 - `nix/secrets/` — stub local secrets input (`secrets.nix`, `STUB`) for public evaluation.
 - `nix/scripts/` — CLI entrypoints (`apply`, `update`, `doctor`, `bootstrap`) and shared helpers.
-- `apps/` — user app configs (e.g., `apps/starship.toml`, `apps/vscode/...`).
+- `apps/` — user app configs (e.g., `apps/shell/common.sh`, `apps/vscode/...`).
 - `surfaces/` — desired state for writable shell entrypoints (`surfaces/shell/desired`).
 - `keyboards/` — Karabiner complex modifications JSON.
 - Local facts live at `~/.config/dotfiles/facts.nix` (not in Git).
@@ -38,7 +38,7 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 ## Commit & Pull Request Guidelines
 - Use Conventional Commits: `feat(scope): ...`, `fix(module): ...`, `chore(ci): ...`, `refactor(...): ...` (see `git log`).
 - PRs must include: summary, affected paths/modules, test commands/output (`nix flake check`, build logs), and migration notes if user‑visible behavior changes.
-- Link related issues; add small screenshots only when UI config changes (e.g., Starship/terminal visuals).
+- Link related issues; add small screenshots only when UI config changes (e.g., shell prompt/terminal visuals).
 
 ## Security & Configuration Tips
 - Never commit secrets or machine identifiers; keep them in local facts/secrets inputs.
