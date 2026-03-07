@@ -34,7 +34,7 @@ let
     if context.stateVersion ? nixos && lib.isString context.stateVersion.nixos && context.stateVersion.nixos != "" then
       context.stateVersion.nixos
     else
-      "25.05";
+      "25.11";
   nixPackage = inputs.nixpkgs.legacyPackages.${context.platform}.nix;
 in
 delib.host {
@@ -59,7 +59,7 @@ delib.host {
         nix.package = lib.mkDefault nixPackage;
         home = {
           inherit (context) username homeDirectory;
-          stateVersion = context.stateVersion.home or "25.05";
+          stateVersion = context.stateVersion.home or "25.11";
         };
       }
       extraHome;

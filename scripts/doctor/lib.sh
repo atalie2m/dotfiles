@@ -7,6 +7,7 @@ eval_darwin_target_bool() {
   local option_path="$2"
 
   nix eval --raw "${flake_ref}#darwinConfigurations.${target_name}.config.${option_path}" \
+    --no-update-lock-file \
     --apply 'x: if x then "true" else "false"' \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS" \
@@ -130,6 +131,7 @@ record_target_checks() {
 
     resolved_target="$target"
     if nix eval --raw "${flake_ref}#darwinConfigurations.${target}.system.drvPath" \
+      --no-update-lock-file \
       --override-input local "$FACTS" \
       --override-input secrets "$SECRETS" \
       >/dev/null 2>&1; then

@@ -146,9 +146,9 @@ if [[ ! -f $facts_file ]]; then
     # Optional overrides:
     # homeDirectory = "/path/to/home/${username}";
     # stateVersion = {
-    #   home = "25.05";
+    #   home = "25.11";
     #   darwin = 6;
-    #   # nixos = "25.05";
+    #   # nixos = "25.11";
     # };
   };
 

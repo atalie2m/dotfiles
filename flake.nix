@@ -2,8 +2,8 @@
   description = "Atalie's nix-darwin system flake";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.05-darwin";
-    nixpkgs-linux.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
+    nixpkgs-linux.url = "github:NixOS/nixpkgs/nixos-25.11";
 
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
@@ -14,10 +14,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-25.05";
+    nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
 
-    home-manager.url = "github:nix-community/home-manager/release-25.05";
+    home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
     nix-homebrew = {
@@ -522,7 +522,7 @@
           };
 
           packages = {
-            darwin-rebuild = inputs.nix-darwin.packages.${pkgs.system}.darwin-rebuild;
+            darwin-rebuild = inputs.nix-darwin.packages.${pkgs.stdenv.hostPlatform.system}.darwin-rebuild;
           };
 
           apps = {
@@ -547,7 +547,7 @@
             };
             darwin-rebuild = {
               type = "app";
-              program = "${inputs.nix-darwin.packages.${pkgs.system}.darwin-rebuild}/bin/darwin-rebuild";
+              program = "${inputs.nix-darwin.packages.${pkgs.stdenv.hostPlatform.system}.darwin-rebuild}/bin/darwin-rebuild";
               meta.description = "Pinned nix-darwin rebuild wrapper from this flake lock.";
             };
             doctor = mkDotfilesApp {

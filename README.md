@@ -291,9 +291,9 @@ Example `facts.nix`:
     # homeDirectory = "/path/to/home/yourname";
 
     stateVersion = {
-      home = "25.05";
+      home = "25.11";
       darwin = 6;
-      nixos = "25.05";
+      nixos = "25.11";
     };
   };
 

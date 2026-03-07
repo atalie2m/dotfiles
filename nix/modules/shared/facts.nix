@@ -20,9 +20,9 @@ delib.module {
       systemType = strOption "";
       architecture = strOption "";
       stateVersion = {
-        home = strOption "25.05";
+        home = strOption "25.11";
         darwin = intOption 6;
-        nixos = strOption "25.05";
+        nixos = strOption "25.11";
       };
     };
 

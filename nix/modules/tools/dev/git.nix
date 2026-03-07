@@ -47,17 +47,13 @@ delib.module {
         enable = true;
 
         lfs.enable = cfg.lfs.enable;
-        delta = lib.mkIf cfg.delta.enable {
-          enable = true;
-          options = cfg.delta.options;
-        };
-
-        extraConfig = lib.mkMerge [
+        settings = lib.mkMerge [
           {
             init.defaultBranch = cfg.defaultBranch;
             pull.rebase = true;
             push.autoSetupRemote = true;
             core.editor = cfg.editorCmd;
+            alias = cfg.aliases;
           }
           (lib.mkIf cfg.enableSigning {
             commit.gpgsign = true;
@@ -65,10 +61,14 @@ delib.module {
           })
           cfg.extraConfig
         ];
-
-        inherit (cfg) aliases;
       }
       // lib.optionalAttrs (fullName != "") { userName = fullName; }
       // lib.optionalAttrs (email != "") { userEmail = email; };
+
+      programs.delta = lib.mkIf cfg.delta.enable {
+        enable = true;
+        enableGitIntegration = true;
+        options = cfg.delta.options;
+      };
     };
 }

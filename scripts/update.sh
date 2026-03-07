@@ -122,6 +122,7 @@ fi
 
 if [[ $run_checks -eq 1 ]]; then
   nix flake check \
+    --no-update-lock-file \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS"
 fi
@@ -130,6 +131,7 @@ if [[ $run_build -eq 1 ]]; then
   target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
   darwin_rebuild build \
     --flake "${flake_ref}#${target}" \
+    --no-update-lock-file \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS"
 fi

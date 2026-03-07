@@ -77,7 +77,7 @@ nix run .#darwin-rebuild -- switch --flake .#<PROFILE_NAME> \
   --override-input local path:$FACTS_DIR \
   --override-input secrets path:$SECRETS_DIR
 
-nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME> \
+nix run home-manager/release-25.11 -- switch --flake .#<PROFILE_NAME> \
   --override-input local path:$FACTS_DIR \
   --override-input secrets path:$SECRETS_DIR
 ```

@@ -31,7 +31,7 @@ delib.module {
 
   darwin.ifEnabled = { cfg, ... }:
     let
-      macAppUtil = inputs.mac-app-util.packages.${pkgs.stdenv.system}.default;
+      macAppUtil = inputs.mac-app-util.packages.${pkgs.stdenv.hostPlatform.system}.default;
       systemTimeoutCmd = "${pkgs.coreutils}/bin/timeout ${toString cfg.systemService.timeoutSeconds}s";
       homeTimeoutCmd = "${pkgs.coreutils}/bin/timeout ${toString cfg.homeTrampolines.timeoutSeconds}s";
       fromDir = cfg.homeTrampolines.fromDir;

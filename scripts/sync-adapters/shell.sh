@@ -49,13 +49,13 @@ group_filter=""
 item_filter=""
 
 tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/sync-shell.XXXXXX")"
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 cleanup() {
   rm -rf "$tmp_dir"
 }
 trap cleanup EXIT
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 new_tmp_file() {
   mktemp "$tmp_dir/file.XXXXXX"
 }

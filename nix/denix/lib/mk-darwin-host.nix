@@ -46,7 +46,7 @@ delib.host {
     nix.package = lib.mkDefault nixPackage;
     home = {
       inherit (context) username homeDirectory;
-      stateVersion = context.stateVersion.home or "25.05";
+      stateVersion = context.stateVersion.home or "25.11";
     };
   };
 

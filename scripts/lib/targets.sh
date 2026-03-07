@@ -13,6 +13,7 @@ list_darwin_targets() {
   root_ref="$(flake_ref_for_root "$root")"
 
   nix eval --raw "$root_ref#darwinConfigurations" \
+    --no-update-lock-file \
     --apply 'x: builtins.concatStringsSep "\n" (builtins.attrNames x)' \
     --override-input local "$facts" \
     --override-input secrets "$secrets" \

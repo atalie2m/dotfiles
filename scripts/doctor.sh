@@ -109,6 +109,7 @@ record_target_checks
 
 if [[ $strict -eq 1 ]]; then
   if nix flake check "$flake_ref" \
+    --no-update-lock-file \
     --override-input local "$FACTS" \
     --override-input secrets "$SECRETS" \
     >/dev/null 2>&1; then

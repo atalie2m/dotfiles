@@ -252,9 +252,9 @@ facts.schema.root|ok|facts is an attrset
 facts.schema.user|ok|facts.user is an attrset
 facts.username|ok|tester
 facts.stateVersion|ok|facts.user.stateVersion set
-facts.stateVersion.home|ok|25.05
+facts.stateVersion.home|ok|25.11
 facts.stateVersion.darwin|ok|6
-facts.stateVersion.nixos|ok|25.05
+facts.stateVersion.nixos|ok|25.11
 EOF_SCHEMA
   exit 0
 fi
@@ -410,9 +410,9 @@ cat >"$doctor_home/.config/dotfiles/facts.nix" <<'EOF_FACTS'
   user = {
     username = "tester";
     stateVersion = {
-      home = "25.05";
+      home = "25.11";
       darwin = 6;
-      nixos = "25.05";
+      nixos = "25.11";
     };
   };
 }
@@ -464,7 +464,7 @@ if [[ $(cat "$tmp_root/apply-sudo.log") != "$expected_preserve_env" ]]; then
 fi
 
 expected_facts_ref="path:$apply_home/.config/dotfiles"
-if ! grep -Fq -- "build --flake path:$ROOT#full_mac --override-input local $expected_facts_ref --override-input secrets $expected_facts_ref --show-trace" "$tmp_root/apply-rebuild.log"; then
+if ! grep -Fq -- "build --flake path:$ROOT#full_mac --no-update-lock-file --override-input local $expected_facts_ref --override-input secrets $expected_facts_ref --show-trace" "$tmp_root/apply-rebuild.log"; then
   echo "FAIL: apply did not pass the expected darwin-rebuild arguments" >&2
   cat "$tmp_root/apply-rebuild.log" >&2 || true
   exit 1

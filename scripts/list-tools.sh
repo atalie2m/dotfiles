@@ -91,6 +91,7 @@ tools_expr_path="./nix/scripts/list-tools.nix"
 
 if [[ $format == "json" ]]; then
   nix eval --json "$attr" \
+    --no-update-lock-file \
     --impure \
     --apply "cfg: (import ${tools_expr_path} { }).select cfg" \
     --override-input local "$FACTS" \
@@ -100,6 +101,7 @@ if [[ $format == "json" ]]; then
 fi
 
 nix eval --raw "$attr" \
+  --no-update-lock-file \
   --impure \
   --apply "cfg: (import ${tools_expr_path} { }).text cfg" \
   --override-input local "$FACTS" \

@@ -89,9 +89,9 @@ jobs:
               homeDirectory = "$HOME";
               platform = "$PLATFORM";
               stateVersion = {
-                home = "25.05";
+                home = "25.11";
                 darwin = 6;
-                nixos = "25.05";
+                nixos = "25.11";
               };
             };
             machines = {

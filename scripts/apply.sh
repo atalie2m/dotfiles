@@ -108,6 +108,7 @@ rebuild_cmd=("$darwin_rebuild_bin")
 
 rebuild_args=("$action"
   --flake "${flake_ref}#${target}"
+  --no-update-lock-file
   --override-input local "$FACTS"
   --override-input secrets "$SECRETS"
 )
