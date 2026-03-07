@@ -8,7 +8,7 @@ This repository keeps Denix orchestration, reusable modules, catalog data, and r
 - `nix/denix/lib`: host constructors and Denix-specific helpers.
 - `nix/modules/shared`: cross-cutting modules such as `facts`, `constants`, `system.nix`, and `nixpkgs.unfree`.
 - `nix/modules/tools`: user-facing tool modules grouped by capability (`shell`, `editor`, `system`, `terminal`, etc.).
-- `nix/catalog/tools`: declarative tool ownership data for Nixpkgs and Homebrew.
+- `nix/catalog/tools`: declarative tool ownership data for Nixpkgs, catalog-backed Homebrew tools, and dedicated Homebrew-backed modules.
 - `scripts/`: operational shell entrypoints, shared shell helpers, runtime adapters, and smoke/integration tests.
 - `nix/scripts/`: Nix expressions used by the CLI, currently `list-tools.nix` and `doctor/facts-schema.nix`.
 - `apps/`, `surfaces/`, and `keyboards/`: repo-managed assets consumed by modules and runtime scripts.

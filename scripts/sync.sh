@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_SCRIPT_LABEL="sync"
+export DOTFILES_SCRIPT_LABEL="sync"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=lib/load-lib.sh
 source "$SCRIPT_DIR/lib/load-lib.sh"

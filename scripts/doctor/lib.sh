@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC2120
+# shellcheck disable=SC2120,SC2154
 
 eval_darwin_target_bool() {
   local target_name="$1"

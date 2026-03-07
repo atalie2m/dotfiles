@@ -89,19 +89,11 @@
       };
       nixCatalog = import ./nix/catalog/tools/nixpkgs.nix;
       brewCatalog = import ./nix/catalog/tools/homebrew.nix;
+      dedicatedHomebrewCatalog = import ./nix/catalog/tools/homebrew-dedicated.nix;
       toolOwnershipLib = import ./nix/lib/tool-ownership.nix {
         lib = inputs.nixpkgs.lib;
         inherit nixCatalog brewCatalog;
-        dedicatedHomebrew = {
-          "editor.emacs" = {
-            optionPath = [ "myconfig" "tools" "editor" "emacs" "enable" ];
-            casks = [ "emacs-plus-app" ];
-          };
-          "terminal.rio" = {
-            optionPath = [ "myconfig" "tools" "terminal" "rio" "enable" ];
-            casks = [ "rio" ];
-          };
-        };
+        dedicatedHomebrew = dedicatedHomebrewCatalog;
       };
       mkConfigurations = { moduleSystem, paths }:
         let
@@ -313,10 +305,7 @@
                 shellcheck \
                   -e SC1091 \
                   -e SC2016 \
-                  -e SC2034 \
                   -e SC2129 \
-                  -e SC2154 \
-                  -e SC2317 \
                   "''${script_files[@]}"
               fi
 
@@ -325,10 +314,7 @@
                   --shell=bash \
                   -e SC1091 \
                   -e SC2016 \
-                  -e SC2034 \
                   -e SC2129 \
-                  -e SC2154 \
-                  -e SC2317 \
                   "''${sourced_files[@]}"
               fi
               touch "$out"
@@ -371,6 +357,16 @@
               } ''
               cd "$src"
               bash scripts/tests/sync-cli-common-parse-test.sh
+              touch "$out"
+            '';
+
+            exportCleanSmoke = pkgs.runCommand "export-clean-smoke-test"
+              {
+                nativeBuildInputs = [ pkgs.bash pkgs.git pkgs.gnutar ];
+                src = dotfilesRoot;
+              } ''
+              cd "$src"
+              bash scripts/tests/export-clean-smoke-test.sh
               touch "$out"
             '';
 

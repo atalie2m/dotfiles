@@ -56,16 +56,53 @@ delib.module {
             fromDir="${fromDir}"
             toDir="${toDir}"
 
+            validateTrampolineDirs() {
+              local homeApplicationsRoot
+              homeApplicationsRoot="$HOME/Applications"
+
+              if [ -z "$fromDir" ]; then
+                echo "mac-app-util: fromDir is empty, skipping home trampolines" >&2
+                return 1
+              fi
+
+              if [ -z "$toDir" ]; then
+                echo "mac-app-util: toDir is empty, skipping home trampolines" >&2
+                return 1
+              fi
+
+              if [ "$toDir" = "/" ]; then
+                echo "mac-app-util: refusing to manage '/' as the trampoline destination" >&2
+                return 1
+              fi
+
+              if [ "$fromDir" = "$toDir" ]; then
+                echo "mac-app-util: refusing to use the same path for fromDir and toDir: $toDir" >&2
+                return 1
+              fi
+
+              case "$toDir" in
+                "$homeApplicationsRoot"|"$homeApplicationsRoot"/*) ;;
+                *)
+                  echo "mac-app-util: refusing to manage non-\$HOME/Applications destination: $toDir" >&2
+                  return 1
+                  ;;
+              esac
+
+              return 0
+            }
+
             if [ -d "$fromDir" ]; then
-              if [ "${lib.boolToString cfg.homeTrampolines.syncDock}" = "true" ]; then
-                ${homeTimeoutCmd} ${macAppUtil}/bin/mac-app-util sync-trampolines "$fromDir" "$toDir" || true
-              else
-                rm -rf "$toDir"
-                mkdir -p "$toDir"
-                while IFS= read -r -d $'\\0' app; do
-                  dest="$toDir/$(basename "$app")"
-                  ${macAppUtil}/bin/mac-app-util mktrampoline "$app" "$dest"
-                done < <(find "$fromDir" -maxdepth 2 -type d -name "*.app" -print0)
+              if validateTrampolineDirs; then
+                if [ "${lib.boolToString cfg.homeTrampolines.syncDock}" = "true" ]; then
+                  ${homeTimeoutCmd} ${macAppUtil}/bin/mac-app-util sync-trampolines "$fromDir" "$toDir" || true
+                else
+                  rm -rf "$toDir"
+                  mkdir -p "$toDir"
+                  while IFS= read -r -d $'\\0' app; do
+                    dest="$toDir/$(basename "$app")"
+                    ${macAppUtil}/bin/mac-app-util mktrampoline "$app" "$dest"
+                  done < <(find "$fromDir" -maxdepth 2 -type d -name "*.app" -print0)
+                fi
               fi
             fi
           '';

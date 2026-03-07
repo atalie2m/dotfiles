@@ -417,9 +417,12 @@ parse_target_args() {
   local value_options="${PARSE_TARGET_VALUE_OPTIONS:-}"
 
   PARSED_HOST=""
+  # shellcheck disable=SC2034
   PARSED_RICE=""
   PARSED_ARGS=()
+  # shellcheck disable=SC2034
   PARSED_PASSTHROUGH=()
+  # shellcheck disable=SC2034
   PARSED_HAS_PASSTHROUGH=0
 
   while [[ $# -gt 0 ]]; do
@@ -431,12 +434,15 @@ parse_target_args() {
       ;;
     --rice)
       [[ $# -lt 2 ]] && die "missing value for --rice"
+      # shellcheck disable=SC2034
       PARSED_RICE="$2"
       shift 2
       ;;
     --)
       shift
+      # shellcheck disable=SC2034
       PARSED_HAS_PASSTHROUGH=1
+      # shellcheck disable=SC2034
       PARSED_PASSTHROUGH=("$@")
       break
       ;;

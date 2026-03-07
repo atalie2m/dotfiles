@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_SCRIPT_LABEL="sync-shell"
+export DOTFILES_SCRIPT_LABEL="sync-shell"
 ADAPTER_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=lib/load-lib.sh
 source "$ADAPTER_DIR/../lib/load-lib.sh"
@@ -39,6 +39,7 @@ group_filter=""
 item_filter=""
 
 tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/sync-shell.XXXXXX")"
+# shellcheck disable=SC2317
 cleanup() {
   rm -rf "$tmp_dir"
 }

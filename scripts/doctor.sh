@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_SCRIPT_LABEL="doctor"
+export DOTFILES_SCRIPT_LABEL="doctor"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=lib/load-lib.sh
 source "$SCRIPT_DIR/lib/load-lib.sh"
@@ -26,6 +26,7 @@ host=""
 rice=""
 strict=0
 json=0
+# shellcheck disable=SC2034
 resolved_target=""
 
 if [[ $# -gt 0 ]]; then

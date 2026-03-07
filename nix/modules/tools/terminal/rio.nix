@@ -1,4 +1,9 @@
-{ delib, lib, dotlib, pkgs, ... }:
+{ delib, lib, dotlib, pkgs, repoPaths, ... }:
+
+let
+  dedicatedHomebrewCatalog = import (repoPaths.catalog + "/tools/homebrew-dedicated.nix");
+  homebrewSpec = dedicatedHomebrewCatalog."terminal.rio";
+in
 
 # Rio terminal configuration
 
@@ -13,7 +18,10 @@ delib.module {
     always = dotlib.mkEnableDefault "tools.terminal.rio.enable";
     ifEnabled = { myconfig, ... }:
       dotlib.ifDarwin myconfig (dotlib.requireHomebrew {
-        casks = [ "rio" ];
+        taps = homebrewSpec.taps or [ ];
+        brews = homebrewSpec.brews or [ ];
+        casks = homebrewSpec.casks or [ ];
+        masApps = homebrewSpec.masApps or { };
       });
   };
 

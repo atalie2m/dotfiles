@@ -1,0 +1,12 @@
+{
+  "editor.emacs" = {
+    optionPath = [ "myconfig" "tools" "editor" "emacs" "enable" ];
+    taps = [ "d12frosted/emacs-plus" ];
+    casks = [ "emacs-plus-app" ];
+  };
+
+  "terminal.rio" = {
+    optionPath = [ "myconfig" "tools" "terminal" "rio" "enable" ];
+    casks = [ "rio" ];
+  };
+}

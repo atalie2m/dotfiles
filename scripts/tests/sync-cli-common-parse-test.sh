@@ -78,7 +78,7 @@ run_resolve_inputs() {
       shift
     done
 
-    DOTFILES_SCRIPT_LABEL="sync-cli-common-parse-test"
+    export DOTFILES_SCRIPT_LABEL="sync-cli-common-parse-test"
     # shellcheck source=lib/load-lib.sh
     source "$LOAD_LIB"
     resolve_inputs
@@ -271,6 +271,47 @@ exit 1
 EOF_NIX
 chmod +x "$fake_bin/nix"
 
+cat >"$fake_bin/darwin-rebuild" <<'EOF_REBUILD'
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf '%s\n' "$*" >"${FAKE_REBUILD_LOG_FILE:?}"
+exit 0
+EOF_REBUILD
+chmod +x "$fake_bin/darwin-rebuild"
+
+cat >"$fake_bin/sudo" <<'EOF_SUDO'
+#!/usr/bin/env bash
+set -euo pipefail
+
+preserve_env=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --preserve-env=*)
+      preserve_env="$1"
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "fake sudo: unexpected option: $1" >&2
+      exit 1
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+printf '%s\n' "$preserve_env" >"${FAKE_SUDO_LOG_FILE:?}"
+printf '%s\n' "$*" >"${FAKE_SUDO_COMMAND_FILE:?}"
+exec "$@"
+EOF_SUDO
+chmod +x "$fake_bin/sudo"
+
 real_uname="$(command -v uname)"
 cat >"$fake_bin/uname" <<EOF_UNAME
 #!/usr/bin/env bash
@@ -329,6 +370,38 @@ fi
 if ! grep -Fq "warn  shell.sync: strict sync check skipped (pass --host to resolve target)" "$tmp_root/doctor-strict.out"; then
   echo "FAIL: doctor --strict did not warn about skipped host-aware sync checks" >&2
   cat "$tmp_root/doctor-strict.out" >&2 || true
+  exit 1
+fi
+
+apply_home="$tmp_root/apply-home"
+mkdir -p "$apply_home/.config/dotfiles"
+
+if ! (
+  HOME="$apply_home" \
+    PATH="$fake_bin:$PATH" \
+    DARWIN_REBUILD_BIN="$fake_bin/darwin-rebuild" \
+    FAKE_SUDO_LOG_FILE="$tmp_root/apply-sudo.log" \
+    FAKE_SUDO_COMMAND_FILE="$tmp_root/apply-sudo-command.log" \
+    FAKE_REBUILD_LOG_FILE="$tmp_root/apply-rebuild.log" \
+    bash "$APPLY_SCRIPT" --host a2m_mac --action build -- --show-trace
+) >"$tmp_root/apply-run.out" 2>"$tmp_root/apply-run.err"; then
+  echo "FAIL: apply unexpectedly failed under fake sudo/darwin-rebuild" >&2
+  cat "$tmp_root/apply-run.out" >&2 || true
+  cat "$tmp_root/apply-run.err" >&2 || true
+  exit 1
+fi
+
+expected_preserve_env="--preserve-env=PATH,FACTS,FACTS_DIR,SECRETS,SECRETS_DIR,DARWIN_REBUILD_BIN"
+if [[ $(cat "$tmp_root/apply-sudo.log") != "$expected_preserve_env" ]]; then
+  echo "FAIL: apply did not use the expected sudo preserve-env set" >&2
+  printf 'expected: %s\nactual:   %s\n' "$expected_preserve_env" "$(cat "$tmp_root/apply-sudo.log")" >&2
+  exit 1
+fi
+
+expected_facts_ref="path:$apply_home/.config/dotfiles"
+if ! grep -Fq -- "build --flake path:$ROOT#a2m_mac --override-input local $expected_facts_ref --override-input secrets $expected_facts_ref --show-trace" "$tmp_root/apply-rebuild.log"; then
+  echo "FAIL: apply did not pass the expected darwin-rebuild arguments" >&2
+  cat "$tmp_root/apply-rebuild.log" >&2 || true
   exit 1
 fi
 

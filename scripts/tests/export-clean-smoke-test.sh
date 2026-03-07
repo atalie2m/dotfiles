@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+EXPORT_SCRIPT="$ROOT/scripts/export-clean.sh"
+
+if [[ ! -f $EXPORT_SCRIPT ]]; then
+  echo "test: export-clean script not found: $EXPORT_SCRIPT" >&2
+  exit 1
+fi
+
+tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/export-clean.XXXXXX")"
+cleanup() {
+  rm -rf "$tmp_root"
+}
+trap cleanup EXIT
+
+dir_output="$tmp_root/export-dir"
+tar_output="$tmp_root/export.tar"
+tar_list="$tmp_root/export.tar.list"
+
+if ! bash "$EXPORT_SCRIPT" --format dir --output "$dir_output" >/dev/null; then
+  echo "FAIL: directory export failed" >&2
+  exit 1
+fi
+
+if [[ ! -f "$dir_output/flake.nix" ]]; then
+  echo "FAIL: directory export is missing flake.nix" >&2
+  exit 1
+fi
+
+for forbidden in ".git" ".DS_Store" "result"; do
+  if [[ -e "$dir_output/$forbidden" ]]; then
+    echo "FAIL: directory export unexpectedly included $forbidden" >&2
+    exit 1
+  fi
+done
+
+if find "$dir_output" -name '._*' -print -quit | grep -q .; then
+  echo "FAIL: directory export unexpectedly included AppleDouble files" >&2
+  exit 1
+fi
+
+if ! bash "$EXPORT_SCRIPT" --format tar --output "$tar_output" >/dev/null; then
+  echo "FAIL: tar export failed" >&2
+  exit 1
+fi
+
+tar -tf "$tar_output" >"$tar_list"
+
+if ! grep -Fq "flake.nix" "$tar_list"; then
+  echo "FAIL: tar export is missing flake.nix" >&2
+  cat "$tar_list" >&2 || true
+  exit 1
+fi
+
+if grep -E '(^|/)(\.git|\.DS_Store|result)(/|$)' "$tar_list" >/dev/null; then
+  echo "FAIL: tar export unexpectedly included ignored metadata" >&2
+  cat "$tar_list" >&2 || true
+  exit 1
+fi
+
+if grep -E '(^|/)\\._[^/]+$' "$tar_list" >/dev/null; then
+  echo "FAIL: tar export unexpectedly included AppleDouble files" >&2
+  cat "$tar_list" >&2 || true
+  exit 1
+fi
+
+echo "PASS: export clean smoke"

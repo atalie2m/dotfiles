@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_SCRIPT_LABEL="apply"
+export DOTFILES_SCRIPT_LABEL="apply"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=lib/load-lib.sh
 source "$SCRIPT_DIR/lib/load-lib.sh"
@@ -21,6 +21,21 @@ Environment:
 USAGE
 }
 
+build_sudo_preserve_env() {
+  local -a vars
+  local var joined
+
+  vars=(PATH)
+  for var in FACTS FACTS_DIR SECRETS SECRETS_DIR DARWIN_REBUILD_BIN; do
+    if [[ -n ${!var:-} ]]; then
+      vars+=("$var")
+    fi
+  done
+
+  joined="${vars[*]}"
+  printf '%s\n' "${joined// /,}"
+}
+
 host=""
 rice=""
 action="switch"
@@ -36,7 +51,7 @@ if [[ $# -gt 0 ]]; then
   esac
 fi
 
-PARSE_TARGET_VALUE_OPTIONS="--action"
+export PARSE_TARGET_VALUE_OPTIONS="--action"
 parse_target_args "$@"
 unset PARSE_TARGET_VALUE_OPTIONS
 
@@ -104,5 +119,5 @@ fi
 if [[ $EUID -eq 0 || $no_sudo -eq 1 ]]; then
   "${rebuild_cmd[@]}" "${rebuild_args[@]}"
 else
-  sudo -E "${rebuild_cmd[@]}" "${rebuild_args[@]}"
+  sudo --preserve-env="$(build_sudo_preserve_env)" "${rebuild_cmd[@]}" "${rebuild_args[@]}"
 fi

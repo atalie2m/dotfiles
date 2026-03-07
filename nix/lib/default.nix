@@ -138,10 +138,4 @@ rec {
 
   ifLinux = myconfig: attrs:
     lib.mkIf (lib.hasSuffix "-linux" (getPlatform myconfig)) attrs;
-
-  requireDarwin = myconfig: attrs:
-    lib.mkIf (lib.hasSuffix "-darwin" (getPlatform myconfig)) attrs;
-
-  requireLinux = myconfig: attrs:
-    lib.mkIf (lib.hasSuffix "-linux" (getPlatform myconfig)) attrs;
 }

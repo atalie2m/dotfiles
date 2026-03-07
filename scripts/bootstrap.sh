@@ -2,7 +2,7 @@
 set -euo pipefail
 umask 077
 
-DOTFILES_SCRIPT_LABEL="bootstrap"
+export DOTFILES_SCRIPT_LABEL="bootstrap"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=lib/load-lib.sh
 source "$SCRIPT_DIR/lib/load-lib.sh"

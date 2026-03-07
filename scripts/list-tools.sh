@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_SCRIPT_LABEL="list-tools"
+export DOTFILES_SCRIPT_LABEL="list-tools"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=lib/load-lib.sh
 source "$SCRIPT_DIR/lib/load-lib.sh"
@@ -35,7 +35,7 @@ if [[ $# -gt 0 ]]; then
   esac
 fi
 
-PARSE_TARGET_VALUE_OPTIONS="--format"
+export PARSE_TARGET_VALUE_OPTIONS="--format"
 parse_target_args "$@"
 unset PARSE_TARGET_VALUE_OPTIONS
 

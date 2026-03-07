@@ -49,6 +49,7 @@ Deeper toggles such as `system.brewNix.autoDock.enable` are intentionally omitte
 - Nixpkgs install catalog data: `nix/catalog/tools/nixpkgs.nix`
 - Homebrew install catalog: `nix/modules/tools/brew-catalog.nix`
 - Homebrew install catalog data: `nix/catalog/tools/homebrew.nix`
+- Dedicated Homebrew ownership data for bespoke modules: `nix/catalog/tools/homebrew-dedicated.nix`
 - `scripts/list-tools.sh`
 - `nix/scripts/list-tools.nix`
 
@@ -56,6 +57,6 @@ The toggle filtering logic lives in `list-tools.nix`, so both text and JSON
 outputs are produced from the same filtered view.
 
 `flake check` includes a final-config tool-ownership check. It fails when a
-Darwin target contains the same `group.tool` key from multiple sources, or when
-its final Homebrew config contains a brew/cask/MAS item that is not claimed by
-the ownership registry.
+Darwin target contains the same `group.tool` key from multiple registries, when
+its final Homebrew config contains a brew/cask/MAS item claimed by multiple
+owners, or when an item is not claimed by the ownership registry.

@@ -79,7 +79,7 @@ Application/tool sourcing priority is:
 1. Use Nix packages by default for CLI tools and libraries.
 2. Use Homebrew for macOS-specific or intentionally latest-first software, preferably through catalog-backed `myconfig.tools` toggles.
 3. Use `tools.system.brewNix` only when native Homebrew integration is the wrong fit and a pinned cask path is needed.
-4. Direct `tools.system.homebrewNative.{brews,casks,masApps}` edits are for module internals; `flake check` validates the final Homebrew ownership set.
+4. Direct `tools.system.homebrewNative.{brews,casks,masApps}` edits are for module internals; `flake check` validates the final Homebrew ownership set, including duplicate item claims and unregistered items.
 
 ## Terraform / OpenTofu Policy
 
@@ -624,6 +624,16 @@ nix flake check \
 nix develop
 ```
 
+### Clean export
+
+```bash
+# Export the tracked working tree as a tarball without .git metadata or AppleDouble files
+bash scripts/export-clean.sh --format tar --output /tmp/dotfiles-clean.tar
+
+# Or export into a directory (the destination must not already exist)
+bash scripts/export-clean.sh --format dir --output /tmp/dotfiles-clean
+```
+
 ## Manual commands (darwin-rebuild / home-manager)
 
 ```bash
@@ -648,4 +658,4 @@ nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME> \
 - **`FACTS_DIR is required ...` / `SECRETS_DIR is required ...`** → `doctor` and `bootstrap` need local file paths. If you override `FACTS` or `SECRETS` with a non-`path:` ref, also set the matching `*_DIR` variable.
 - **`darwin-rebuild: command not found`** → Use `nix run .#darwin-rebuild -- ...` for manual runs; `nix run .#apply` and `nix run .#update` already use the pinned wrapper automatically.
 - **`error: unrecognised flag '--flake'`** → Ensure you invoke `nix run <flake>#<pkg> -- <cmd>`. Everything after `--` is passed through to `darwin-rebuild`.
-- **Using `sudo`** → macOS resets `PATH` under `sudo`; use the CLI (which calls `sudo -E`) or the pinned wrapper via `nix run .#darwin-rebuild -- ...`.
+- **Using `sudo`** → macOS resets `PATH` under `sudo`; `nix run .#apply` preserves `PATH` plus the dotfiles input override variables it needs, while manual runs should use the pinned wrapper via `nix run .#darwin-rebuild -- ...`.
