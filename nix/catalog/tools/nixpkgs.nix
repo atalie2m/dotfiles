@@ -20,6 +20,7 @@
   zip = { group = "core"; pkg = "zip"; };
 
   # Development
+  ansible = { group = "dev"; pkg = "ansible"; };
   awscli2 = { group = "dev"; pkg = "awscli2"; };
   gh = { group = "dev"; pkg = "gh"; };
   go = { group = "dev"; pkg = "go"; };
