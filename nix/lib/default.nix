@@ -3,6 +3,41 @@
 let
   getPlatform = myconfig:
     myconfig.facts.user.platform or myconfig.constants.platform or "";
+  normalizeCatalogPkgPath = value:
+    if value == null then null
+    else if builtins.isList value then value
+    else [ value ];
+  selectedCatalogPkgField = systemName: spec:
+    if systemName == "darwin" then
+      if spec ? pkgDarwin then "pkgDarwin"
+      else if spec ? pkg then "pkg"
+      else null
+    else if systemName == "linux" then
+      if spec ? pkgLinux then "pkgLinux"
+      else if spec ? pkg then "pkg"
+      else null
+    else if spec ? pkg then
+      "pkg"
+    else
+      null;
+  selectedCatalogPkgPath = systemName: spec:
+    let
+      field = selectedCatalogPkgField systemName spec;
+    in
+    if field == null then null else normalizeCatalogPkgPath spec.${field};
+  selectedCatalogPkgDescription = systemName: spec:
+    let
+      field = selectedCatalogPkgField systemName spec;
+      path = selectedCatalogPkgPath systemName spec;
+      missingFields =
+        if systemName == "darwin" then "pkgDarwin or pkg"
+        else if systemName == "linux" then "pkgLinux or pkg"
+        else "pkg";
+    in
+    if field == null then
+      "${missingFields} is not set"
+    else
+      "${field}=pkgs.${lib.concatStringsSep "." (map builtins.toString path)}";
   mkHostContext = { inputs, name, machineKey, resolveHomeDirectory, resolvePlatform }:
     let
       facts = import (inputs.local + "/facts.nix");
@@ -132,6 +167,31 @@ rec {
         nixpkgs.unfree.packages = lib.mkAfter packages;
       })
     ];
+
+  resolveCatalogPkg =
+    { pkgs
+    , systemName
+    , spec
+    }:
+    let
+      path = selectedCatalogPkgPath systemName spec;
+    in
+    if path == null then null else lib.attrByPath path null pkgs;
+
+  nixCatalogFailureMessage =
+    { toolKey
+    , systemName
+    , spec
+    }:
+    "catalog entry ${toolKey} is enabled on ${systemName} but did not resolve to a Nix package (${selectedCatalogPkgDescription systemName spec})";
+
+  hasHomebrewInstallPayload = spec:
+    (spec.brews or [ ]) != [ ]
+    || (spec.casks or [ ]) != [ ]
+    || (spec.masApps or { }) != { };
+
+  homebrewCatalogFailureMessage = { toolKey }:
+    "Homebrew catalog entry ${toolKey} must declare at least one of brews, casks, or masApps.";
 
   ifDarwin = myconfig: attrs:
     lib.mkIf (lib.hasSuffix "-darwin" (getPlatform myconfig)) attrs;

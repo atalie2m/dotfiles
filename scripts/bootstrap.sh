@@ -48,9 +48,17 @@ detect_platform() {
     printf '%s\n' "x86_64-linux"
     ;;
   *)
-    printf '%s\n' "aarch64-darwin"
+    return 1
     ;;
   esac
+}
+
+platform_signature() {
+  local machine_arch system_name
+
+  machine_arch="$(uname -m 2>/dev/null || printf '%s' "unknown")"
+  system_name="$(uname -s 2>/dev/null || printf '%s' "unknown")"
+  printf '%s:%s\n' "$machine_arch" "$system_name"
 }
 
 if [[ $# -gt 0 ]]; then
@@ -102,7 +110,9 @@ fi
 
 host="${host:-${HOST:-}}"
 rice="${rice:-${RICE:-}}"
-require_host_argument "$host" "bootstrap"
+if [[ $apply_after -eq 1 ]]; then
+  require_host_argument "$host" "bootstrap"
+fi
 
 set_repo_root
 cd "$ROOT"
@@ -113,7 +123,9 @@ ensure_inputs_dirs "$FACTS_DIR" "$SECRETS_DIR"
 facts_file="$FACTS_DIR/facts.nix"
 if [[ ! -f $facts_file ]]; then
   username="${USER:-}"
-  detected_platform="$(detect_platform)"
+  if ! detected_platform="$(detect_platform)"; then
+    die "unsupported platform for bootstrap facts generation: $(platform_signature) (set user.platform manually in $facts_file)"
+  fi
   if [[ -z $username ]]; then
     username=$(id -un 2>/dev/null || true)
   fi
@@ -132,7 +144,7 @@ if [[ ! -f $facts_file ]]; then
     # email = "you@example.com";
 
     # Optional overrides:
-    # homeDirectory = "/Users/${username}";
+    # homeDirectory = "/path/to/home/${username}";
     # stateVersion = {
     #   home = "25.05";
     #   darwin = 6;
@@ -183,9 +195,9 @@ fi
 doctor_args=()
 if [[ -n $host ]]; then
   doctor_args+=(--host "$host")
-fi
-if [[ -n $rice ]]; then
-  doctor_args+=(--rice "$rice")
+  if [[ -n $rice ]]; then
+    doctor_args+=(--rice "$rice")
+  fi
 fi
 if [[ $strict -eq 1 ]]; then
   doctor_args+=(--strict)

@@ -36,7 +36,7 @@ Shared modules, catalogs, and operational scripts now live outside the Denix hos
 See [`docs/architecture.md`](docs/architecture.md) for the current responsibility split.
 
 Operational note: this repo keeps shared NixOS and standalone Home Manager trees, but the day-to-day CLI in this flake (`apply`, `update`, `list-tools`, and target-aware `doctor`) is Darwin-first and resolves `darwinConfigurations`.
-`nixosConfigurations` and `homeConfigurations` remain available as auxiliary outputs for manual evaluation and targeted experiments; the operational CLI does not resolve them.
+`nixosConfigurations` and `homeConfigurations` remain available as auxiliary outputs for manual evaluation and targeted experiments; the operational CLI does not resolve them, and CI keeps representative builds on Darwin while Linux outputs stay eval-oriented/best-effort.
 
 - Hosts: `full_mac` (default rice: `full`), `minimal_mac` (default rice: `minimum`).
 - Rices: `base`, `darwin`, `dev`, `full`, `minimum`.
@@ -79,7 +79,7 @@ Application/tool sourcing priority is:
 1. Use Nix packages by default for CLI tools and libraries.
 2. Use Homebrew for macOS-specific or intentionally latest-first software, preferably through catalog-backed `myconfig.tools` toggles.
 3. Use `tools.system.brewNix` only when native Homebrew integration is the wrong fit and a pinned cask path is needed.
-4. Direct `tools.system.homebrewNative.{brews,casks,masApps}` edits are for module internals; `flake check` validates the final Homebrew ownership set, including duplicate item claims and unregistered items.
+4. Direct `tools.system.homebrewNative.{brews,casks,masApps}` edits are for module internals; `flake check` validates the final Homebrew ownership set plus `brew-nix` casks, including duplicate item claims, cross-source overlaps, and unregistered items.
 
 ## Terraform / OpenTofu Policy
 
@@ -294,7 +294,7 @@ Default layout:
 - Recommended (for Git identity): `user.fullName`, `user.email`
 - Optional overrides:
   `user.homeDirectory` (auto-derived) and `machines.<host>.platform` (per-host override when you truly need it).
-- Recommended: keep `user.platform` explicit. `bootstrap` auto-detects it and writes `aarch64-darwin` on Apple Silicon Macs.
+- Recommended: keep `user.platform` explicit. `bootstrap` auto-detects and writes the supported `arch-os` value for the current Darwin/Linux host.
 
 Example `facts.nix`:
 
@@ -309,7 +309,7 @@ Example `facts.nix`:
     email = "you@example.com";
 
     # Optional overrides
-    # homeDirectory = "/Users/yourname";
+    # homeDirectory = "/path/to/home/yourname";
 
     stateVersion = {
       home = "25.05";
@@ -529,7 +529,9 @@ All CLI commands automatically append:
 `--override-input local "$FACTS"` and `--override-input secrets "$SECRETS"`.
 
 These operational CLI commands are Darwin-first: they target `darwinConfigurations` and macOS-specific checks/builds.
-`apply`, `update`, `list-tools`, and `bootstrap` require `--host`, a positional host, or `HOST=...`.
+`apply` and `list-tools` require `--host`, a positional host, or `HOST=...`.
+`update` only requires a host when build is enabled (the default).
+`bootstrap` only requires a host when `--apply` or `--yes` is used.
 
 Defaults:
 
@@ -546,14 +548,17 @@ Advanced overrides:
 ### Bootstrap (first run)
 
 ```bash
-# Generate minimal facts/secrets, run doctor, then optionally apply
+# Generate minimal facts/secrets and run doctor
+nix run .#bootstrap
+
+# Generate facts/secrets, run doctor, then apply a target
 nix run .#bootstrap -- --host full_mac --apply
 
 # Non-interactive (auto-apply)
 nix run .#bootstrap -- --host full_mac --yes
 ```
 
-`bootstrap` creates a minimal `facts.nix` (`user.username` only) and leaves extra fields such as `stateVersion` as opt-in comments.
+`bootstrap` creates a minimal `facts.nix` with `user.username` and detected `user.platform`, and leaves extra fields such as `stateVersion` as opt-in comments.
 
 ### Doctor (health checks)
 
@@ -596,6 +601,9 @@ nix run .#apply -- --host full_mac -- --show-trace
 ### Update (flake inputs + checks/build)
 
 ```bash
+# Update all non-path root inputs from flake.lock, then run checks only
+UPDATE_SKIP_BUILD=1 nix run .#update
+
 # Update all non-path root inputs from flake.lock, then run checks/build
 nix run .#update -- --host full_mac
 
@@ -628,10 +636,10 @@ nix develop
 
 ```bash
 # Export the tracked working tree as a tarball without .git metadata or AppleDouble files
-bash scripts/export-clean.sh --format tar --output /tmp/dotfiles-clean.tar
+nix run .#dotfiles -- export-clean --format tar --output /tmp/dotfiles-clean.tar
 
-# Or export into a directory (the destination must not already exist)
-bash scripts/export-clean.sh --format dir --output /tmp/dotfiles-clean
+# Or export into a directory via the dedicated app wrapper
+nix run .#export-clean -- --format dir --output /tmp/dotfiles-clean
 ```
 
 ## Manual commands (darwin-rebuild / home-manager)

@@ -21,6 +21,15 @@ let
             masApps = spec.masApps or { };
           });
       };
+
+      darwin.ifEnabled = { ... }: {
+        assertions = lib.optional (!dotlib.hasHomebrewInstallPayload spec) {
+          assertion = false;
+          message = dotlib.homebrewCatalogFailureMessage {
+            toolKey = "${spec.group}.${toolName}";
+          };
+        };
+      };
     };
 in
 {

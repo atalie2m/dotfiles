@@ -106,8 +106,27 @@ run_update() {
   local repo_dir="$1"
   local stdout_file="$2"
   local stderr_file="$3"
+  local parsing_env=1
+  local entry
+  local -a env_overrides=()
+  local -a script_args=()
 
   shift 3
+
+  while [[ $# -gt 0 ]]; do
+    if [[ $1 == "--" ]]; then
+      parsing_env=0
+      shift
+      continue
+    fi
+
+    if [[ $parsing_env -eq 1 ]]; then
+      env_overrides+=("$1")
+    else
+      script_args+=("$1")
+    fi
+    shift
+  done
 
   (
     export HOME="$tmp_root/home"
@@ -120,12 +139,11 @@ run_update() {
     export FAKE_UPDATE_LOG_FILE="$repo_dir/update.log"
     mkdir -p "$HOME"
 
-    while [[ $# -gt 0 ]]; do
-      export "${1%%=*}=${1#*=}"
-      shift
+    for entry in "${env_overrides[@]}"; do
+      export "${entry%%=*}=${entry#*=}"
     done
 
-    bash "$UPDATE_SCRIPT" --host full_mac
+    bash "$UPDATE_SCRIPT" "${script_args[@]}"
   ) >"$stdout_file" 2>"$stderr_file"
 }
 
@@ -134,7 +152,7 @@ setup_repo "$commit_repo"
 printf 'staged but unrelated\n' >"$commit_repo/unrelated.txt"
 git -C "$commit_repo" add unrelated.txt
 
-if ! run_update "$commit_repo" "$tmp_root/commit.stdout" "$tmp_root/commit.stderr" 'FAKE_FLAKE_LOCK_CONTENT={ "version": 2 }'; then
+if ! run_update "$commit_repo" "$tmp_root/commit.stdout" "$tmp_root/commit.stderr" 'FAKE_FLAKE_LOCK_CONTENT={ "version": 2 }' --; then
   echo "FAIL: update commit flow failed" >&2
   cat "$tmp_root/commit.stdout" >&2 || true
   cat "$tmp_root/commit.stderr" >&2 || true
@@ -166,7 +184,7 @@ setup_repo "$noop_repo"
 printf 'still unrelated\n' >"$noop_repo/unrelated.txt"
 git -C "$noop_repo" add unrelated.txt
 
-if ! run_update "$noop_repo" "$tmp_root/noop.stdout" "$tmp_root/noop.stderr"; then
+if ! run_update "$noop_repo" "$tmp_root/noop.stdout" "$tmp_root/noop.stderr" --; then
   echo "FAIL: update noop flow failed" >&2
   cat "$tmp_root/noop.stdout" >&2 || true
   cat "$tmp_root/noop.stderr" >&2 || true

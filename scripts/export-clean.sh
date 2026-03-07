@@ -9,6 +9,7 @@ source "$SCRIPT_DIR/lib/load-lib.sh"
 usage() {
   cat <<'USAGE'
 Usage: scripts/export-clean.sh --output <path> [--format dir|tar]
+       nix run .#dotfiles -- export-clean --output <path> [--format dir|tar]
 
 Exports the current git-tracked working tree without .git metadata or macOS
 AppleDouble sidecar files. The output path must not already exist.

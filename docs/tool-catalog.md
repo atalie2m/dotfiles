@@ -59,4 +59,5 @@ outputs are produced from the same filtered view.
 `flake check` includes a final-config tool-ownership check. It fails when a
 Darwin target contains the same `group.tool` key from multiple registries, when
 its final Homebrew config contains a brew/cask/MAS item claimed by multiple
-owners, or when an item is not claimed by the ownership registry.
+owners, when a Homebrew cask overlaps with `tools.system.brewNix`, or when an
+item is not claimed by the ownership registry.

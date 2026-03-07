@@ -66,8 +66,15 @@ fi
 
 host="${host:-${HOST:-}}"
 rice="${rice:-${RICE:-}}"
-require_host_argument "$host" "update"
 start_dir="$PWD"
+
+run_build=1
+if [[ ${UPDATE_SKIP_BUILD:-0} == "1" ]]; then
+  run_build=0
+fi
+if [[ $run_build -eq 1 ]]; then
+  require_host_argument "$host" "update"
+fi
 
 set_repo_root
 ROOT="$(require_writable_checkout "$ROOT" "$start_dir")"
@@ -119,7 +126,7 @@ if [[ $run_checks -eq 1 ]]; then
     --override-input secrets "$SECRETS"
 fi
 
-if [[ ${UPDATE_SKIP_BUILD:-0} != "1" ]]; then
+if [[ $run_build -eq 1 ]]; then
   target=$(resolve_target "$host" "$rice" "$ROOT" "$FACTS" "$SECRETS") || exit 1
   darwin_rebuild build \
     --flake "${flake_ref}#${target}" \

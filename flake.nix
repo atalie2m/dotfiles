@@ -161,6 +161,38 @@
               darwinTargetNames;
           toolOwnershipFailures = lib.concatMap (report: report.failureMessages) toolOwnershipReports;
           toolOwnershipFailureText = lib.concatStringsSep "\n" toolOwnershipFailures;
+          catalogValidationFailureText =
+            dotlib.nixCatalogFailureMessage {
+              toolKey = "core.fakeTool";
+              systemName = "darwin";
+              spec = {
+                group = "core";
+                pkgDarwin = [ "missing" "package" ];
+              };
+            };
+          brewNixOverlapReport = toolOwnershipLib.report "test-target" {
+            myconfig.tools.system.brewNix = {
+              enable = true;
+              casks = {
+                keyclu = "KeyClu.app";
+              };
+              extraCasks = { };
+            };
+            homebrew.casks = [ "keyclu" ];
+          };
+          brewNixDuplicateClaimReport = toolOwnershipLib.report "test-target" {
+            myconfig.tools.system = {
+              brewNix = {
+                enable = true;
+                casks = {
+                  keyclu = "KeyClu.app";
+                };
+                extraCasks = { };
+              };
+              keyclu.enable = true;
+            };
+            homebrew.casks = [ "keyclu" ];
+          };
 
           mkDotfilesApp = { name, subcommand ? null, description }:
             let
@@ -330,6 +362,26 @@
                             touch "$out"
             '';
 
+            catalogPolicy =
+              let
+                _ =
+                  assert dotlib.hasHomebrewInstallPayload { casks = [ "keyclu" ]; };
+                  assert (!dotlib.hasHomebrewInstallPayload { taps = [ "homebrew/cask" ]; });
+                  assert lib.hasInfix "core.fakeTool" catalogValidationFailureText;
+                  assert lib.hasInfix "darwin" catalogValidationFailureText;
+                  assert brewNixOverlapReport.hasFailures;
+                  assert lib.any
+                    (message: lib.hasInfix "configured in both Homebrew and brew-nix" message)
+                    brewNixOverlapReport.failureMessages;
+                  assert lib.any
+                    (entry: entry.itemType == "cask" && entry.itemName == "keyclu")
+                    brewNixDuplicateClaimReport.duplicateHomebrewItems;
+                  null;
+              in
+              builtins.seq _ (pkgs.runCommand "catalog-policy-check" { } ''
+                touch "$out"
+              '');
+
             syncShellSmoke = pkgs.runCommand "sync-shell-smoke-test"
               {
                 nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
@@ -422,7 +474,7 @@
           apps = {
             dotfiles = mkDotfilesApp {
               name = "cli";
-              description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/list-tools).";
+              description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/export-clean/list-tools/sync).";
             };
             update = mkDotfilesApp {
               name = "update";
@@ -453,6 +505,11 @@
               name = "bootstrap";
               subcommand = "bootstrap";
               description = "Initialize local facts/secrets and optionally apply.";
+            };
+            export-clean = mkDotfilesApp {
+              name = "export-clean";
+              subcommand = "export-clean";
+              description = "Export a clean tracked copy without .git metadata or AppleDouble files.";
             };
             format = {
               type = "app";

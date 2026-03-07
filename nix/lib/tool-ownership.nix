@@ -167,10 +167,39 @@ let
     in
     lib.filter (item: item.itemName != "") (brews ++ casks ++ masApps);
 
+  brewNixItems = config:
+    let
+      cfg = lib.attrByPath [ "myconfig" "tools" "system" "brewNix" ] { } config;
+      caskAttrs = (cfg.casks or { }) // (cfg.extraCasks or { });
+    in
+    if cfg.enable or false then
+      map
+        (itemName: {
+          itemType = "cask";
+          inherit itemName;
+        })
+        (builtins.attrNames caskAttrs)
+    else
+      [ ];
+
+  brewNixClaims = config:
+    let
+      items = brewNixItems config;
+    in
+    if items == [ ] then
+      [ ]
+    else
+      homebrewClaimsFor {
+        key = "system.brewNix";
+        claimSource = "brewNix";
+        casks = map (item: item.itemName) items;
+      };
+
   claimsFromConfig = config:
     nixClaimsFromCatalog config
     ++ homebrewClaimsFromCatalog config
-    ++ dedicatedHomebrewClaims config;
+    ++ dedicatedHomebrewClaims config
+    ++ brewNixClaims config;
 
   sourceSummary = claims:
     lib.unique (map (claim: claim.source or "") claims);
@@ -188,6 +217,8 @@ in
       registry = registryFromClaims claims;
       registryClaims = flattenRegistry registry;
       itemRegistry = itemRegistryFromClaims claims;
+      finalHomebrewItems = homebrewItems (config.homebrew or { });
+      configuredBrewNixItems = brewNixItems config;
       duplicateClaims =
         lib.filter
           (entry: builtins.length (sourceSummary entry.claims) > 1)
@@ -207,11 +238,20 @@ in
         lib.unique
           (map
             itemIdForClaim
-            (lib.filter (claim: itemIdForClaim claim != "") registryClaims));
+            (lib.filter (claim: claim.source != "brewNix" && itemIdForClaim claim != "") registryClaims));
       unclaimedHomebrew =
         lib.filter
           (item: !lib.elem "${item.itemType}:${item.itemName}" claimedHomebrewItems)
-          (homebrewItems (config.homebrew or { }));
+          finalHomebrewItems;
+      overlappingBrewNixHomebrew =
+        lib.filter
+          (homebrewItem:
+            lib.any
+              (brewNixItem:
+                brewNixItem.itemType == homebrewItem.itemType
+                && brewNixItem.itemName == homebrewItem.itemName)
+              configuredBrewNixItems)
+          finalHomebrewItems;
       failureMessages =
         (map
           (entry:
@@ -226,10 +266,15 @@ in
         (map
           (item:
             "${targetName}: unregistered Homebrew ${item.itemType} '${item.itemName}' in final config")
-          unclaimedHomebrew);
+          unclaimedHomebrew)
+        ++
+        (map
+          (item:
+            "${targetName}: ${item.itemType} '${item.itemName}' is configured in both Homebrew and brew-nix")
+          overlappingBrewNixHomebrew);
     in
     {
-      inherit duplicateClaims duplicateHomebrewItems failureMessages itemRegistry registry targetName unclaimedHomebrew;
+      inherit duplicateClaims duplicateHomebrewItems failureMessages itemRegistry overlappingBrewNixHomebrew registry targetName unclaimedHomebrew;
       hasFailures = failureMessages != [ ];
     };
 }

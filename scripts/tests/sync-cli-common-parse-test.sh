@@ -106,7 +106,9 @@ assert_missing_host() {
   local stdout_file="$3"
   local stderr_file="$4"
 
-  if bash "$script" >"$stdout_file" 2>"$stderr_file"; then
+  shift 4
+
+  if bash "$script" "$@" >"$stdout_file" 2>"$stderr_file"; then
     echo "FAIL: $command_name unexpectedly accepted missing host" >&2
     exit 1
   fi
@@ -175,7 +177,7 @@ fi
 assert_missing_host "$APPLY_SCRIPT" "apply" "$tmp_root/apply.out" "$tmp_root/apply.err"
 assert_missing_host "$UPDATE_SCRIPT" "update" "$tmp_root/update.out" "$tmp_root/update.err"
 assert_missing_host "$LIST_TOOLS_SCRIPT" "list-tools" "$tmp_root/list-tools.out" "$tmp_root/list-tools.err"
-assert_missing_host "$BOOTSTRAP_SCRIPT" "bootstrap" "$tmp_root/bootstrap-missing-host.out" "$tmp_root/bootstrap-missing-host.err"
+assert_missing_host "$BOOTSTRAP_SCRIPT" "bootstrap" "$tmp_root/bootstrap-missing-host.out" "$tmp_root/bootstrap-missing-host.err" --apply
 
 default_home="$tmp_root/default-home"
 default_out="$tmp_root/default.out"
@@ -337,6 +339,69 @@ fi
 exit 1
 EOF_XCODE
 chmod +x "$fake_bin/xcode-select"
+
+bootstrap_home="$tmp_root/bootstrap-home"
+if ! (
+  HOME="$bootstrap_home" \
+    PATH="$fake_bin:$PATH" \
+    bash "$BOOTSTRAP_SCRIPT"
+) >"$tmp_root/bootstrap-hostless.out" 2>"$tmp_root/bootstrap-hostless.err"; then
+  echo "FAIL: bootstrap unexpectedly failed without host" >&2
+  cat "$tmp_root/bootstrap-hostless.out" >&2 || true
+  cat "$tmp_root/bootstrap-hostless.err" >&2 || true
+  exit 1
+fi
+
+bootstrap_facts_file="$bootstrap_home/.config/dotfiles/facts.nix"
+bootstrap_secrets_file="$bootstrap_home/.config/dotfiles/secrets.nix"
+if [[ ! -f $bootstrap_facts_file || ! -f $bootstrap_secrets_file ]]; then
+  echo "FAIL: bootstrap did not create facts/secrets files without host" >&2
+  exit 1
+fi
+if ! grep -Fq 'platform = "x86_64-darwin";' "$bootstrap_facts_file"; then
+  echo "FAIL: bootstrap did not record the detected platform" >&2
+  cat "$bootstrap_facts_file" >&2 || true
+  exit 1
+fi
+if ! grep -Fq '# homeDirectory = "/path/to/home/' "$bootstrap_facts_file"; then
+  echo "FAIL: bootstrap homeDirectory example did not stay platform-neutral" >&2
+  cat "$bootstrap_facts_file" >&2 || true
+  exit 1
+fi
+
+unsupported_bin="$tmp_root/unsupported-bin"
+mkdir -p "$unsupported_bin"
+cat >"$unsupported_bin/uname" <<'EOF_BAD_UNAME'
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "${1:-}" in
+  -s) printf 'Plan9\n' ;;
+  -m) printf 'loongarch64\n' ;;
+  *) exit 1 ;;
+esac
+EOF_BAD_UNAME
+chmod +x "$unsupported_bin/uname"
+
+unsupported_home="$tmp_root/unsupported-home"
+if (
+  HOME="$unsupported_home" \
+    PATH="$unsupported_bin:$PATH" \
+    bash "$BOOTSTRAP_SCRIPT"
+) >"$tmp_root/bootstrap-unsupported.out" 2>"$tmp_root/bootstrap-unsupported.err"; then
+  echo "FAIL: bootstrap unexpectedly accepted an unsupported platform" >&2
+  exit 1
+fi
+
+if ! grep -Fq "unsupported platform for bootstrap facts generation: loongarch64:Plan9" "$tmp_root/bootstrap-unsupported.err"; then
+  echo "FAIL: bootstrap unsupported-platform error changed" >&2
+  cat "$tmp_root/bootstrap-unsupported.err" >&2 || true
+  exit 1
+fi
+if [[ -f "$unsupported_home/.config/dotfiles/facts.nix" ]]; then
+  echo "FAIL: bootstrap wrote facts.nix after unsupported platform detection" >&2
+  exit 1
+fi
 
 doctor_home="$tmp_root/doctor-home"
 mkdir -p "$doctor_home/.config/dotfiles"

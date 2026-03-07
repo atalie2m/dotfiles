@@ -21,6 +21,7 @@ This repository keeps Denix orchestration, reusable modules, catalog data, and r
 
 ## Practical Implications
 
+- The operational CLI is Darwin-first; shared NixOS/Home Manager outputs remain available for evaluation and targeted experiments rather than full parity with the macOS workflow.
 - If you add a reusable feature, put it in `nix/modules/` and keep `nix/denix/` focused on composition.
 - If you add catalog-owned tools, update both `nix/catalog/tools/*` and the relevant module/docs.
 - If you add a new operational CLI behavior, put the shell entrypoint under `scripts/` and keep any Nix helper expression under `nix/scripts/`.

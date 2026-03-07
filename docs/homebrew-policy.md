@@ -15,7 +15,7 @@ This document defines package-source boundaries for this dotfiles flake.
 1. Do not install the same CLI from both Nix and Homebrew.
 2. When migrating a tool source (Nix <-> Homebrew), remove the old declaration in the same change.
 3. Keep GUI apps in Homebrew casks unless there is a strong reason to package them with Nix.
-4. `flake check` validates final Darwin configs and fails if a Homebrew item is unregistered, claimed by multiple owners, or a `group.tool` key is claimed by multiple registries.
+4. `flake check` validates final Darwin configs and fails if a Homebrew item is unregistered, claimed by multiple owners, overlaps with a `brew-nix` cask, or a `group.tool` key is claimed by multiple registries.
 
 ## PATH and Runtime Rules
 

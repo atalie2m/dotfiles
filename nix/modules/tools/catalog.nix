@@ -9,20 +9,13 @@ let
     else "other";
 
   resolvePkg = spec:
-    let
-      selected =
-        if systemName == "darwin" then spec.pkgDarwin or spec.pkg or null
-        else if systemName == "linux" then spec.pkgLinux or spec.pkg or null
-        else spec.pkg or null;
-      path =
-        if builtins.isList selected then selected
-        else if selected == null then null
-        else [ selected ];
-    in
-    if path == null then null else lib.attrByPath path null pkgs;
+    dotlib.resolveCatalogPkg {
+      inherit pkgs systemName spec;
+    };
 
   mkToolModule = toolName: spec:
     let
+      toolKey = "${spec.group}.${toolName}";
       optionPath = [ "tools" spec.group toolName "enable" ];
       supportedSystems = spec.systems or [ "darwin" "linux" ];
       package = resolvePkg spec;
@@ -47,6 +40,13 @@ let
         };
 
       home.ifEnabled = { ... }: {
+        assertions = lib.optional (isSupportedSystem && package == null) {
+          assertion = false;
+          message = dotlib.nixCatalogFailureMessage {
+            inherit toolKey systemName spec;
+          };
+        };
+
         home.packages = lib.optional (isSupportedSystem && package != null) package;
       };
     };

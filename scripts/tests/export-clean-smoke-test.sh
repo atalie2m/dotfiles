@@ -4,9 +4,15 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 EXPORT_SCRIPT="$ROOT/scripts/export-clean.sh"
+DOTFILES_SCRIPT="$ROOT/scripts/dotfiles.sh"
 
 if [[ ! -f $EXPORT_SCRIPT ]]; then
   echo "test: export-clean script not found: $EXPORT_SCRIPT" >&2
+  exit 1
+fi
+
+if [[ ! -f $DOTFILES_SCRIPT ]]; then
+  echo "test: dotfiles script not found: $DOTFILES_SCRIPT" >&2
   exit 1
 fi
 
@@ -39,6 +45,11 @@ done
 
 if find "$dir_output" -name '._*' -print -quit | grep -q .; then
   echo "FAIL: directory export unexpectedly included AppleDouble files" >&2
+  exit 1
+fi
+
+if ! bash "$DOTFILES_SCRIPT" export-clean --format dir --output "$tmp_root/export-via-dotfiles" >/dev/null; then
+  echo "FAIL: dotfiles export-clean delegation failed" >&2
   exit 1
 fi
 
