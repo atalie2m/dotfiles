@@ -38,7 +38,7 @@ See [`docs/architecture.md`](docs/architecture.md) for the current responsibilit
 Operational note: this repo keeps shared NixOS and standalone Home Manager trees, but the day-to-day CLI in this flake (`apply`, `update`, `list-tools`, and target-aware `doctor`) is Darwin-first and resolves `darwinConfigurations`.
 `nixosConfigurations` and `homeConfigurations` remain available as auxiliary outputs for manual evaluation and targeted experiments; the operational CLI does not resolve them.
 
-- Hosts: `a2m_mac` (default rice: `full`), `mn_mac` (default rice: `full`).
+- Hosts: `full_mac` (default rice: `full`), `minimal_mac` (default rice: `minimum`).
 - Rices: `base`, `darwin`, `dev`, `full`, `minimum`.
   - `base`: shared essentials (`system.nix`, core CLI, shell, Git, GPG/SOPS).
   - `darwin`: macOS base integrations (Homebrew + hostnames/fonts).
@@ -50,25 +50,25 @@ CLI usage examples (recommended for macOS / nix-darwin):
 
 ```bash
 # Apply default rice for each host
-nix run .#apply -- --host a2m_mac
-nix run .#apply -- --host mn_mac
+nix run .#apply -- --host full_mac
+nix run .#apply -- --host minimal_mac
 
 # Build only (no switch)
-nix run .#apply -- --host a2m_mac --action build
+nix run .#apply -- --host full_mac --action build
 
 # Switch rices per host
-nix run .#apply -- --host a2m_mac --rice minimum
-nix run .#apply -- --host mn_mac --rice minimum
+nix run .#apply -- --host full_mac --rice minimum
+nix run .#apply -- --host minimal_mac --rice full
 
 ```
 
 Manual attribute examples (still valid):
-`a2m_mac`, `mn_mac`, `a2m_mac-minimum`, `mn_mac-minimum`.
+`full_mac`, `minimal_mac`, `full_mac-minimum`, `minimal_mac-full`.
 
 When `--rice` is provided, the CLI resolves only `host-rice` (no implicit fallback to `host`).
 
 Home Manager outputs are dedicated one-per-host profiles:
-`<user>@a2m_mac`, `<user>@mn_mac`, `<user>@a2m_nixos`.
+`<user>@full_mac`, `<user>@minimal_mac`, `<user>@a2m_nixos`.
 
 ## Application Source Policy
 
@@ -117,14 +117,14 @@ Use `list-tools` as the canonical way to inspect the expanded toggle set for a h
 List effective tool toggles for a target host/rice:
 
 ```bash
-nix run .#list-tools -- --host a2m_mac
-nix run .#list-tools -- --host a2m_mac --rice minimum --format json
+nix run .#list-tools -- --host full_mac
+nix run .#list-tools -- --host full_mac --rice minimum --format json
 ```
 
 Manual evaluation (JSON):
 
 ```bash
-nix eval --json .#darwinConfigurations.a2m_mac-minimum.config.myconfig.tools
+nix eval --json .#darwinConfigurations.full_mac-minimum.config.myconfig.tools
 ```
 
 ## VS Code Instances (Directory Profiles)
@@ -319,7 +319,7 @@ Example `facts.nix`:
   };
 
   machines = {
-    a2m_mac = {
+    full_mac = {
       computerName = "Your Mac";
       localHostName = "your-mac";
       hostName = "your-mac";
@@ -372,7 +372,7 @@ All `nix run .#apply|.#update|.#doctor|.#bootstrap|.#list-tools` commands derive
 FACTS_DIR="$HOME/.config/dotfiles"
 SECRETS_DIR="$HOME/.config/dotfiles"
 
-nix run .#darwin-rebuild -- build --flake .#a2m_mac \
+nix run .#darwin-rebuild -- build --flake .#full_mac \
   --override-input local path:$FACTS_DIR \
   --override-input secrets path:$SECRETS_DIR
 ```
@@ -547,10 +547,10 @@ Advanced overrides:
 
 ```bash
 # Generate minimal facts/secrets, run doctor, then optionally apply
-nix run .#bootstrap -- --host a2m_mac --rice full --apply
+nix run .#bootstrap -- --host full_mac --apply
 
 # Non-interactive (auto-apply)
-nix run .#bootstrap -- --host a2m_mac --rice full --yes
+nix run .#bootstrap -- --host full_mac --yes
 ```
 
 `bootstrap` creates a minimal `facts.nix` (`user.username` only) and leaves extra fields such as `stateVersion` as opt-in comments.
@@ -562,10 +562,10 @@ nix run .#bootstrap -- --host a2m_mac --rice full --yes
 nix run .#doctor
 
 # Basic checks
-nix run .#doctor -- --host a2m_mac
+nix run .#doctor -- --host full_mac
 
 # Strict checks (includes nix flake check + enabled sync checks)
-nix run .#doctor -- --host a2m_mac --strict
+nix run .#doctor -- --host full_mac --strict
 
 # JSON output for CI
 nix run .#doctor -- --json
@@ -578,32 +578,32 @@ For target evaluation and strict sync checks, pass `--host` so `doctor` can gate
 
 ```bash
 # Apply default rice
-nix run .#apply -- --host a2m_mac
+nix run .#apply -- --host full_mac
 
 # Switch rices
-nix run .#apply -- --host a2m_mac --rice minimum
+nix run .#apply -- --host full_mac --rice minimum
 
 # Build only (no switch)
-nix run .#apply -- --host a2m_mac --action build
+nix run .#apply -- --host full_mac --action build
 
 # Avoid sudo (CI/non-privileged)
-nix run .#apply -- --host a2m_mac --no-sudo --action build
+nix run .#apply -- --host full_mac --no-sudo --action build
 
 # Pass extra args to darwin-rebuild
-nix run .#apply -- --host a2m_mac -- --show-trace
+nix run .#apply -- --host full_mac -- --show-trace
 ```
 
 ### Update (flake inputs + checks/build)
 
 ```bash
 # Update all non-path root inputs from flake.lock, then run checks/build
-nix run .#update -- --host a2m_mac
+nix run .#update -- --host full_mac
 
 # Full `nix flake update`
-UPDATE_ALL=1 nix run .#update -- --host a2m_mac
+UPDATE_ALL=1 nix run .#update -- --host full_mac
 
 # Force checks + formatter
-UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host a2m_mac
+UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host full_mac
 ```
 
 ### Formatter / Checks / Dev Shell

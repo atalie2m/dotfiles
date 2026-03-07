@@ -142,7 +142,7 @@ if [[ ! -f $facts_file ]]; then
 
   # Optional machine metadata for tools.system.hostnames:
   # machines = {
-  #   a2m_mac = {
+  #   full_mac = {
   #     computerName = "Your Mac";
   #     localHostName = "your-mac";
   #     hostName = "your-mac";

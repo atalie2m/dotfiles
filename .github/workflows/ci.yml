@@ -71,12 +71,12 @@ jobs:
               };
             };
             machines = {
-              a2m_mac = {
+              full_mac = {
                 computerName = "CI Mac";
                 localHostName = "ci-mac";
                 hostName = "ci-mac.local";
               };
-              mn_mac = {
+              minimal_mac = {
                 computerName = "CI Mac";
                 localHostName = "ci-mac";
                 hostName = "ci-mac.local";
@@ -105,10 +105,10 @@ jobs:
         run: |
           set -euo pipefail
           targets=(
-            a2m_mac
-            mn_mac
-            a2m_mac-minimum
-            mn_mac-minimum
+            full_mac
+            minimal_mac
+            full_mac-minimum
+            minimal_mac-full
           )
 
           for target in "${targets[@]}"; do
@@ -122,11 +122,11 @@ jobs:
       - name: Evaluate auxiliary outputs
         run: |
           set -euo pipefail
-          nix eval --raw '.#homeConfigurations."runner@a2m_mac".activationPackage.drvPath' \
+          nix eval --raw '.#homeConfigurations."runner@full_mac".activationPackage.drvPath' \
             --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
             --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
             >/dev/null
-          nix eval --raw '.#homeConfigurations."runner@mn_mac".activationPackage.drvPath' \
+          nix eval --raw '.#homeConfigurations."runner@minimal_mac".activationPackage.drvPath' \
             --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
             --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
             >/dev/null
@@ -139,14 +139,8 @@ jobs:
             --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
             >/dev/null
 
-      - name: Build representative minimum configuration (a2m_mac-minimum)
+      - name: Build representative minimum configuration (minimal_mac)
         run: >
-          nix build --no-link .#darwinConfigurations.a2m_mac-minimum.system
-          --override-input local path:${{ steps.local_inputs.outputs.local_dir }}
-          --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
-
-      - name: Build representative full configuration (a2m_mac)
-        run: >
-          nix build --no-link .#darwinConfigurations.a2m_mac.system
+          nix build --no-link .#darwinConfigurations.minimal_mac.system
           --override-input local path:${{ steps.local_inputs.outputs.local_dir }}
           --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}

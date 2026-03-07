@@ -16,14 +16,14 @@ catalog-owned tools in that group.
 ### Text Output
 
 ```bash
-nix run .#list-tools -- --host a2m_mac
-nix run .#list-tools -- --host a2m_mac --rice minimum
+nix run .#list-tools -- --host full_mac
+nix run .#list-tools -- --host full_mac --rice minimum
 ```
 
 ### JSON Output
 
 ```bash
-nix run .#list-tools -- --host a2m_mac --format json
+nix run .#list-tools -- --host full_mac --format json
 ```
 
 ### Output Scope

@@ -125,7 +125,7 @@ run_update() {
       shift
     done
 
-    bash "$UPDATE_SCRIPT" --host a2m_mac
+    bash "$UPDATE_SCRIPT" --host full_mac
   ) >"$stdout_file" 2>"$stderr_file"
 }
 
