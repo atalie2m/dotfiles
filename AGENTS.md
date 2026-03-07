@@ -21,9 +21,8 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 - Both inputs default to the same base directory: `~/.config/dotfiles/`.
 
 ## Build, Test, and Development Commands
+- Canonical command examples and current host names live in `docs/commands.md`.
 - `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles` — validates flake, runs basic checks.
-- `nix run .#apply -- --host a2m_mac --action build` — builds the `a2m_mac` host (default rice: full); add `--rice <rice>` or swap host as needed.
-- `nix run .#apply -- --host a2m_mac` — applies the built configuration (uses `sudo -E` internally).
 - Template: `nix flake init -t github:atalie2m/dotfiles#web-dev` (see `templates/web-dev`).
 
 ## Coding Style & Naming Conventions
@@ -46,7 +45,7 @@ This repository is a Nix flake–based macOS dotfiles setup using nix-darwin, Ho
 - Never commit secrets or machine identifiers; keep them in local facts/secrets inputs.
 
 ## Runtime Sync
-- Shell sync is implemented directly in `scripts/sync-adapters/shell.sh`.
+- Shell sync is implemented under `scripts/sync-adapters/shell.sh` plus sourced helpers in `scripts/sync-adapters/shell/`.
 - The public entrypoint is `scripts/sync.sh`, and it only dispatches the `shell` surface.
 - Shell sync is stateless: it does not keep `lastApplied` hashes or any shell-specific state directory.
 - Add/update smoke tests under `scripts/tests/` and keep `docs/reconciled-surfaces.md` and `README.md` aligned with the runtime model.

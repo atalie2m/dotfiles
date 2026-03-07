@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.05-darwin";
+    nixpkgs-linux.url = "github:NixOS/nixpkgs/nixos-25.05";
 
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
@@ -76,8 +77,9 @@
 
   outputs = inputs @ { denix, flake-parts, ... }:
     let
+      nixLib = inputs.nixpkgs.lib;
       localStub = builtins.pathExists (inputs.local + "/STUB");
-      dotlib = import ./nix/lib { lib = inputs.nixpkgs.lib; };
+      dotlib = import ./nix/lib { lib = nixLib; };
       repoPaths = rec {
         root = ./.;
         apps = root + "/apps";
@@ -91,10 +93,260 @@
       brewCatalog = import ./nix/catalog/tools/homebrew.nix;
       dedicatedHomebrewCatalog = import ./nix/catalog/tools/homebrew-dedicated.nix;
       toolOwnershipLib = import ./nix/lib/tool-ownership.nix {
-        lib = inputs.nixpkgs.lib;
+        lib = nixLib;
         inherit nixCatalog brewCatalog;
         dedicatedHomebrew = dedicatedHomebrewCatalog;
       };
+      linuxSystems = [ "aarch64-linux" "x86_64-linux" ];
+      treefmtConfigFor = pkgs: {
+        projectRootFile = "flake.nix";
+        settings = {
+          global.excludes = [ ".direnv/**" "result/**" "flake.lock" ];
+          formatter.prettier-json = {
+            command = "${pkgs.nodePackages.prettier}/bin/prettier";
+            includes = [ "*.json" "**/*.json" ];
+            options = [ "--write" ];
+          };
+        };
+        programs.nixpkgs-fmt.enable = true;
+        programs.shfmt = {
+          enable = true;
+          indent_size = 2;
+        };
+      };
+      mkPortableChecks = { pkgs, formatterWrapper }:
+        {
+          treefmt = pkgs.runCommand "treefmt-check"
+            {
+              nativeBuildInputs = [ pkgs.git formatterWrapper ];
+              src = repoPaths.root;
+            } ''
+                          set -euo pipefail
+                          project_dir="$TMPDIR/project"
+                          cp -r "$src" "$project_dir"
+                          chmod -R u+w "$project_dir"
+                          cd "$project_dir"
+
+                          export HOME="$TMPDIR/home"
+                          mkdir -p "$HOME"
+                          cat >"$HOME/.gitconfig" <<'EOF'
+            [user]
+              name = Nix
+              email = nix@localhost
+            [init]
+              defaultBranch = main
+            EOF
+                          export GIT_CONFIG_NOSYSTEM=1
+                          export LANG=en_US.UTF-8
+                          export LC_ALL=en_US.UTF-8
+
+            git init --quiet
+            git add .
+            git -c commit.gpgSign=false commit -m init --quiet
+
+                          treefmt --version
+                          treefmt --no-cache
+                          git --no-pager diff --exit-code
+                          touch "$out"
+          '';
+
+          statix = pkgs.runCommand "statix-check"
+            {
+              nativeBuildInputs = [ pkgs.statix ];
+              src = repoPaths.root;
+            } ''
+                        cd "$src"
+                        config_file=$(mktemp)
+                        cat >"$config_file" <<'EOF'
+            disabled = [
+              "manual_inherit",
+              "manual_inherit_from",
+              "useless_parens",
+              "empty_pattern",
+              "useless_has_attr",
+              "repeated_keys",
+            ]
+            ignore = [ ".direnv", "result" ]
+            nix_version = "2.4"
+            EOF
+                        statix check --config "$config_file" .
+                        touch "$out"
+          '';
+
+          deadnix = pkgs.runCommand "deadnix-check"
+            {
+              nativeBuildInputs = [ pkgs.deadnix ];
+              src = repoPaths.root;
+            } ''
+            cd "$src"
+            deadnix --fail -l -L .
+            touch "$out"
+          '';
+
+          shellcheck = pkgs.runCommand "shellcheck-check"
+            {
+              nativeBuildInputs = [ pkgs.findutils pkgs.shellcheck ];
+              src = repoPaths.root;
+            } ''
+            cd "$src"
+            mapfile -t script_files < <(find scripts -type f -name '*.sh' | sort)
+            mapfile -t sourced_files < <(
+              {
+                if [[ -d surfaces/shell/desired ]]; then
+                  find surfaces/shell/desired -type f -name '*.sh'
+                fi
+                if [[ -d apps/shell ]]; then
+                  find apps/shell -type f -name '*.sh'
+                fi
+              } | sort
+            )
+
+            if [[ "''${#script_files[@]}" -eq 0 && "''${#sourced_files[@]}" -eq 0 ]]; then
+              touch "$out"
+              exit 0
+            fi
+
+            if [[ "''${#script_files[@]}" -gt 0 ]]; then
+              shellcheck \
+                -e SC1091 \
+                -e SC2016 \
+                -e SC2129 \
+                "''${script_files[@]}"
+            fi
+
+            if [[ "''${#sourced_files[@]}" -gt 0 ]]; then
+              shellcheck \
+                --shell=bash \
+                -e SC1091 \
+                -e SC2016 \
+                -e SC2129 \
+                "''${sourced_files[@]}"
+            fi
+            touch "$out"
+          '';
+
+          syncShellSmoke = pkgs.runCommand "sync-shell-smoke-test"
+            {
+              nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
+              src = repoPaths.root;
+            } ''
+            cd "$src"
+            bash scripts/tests/sync-shell-smoke-test.sh
+            touch "$out"
+          '';
+
+          syncCliMigration = pkgs.runCommand "sync-cli-migration-test"
+            {
+              nativeBuildInputs = [ pkgs.bash pkgs.git ];
+              src = repoPaths.root;
+            } ''
+            cd "$src"
+            bash scripts/tests/sync-cli-migration-test.sh
+            touch "$out"
+          '';
+
+          syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
+            {
+              nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
+              src = repoPaths.root;
+            } ''
+            cd "$src"
+            bash scripts/tests/sync-cli-common-parse-test.sh
+            touch "$out"
+          '';
+
+          exportCleanSmoke = pkgs.runCommand "export-clean-smoke-test"
+            {
+              nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.git pkgs.gnused pkgs.gnutar ];
+              src = repoPaths.root;
+            } ''
+            project_dir="$TMPDIR/project"
+            cp -r "$src" "$project_dir"
+            chmod -R u+w "$project_dir"
+            cd "$project_dir"
+            git init --quiet
+            git add .
+            bash scripts/tests/export-clean-smoke-test.sh
+            touch "$out"
+          '';
+
+          shellEntrypointWriteability = pkgs.runCommand "shell-zsh-writeability-test"
+            {
+              nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
+              src = repoPaths.root;
+            } ''
+            cd "$src"
+            bash scripts/tests/shell-zsh-writeability-test.sh
+            touch "$out"
+          '';
+
+          zshrcCompat = pkgs.runCommand "zshrc-compat-test"
+            {
+              nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
+              src = repoPaths.root;
+            } ''
+            cd "$src"
+            bash scripts/tests/zshrc-compat-test.sh
+            touch "$out"
+          '';
+
+          vscodeInstancesSmoke = pkgs.runCommand "vscode-instances-smoke-test"
+            {
+              nativeBuildInputs = [ pkgs.bash pkgs.jq ];
+              src = repoPaths.root;
+            } ''
+            cd "$src"
+            bash scripts/tests/vscode-instances-smoke-test.sh
+            touch "$out"
+          '';
+
+          retiredHostLiterals = pkgs.runCommand "retired-host-literals-test"
+            {
+              nativeBuildInputs = [ pkgs.bash pkgs.ripgrep ];
+              src = repoPaths.root;
+            } ''
+            cd "$src"
+            bash scripts/tests/retired-host-literals-test.sh
+            touch "$out"
+          '';
+        };
+      mkPortableDevShell = { pkgs, formatterWrapper }:
+        pkgs.mkShell {
+          name = "dotfiles-dev";
+          packages = [
+            pkgs.age
+            pkgs.deadnix
+            pkgs.nvfetcher
+            pkgs.shellcheck
+            pkgs.sops
+            pkgs.statix
+            formatterWrapper
+          ];
+        };
+      linuxContributorOutputs =
+        nixLib.foldl'
+          nixLib.recursiveUpdate
+          { }
+          (map
+            (system:
+              let
+                pkgs = import inputs.nixpkgs-linux { inherit system; };
+                treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs (treefmtConfigFor pkgs);
+                formatterWrapper = treefmtEval.config.build.wrapper;
+              in
+              {
+                formatter.${system} = formatterWrapper;
+                checks.${system} = mkPortableChecks { inherit pkgs formatterWrapper; };
+                devShells.${system}.default = mkPortableDevShell { inherit pkgs formatterWrapper; };
+                apps.${system}.format = {
+                  type = "app";
+                  program = "${pkgs.writeShellScript "dotfiles-format" ''
+                    exec ${formatterWrapper}/bin/treefmt "$@"
+                  ''}";
+                  meta.description = "Format Nix and shell files with treefmt.";
+                };
+              })
+            linuxSystems);
       mkConfigurations = { moduleSystem, paths }:
         let
           facts = import (inputs.local + "/facts.nix");
@@ -221,137 +473,18 @@
               ''}";
               meta.description = description;
             };
+          portableChecks = mkPortableChecks {
+            inherit pkgs;
+            formatterWrapper = config.treefmt.build.wrapper;
+          };
         in
         {
-          treefmt = {
-            projectRootFile = "flake.nix";
-            settings = {
-              global.excludes = [ ".direnv/**" "result/**" "flake.lock" ];
-              formatter.prettier-json = {
-                command = "${pkgs.nodePackages.prettier}/bin/prettier";
-                includes = [ "*.json" "**/*.json" ];
-                options = [ "--write" ];
-              };
-            };
-            programs.nixpkgs-fmt.enable = true;
-            programs.shfmt = {
-              enable = true;
-              indent_size = 2;
-            };
-          };
+          treefmt = treefmtConfigFor pkgs;
 
           formatter = config.treefmt.build.wrapper;
 
-          checks = {
-            treefmt = lib.mkForce (pkgs.runCommand "treefmt-check"
-              {
-                nativeBuildInputs = [ pkgs.git config.treefmt.build.wrapper ];
-                src = dotfilesRoot;
-              } ''
-                            set -euo pipefail
-                            project_dir="$TMPDIR/project"
-                            cp -r "$src" "$project_dir"
-                            chmod -R u+w "$project_dir"
-                            cd "$project_dir"
-
-                            export HOME="$TMPDIR/home"
-                            mkdir -p "$HOME"
-                            cat >"$HOME/.gitconfig" <<'EOF'
-              [user]
-                name = Nix
-                email = nix@localhost
-              [init]
-                defaultBranch = main
-              EOF
-                            export GIT_CONFIG_NOSYSTEM=1
-                            export LANG=en_US.UTF-8
-                            export LC_ALL=en_US.UTF-8
-
-              git init --quiet
-              git add .
-              git -c commit.gpgSign=false commit -m init --quiet
-
-                            treefmt --version
-                            treefmt --no-cache
-                            git --no-pager diff --exit-code
-                            touch "$out"
-            '');
-
-            statix = pkgs.runCommand "statix-check"
-              {
-                nativeBuildInputs = [ pkgs.statix ];
-                src = dotfilesRoot;
-              } ''
-                          cd "$src"
-                          config_file=$(mktemp)
-                          cat >"$config_file" <<'EOF'
-              disabled = [
-                "manual_inherit",
-                "manual_inherit_from",
-                "useless_parens",
-                "empty_pattern",
-                "useless_has_attr",
-                "repeated_keys",
-              ]
-              ignore = [ ".direnv", "result" ]
-              nix_version = "2.4"
-              EOF
-                          statix check --config "$config_file" .
-                          touch "$out"
-            '';
-
-            deadnix = pkgs.runCommand "deadnix-check"
-              {
-                nativeBuildInputs = [ pkgs.deadnix ];
-                src = dotfilesRoot;
-              } ''
-              cd "$src"
-              deadnix --fail -l -L .
-              touch "$out"
-            '';
-
-            shellcheck = pkgs.runCommand "shellcheck-check"
-              {
-                nativeBuildInputs = [ pkgs.findutils pkgs.shellcheck ];
-                src = dotfilesRoot;
-              } ''
-              cd "$src"
-              mapfile -t script_files < <(find scripts -type f -name '*.sh' | sort)
-              mapfile -t sourced_files < <(
-                {
-                  if [[ -d surfaces/shell/desired ]]; then
-                    find surfaces/shell/desired -type f -name '*.sh'
-                  fi
-                  if [[ -d apps/shell ]]; then
-                    find apps/shell -type f -name '*.sh'
-                  fi
-                } | sort
-              )
-
-              if [[ "''${#script_files[@]}" -eq 0 && "''${#sourced_files[@]}" -eq 0 ]]; then
-                touch "$out"
-                exit 0
-              fi
-
-              if [[ "''${#script_files[@]}" -gt 0 ]]; then
-                shellcheck \
-                  -e SC1091 \
-                  -e SC2016 \
-                  -e SC2129 \
-                  "''${script_files[@]}"
-              fi
-
-              if [[ "''${#sourced_files[@]}" -gt 0 ]]; then
-                shellcheck \
-                  --shell=bash \
-                  -e SC1091 \
-                  -e SC2016 \
-                  -e SC2129 \
-                  "''${sourced_files[@]}"
-              fi
-              touch "$out"
-            '';
-
+          checks = portableChecks // {
+            treefmt = lib.mkForce portableChecks.treefmt;
             toolOwnership = pkgs.runCommand "tool-ownership-check" { } ''
                             if [ ${toString (builtins.length toolOwnershipFailures)} -ne 0 ]; then
                               cat >&2 <<'EOF'
@@ -381,90 +514,11 @@
               builtins.seq _ (pkgs.runCommand "catalog-policy-check" { } ''
                 touch "$out"
               '');
-
-            syncShellSmoke = pkgs.runCommand "sync-shell-smoke-test"
-              {
-                nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
-                src = dotfilesRoot;
-              } ''
-              cd "$src"
-              bash scripts/tests/sync-shell-smoke-test.sh
-              touch "$out"
-            '';
-
-            syncCliMigration = pkgs.runCommand "sync-cli-migration-test"
-              {
-                nativeBuildInputs = [ pkgs.bash pkgs.git ];
-                src = dotfilesRoot;
-              } ''
-              cd "$src"
-              bash scripts/tests/sync-cli-migration-test.sh
-              touch "$out"
-            '';
-
-            syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
-              {
-                nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
-                src = dotfilesRoot;
-              } ''
-              cd "$src"
-              bash scripts/tests/sync-cli-common-parse-test.sh
-              touch "$out"
-            '';
-
-            exportCleanSmoke = pkgs.runCommand "export-clean-smoke-test"
-              {
-                nativeBuildInputs = [ pkgs.bash pkgs.git pkgs.gnutar ];
-                src = dotfilesRoot;
-              } ''
-              cd "$src"
-              bash scripts/tests/export-clean-smoke-test.sh
-              touch "$out"
-            '';
-
-            shellEntrypointWriteability = pkgs.runCommand "shell-zsh-writeability-test"
-              {
-                nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
-                src = dotfilesRoot;
-              } ''
-              cd "$src"
-              bash scripts/tests/shell-zsh-writeability-test.sh
-              touch "$out"
-            '';
-
-            zshrcCompat = pkgs.runCommand "zshrc-compat-test"
-              {
-                nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
-                src = dotfilesRoot;
-              } ''
-              cd "$src"
-              bash scripts/tests/zshrc-compat-test.sh
-              touch "$out"
-            '';
-
-            vscodeInstancesSmoke = pkgs.runCommand "vscode-instances-smoke-test"
-              {
-                nativeBuildInputs = [ pkgs.bash pkgs.jq ];
-                src = dotfilesRoot;
-              } ''
-              cd "$src"
-              bash scripts/tests/vscode-instances-smoke-test.sh
-              touch "$out"
-            '';
-
           };
 
-          devShells.default = pkgs.mkShell {
-            name = "dotfiles-dev";
-            packages = [
-              pkgs.age
-              pkgs.deadnix
-              pkgs.nvfetcher
-              pkgs.shellcheck
-              pkgs.sops
-              pkgs.statix
-              config.treefmt.build.wrapper
-            ];
+          devShells.default = mkPortableDevShell {
+            inherit pkgs;
+            formatterWrapper = config.treefmt.build.wrapper;
           };
 
           packages = {
@@ -527,7 +581,7 @@
             description = "Web development template: devShell with Node 22, pnpm, bun, optional wrangler, awscli2, jq/yq, mkcert, just; Prettier formatting via treefmt-nix; apps.dev/apps.format and checks";
           };
         };
-      } // (if localStub then { } else {
+      } // linuxContributorOutputs // (if localStub then { } else {
         inherit nixosConfigurations homeConfigurations darwinConfigurations;
       });
     };

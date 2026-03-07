@@ -78,4 +78,49 @@ if grep -E '(^|/)\\._[^/]+$' "$tar_list" >/dev/null; then
   exit 1
 fi
 
+fake_git_dir="$tmp_root/fake-git"
+mkdir -p "$fake_git_dir"
+
+cat >"$fake_git_dir/git-missing" <<'EOF'
+#!/usr/bin/env bash
+echo "git: command not found" >&2
+exit 127
+EOF
+chmod +x "$fake_git_dir/git-missing"
+
+cat >"$fake_git_dir/git-refused" <<EOF
+#!/usr/bin/env bash
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+  echo "fatal: detected dubious ownership in repository at '$ROOT'" >&2
+  exit 128
+fi
+echo "fatal: detected dubious ownership in repository at '$ROOT'" >&2
+exit 128
+EOF
+chmod +x "$fake_git_dir/git-refused"
+
+assert_export_fails() {
+  local expected="$1"
+  local wrapper="$2"
+  local stderr_file="$tmp_root/$wrapper.err"
+  local path_dir="$tmp_root/path-$wrapper"
+
+  mkdir -p "$path_dir"
+  ln -sf "$fake_git_dir/$wrapper" "$path_dir/git"
+
+  if PATH="$path_dir:$PATH" bash "$EXPORT_SCRIPT" --format dir --output "$tmp_root/$wrapper-output" >"$tmp_root/$wrapper.out" 2>"$stderr_file"; then
+    echo "FAIL: export-clean unexpectedly succeeded with git wrapper $wrapper" >&2
+    exit 1
+  fi
+
+  if ! grep -Fq "$expected" "$stderr_file"; then
+    echo "FAIL: export-clean error message missing expected text for $wrapper" >&2
+    cat "$stderr_file" >&2 || true
+    exit 1
+  fi
+}
+
+assert_export_fails "requires a trusted Git worktree" "git-missing"
+assert_export_fails "detected dubious ownership" "git-refused"
+
 echo "PASS: export clean smoke"

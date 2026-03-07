@@ -5,7 +5,7 @@ The design is intentionally small and stateless.
 
 ## Shell entrypoints
 
-`scripts/sync-adapters/shell.sh` is a standalone writable entrypoint manager.
+`scripts/sync-adapters/shell.sh` is the writable entrypoint manager entrypoint, with helper logic split under `scripts/sync-adapters/shell/`.
 It compares desired managed content against the current file and repairs the file in place.
 Shared shell helpers still come from Home Manager at `~/.config/shell/common.sh`; that file is not part of the runtime sync surface.
 

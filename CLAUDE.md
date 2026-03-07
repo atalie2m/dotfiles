@@ -5,27 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Remarks
 - Nix and Denix have few usage examples, so be sure to read the references carefully.
 - `brew-nix` is different from `homebrew` (nix-darwin). `brew-nix` installs brew Casks without pre-installing Homebrew.
+- Canonical command examples and current host names live in `docs/commands.md`.
 - Follow steps sequentially. After each step, run:
   - `git add` (stage changes)
   - `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles`
   - `nix run .#apply -- --host <host> --action build`
   - Ask the user to run `nix run .#apply -- --host <host>` (or `sudo darwin-rebuild switch ...` if they prefer manual invocation)
-
-## Build and Development Commands
-
-### Build and Apply Configuration
-```bash
-# Build only
-nix run .#apply -- --host a2m_mac --action build
-
-# Switch to the new configuration (requires sudo; CLI handles it)
-nix run .#apply -- --host a2m_mac
-
-# Manual alternative
-darwin-rebuild build --flake .#a2m_mac \
-  --override-input local path:$HOME/.config/dotfiles \
-  --override-input secrets path:$HOME/.config/dotfiles
-```
 
 ## Architecture Overview
 

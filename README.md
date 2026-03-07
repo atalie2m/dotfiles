@@ -46,21 +46,7 @@ Operational note: this repo keeps shared NixOS and standalone Home Manager trees
   - `full`: composition of `base + darwin + dev`.
   - `minimum`: minimal base profile alias.
 
-CLI usage examples (recommended for macOS / nix-darwin):
-
-```bash
-# Apply default rice for each host
-nix run .#apply -- --host full_mac
-nix run .#apply -- --host minimal_mac
-
-# Build only (no switch)
-nix run .#apply -- --host full_mac --action build
-
-# Switch rices per host
-nix run .#apply -- --host full_mac --rice minimum
-nix run .#apply -- --host minimal_mac --rice full
-
-```
+Canonical host names and CLI examples live in [`docs/commands.md`](docs/commands.md).
 
 Manual attribute examples (still valid):
 `full_mac`, `minimal_mac`, `full_mac-minimum`, `minimal_mac-full`.
@@ -112,14 +98,7 @@ Example (`flake.nix` for a Terraform repo):
 ## Tool Catalog (myconfig.tools)
 
 Group toggles such as `tools.dev.enable` are bundle switches, not just namespaces. Enabling a group fans out to the catalog-owned tool toggles under that group.
-Use `list-tools` as the canonical way to inspect the expanded toggle set for a host/rice, and see [`docs/tool-catalog.md`](docs/tool-catalog.md) for the catalog rules.
-
-List effective tool toggles for a target host/rice:
-
-```bash
-nix run .#list-tools -- --host full_mac
-nix run .#list-tools -- --host full_mac --rice minimum --format json
-```
+Use `list-tools` as the canonical way to inspect the expanded group/tool toggle set for a host/rice. It intentionally omits deeper toggles such as `system.brewNix.autoDock.enable`; see [`docs/tool-catalog.md`](docs/tool-catalog.md) for the exact scope and [`docs/commands.md`](docs/commands.md) for examples.
 
 Manual evaluation (JSON):
 
@@ -181,7 +160,7 @@ The default Zsh prompt is Pure. `base` / `minimum` keep that prompt-only setup, 
 ### Shell sync (writable entrypoints)
 
 Shell sync is a small, stateless writable-entrypoint manager.
-Runtime sync operations are implemented through `scripts/sync.sh` (surface: `shell`) with `scripts/sync-adapters/shell.sh`.
+Runtime sync operations are implemented through `scripts/sync.sh` (surface: `shell`) with `scripts/sync-adapters/shell.sh` and sourced helpers under `scripts/sync-adapters/shell/`.
 Its job is to keep writable shell entrypoints in place and update only repo-managed blocks/files.
 Shared shell helpers are shipped separately as `apps/shell/common.sh` and linked to `~/.config/shell/common.sh`; they are declarative Home Manager content, not part of runtime sync state.
 
@@ -545,119 +524,30 @@ Advanced overrides:
 - `FACTS` and `SECRETS` may point to other flake input references when needed.
 - `doctor` and `bootstrap` still require matching `FACTS_DIR` / `SECRETS_DIR` when those overrides are not `path:...`, because they read or write local files directly.
 
+Canonical command examples live in [`docs/commands.md`](docs/commands.md).
+
 ### Bootstrap (first run)
-
-```bash
-# Generate minimal facts/secrets and run doctor
-nix run .#bootstrap
-
-# Generate facts/secrets, run doctor, then apply a target
-nix run .#bootstrap -- --host full_mac --apply
-
-# Non-interactive (auto-apply)
-nix run .#bootstrap -- --host full_mac --yes
-```
 
 `bootstrap` creates a minimal `facts.nix` with `user.username` and detected `user.platform`, and leaves extra fields such as `stateVersion` as opt-in comments.
 
 ### Doctor (health checks)
-
-```bash
-# Global facts/secrets/basic system checks
-nix run .#doctor
-
-# Basic checks
-nix run .#doctor -- --host full_mac
-
-# Strict checks (includes nix flake check + enabled sync checks)
-nix run .#doctor -- --host full_mac --strict
-
-# JSON output for CI
-nix run .#doctor -- --json
-```
 
 `doctor` can run without a host for global facts/secrets/basic system checks.
 For target evaluation and strict sync checks, pass `--host` so `doctor` can gate checks by target tool enablement.
 
 ### Apply (build/switch)
 
-```bash
-# Apply default rice
-nix run .#apply -- --host full_mac
-
-# Switch rices
-nix run .#apply -- --host full_mac --rice minimum
-
-# Build only (no switch)
-nix run .#apply -- --host full_mac --action build
-
-# Avoid sudo (CI/non-privileged)
-nix run .#apply -- --host full_mac --no-sudo --action build
-
-# Pass extra args to darwin-rebuild
-nix run .#apply -- --host full_mac -- --show-trace
-```
-
 ### Update (flake inputs + checks/build)
-
-```bash
-# Update all non-path root inputs from flake.lock, then run checks only
-UPDATE_SKIP_BUILD=1 nix run .#update
-
-# Update all non-path root inputs from flake.lock, then run checks/build
-nix run .#update -- --host full_mac
-
-# Full `nix flake update`
-UPDATE_ALL=1 nix run .#update -- --host full_mac
-
-# Force checks + formatter
-UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host full_mac
-```
 
 ### Formatter / Checks / Dev Shell
 
-```bash
-# treefmt formatter (used by `nix fmt`)
-nix fmt
-
-# explicit format app (same formatter as above)
-nix run .#format
-
-# checks: treefmt + statix + deadnix + shellcheck
-nix flake check \
-  --override-input local path:$HOME/.config/dotfiles \
-  --override-input secrets path:$HOME/.config/dotfiles
-
-# dotfiles development toolchain
-nix develop
-```
-
 ### Clean export
 
-```bash
-# Export the tracked working tree as a tarball without .git metadata or AppleDouble files
-nix run .#dotfiles -- export-clean --format tar --output /tmp/dotfiles-clean.tar
-
-# Or export into a directory via the dedicated app wrapper
-nix run .#export-clean -- --format dir --output /tmp/dotfiles-clean
-```
+`export-clean` is tracked-only and requires Git to access a trusted worktree. It fails closed if Git is unavailable or refuses the repository; see [`docs/commands.md`](docs/commands.md) for examples.
 
 ## Manual commands (darwin-rebuild / home-manager)
 
-```bash
-# nix-darwin configuration
-FACTS_DIR="$HOME/.config/dotfiles"
-SECRETS_DIR="$HOME/.config/dotfiles"
-
-nix run .#darwin-rebuild -- switch --flake .#<PROFILE_NAME> \
-  --override-input local path:$FACTS_DIR \
-  --override-input secrets path:$SECRETS_DIR
-
-# home-manager configuration (replace <HOSTNAME> with your actual hostname)
-nix run home-manager/release-25.05 -- switch --flake .#<PROFILE_NAME> \
-  --override-input local path:$FACTS_DIR \
-  --override-input secrets path:$SECRETS_DIR
-```
+Manual rebuild examples live in [`docs/commands.md`](docs/commands.md).
 
 ## Troubleshooting
 

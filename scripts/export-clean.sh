@@ -67,6 +67,24 @@ trap cleanup EXIT
 export_root="$tmp_root/export"
 mkdir -p "$export_root"
 
+git_bin="$(command -v git 2>/dev/null || true)"
+[[ -n $git_bin ]] || die "git is required for export-clean"
+
+git_check_err="$tmp_root/git-check.err"
+tracked_paths_file="$tmp_root/tracked-paths.zlist"
+
+if ! "$git_bin" -C "$ROOT" rev-parse --show-toplevel >/dev/null 2>"$git_check_err"; then
+  git_check_message="$(tr '\n' ' ' <"$git_check_err" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+  [[ -n $git_check_message ]] || git_check_message="git could not access the repository"
+  die "export-clean requires a trusted Git worktree with a working git binary: $git_check_message"
+fi
+
+if ! "$git_bin" -C "$ROOT" ls-files -z >"$tracked_paths_file" 2>"$git_check_err"; then
+  git_check_message="$(tr '\n' ' ' <"$git_check_err" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+  [[ -n $git_check_message ]] || git_check_message="git could not enumerate tracked files"
+  die "export-clean failed to enumerate tracked files: $git_check_message"
+fi
+
 while IFS= read -r -d '' relpath; do
   src="$ROOT/$relpath"
   dest="$export_root/$relpath"
@@ -75,15 +93,7 @@ while IFS= read -r -d '' relpath; do
 
   mkdir -p "$(dirname "$dest")"
   cp -pP "$src" "$dest"
-done < <(
-  if git -C "$ROOT" rev-parse --show-toplevel >/dev/null 2>&1; then
-    git -C "$ROOT" ls-files -z
-  else
-    find . \
-      \( -name .git -o -name .DS_Store -o -name result -o -name '._*' \) -prune \
-      -o \( -type f -o -type l \) -print0
-  fi
-)
+done <"$tracked_paths_file"
 
 case "$format" in
 dir)

@@ -13,6 +13,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  linux-tooling:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix (Determinate Systems)
+        uses: DeterminateSystems/nix-installer-action@v19
+        with:
+          planner: linux
+          extra-conf: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Run Linux contributor checks
+        run: nix flake check
+
+      - name: Validate Linux format app
+        run: nix run .#format -- --version
+
+      - name: Validate Linux dev shell
+        run: nix develop --command bash -lc 'treefmt --version && shellcheck --version'
+
   test:
     runs-on: macos-latest
     env:

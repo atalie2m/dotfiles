@@ -189,6 +189,7 @@ delib.module {
 
           launcher = pkgs.writeShellApplication {
             name = "code-${name}";
+            runtimeInputs = [ pkgs.jq ];
             text = ''
               set -euo pipefail
               exec ${vscodeInstancesScript} launch ${lib.escapeShellArgs (commonScriptArgs ++ [ "--disabled-extensions-txt" disabledExtensionsTxt ])} -- "$@"
