@@ -227,13 +227,22 @@ require_host_argument() {
 resolve_text_tool_bin() {
   local tool_name="$1"
   local tool_path=""
+  local fallback_path=""
 
   tool_path="$(command -v "$tool_name" 2>/dev/null || true)"
-  if [[ -z $tool_path ]]; then
-    die "required command not found in PATH: $tool_name"
+  if [[ -n $tool_path ]]; then
+    printf '%s\n' "$tool_path"
+    return 0
   fi
 
-  printf '%s\n' "$tool_path"
+  for fallback_path in "/usr/bin/$tool_name" "/bin/$tool_name"; do
+    if [[ -x $fallback_path ]]; then
+      printf '%s\n' "$fallback_path"
+      return 0
+    fi
+  done
+
+  die "required command not found in PATH: $tool_name"
 }
 
 DOTFILES_TEXT_AWK_BIN="${DOTFILES_TEXT_AWK_BIN:-$(resolve_text_tool_bin awk)}"
