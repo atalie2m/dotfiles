@@ -15,6 +15,7 @@ Subcommands:
   export-clean
   list-tools
   sync
+  vscode
 USAGE
 }
 
@@ -27,7 +28,7 @@ subcommand="$1"
 shift
 
 case "$subcommand" in
-apply | update | doctor | bootstrap | export-clean | list-tools | sync)
+apply | update | doctor | bootstrap | export-clean | list-tools | sync | vscode)
   target="$SCRIPT_DIR/${subcommand}.sh"
   if [[ ! -f $target ]]; then
     cwd_target="$(pwd)/scripts/${subcommand}.sh"

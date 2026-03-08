@@ -1,0 +1,8 @@
+# Windsurf plugin (formerly Codeium)
+codeium.codeium
+
+# Claude Dev / Cline
+saoudrizwan.claude-dev
+
+# Parallels integration
+parallelsdesktop.parallels-desktop

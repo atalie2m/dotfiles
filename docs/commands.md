@@ -72,6 +72,12 @@ nix run .#dotfiles -- sync vscode --check --details --diff
 nix run .#dotfiles -- sync vscode --apply
 nix run .#dotfiles -- sync vscode --check --profile web
 nix run .#dotfiles -- sync vscode --apply --profile native
+
+# VS Code launch helper
+nix run .#dotfiles -- vscode launch --profile web
+nix run .#dotfiles -- vscode launch --profile native
+nix run .#dotfiles -- vscode launch --profile web -- path/to/project
+nix run .#dotfiles -- vscode launch --profile web --print-command
 ```
 
 Notes:

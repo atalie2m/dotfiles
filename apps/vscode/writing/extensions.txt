@@ -1,6 +1,5 @@
 # Writing / docs
 james-yu.latex-workshop
-jeandeaual.lilypond-formatter
 jeandeaual.lilypond-syntax
 jeandeaual.scheme
 lhl2617.lilypond-formatter

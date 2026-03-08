@@ -305,6 +305,16 @@
             touch "$out"
           '';
 
+          vscodeLaunchSmoke = pkgs.runCommand "vscode-launch-test"
+            {
+              nativeBuildInputs = [ pkgs.bash ];
+              src = repoPaths.root;
+            } ''
+            cd "$src"
+            bash scripts/tests/vscode-launch-test.sh
+            touch "$out"
+          '';
+
           retiredHostLiterals = pkgs.runCommand "retired-host-literals-test"
             {
               nativeBuildInputs = [ pkgs.bash pkgs.ripgrep ];

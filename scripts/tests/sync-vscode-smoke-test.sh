@@ -44,6 +44,19 @@ code_state_dir="$tmp_root/code-state"
 
 mkdir -p "$home_dir" "$managed_dir/_default" "$managed_dir/native" "$managed_dir/web" "$fake_bin_dir" "$code_state_dir"
 mkdir -p "$home_dir/.local/share/vscode-instances/native"
+mkdir -p "$home_dir/.vscode/extensions/ext.base-1.0.0" "$home_dir/.vscode/extensions/ext.stale-1.0.0"
+
+cat >"$home_dir/.vscode/extensions/extensions.json" <<'EOF'
+[
+  {
+    "identifier": {
+      "id": "ext.base"
+    },
+    "relativeLocation": "ext.base-1.0.0",
+    "version": "1.0.0"
+  }
+]
+EOF
 
 cat >"$managed_dir/_default/settings.json" <<'EOF'
 {
@@ -86,6 +99,49 @@ state_dir="${FAKE_CODE_STATE_DIR:?}"
 profile="native"
 command=""
 extension_id=""
+extensions_root="${HOME}/.vscode/extensions"
+extensions_manifest="${extensions_root}/extensions.json"
+
+ensure_manifest() {
+  mkdir -p "$extensions_root"
+  if [[ ! -f $extensions_manifest ]]; then
+    printf '[]\n' >"$extensions_manifest"
+  fi
+}
+
+upsert_manifest_extension() {
+  local ext="$1"
+  local slug location tmp_file
+  slug="${ext}-1.0.0"
+  location="${extensions_root}/${slug}"
+  mkdir -p "$location"
+  ensure_manifest
+  tmp_file="${extensions_manifest}.tmp"
+  jq -S \
+    --arg id "$ext" \
+    --arg slug "$slug" \
+    --arg path "$location" \
+    '
+      [ .[] | select((.identifier.id // "") != $id) ] + [
+        {
+          identifier: { id: $id },
+          location: { "$mid": 1, path: $path, scheme: "file" },
+          relativeLocation: $slug,
+          version: "1.0.0"
+        }
+      ]
+    ' "$extensions_manifest" >"$tmp_file"
+  mv "$tmp_file" "$extensions_manifest"
+}
+
+remove_manifest_extension() {
+  local ext="$1"
+  local tmp_file
+  ensure_manifest
+  tmp_file="${extensions_manifest}.tmp"
+  jq -S --arg id "$ext" '[ .[] | select((.identifier.id // "") != $id) ]' "$extensions_manifest" >"$tmp_file"
+  mv "$tmp_file" "$extensions_manifest"
+}
 
 args=("$@")
 idx=0
@@ -123,6 +179,7 @@ list)
   awk 'NF { print }' "$profile_file"
   ;;
 install)
+  upsert_manifest_extension "$extension_id"
   awk -v ext="$extension_id" '
     BEGIN { seen = 0 }
     $0 == ext { seen = 1 }
@@ -136,6 +193,7 @@ install)
   mv "${profile_file}.tmp" "$profile_file"
   ;;
 uninstall)
+  remove_manifest_extension "$extension_id"
   awk -v ext="$extension_id" '$0 != ext { print }' "$profile_file" >"${profile_file}.tmp"
   mv "${profile_file}.tmp" "$profile_file"
   ;;
@@ -237,13 +295,13 @@ if ! jq -e '.ownedSettingsKeys | index("files.autoSave")' "$web_state" >/dev/nul
   exit 1
 fi
 
-if ! grep -Fqx "ext.base" "$code_state_dir/native.extensions" || ! grep -Fqx "ext.native" "$code_state_dir/native.extensions"; then
-  echo "FAIL: native extensions were not installed" >&2
+if ! jq -e 'any(.[]; .identifier.id == "ext.base") and any(.[]; .identifier.id == "ext.native")' "$home_dir/.vscode/extensions/extensions.json" >/dev/null; then
+  echo "FAIL: native extensions were not recorded in the global extensions manifest" >&2
   exit 1
 fi
 
-if ! grep -Fqx "ext.base" "$code_state_dir/Web.extensions" || ! grep -Fqx "ext.web" "$code_state_dir/Web.extensions"; then
-  echo "FAIL: web extensions were not installed" >&2
+if ! jq -e 'any(.[]; .identifier.id == "ext.base") and any(.[]; .identifier.id == "ext.web")' "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json" >/dev/null; then
+  echo "FAIL: web extensions were not written to the profile manifest" >&2
   exit 1
 fi
 
@@ -252,9 +310,16 @@ if [[ -d "$home_dir/.local/share/vscode-instances" ]]; then
   exit 1
 fi
 
+if [[ -d "$home_dir/.vscode/extensions/ext.stale-1.0.0" ]]; then
+  echo "FAIL: orphaned VS Code extension dir was not removed" >&2
+  exit 1
+fi
+
 jq '. + { "editor.minimap.enabled": false }' "$web_settings" >"$tmp_root/web-settings-user.json"
 mv "$tmp_root/web-settings-user.json" "$web_settings"
-printf 'ext.user\n' >>"$code_state_dir/Web.extensions"
+jq '. + [{ "identifier": { "id": "ext.user" }, "relativeLocation": "ext.user-1.0.0", "version": "1.0.0" }]' \
+  "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json" >"$tmp_root/web-extensions-user.json"
+mv "$tmp_root/web-extensions-user.json" "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json"
 
 cat >"$managed_dir/_default/settings.json" <<'EOF'
 {
@@ -281,13 +346,13 @@ if [[ $(jq -r '.["editor.minimap.enabled"]' "$web_settings") != "false" ]]; then
   exit 1
 fi
 
-if grep -Fqx "ext.web" "$code_state_dir/Web.extensions"; then
-  echo "FAIL: removed owned extension still exists after apply" >&2
+if jq -e 'any(.[]; .identifier.id == "ext.web")' "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json" >/dev/null; then
+  echo "FAIL: removed owned extension still exists in the web profile manifest after apply" >&2
   exit 1
 fi
 
-if ! grep -Fqx "ext.user" "$code_state_dir/Web.extensions"; then
-  echo "FAIL: unmanaged user extension was not preserved" >&2
+if ! jq -e 'any(.[]; .identifier.id == "ext.user")' "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json" >/dev/null; then
+  echo "FAIL: unmanaged user extension was not preserved in the web profile manifest" >&2
   exit 1
 fi
 

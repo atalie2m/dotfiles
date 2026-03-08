@@ -19,7 +19,6 @@ natqe.reload
 silesky.toggle-boolean
 sleistner.vscode-fileutils
 vscodevim.vim
-vintharas.learn-vim
 
 # Git / collaboration
 arturock.gitstash
@@ -41,6 +40,7 @@ anthropic.claude-code
 codeium.codeium
 github.copilot
 github.copilot-chat
+openai.chatgpt
 saoudrizwan.claude-dev
 
 # System

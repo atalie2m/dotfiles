@@ -134,6 +134,8 @@ user_data_home="$vscode_data_home/User"
 profiles_home="$user_data_home/profiles"
 global_storage_dir="$user_data_home/globalStorage"
 storage_json_path="$global_storage_dir/storage.json"
+extensions_root="${VSCODE_EXTENSIONS_DIR:-$HOME/.vscode/extensions}"
+extensions_manifest_path="$extensions_root/extensions.json"
 legacy_instances_dir="${VSCODE_LEGACY_INSTANCES_DIR:-$HOME/.local/share/vscode-instances}"
 code_cli_retries="${VSCODE_CODE_RETRIES:-3}"
 
@@ -180,6 +182,28 @@ run_code_cli() {
     cat "$stderr_file" >&2
     return "$rc"
   done
+}
+
+prune_orphaned_extension_dirs() {
+  local keep_file path path_name
+
+  [[ -d $extensions_root ]] || return 0
+  [[ -f $extensions_manifest_path ]] || return 0
+
+  keep_file="$(new_tmp_file)"
+  jq -r '.[] | .relativeLocation // empty' "$extensions_manifest_path" | awk 'NF { print }' >"$keep_file"
+
+  shopt -s nullglob
+  for path in "$extensions_root"/*; do
+    [[ -d $path ]] || continue
+    path_name="$(basename "$path")"
+    if grep -Fqx "$path_name" "$keep_file"; then
+      continue
+    fi
+    log "Removing orphaned VS Code extension dir: $path"
+    rm -rf "$path"
+  done
+  shopt -u nullglob
 }
 
 profile_selected() {
@@ -497,6 +521,7 @@ ensure_custom_profile_runtime() {
     else
       jq -S '.' "$extensions_manifest" >/dev/null
     fi
+    normalize_custom_profile_extension_manifest "$profile_dir_name" "$profile_name"
   fi
 }
 
@@ -509,7 +534,7 @@ ensure_profile_runtime() {
 
   if [[ $profile_dir_name == "native" ]]; then
     settings_path="$(profile_settings_path "$profile_dir_name")"
-    extensions_manifest="$HOME/.vscode/extensions/extensions.json"
+    extensions_manifest="$extensions_manifest_path"
     if [[ ! -f $settings_path ]]; then
       printf '{}\n' >"$settings_path"
     else
@@ -521,25 +546,131 @@ ensure_profile_runtime() {
     else
       jq -S '.' "$extensions_manifest" >/dev/null
     fi
+    prune_orphaned_extension_dirs
     return 0
   fi
 
+  prune_orphaned_extension_dirs
   ensure_custom_profile_runtime "$profile_dir_name" "$profile_name"
 }
 
 list_profile_extensions() {
   local profile_dir_name="$1"
-  local profile_name="$2"
+  local _profile_name="$2"
   local output_file="$3"
+  local manifest_path
 
   if [[ $profile_dir_name == "native" ]]; then
-    run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --list-extensions >"$output_file"
+    manifest_path="$extensions_manifest_path"
   else
-    run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --profile "$profile_name" --list-extensions >"$output_file"
+    manifest_path="$(profile_extensions_manifest_path "$profile_dir_name")"
   fi
 
-  awk 'NF { print }' "$output_file" >"${output_file}.filtered"
-  mv "${output_file}.filtered" "$output_file"
+  if [[ ! -f $manifest_path ]]; then
+    : >"$output_file"
+    return 0
+  fi
+
+  jq -r '.[].identifier.id // empty' "$manifest_path" | awk 'NF { print }' | LC_ALL=C sort -u >"$output_file"
+}
+
+global_extension_manifest_entry() {
+  local extension_id="$1"
+  local output_file="$2"
+
+  [[ -f $extensions_manifest_path ]] || return 1
+
+  jq -e \
+    --arg id "${extension_id,,}" \
+    '
+      map(select((.identifier.id // "" | ascii_downcase) == $id))
+      | last
+    ' "$extensions_manifest_path" >"$output_file"
+}
+
+normalize_custom_profile_extension_manifest() {
+  local profile_dir_name="$1"
+  local manifest_path ids_file rebuilt_file extension_id entry_file path
+
+  manifest_path="$(profile_extensions_manifest_path "$profile_dir_name")"
+  [[ -n $manifest_path ]] || return 0
+  [[ -f $manifest_path ]] || return 0
+
+  ids_file="$(new_tmp_file)"
+  rebuilt_file="$(new_tmp_file)"
+  printf '[]\n' >"$rebuilt_file"
+
+  jq -r '.[].identifier.id // empty' "$manifest_path" | awk 'NF && !seen[$0]++ { print }' >"$ids_file"
+
+  while IFS= read -r extension_id; do
+    [[ -n $extension_id ]] || continue
+
+    entry_file="$(new_tmp_file)"
+    if ! global_extension_manifest_entry "$extension_id" "$entry_file"; then
+      jq -e \
+        --arg id "${extension_id,,}" \
+        '
+          map(select((.identifier.id // "" | ascii_downcase) == $id))
+          | last
+        ' "$manifest_path" >"$entry_file" || continue
+
+      path="$(jq -r '.location.path // empty' "$entry_file")"
+      if [[ -z $path || ! -e $path ]]; then
+        continue
+      fi
+    fi
+
+    jq -S --slurpfile entry "$entry_file" '. + [$entry[0]]' "$rebuilt_file" >"${rebuilt_file}.tmp"
+    mv "${rebuilt_file}.tmp" "$rebuilt_file"
+  done <"$ids_file"
+
+  mv "$rebuilt_file" "$manifest_path"
+}
+
+add_custom_profile_extension_membership() {
+  local profile_dir_name="$1"
+  local profile_name="$2"
+  local extension_id="$3"
+  local manifest_path manifest_entry tmp_file
+
+  manifest_path="$(profile_extensions_manifest_path "$profile_dir_name")"
+  [[ -n $manifest_path ]] || return 1
+
+  ensure_custom_profile_runtime "$profile_dir_name" "$profile_name"
+
+  manifest_entry="$(new_tmp_file)"
+  if ! global_extension_manifest_entry "$extension_id" "$manifest_entry"; then
+    return 1
+  fi
+
+  tmp_file="$(new_tmp_file)"
+  jq -S \
+    --slurpfile entry "$manifest_entry" \
+    --arg id "${extension_id,,}" \
+    '
+      [ .[] | select((.identifier.id // "" | ascii_downcase) != $id) ] + [$entry[0]]
+    ' "$manifest_path" >"$tmp_file"
+  mv "$tmp_file" "$manifest_path"
+}
+
+remove_custom_profile_extension_membership() {
+  local profile_dir_name="$1"
+  local profile_name="$2"
+  local extension_id="$3"
+  local manifest_path tmp_file
+
+  manifest_path="$(profile_extensions_manifest_path "$profile_dir_name")"
+  [[ -n $manifest_path ]] || return 1
+
+  ensure_custom_profile_runtime "$profile_dir_name" "$profile_name"
+
+  tmp_file="$(new_tmp_file)"
+  jq -S \
+    --arg id "${extension_id,,}" \
+    '
+      [ .[] | select((.identifier.id // "" | ascii_downcase) != $id) ]
+    ' "$manifest_path" >"$tmp_file"
+  mv "$tmp_file" "$manifest_path"
 }
 
 install_profile_extension() {
@@ -547,10 +678,21 @@ install_profile_extension() {
   local profile_name="$2"
   local extension_id="$3"
 
+  prune_orphaned_extension_dirs
+
   if [[ $profile_dir_name == "native" ]]; then
     run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --install-extension "$extension_id" --force
   else
-    run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --profile "$profile_name" --install-extension "$extension_id" --force
+    if add_custom_profile_extension_membership "$profile_dir_name" "$profile_name" "$extension_id"; then
+      return 0
+    fi
+
+    if run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --install-extension "$extension_id" --force; then
+      add_custom_profile_extension_membership "$profile_dir_name" "$profile_name" "$extension_id"
+      return 0
+    fi
+
+    return 1
   fi
 }
 
@@ -559,10 +701,12 @@ uninstall_profile_extension() {
   local profile_name="$2"
   local extension_id="$3"
 
+  prune_orphaned_extension_dirs
+
   if [[ $profile_dir_name == "native" ]]; then
     run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --uninstall-extension "$extension_id"
   else
-    run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --profile "$profile_name" --uninstall-extension "$extension_id"
+    remove_custom_profile_extension_membership "$profile_dir_name" "$profile_name" "$extension_id"
   fi
 }
 

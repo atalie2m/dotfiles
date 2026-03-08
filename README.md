@@ -114,8 +114,9 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - `apps/vscode/_default/` is the shared layer applied to every managed profile.
 - `apps/vscode/native/` maps to VS Code's built-in Default profile.
 - `apps/vscode/<name>/` for any other name maps to a native custom profile with that display name.
-- Supported inputs are `settings.json` and `extensions.txt`.
+- Supported inputs are `settings.json`, `extensions.txt`, and launch-only `launch-disabled-extensions.txt`.
 - `sync vscode --apply` runs during activation and reconciles repo-owned settings keys and extensions into writable VS Code profile state.
+- `vscode launch --profile <name>` launches a managed profile and applies launch-only `--disable-extension` flags from `launch-disabled-extensions.txt`.
 - Drift management is mutable by design: repo-owned settings keys and extensions converge, while user-added settings keys and extensions remain untouched.
 
 See `docs/vscode.md` for the runtime model and CLI.
