@@ -1,0 +1,304 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SYNC_SCRIPT="$ROOT/scripts/sync.sh"
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/tests/sync-vscode-smoke-test.sh
+
+Description:
+  Runs a lightweight VS Code native profile sync smoke test with a temporary HOME.
+USAGE
+}
+
+if [[ ${1:-} == "-h" || ${1:-} == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ ! -f $SYNC_SCRIPT ]]; then
+  echo "test: sync script not found: $SYNC_SCRIPT" >&2
+  exit 1
+fi
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "test: jq is required" >&2
+  exit 1
+fi
+
+tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/sync-vscode-smoke.XXXXXX")"
+cleanup() {
+  rm -rf "$tmp_root"
+}
+trap cleanup EXIT
+
+home_dir="$tmp_root/home"
+managed_dir="$tmp_root/managed"
+fake_bin_dir="$tmp_root/bin"
+fake_code="$fake_bin_dir/code"
+code_state_dir="$tmp_root/code-state"
+
+mkdir -p "$home_dir" "$managed_dir/_default" "$managed_dir/native" "$managed_dir/web" "$fake_bin_dir" "$code_state_dir"
+mkdir -p "$home_dir/.local/share/vscode-instances/native"
+
+cat >"$managed_dir/_default/settings.json" <<'EOF'
+{
+  "window.title": "[BASE] ${profileName}",
+  "files.autoSave": "afterDelay",
+  "editor.fontLigatures": true
+}
+EOF
+
+cat >"$managed_dir/_default/extensions.txt" <<'EOF'
+ext.base
+EOF
+
+cat >"$managed_dir/native/settings.json" <<'EOF'
+{
+  "workbench.colorTheme": "Catppuccin Frappé"
+}
+EOF
+
+cat >"$managed_dir/native/extensions.txt" <<'EOF'
+ext.native
+EOF
+
+cat >"$managed_dir/web/settings.json" <<'EOF'
+{
+  "window.title": "[WEB] ${profileName}",
+  "workbench.colorTheme": "Abyss"
+}
+EOF
+
+cat >"$managed_dir/web/extensions.txt" <<'EOF'
+ext.web
+EOF
+
+cat >"$fake_code" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir="${FAKE_CODE_STATE_DIR:?}"
+profile="native"
+command=""
+extension_id=""
+
+args=("$@")
+idx=0
+while [[ $idx -lt ${#args[@]} ]]; do
+  case "${args[$idx]}" in
+  --profile)
+    idx=$((idx + 1))
+    profile="${args[$idx]}"
+    ;;
+  --list-extensions)
+    command="list"
+    ;;
+  --install-extension)
+    command="install"
+    idx=$((idx + 1))
+    extension_id="${args[$idx]}"
+    ;;
+  --uninstall-extension)
+    command="uninstall"
+    idx=$((idx + 1))
+    extension_id="${args[$idx]}"
+    ;;
+  --force)
+    ;;
+  esac
+  idx=$((idx + 1))
+done
+
+profile_slug=$(printf '%s' "$profile" | tr ' /' '__')
+profile_file="$state_dir/${profile_slug}.extensions"
+touch "$profile_file"
+
+case "$command" in
+list)
+  awk 'NF { print }' "$profile_file"
+  ;;
+install)
+  awk -v ext="$extension_id" '
+    BEGIN { seen = 0 }
+    $0 == ext { seen = 1 }
+    { print }
+    END {
+      if (seen == 0) {
+        print ext
+      }
+    }
+  ' "$profile_file" >"${profile_file}.tmp"
+  mv "${profile_file}.tmp" "$profile_file"
+  ;;
+uninstall)
+  awk -v ext="$extension_id" '$0 != ext { print }' "$profile_file" >"${profile_file}.tmp"
+  mv "${profile_file}.tmp" "$profile_file"
+  ;;
+*)
+  echo "fake code: unsupported args: $*" >&2
+  exit 1
+  ;;
+esac
+EOF
+chmod +x "$fake_code"
+
+run_vscode_sync() {
+  HOME="$home_dir" \
+    PATH="$fake_bin_dir:$PATH" \
+    FAKE_CODE_STATE_DIR="$code_state_dir" \
+    bash "$SYNC_SCRIPT" vscode "$@" --managed-dir "$managed_dir"
+}
+
+run_vscode_sync_from_copy() {
+  local copied_root="$tmp_root/scripts-copy"
+
+  if [[ ! -d $copied_root ]]; then
+    cp -R "$ROOT/scripts" "$copied_root"
+    chmod -R u+w "$copied_root"
+  fi
+
+  HOME="$home_dir" \
+    PATH="$fake_bin_dir:$PATH" \
+    FAKE_CODE_STATE_DIR="$code_state_dir" \
+    bash "$copied_root/sync.sh" vscode "$@" --managed-dir "$managed_dir"
+}
+
+web_profile_id() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    printf 'dotfiles:vscode-profile:web' | sha256sum | awk '{ print substr($1, 1, 32) }'
+    return 0
+  fi
+
+  printf 'dotfiles:vscode-profile:web' | shasum -a 256 | awk '{ print substr($1, 1, 32) }'
+}
+
+printf 'test: running VS Code sync smoke test\n'
+printf 'test: temp root = %s\n' "$tmp_root"
+
+if ! run_vscode_sync --apply >/dev/null; then
+  echo "FAIL: initial VS Code apply failed" >&2
+  exit 1
+fi
+
+web_id="$(web_profile_id)"
+storage_json="$home_dir/Library/Application Support/Code/User/globalStorage/storage.json"
+native_settings="$home_dir/Library/Application Support/Code/User/settings.json"
+web_settings="$home_dir/Library/Application Support/Code/User/profiles/$web_id/settings.json"
+native_state="$home_dir/.local/state/dotfiles/vscode/native.json"
+web_state="$home_dir/.local/state/dotfiles/vscode/web.json"
+
+if [[ ! -f $storage_json ]]; then
+  echo "FAIL: storage.json was not created" >&2
+  exit 1
+fi
+
+if ! jq -e --arg id "$web_id" '.userDataProfiles | any(.[]; .name == "Web" and .location == $id)' "$storage_json" >/dev/null; then
+  echo "FAIL: web profile was not registered in storage.json" >&2
+  exit 1
+fi
+
+if [[ -d "$home_dir/Library/Application Support/Code/User/profiles/__default__profile__" ]]; then
+  echo "FAIL: native profile unexpectedly created a custom profile directory" >&2
+  exit 1
+fi
+
+if [[ ! -f $native_settings ]]; then
+  echo "FAIL: native settings were not written" >&2
+  exit 1
+fi
+
+if [[ ! -f $web_settings ]]; then
+  echo "FAIL: web settings were not written" >&2
+  exit 1
+fi
+
+if [[ $(jq -r '.["files.autoSave"]' "$web_settings") != "afterDelay" ]]; then
+  echo "FAIL: shared settings were not merged into web profile" >&2
+  exit 1
+fi
+
+if [[ $(jq -r '.["workbench.colorTheme"]' "$native_settings") != "Catppuccin Frappé" ]]; then
+  echo "FAIL: native settings overlay was not applied" >&2
+  exit 1
+fi
+
+if [[ ! -f $native_state || ! -f $web_state ]]; then
+  echo "FAIL: state files were not created" >&2
+  exit 1
+fi
+
+if ! jq -e '.ownedSettingsKeys | index("files.autoSave")' "$web_state" >/dev/null; then
+  echo "FAIL: web state file does not track owned settings" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "ext.base" "$code_state_dir/native.extensions" || ! grep -Fqx "ext.native" "$code_state_dir/native.extensions"; then
+  echo "FAIL: native extensions were not installed" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "ext.base" "$code_state_dir/Web.extensions" || ! grep -Fqx "ext.web" "$code_state_dir/Web.extensions"; then
+  echo "FAIL: web extensions were not installed" >&2
+  exit 1
+fi
+
+if [[ -d "$home_dir/.local/share/vscode-instances" ]]; then
+  echo "FAIL: legacy vscode instances directory was not removed" >&2
+  exit 1
+fi
+
+jq '. + { "editor.minimap.enabled": false }' "$web_settings" >"$tmp_root/web-settings-user.json"
+mv "$tmp_root/web-settings-user.json" "$web_settings"
+printf 'ext.user\n' >>"$code_state_dir/Web.extensions"
+
+cat >"$managed_dir/_default/settings.json" <<'EOF'
+{
+  "window.title": "[BASE] ${profileName}",
+  "editor.fontLigatures": true
+}
+EOF
+
+cat >"$managed_dir/web/extensions.txt" <<'EOF'
+EOF
+
+if ! run_vscode_sync --apply >/dev/null; then
+  echo "FAIL: second VS Code apply failed" >&2
+  exit 1
+fi
+
+if jq -e 'has("files.autoSave")' "$web_settings" >/dev/null; then
+  echo "FAIL: removed owned settings key still exists after apply" >&2
+  exit 1
+fi
+
+if [[ $(jq -r '.["editor.minimap.enabled"]' "$web_settings") != "false" ]]; then
+  echo "FAIL: unmanaged user setting was not preserved" >&2
+  exit 1
+fi
+
+if grep -Fqx "ext.web" "$code_state_dir/Web.extensions"; then
+  echo "FAIL: removed owned extension still exists after apply" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "ext.user" "$code_state_dir/Web.extensions"; then
+  echo "FAIL: unmanaged user extension was not preserved" >&2
+  exit 1
+fi
+
+if ! run_vscode_sync --check >/dev/null; then
+  echo "FAIL: final VS Code check failed" >&2
+  exit 1
+fi
+
+if ! run_vscode_sync_from_copy --check >/dev/null; then
+  echo "FAIL: VS Code check failed when sync script ran outside repo root with explicit managed dir" >&2
+  exit 1
+fi
+
+echo "PASS: VS Code sync smoke"

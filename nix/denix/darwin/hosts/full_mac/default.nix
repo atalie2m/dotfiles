@@ -15,11 +15,5 @@ mkDarwinHost {
       homeTrampolines.syncDock = true;
       homeTrampolines.timeoutSeconds = 15;
     };
-    tools.editor.vscode.appLaunchers.displayNames = {
-      python = "VSC - Python";
-      web = "VSC - Web";
-      writing = "VSC - Writing";
-      native = "VSC - Default";
-    };
   };
 }

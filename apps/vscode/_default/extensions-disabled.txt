@@ -1,4 +1,0 @@
-# Extensions listed here are installed (if not already) but launched as disabled
-# via `--disable-extension <id>` in the `code-<profile>` wrapper.
-#
-# Per-profile overrides: `apps/vscode/<profile>/extensions-disabled.txt`

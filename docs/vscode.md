@@ -1,99 +1,102 @@
-# VS Code Instances (Directory Profiles)
+# VS Code Profiles
 
-This repository runs multiple isolated VS Code instances using the upstream
-CLI flags:
+This repository manages one VS Code installation and reconciles native VS Code profiles into writable runtime state.
+It no longer uses isolated per-instance runtime directories.
 
-- `--user-data-dir` (settings, UI state, keychain integration, etc.)
-- `--extensions-dir` (installed extensions)
+## Managed layout
 
-This avoids brittle macOS app-bundle modifications (Info.plist patching,
-helper renames, re-signing).
+Profiles live under `apps/vscode/<name>/`:
 
-The instance wiring is declarative, but extensions remain intentionally
-mutable: bootstrap installs the declared baseline incrementally and does not
-remove extra user-installed extensions.
-
-## Profile Layout
-
-Profiles live in `apps/vscode/<name>/`:
-
-- `apps/vscode/_default/` (baseline)
-- `apps/vscode/python/`
-- `apps/vscode/web/`
-- ...
+- `apps/vscode/_default/`
+  - Shared layer applied to every managed profile.
+  - Not a runtime profile by itself.
+- `apps/vscode/native/`
+  - Maps to VS Code's built-in Default profile.
+- `apps/vscode/<name>/`
+  - Any other directory maps to a native custom profile.
+  - The display name is derived from the directory name (`python` -> `Python`, `web` -> `Web`).
 
 Supported files:
 
-- `settings.json` (optional)
-- `extensions.txt` (optional)
-- `extensions-disabled.txt` (optional)
-  - IDs listed here are installed (if missing) but always launched disabled via
-    `--disable-extension <id>`.
-- `icon.icns` (optional, macOS launcher icon)
+- `settings.json`
+- `extensions.txt`
 
-Example:
+Legacy per-profile extension disable lists are not supported by native profile sync.
+Remove those files if they still exist in a managed profile.
 
-```text
-apps/vscode/python/extensions.txt
-  ms-python.python
-  ms-toolsai.jupyter
+## Runtime model
 
-apps/vscode/python/extensions-disabled.txt
-  github.copilot-chat
+`sync vscode` builds the desired profile state from the repo and writes it into VS Code's native profile storage.
+
+- Effective settings:
+  - `_default/settings.json` recursively merged with `<profile>/settings.json`
+- Effective extensions:
+  - `_default/extensions.txt` plus `<profile>/extensions.txt`, unique by extension ID
+- Runtime ownership:
+  - The repo owns the effective settings' top-level keys
+  - The repo owns the effective extension IDs
+- Mutable drift:
+  - Owned keys and owned extensions converge on apply
+  - User-added settings keys and user-added extensions are preserved
+  - Removed repo-owned keys and extensions are deleted on the next apply
+
+To support that mutable model, sync keeps minimal local state per profile under the VS Code sync state directory.
+That state records the previously owned top-level settings keys and extension IDs so apply can remove repo-owned items that were deleted from `apps/vscode/`.
+
+## Runtime locations
+
+On macOS:
+
+- `native` settings live in `~/Library/Application Support/Code/User/settings.json`
+- custom profile settings live in `~/Library/Application Support/Code/User/profiles/<profile-id>/settings.json`
+- sync state defaults to `${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/vscode`
+
+`sync vscode` bootstraps custom profiles as needed and updates VS Code's profile registry before writing managed state.
+
+## Commands
+
+Use the public sync entrypoint:
+
+```bash
+# Check all managed profiles
+nix run .#dotfiles -- sync vscode --check
+
+# Check with details or projected diffs
+nix run .#dotfiles -- sync vscode --check --details
+nix run .#dotfiles -- sync vscode --check --details --diff
+
+# Apply all managed profiles
+nix run .#dotfiles -- sync vscode --apply
+
+# Restrict to one repo profile directory
+nix run .#dotfiles -- sync vscode --check --profile web
+nix run .#dotfiles -- sync vscode --apply --profile native
+
+# Override source or state locations
+nix run .#dotfiles -- sync vscode --apply --managed-dir /path/to/apps/vscode
+nix run .#dotfiles -- sync vscode --apply --state-dir /path/to/state
 ```
 
-## Generated Commands
+Flags:
 
-For each profile `name`:
+- `--check`
+- `--apply`
+- `--details`
+- `--diff`
+- `--profile <name>`
+- `--managed-dir <path>`
+- `--state-dir <path>`
 
-- `code-<name>`
-  - Launches the instance with its own dirs under:
-    - `${VSCODE_INSTANCES_BASE}/<name>/user-data`
-    - `${VSCODE_INSTANCES_BASE}/<name>/extensions`
-  - Auto-runs bootstrap when the baseline changes.
-  - Always passes `--disable-extension` for each entry in
-    `extensions-disabled.txt` (so even if you enabled it last session, it will
-    be disabled again on next launch).
-- `code-<name>-bootstrap`
-  - Seeds/updates `${user-data}/User/settings.json` and installs baseline
-    extensions (incremental; does not remove user-installed extensions).
-- `code-<name>-reset`
-  - Moves the instance directory to a timestamped backup and re-runs bootstrap.
+`sync vscode --apply` is also run during Home Manager activation when VS Code is enabled.
 
-Notes:
+## Manual switching
 
-- The "disabled" behavior is enforced at launch time (by CLI flags). It is not
-  written into VS Code's internal state DB.
-- For debugging, you can skip auto-bootstrap with `VSCODE_SKIP_BOOTSTRAP=1`.
-- To force baseline extensions to re-install, use `VSCODE_FORCE_EXTENSIONS=1`
-  with `code-<name>-bootstrap`.
+Profile selection stays manual.
+Switch profiles in the VS Code UI, or launch with upstream profile support such as:
 
-## Settings Merge Rules
+```bash
+code --profile "Web"
+code --profile "Python"
+```
 
-During bootstrap, settings are merged:
-
-- Baseline (`_default/settings.json` + `<name>/settings.json`) first
-- Existing `${user-data}/User/settings.json` second (user wins)
-
-Exception: instance identity keys are always taken from the baseline to avoid
-drift (e.g., window title badges and bar colors).
-
-## macOS App Launchers
-
-On macOS, lightweight `.app` launchers are created under:
-
-- `~/Applications/VS Code Instances/`
-
-These are simple wrappers around `code-<name>` (no upstream VS Code.app
-modification). As a result, Dock/menubar app identity may still show as "Code",
-but the instance is visually identified via the window title badge and bar
-colors.
-
-## Runtime Script
-
-Operational behavior for `bootstrap`, `launch`, and `reset` lives in:
-
-- `scripts/vscode-instances.sh`
-
-The Nix module (`nix/modules/tools/editor/vscode.nix`) is responsible for
-declarative instance data and thin command wiring only.
+`sync vscode` manages the underlying profile contents; it does not pick the active profile for you.

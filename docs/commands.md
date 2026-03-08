@@ -58,6 +58,28 @@ nix flake check \
 nix develop
 ```
 
+## Runtime sync
+
+```bash
+# Shell entrypoints
+nix run .#dotfiles -- sync shell --check
+nix run .#dotfiles -- sync shell --check --details --diff
+nix run .#dotfiles -- sync shell --apply
+
+# VS Code native profiles
+nix run .#dotfiles -- sync vscode --check
+nix run .#dotfiles -- sync vscode --check --details --diff
+nix run .#dotfiles -- sync vscode --apply
+nix run .#dotfiles -- sync vscode --check --profile web
+nix run .#dotfiles -- sync vscode --apply --profile native
+```
+
+Notes:
+
+- `sync vscode --apply` also runs during activation when `tools.editor.vscode.enable = true`.
+- `apps/vscode/_default/` is the shared layer for all managed profiles.
+- `apps/vscode/native/` maps to VS Code's built-in Default profile.
+
 ## Clean export
 
 `export-clean` is tracked-only and requires Git to access a trusted worktree. It fails closed if Git is unavailable or refuses the repository.

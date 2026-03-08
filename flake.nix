@@ -295,13 +295,13 @@
             touch "$out"
           '';
 
-          vscodeInstancesSmoke = pkgs.runCommand "vscode-instances-smoke-test"
+          syncVscodeSmoke = pkgs.runCommand "sync-vscode-smoke-test"
             {
               nativeBuildInputs = [ pkgs.bash pkgs.jq ];
               src = repoPaths.root;
             } ''
             cd "$src"
-            bash scripts/tests/vscode-instances-smoke-test.sh
+            bash scripts/tests/sync-vscode-smoke-test.sh
             touch "$out"
           '';
 

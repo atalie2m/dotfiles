@@ -1,7 +1,9 @@
 # Runtime Sync Surfaces
 
-This repository now has one runtime sync surface: shell entrypoints.
-The design is intentionally small and stateless.
+This repository has two runtime sync surfaces:
+
+- shell entrypoints
+- VS Code native profiles
 
 ## Shell entrypoints
 
@@ -39,6 +41,51 @@ nix run .#dotfiles -- sync shell --check --details --diff
 nix run .#dotfiles -- sync shell --apply
 ```
 
+## VS Code native profiles
+
+`scripts/sync-adapters/vscode.sh` reconciles declarative profile input from `apps/vscode/` into writable VS Code profile state.
+The design is intentionally mutable: only the repo-owned subset converges.
+
+- Desired:
+  - `apps/vscode/_default/settings.json`
+  - `apps/vscode/_default/extensions.txt`
+  - `apps/vscode/<profile>/settings.json`
+  - `apps/vscode/<profile>/extensions.txt`
+- Actual:
+  - VS Code native profile settings and extension membership
+  - `native` maps to the built-in Default profile
+  - other profile directories map to custom native profiles
+- State:
+  - `${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/vscode`
+  - one JSON state file per managed profile
+- Model:
+  - recursively merge `_default` with the selected profile
+  - own the effective settings' top-level keys and effective extension IDs
+  - preserve user-added settings keys and extensions outside that owned subset
+
+Behavior:
+
+- `sync vscode --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`.
+- `sync vscode --apply` creates missing native profiles, updates the VS Code profile registry, and reconciles owned settings keys and extensions.
+- Previously owned keys/extensions that were removed from `apps/vscode/` are removed on apply.
+- User-added keys/extensions that are not owned by the repo are not removed.
+- Legacy per-profile extension disable lists are not part of this surface and are treated as invalid input.
+- Apply also removes the legacy `~/.local/share/vscode-instances` tree after a successful full reconciliation.
+- Home Manager activation runs `sync vscode --apply` when VS Code is enabled.
+
+Workflow:
+
+```bash
+# 1) Check whether any managed profile needs apply
+nix run .#dotfiles -- sync vscode --check
+
+# 2) Inspect details and projected diffs
+nix run .#dotfiles -- sync vscode --check --details --diff
+
+# 3) Reconcile the owned subset into native VS Code profiles
+nix run .#dotfiles -- sync vscode --apply
+```
+
 ## zsh root compat
 
 Runtime zsh uses `~/.nix/.zshrc`.
@@ -70,7 +117,7 @@ Shell-local customization should go in the per-shell local hook files, not in re
 - zsh: `~/.config/shell/zsh.local.sh`
 - bash: `~/.config/shell/bash.local.sh`
 
-## Removed surface
+## Removed surfaces
 
-Terminal.app profile sync has been removed from this repository.
-Manage Terminal.app manually if you still need it.
+- Terminal.app profile sync has been removed from this repository.
+- VS Code multi-instance / directory-profile sync has been removed in favor of native profiles plus `sync vscode`.

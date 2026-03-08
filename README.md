@@ -106,33 +106,25 @@ Manual evaluation (JSON):
 nix eval --json .#darwinConfigurations.full_mac-minimum.config.myconfig.tools
 ```
 
-## VS Code Instances (Directory Profiles)
+## VS Code Profiles
 
-This repo uses "directory profiles" to run multiple isolated VS Code instances
-(separate user-data + extensions dirs) without relying on macOS app-bundle hacks.
+This repo now uses a single VS Code installation with native VS Code profiles.
+The declarative source stays under `apps/vscode/<name>/`, and runtime materialization happens through `sync vscode`.
 
-- Profiles live under `apps/vscode/<name>/`.
-  - `_default/` provides the baseline.
-  - Each profile can define:
-    - `settings.json`
-    - `extensions.txt`
-    - `extensions-disabled.txt` (installed but always launched disabled)
-    - `icon.icns` (optional, macOS launcher icon)
-- Generated commands:
-  - `code-<name>`: self-bootstraps (if baseline changed) then launches the instance.
-  - `code-<name>-bootstrap`: seed/merge settings and install baseline extensions.
-  - `code-<name>-reset`: backup the instance dir and re-bootstrap.
-- Runtime boundary:
-  - Settings, launchers, baseline extension lists, and icons are repo-managed.
-  - Installed extensions remain intentionally mutable (`mutableExtensionsDir = true`); bootstrap adds missing baseline extensions but does not remove user-added ones.
+- `apps/vscode/_default/` is the shared layer applied to every managed profile.
+- `apps/vscode/native/` maps to VS Code's built-in Default profile.
+- `apps/vscode/<name>/` for any other name maps to a native custom profile with that display name.
+- Supported inputs are `settings.json` and `extensions.txt`.
+- `sync vscode --apply` runs during activation and reconciles repo-owned settings keys and extensions into writable VS Code profile state.
+- Drift management is mutable by design: repo-owned settings keys and extensions converge, while user-added settings keys and extensions remain untouched.
 
-See `docs/vscode.md` for details.
+See `docs/vscode.md` for the runtime model and CLI.
 
 ## Mutable Editor Tooling
 
 - Emacs app/config wiring is declarative, but package installation still happens through `package.el` against GNU ELPA / NonGNU ELPA / MELPA at runtime.
-- VS Code instance definitions are declarative, but extension state is intentionally mutable as described above.
-- This repo treats those editor runtimes as a convenience boundary: config is pinned here, packages/extensions are not.
+- VS Code profile definitions are declarative, but runtime state stays writable; `sync vscode` manages only the owned subset of settings keys and extensions.
+- This repo treats those editor runtimes as a convenience boundary: config is pinned here, package/login/UI state is not.
 
 ## Terminal Compatibility
 
@@ -247,7 +239,7 @@ Additional sync tests:
 scripts/tests/sync-cli-migration-test.sh
 scripts/tests/sync-cli-common-parse-test.sh
 scripts/tests/sync-shell-smoke-test.sh
-scripts/tests/vscode-instances-smoke-test.sh
+scripts/tests/sync-vscode-smoke-test.sh
 ```
 
 ## Local Facts + Secrets (Override Inputs)

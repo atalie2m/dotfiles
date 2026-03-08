@@ -53,6 +53,11 @@ if [[ $help_output != *"sync shell"* ]]; then
   printf '%s\n' "$help_output" >&2
   exit 1
 fi
+if [[ $help_output != *"sync vscode"* ]]; then
+  echo "FAIL: sync help missing VS Code usage" >&2
+  printf '%s\n' "$help_output" >&2
+  exit 1
+fi
 if [[ $help_output == *"terminal --check"* ]]; then
   echo "FAIL: sync help still advertises removed terminal surface" >&2
   printf '%s\n' "$help_output" >&2

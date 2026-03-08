@@ -168,7 +168,7 @@ if bash "$SYNC_SCRIPT" terminal --check >/dev/null 2>"$tmp_root/terminal.err"; t
   echo "FAIL: sync unexpectedly accepted removed terminal surface" >&2
   exit 1
 fi
-if ! grep -Fq "unknown sync surface: terminal (expected: shell)" "$tmp_root/terminal.err"; then
+if ! grep -Fq "unknown sync surface: terminal (expected: shell or vscode)" "$tmp_root/terminal.err"; then
   echo "FAIL: removed terminal surface did not report expected error" >&2
   cat "$tmp_root/terminal.err" >&2 || true
   exit 1
