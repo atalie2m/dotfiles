@@ -112,11 +112,11 @@ This repo now uses a single VS Code installation with native VS Code profiles.
 The declarative source stays under `apps/vscode/<name>/`, and runtime materialization happens through `sync vscode`.
 
 - `apps/vscode/_default/` is the shared layer applied to every managed profile.
-- `apps/vscode/native/` maps to VS Code's built-in Default profile.
+- `apps/vscode/native/` is managed as a native profile (`Native`).
 - `apps/vscode/<name>/` for any other name maps to a native custom profile with that display name.
-- Supported inputs are `settings.json`, `extensions.txt`, and launch-only `launch-disabled-extensions.txt`.
+- Supported inputs are `settings.json`, `extensions.txt`, and bootstrap-only `default-disabled-extensions.txt`.
 - `sync vscode --apply` runs during activation and reconciles repo-owned settings keys and extensions into writable VS Code profile state.
-- `vscode launch --profile <name>` launches a managed profile and applies launch-only `--disable-extension` flags from `launch-disabled-extensions.txt`.
+- `default-disabled-extensions.txt` is seeded once into the profile's extension enablement state; users can later enable those extensions in the VS Code UI and sync will not force them back off.
 - Drift management is mutable by design: repo-owned settings keys and extensions converge, while user-added settings keys and extensions remain untouched.
 
 See `docs/vscode.md` for the runtime model and CLI.

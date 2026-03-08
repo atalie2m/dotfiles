@@ -297,21 +297,11 @@
 
           syncVscodeSmoke = pkgs.runCommand "sync-vscode-smoke-test"
             {
-              nativeBuildInputs = [ pkgs.bash pkgs.jq ];
+              nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.sqlite ];
               src = repoPaths.root;
             } ''
             cd "$src"
             bash scripts/tests/sync-vscode-smoke-test.sh
-            touch "$out"
-          '';
-
-          vscodeLaunchSmoke = pkgs.runCommand "vscode-launch-test"
-            {
-              nativeBuildInputs = [ pkgs.bash ];
-              src = repoPaths.root;
-            } ''
-            cd "$src"
-            bash scripts/tests/vscode-launch-test.sh
             touch "$out"
           '';
 

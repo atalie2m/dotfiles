@@ -1,11 +1,5 @@
 {
   "window.title": "[WEB] ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
-  "workbench.colorCustomizations": {
-    "titleBar.activeBackground": "#1f6feb",
-    "titleBar.inactiveBackground": "#1f6feb",
-    "statusBar.background": "#1f6feb",
-    "statusBar.noFolderBackground": "#1f6feb"
-  },
   "git.enableCommitSigning": true,
   "markdown.preview.fontFamily": "0xProto",
   "terminal.integrated.fontFamily": "monospace",

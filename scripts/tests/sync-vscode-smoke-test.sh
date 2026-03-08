@@ -30,6 +30,11 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v sqlite3 >/dev/null 2>&1; then
+  echo "test: sqlite3 is required" >&2
+  exit 1
+fi
+
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/sync-vscode-smoke.XXXXXX")"
 cleanup() {
   rm -rf "$tmp_root"
@@ -70,6 +75,10 @@ cat >"$managed_dir/_default/extensions.txt" <<'EOF'
 ext.base
 EOF
 
+cat >"$managed_dir/_default/default-disabled-extensions.txt" <<'EOF'
+ext.base
+EOF
+
 cat >"$managed_dir/native/settings.json" <<'EOF'
 {
   "workbench.colorTheme": "Catppuccin Frappé"
@@ -88,6 +97,10 @@ cat >"$managed_dir/web/settings.json" <<'EOF'
 EOF
 
 cat >"$managed_dir/web/extensions.txt" <<'EOF'
+ext.web
+EOF
+
+cat >"$managed_dir/web/default-disabled-extensions.txt" <<'EOF'
 ext.web
 EOF
 
@@ -235,6 +248,15 @@ web_profile_id() {
   printf 'dotfiles:vscode-profile:web' | shasum -a 256 | awk '{ print substr($1, 1, 32) }'
 }
 
+native_profile_id() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    printf 'dotfiles:vscode-profile:native' | sha256sum | awk '{ print substr($1, 1, 32) }'
+    return 0
+  fi
+
+  printf 'dotfiles:vscode-profile:native' | shasum -a 256 | awk '{ print substr($1, 1, 32) }'
+}
+
 printf 'test: running VS Code sync smoke test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
@@ -244,11 +266,15 @@ if ! run_vscode_sync --apply >/dev/null; then
 fi
 
 web_id="$(web_profile_id)"
+native_id="$(native_profile_id)"
 storage_json="$home_dir/Library/Application Support/Code/User/globalStorage/storage.json"
-native_settings="$home_dir/Library/Application Support/Code/User/settings.json"
+native_settings="$home_dir/Library/Application Support/Code/User/profiles/$native_id/settings.json"
 web_settings="$home_dir/Library/Application Support/Code/User/profiles/$web_id/settings.json"
+native_profile_extensions="$home_dir/Library/Application Support/Code/User/profiles/$native_id/extensions.json"
 native_state="$home_dir/.local/state/dotfiles/vscode/native.json"
 web_state="$home_dir/.local/state/dotfiles/vscode/web.json"
+native_db="$home_dir/Library/Application Support/Code/User/profiles/$native_id/globalStorage/state.vscdb"
+web_db="$home_dir/Library/Application Support/Code/User/profiles/$web_id/globalStorage/state.vscdb"
 
 if [[ ! -f $storage_json ]]; then
   echo "FAIL: storage.json was not created" >&2
@@ -260,8 +286,8 @@ if ! jq -e --arg id "$web_id" '.userDataProfiles | any(.[]; .name == "Web" and .
   exit 1
 fi
 
-if [[ -d "$home_dir/Library/Application Support/Code/User/profiles/__default__profile__" ]]; then
-  echo "FAIL: native profile unexpectedly created a custom profile directory" >&2
+if ! jq -e --arg id "$native_id" '.userDataProfiles | any(.[]; .name == "Native" and .location == $id)' "$storage_json" >/dev/null; then
+  echo "FAIL: native profile was not registered in storage.json" >&2
   exit 1
 fi
 
@@ -290,13 +316,28 @@ if [[ ! -f $native_state || ! -f $web_state ]]; then
   exit 1
 fi
 
+if [[ ! -f $native_db || ! -f $web_db ]]; then
+  echo "FAIL: enablement databases were not created" >&2
+  exit 1
+fi
+
 if ! jq -e '.ownedSettingsKeys | index("files.autoSave")' "$web_state" >/dev/null; then
   echo "FAIL: web state file does not track owned settings" >&2
   exit 1
 fi
 
-if ! jq -e 'any(.[]; .identifier.id == "ext.base") and any(.[]; .identifier.id == "ext.native")' "$home_dir/.vscode/extensions/extensions.json" >/dev/null; then
-  echo "FAIL: native extensions were not recorded in the global extensions manifest" >&2
+if ! jq -e '.bootstrappedDefaultDisabledExtensions | index("ext.base")' "$native_state" >/dev/null; then
+  echo "FAIL: native state file does not track bootstrapped default-disabled extensions" >&2
+  exit 1
+fi
+
+if ! jq -e '.bootstrappedDefaultDisabledExtensions | index("ext.base") and index("ext.web")' "$web_state" >/dev/null; then
+  echo "FAIL: web state file does not track bootstrapped default-disabled extensions" >&2
+  exit 1
+fi
+
+if ! jq -e 'any(.[]; .identifier.id == "ext.base") and any(.[]; .identifier.id == "ext.native")' "$native_profile_extensions" >/dev/null; then
+  echo "FAIL: native extensions were not recorded in the profile manifest" >&2
   exit 1
 fi
 
@@ -315,11 +356,30 @@ if [[ -d "$home_dir/.vscode/extensions/ext.stale-1.0.0" ]]; then
   exit 1
 fi
 
+native_disabled_json="$(sqlite3 "$native_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
+web_disabled_json="$(sqlite3 "$web_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
+
+if ! printf '%s' "$native_disabled_json" | jq -e 'map(.id) | index("ext.base")' >/dev/null; then
+  echo "FAIL: native default-disabled extension was not bootstrapped into enablement storage" >&2
+  exit 1
+fi
+
+if ! printf '%s' "$web_disabled_json" | jq -e 'map(.id) | index("ext.base") and index("ext.web")' >/dev/null; then
+  echo "FAIL: web default-disabled extensions were not bootstrapped into enablement storage" >&2
+  exit 1
+fi
+
 jq '. + { "editor.minimap.enabled": false }' "$web_settings" >"$tmp_root/web-settings-user.json"
 mv "$tmp_root/web-settings-user.json" "$web_settings"
-jq '. + [{ "identifier": { "id": "ext.user" }, "relativeLocation": "ext.user-1.0.0", "version": "1.0.0" }]' \
+jq '. + [{ "identifier": { "id": "ext.user" }, "relativeLocation": "ext.user-1.0.0", "location": { "$mid": 1, "path": "'"$home_dir"'/.vscode/extensions/ext.user-1.0.0", "scheme": "file" }, "version": "1.0.0" }]' \
   "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json" >"$tmp_root/web-extensions-user.json"
 mv "$tmp_root/web-extensions-user.json" "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json"
+mkdir -p "$home_dir/.vscode/extensions/ext.user-1.0.0"
+jq '. + [{ "identifier": { "id": "ext.user" }, "relativeLocation": "ext.user-1.0.0", "location": { "$mid": 1, "path": "'"$home_dir"'/.vscode/extensions/ext.user-1.0.0", "scheme": "file" }, "version": "1.0.0" }]' \
+  "$home_dir/.vscode/extensions/extensions.json" >"$tmp_root/global-extensions-user.json"
+mv "$tmp_root/global-extensions-user.json" "$home_dir/.vscode/extensions/extensions.json"
+sqlite3 "$web_db" "INSERT INTO ItemTable(key, value) VALUES ('extensionsIdentifiers/disabled', '[]') ON CONFLICT(key) DO UPDATE SET value = excluded.value;"
+sqlite3 "$web_db" "INSERT INTO ItemTable(key, value) VALUES ('extensionsIdentifiers/enabled', '[{\"id\":\"ext.base\"},{\"id\":\"ext.web\"}]') ON CONFLICT(key) DO UPDATE SET value = excluded.value;"
 
 cat >"$managed_dir/_default/settings.json" <<'EOF'
 {
@@ -329,6 +389,9 @@ cat >"$managed_dir/_default/settings.json" <<'EOF'
 EOF
 
 cat >"$managed_dir/web/extensions.txt" <<'EOF'
+EOF
+
+cat >"$managed_dir/web/default-disabled-extensions.txt" <<'EOF'
 EOF
 
 if ! run_vscode_sync --apply >/dev/null; then
@@ -353,6 +416,17 @@ fi
 
 if ! jq -e 'any(.[]; .identifier.id == "ext.user")' "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json" >/dev/null; then
   echo "FAIL: unmanaged user extension was not preserved in the web profile manifest" >&2
+  exit 1
+fi
+
+web_disabled_json="$(sqlite3 "$web_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
+if ! printf '%s' "$web_disabled_json" | jq -e 'map(.id) | length == 0' >/dev/null; then
+  echo "FAIL: manually re-enabled default-disabled extension was bootstrapped again on apply" >&2
+  exit 1
+fi
+
+if ! jq -e '.bootstrappedDefaultDisabledExtensions | index("ext.base") and (index("ext.web") | not)' "$web_state" >/dev/null; then
+  echo "FAIL: web state file did not refresh bootstrapped default-disabled extensions after apply" >&2
   exit 1
 fi
 

@@ -1,9 +1,3 @@
 {
-  "window.title": "[DEFAULT] ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
-  "workbench.colorCustomizations": {
-    "titleBar.activeBackground": "#6e7681",
-    "titleBar.inactiveBackground": "#6e7681",
-    "statusBar.background": "#6e7681",
-    "statusBar.noFolderBackground": "#6e7681"
-  }
+  "window.title": "[DEFAULT] ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}"
 }

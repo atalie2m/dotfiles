@@ -53,7 +53,7 @@ The design is intentionally mutable: only the repo-owned subset converges.
   - `apps/vscode/<profile>/extensions.txt`
 - Actual:
   - VS Code native profile settings and extension membership
-  - `native` maps to the built-in Default profile
+  - `native` maps to a managed custom profile (`Native`)
   - other profile directories map to custom native profiles
 - State:
   - `${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/vscode`

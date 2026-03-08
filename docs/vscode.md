@@ -11,19 +11,21 @@ Profiles live under `apps/vscode/<name>/`:
   - Shared layer applied to every managed profile.
   - Not a runtime profile by itself.
 - `apps/vscode/native/`
-  - Maps to VS Code's built-in Default profile.
+  - Managed as a custom native profile with display name `Native`.
 - `apps/vscode/<name>/`
   - Any other directory maps to a native custom profile.
   - The display name is derived from the directory name (`python` -> `Python`, `web` -> `Web`).
+
+Note: VS Code's built-in `Default` profile is intentionally unmanaged. It is left as-is by `sync vscode`, so existing extensions/settings there are preserved.
 
 Supported files:
 
 - `settings.json`
 - `extensions.txt`
-- `launch-disabled-extensions.txt`
+- `default-disabled-extensions.txt`
 
-`launch-disabled-extensions.txt` is launch-only input.
-It does not affect `sync vscode` state and is only used by the launch helper.
+`default-disabled-extensions.txt` is bootstrap-only input.
+It is applied through `sync vscode --apply`, not at launch time.
 
 ## Runtime model
 
@@ -42,14 +44,19 @@ It does not affect `sync vscode` state and is only used by the launch helper.
   - Removed repo-owned keys and extensions are deleted on the next apply
 
 To support that mutable model, sync keeps minimal local state per profile under the VS Code sync state directory.
-That state records the previously owned top-level settings keys and extension IDs so apply can remove repo-owned items that were deleted from `apps/vscode/`.
+That state records:
+
+- previously owned top-level settings keys
+- previously owned extension IDs
+- which default-disabled extension IDs have already been bootstrapped for the current profile
 
 ## Runtime locations
 
 On macOS:
 
-- `native` settings live in `~/Library/Application Support/Code/User/settings.json`
-- custom profile settings live in `~/Library/Application Support/Code/User/profiles/<profile-id>/settings.json`
+- Custom profile settings live in `~/Library/Application Support/Code/User/profiles/<profile-id>/settings.json`
+- `native` is managed as a custom profile under the same path, using its own profile id:
+  - `~/Library/Application Support/Code/User/profiles/<native-profile-id>/settings.json`
 - sync state defaults to `${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/vscode`
 
 `sync vscode` bootstraps custom profiles as needed and updates VS Code's profile registry before writing managed state.
@@ -102,53 +109,44 @@ code --profile "Python"
 
 `sync vscode` manages the underlying profile contents; it does not pick the active profile for you.
 
-## Launch-only disabled extensions
+## Bootstrap-only default-disabled extensions
 
-If you want an extension installed but disabled only at launch time for a specific managed profile, add:
+If you want an extension installed by dotfiles but disabled by default when the profile is first bootstrapped, add:
 
-- `apps/vscode/_default/launch-disabled-extensions.txt`
-- `apps/vscode/<profile>/launch-disabled-extensions.txt`
+- `apps/vscode/_default/default-disabled-extensions.txt`
+- `apps/vscode/<profile>/default-disabled-extensions.txt`
 
-Those files are merged and de-duplicated at launch time.
-They do not uninstall extensions and are not part of sync drift management.
+Those files are merged and de-duplicated during `sync vscode --apply`.
+The seed is bootstrap-only:
 
-Launch with the helper:
+- a newly listed extension ID is added once to the profile's disabled extension state
+- if the same extension was explicitly enabled by the user later in VS Code, future applies do not force it back off
+- if you add a new extension ID to `default-disabled-extensions.txt` later, the next apply seeds only that new ID
+
+This is part of sync state, not launch behavior.
+Start VS Code normally with the upstream profile selector:
 
 ```bash
-nix run .#dotfiles -- vscode launch --profile web
-nix run .#dotfiles -- vscode launch --profile native
-nix run .#dotfiles -- vscode launch --profile web -- path/to/project
-nix run .#dotfiles -- vscode launch --profile web --print-command
+code --profile "Web"
+code --profile "Python"
 ```
-
-Behavior:
-
-- `native` launches the built-in Default profile
-- any other managed dir name launches the matching native custom profile
-- launch-disabled extensions are passed as repeated `--disable-extension <id>` flags
-- `sync vscode --apply` does not read `launch-disabled-extensions.txt`
-- a normal VS Code launch from Dock, Spotlight, or `code --profile ...` does not read `launch-disabled-extensions.txt`
 
 ## Mutable behavior and precedence
 
-The mutable model has two different control planes:
+The mutable model is controlled only by `sync vscode --apply`:
 
-- `sync vscode --apply`
-  - installs or uninstalls repo-owned extensions from `extensions.txt`
-  - reconciles repo-owned top-level settings keys from `settings.json`
-  - preserves user-added extension IDs that are not repo-owned
-  - preserves user-added settings keys that are not repo-owned
-- `vscode launch --profile ...`
-  - does not install or uninstall anything
-  - does not rewrite settings
-  - only adds launch-time `--disable-extension <id>` flags
+- repo-owned extensions from `extensions.txt` are installed or uninstalled
+- repo-owned top-level settings keys from `settings.json` are reconciled
+- user-added extension IDs that are not repo-owned are preserved
+- user-added settings keys that are not repo-owned are preserved
+- default-disabled extension IDs are bootstrapped once from `default-disabled-extensions.txt`
 
 That means:
 
-- adding an extension in the VS Code UI does not make `vscode launch` remove it
+- adding an extension in the VS Code UI does not make sync remove it unless dotfiles later takes ownership of it
 - disabling or enabling an extension in the VS Code UI does not change repo state
-- if an extension is listed in `launch-disabled-extensions.txt`, every `vscode launch` session disables it again for that launch
-- if you start VS Code outside the launch helper, launch-disabled extensions are not forced off
+- enabling an extension that was previously bootstrapped from `default-disabled-extensions.txt` is preserved on future applies
+- there is no launch helper and no launch-time disable flag in this model
 
 ## When a user-added extension is removed
 

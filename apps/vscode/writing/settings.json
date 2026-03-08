@@ -1,11 +1,5 @@
 {
   "window.title": "[WRITING] ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
-  "workbench.colorCustomizations": {
-    "titleBar.activeBackground": "#a855f7",
-    "titleBar.inactiveBackground": "#a855f7",
-    "statusBar.background": "#a855f7",
-    "statusBar.noFolderBackground": "#a855f7"
-  },
   "workbench.colorTheme": "Catppuccin Mocha",
   "markdown.marp.html": "all"
 }

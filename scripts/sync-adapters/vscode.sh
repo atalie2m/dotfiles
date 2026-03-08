@@ -128,6 +128,7 @@ fi
 code_bin="${VSCODE_CODE_BIN:-$(command -v code 2>/dev/null || true)}"
 [[ -n $code_bin ]] || die "VS Code CLI not found in PATH (expected 'code')"
 command -v jq >/dev/null 2>&1 || die "jq is required for sync vscode"
+command -v sqlite3 >/dev/null 2>&1 || die "sqlite3 is required for sync vscode"
 
 vscode_data_home="${VSCODE_DATA_HOME:-$HOME/Library/Application Support/Code}"
 user_data_home="$vscode_data_home/User"
@@ -151,6 +152,10 @@ sha256_hex() {
   fi
 
   die "required command not found in PATH: sha256sum or shasum"
+}
+
+to_lower() {
+  printf '%s' "$1" | awk '{ print tolower($0) }'
 }
 
 run_code_cli() {
@@ -222,11 +227,6 @@ profile_selected() {
 profile_display_name() {
   local profile_dir_name="$1"
 
-  if [[ $profile_dir_name == "native" ]]; then
-    printf 'Default\n'
-    return 0
-  fi
-
   printf '%s\n' "$profile_dir_name" | awk '
     BEGIN { FS = "[-_]+" }
     {
@@ -247,11 +247,6 @@ profile_display_name() {
 profile_id() {
   local profile_dir_name="$1"
 
-  if [[ $profile_dir_name == "native" ]]; then
-    printf '__default__profile__\n'
-    return 0
-  fi
-
   sha256_hex "dotfiles:vscode-profile:${profile_dir_name}" | awk '{ print substr($1, 1, 32) }'
 }
 
@@ -268,26 +263,39 @@ profile_runtime_dir() {
 profile_settings_path() {
   local profile_dir_name="$1"
 
-  if [[ $profile_dir_name == "native" ]]; then
-    printf '%s/settings.json\n' "$user_data_home"
-  else
-    printf '%s/settings.json\n' "$(profile_runtime_dir "$profile_dir_name")"
-  fi
+  printf '%s/settings.json\n' "$(profile_runtime_dir "$profile_dir_name")"
 }
 
 profile_extensions_manifest_path() {
   local profile_dir_name="$1"
 
-  if [[ $profile_dir_name == "native" ]]; then
-    printf '\n'
-  else
-    printf '%s/extensions.json\n' "$(profile_runtime_dir "$profile_dir_name")"
-  fi
+  printf '%s/extensions.json\n' "$(profile_runtime_dir "$profile_dir_name")"
 }
 
-profile_disabled_file_path() {
+profile_legacy_disabled_file_path() {
   local profile_dir_name="$1"
   printf '%s/%s/extensions-disabled.txt\n' "$managed_dir" "$profile_dir_name"
+}
+
+profile_legacy_launch_disabled_file_path() {
+  local profile_dir_name="$1"
+  printf '%s/%s/launch-disabled-extensions.txt\n' "$managed_dir" "$profile_dir_name"
+}
+
+profile_default_disabled_file_path() {
+  local profile_dir_name="$1"
+  printf '%s/%s/default-disabled-extensions.txt\n' "$managed_dir" "$profile_dir_name"
+}
+
+profile_global_storage_dir() {
+  local profile_dir_name="$1"
+
+  printf '%s/globalStorage\n' "$(profile_runtime_dir "$profile_dir_name")"
+}
+
+profile_enablement_db_path() {
+  local profile_dir_name="$1"
+  printf '%s/state.vscdb\n' "$(profile_global_storage_dir "$profile_dir_name")"
 }
 
 lines_file_to_json_array() {
@@ -316,20 +324,65 @@ filter_extensions_file() {
   ' "$input_path" >"$output_path"
 }
 
+canonical_extension_id() {
+  case "$1" in
+  github.copilot)
+    printf 'github.copilot-chat\n'
+    ;;
+  *)
+    printf '%s\n' "$1"
+    ;;
+  esac
+}
+
+canonicalize_extension_ids_file() {
+  local input_path="$1"
+  local output_path="$2"
+  local extension_id canonical_id
+
+  : >"$output_path"
+  while IFS= read -r extension_id; do
+    [[ -n $extension_id ]] || continue
+    canonical_id="$(canonical_extension_id "$extension_id")"
+    [[ -n $canonical_id ]] || continue
+    printf '%s\n' "$canonical_id"
+  done <"$input_path" | awk '!seen[$0]++' >"$output_path"
+}
+
 build_desired_extensions() {
   local profile_dir_name="$1"
   local output_path="$2"
-  local default_exts profile_exts combined
+  local default_exts profile_exts combined filtered
 
   default_exts="$(new_tmp_file)"
   profile_exts="$(new_tmp_file)"
   combined="$(new_tmp_file)"
+  filtered="$(new_tmp_file)"
 
   filter_extensions_file "$managed_dir/_default/extensions.txt" "$default_exts"
   filter_extensions_file "$managed_dir/$profile_dir_name/extensions.txt" "$profile_exts"
 
   cat "$default_exts" "$profile_exts" >"$combined"
-  awk '!seen[$0]++' "$combined" >"$output_path"
+  canonicalize_extension_ids_file "$combined" "$filtered"
+  awk '!seen[$0]++' "$filtered" >"$output_path"
+}
+
+build_desired_default_disabled_extensions() {
+  local profile_dir_name="$1"
+  local output_path="$2"
+  local default_disabled profile_disabled combined filtered
+
+  default_disabled="$(new_tmp_file)"
+  profile_disabled="$(new_tmp_file)"
+  combined="$(new_tmp_file)"
+  filtered="$(new_tmp_file)"
+
+  filter_extensions_file "$(profile_default_disabled_file_path "_default")" "$default_disabled"
+  filter_extensions_file "$(profile_default_disabled_file_path "$profile_dir_name")" "$profile_disabled"
+
+  cat "$default_disabled" "$profile_disabled" >"$combined"
+  canonicalize_extension_ids_file "$combined" "$filtered"
+  awk '!seen[$0]++' "$filtered" >"$output_path"
 }
 
 build_desired_settings() {
@@ -364,11 +417,12 @@ state_file_valid() {
     --arg name "$profile_name" \
     '
       type == "object"
-      and .version == 1
+      and .version == 2
       and .profileDirName == $dir
       and .profileName == $name
       and (.ownedSettingsKeys | type == "array")
       and (.ownedExtensions | type == "array")
+      and (.bootstrappedDefaultDisabledExtensions | type == "array")
     ' "$state_file" >/dev/null
 }
 
@@ -378,10 +432,14 @@ load_state_lists() {
   local profile_name="$3"
   local owned_keys_file="$4"
   local owned_extensions_file="$5"
+  local bootstrapped_default_disabled_file="${6:-}"
 
   if [[ ! -f $state_file ]]; then
     : >"$owned_keys_file"
     : >"$owned_extensions_file"
+    if [[ -n $bootstrapped_default_disabled_file ]]; then
+      : >"$bootstrapped_default_disabled_file"
+    fi
     return 1
   fi
 
@@ -391,6 +449,9 @@ load_state_lists() {
 
   jq -r '.ownedSettingsKeys[]' "$state_file" >"$owned_keys_file"
   jq -r '.ownedExtensions[]' "$state_file" >"$owned_extensions_file"
+  if [[ -n $bootstrapped_default_disabled_file ]]; then
+    jq -r '.bootstrappedDefaultDisabledExtensions[]' "$state_file" >"$bootstrapped_default_disabled_file"
+  fi
   return 0
 }
 
@@ -400,6 +461,7 @@ write_state_file() {
   local profile_name="$3"
   local owned_keys_file="$4"
   local owned_extensions_file="$5"
+  local bootstrapped_default_disabled_file="$6"
   local tmp_file
 
   tmp_file="$(new_tmp_file)"
@@ -410,13 +472,15 @@ write_state_file() {
     --arg name "$profile_name" \
     --argjson ownedKeys "$(lines_file_to_json_array "$owned_keys_file")" \
     --argjson ownedExtensions "$(lines_file_to_json_array "$owned_extensions_file")" \
+    --argjson bootstrappedDefaultDisabledExtensions "$(lines_file_to_json_array "$bootstrapped_default_disabled_file")" \
     '
       {
-        version: 1,
+        version: 2,
         profileDirName: $dir,
         profileName: $name,
         ownedSettingsKeys: $ownedKeys,
-        ownedExtensions: $ownedExtensions
+        ownedExtensions: $ownedExtensions,
+        bootstrappedDefaultDisabledExtensions: $bootstrappedDefaultDisabledExtensions
       }
     ' >"$tmp_file"
 
@@ -472,6 +536,98 @@ ensure_storage_json_exists() {
   mv "$tmp_file" "$storage_json_path"
 }
 
+ensure_enablement_db() {
+  local profile_dir_name="$1"
+  local storage_dir db_path
+
+  storage_dir="$(profile_global_storage_dir "$profile_dir_name")"
+  db_path="$(profile_enablement_db_path "$profile_dir_name")"
+
+  mkdir -p "$storage_dir"
+  sqlite3 "$db_path" 'CREATE TABLE IF NOT EXISTS ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB);' >/dev/null
+}
+
+sql_escape_single_quotes() {
+  local value="$1"
+  printf "%s" "${value//\'/\'\'}"
+}
+
+read_enablement_ids_from_db() {
+  local db_path="$1"
+  local key="$2"
+  local output_file="$3"
+  local raw_json
+
+  : >"$output_file"
+  [[ -f $db_path ]] || return 0
+
+  raw_json="$(sqlite3 "$db_path" "SELECT value FROM ItemTable WHERE key = '$(sql_escape_single_quotes "$key")';" || true)"
+  [[ -n $raw_json ]] || return 0
+
+  if ! printf '%s' "$raw_json" | jq -er '. | if type == "array" then .[] | .id // empty else empty end' >"$output_file"; then
+    : >"$output_file"
+  fi
+
+  LC_ALL=C sort -u -o "$output_file" "$output_file"
+}
+
+write_enablement_ids_to_db() {
+  local db_path="$1"
+  local key="$2"
+  local ids_file="$3"
+  local value_json
+
+  value_json="$(
+    jq -Rn \
+      --rawfile ids "$ids_file" \
+      '
+        ($ids | split("\n") | map(select(length > 0)) | unique)
+        | map({ id: . })
+      '
+  )"
+
+  sqlite3 "$db_path" \
+    "INSERT INTO ItemTable(key, value) VALUES ('$(sql_escape_single_quotes "$key")', '$(sql_escape_single_quotes "$value_json")')
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value;" >/dev/null
+}
+
+bootstrap_default_disabled_extensions() {
+  local profile_dir_name="$1"
+  local desired_default_disabled_file="$2"
+  local seeded_default_disabled_file="$3"
+  local output_seeded_default_disabled_file="$4"
+  local db_path pending_seed current_disabled current_enabled updated_disabled updated_enabled
+
+  file_intersection "$seeded_default_disabled_file" "$desired_default_disabled_file" "$output_seeded_default_disabled_file"
+
+  if [[ ! -s $desired_default_disabled_file ]]; then
+    return 0
+  fi
+
+  pending_seed="$(new_tmp_file)"
+  file_minus_file "$desired_default_disabled_file" "$output_seeded_default_disabled_file" "$pending_seed"
+
+  if [[ ! -s $pending_seed ]]; then
+    return 0
+  fi
+
+  ensure_enablement_db "$profile_dir_name"
+  db_path="$(profile_enablement_db_path "$profile_dir_name")"
+  current_disabled="$(new_tmp_file)"
+  current_enabled="$(new_tmp_file)"
+  updated_disabled="$(new_tmp_file)"
+  updated_enabled="$(new_tmp_file)"
+
+  read_enablement_ids_from_db "$db_path" "extensionsIdentifiers/disabled" "$current_disabled"
+  read_enablement_ids_from_db "$db_path" "extensionsIdentifiers/enabled" "$current_enabled"
+  unique_lines_into_file "$updated_disabled" "$current_disabled" "$pending_seed"
+  file_minus_file "$current_enabled" "$pending_seed" "$updated_enabled"
+  unique_lines_into_file "$output_seeded_default_disabled_file" "$output_seeded_default_disabled_file" "$pending_seed"
+
+  write_enablement_ids_to_db "$db_path" "extensionsIdentifiers/disabled" "$updated_disabled"
+  write_enablement_ids_to_db "$db_path" "extensionsIdentifiers/enabled" "$updated_enabled"
+}
+
 ensure_custom_profile_registry() {
   local profile_name="$1"
   local profile_location="$2"
@@ -523,6 +679,8 @@ ensure_custom_profile_runtime() {
     fi
     normalize_custom_profile_extension_manifest "$profile_dir_name" "$profile_name"
   fi
+
+  ensure_enablement_db "$profile_dir_name"
 }
 
 ensure_profile_runtime() {
@@ -531,25 +689,6 @@ ensure_profile_runtime() {
   local settings_path extensions_manifest
 
   mkdir -p "$user_data_home"
-
-  if [[ $profile_dir_name == "native" ]]; then
-    settings_path="$(profile_settings_path "$profile_dir_name")"
-    extensions_manifest="$extensions_manifest_path"
-    if [[ ! -f $settings_path ]]; then
-      printf '{}\n' >"$settings_path"
-    else
-      jq -S '.' "$settings_path" >/dev/null
-    fi
-    mkdir -p "$(dirname "$extensions_manifest")"
-    if [[ ! -f $extensions_manifest ]]; then
-      printf '[]\n' >"$extensions_manifest"
-    else
-      jq -S '.' "$extensions_manifest" >/dev/null
-    fi
-    prune_orphaned_extension_dirs
-    return 0
-  fi
-
   prune_orphaned_extension_dirs
   ensure_custom_profile_runtime "$profile_dir_name" "$profile_name"
 }
@@ -559,29 +698,29 @@ list_profile_extensions() {
   local _profile_name="$2"
   local output_file="$3"
   local manifest_path
-
-  if [[ $profile_dir_name == "native" ]]; then
-    manifest_path="$extensions_manifest_path"
-  else
-    manifest_path="$(profile_extensions_manifest_path "$profile_dir_name")"
-  fi
+  manifest_path="$(profile_extensions_manifest_path "$profile_dir_name")"
 
   if [[ ! -f $manifest_path ]]; then
     : >"$output_file"
     return 0
   fi
 
-  jq -r '.[].identifier.id // empty' "$manifest_path" | awk 'NF { print }' | LC_ALL=C sort -u >"$output_file"
+  jq -r '.[].identifier.id // empty' "$manifest_path" | awk 'NF { print }' >"${output_file}.raw"
+  canonicalize_extension_ids_file "${output_file}.raw" "$output_file"
+  LC_ALL=C sort -u -o "$output_file" "$output_file"
 }
 
 global_extension_manifest_entry() {
   local extension_id="$1"
   local output_file="$2"
+  local lower_id
+
+  lower_id="$(to_lower "$extension_id")"
 
   [[ -f $extensions_manifest_path ]] || return 1
 
   jq -e \
-    --arg id "${extension_id,,}" \
+    --arg id "$lower_id" \
     '
       map(select((.identifier.id // "" | ascii_downcase) == $id))
       | last
@@ -590,7 +729,7 @@ global_extension_manifest_entry() {
 
 normalize_custom_profile_extension_manifest() {
   local profile_dir_name="$1"
-  local manifest_path ids_file rebuilt_file extension_id entry_file path
+  local manifest_path ids_file rebuilt_file extension_id entry_file path lower_id
 
   manifest_path="$(profile_extensions_manifest_path "$profile_dir_name")"
   [[ -n $manifest_path ]] || return 0
@@ -607,8 +746,9 @@ normalize_custom_profile_extension_manifest() {
 
     entry_file="$(new_tmp_file)"
     if ! global_extension_manifest_entry "$extension_id" "$entry_file"; then
+      lower_id="$(to_lower "$extension_id")"
       jq -e \
-        --arg id "${extension_id,,}" \
+        --arg id "$lower_id" \
         '
           map(select((.identifier.id // "" | ascii_downcase) == $id))
           | last
@@ -631,12 +771,13 @@ add_custom_profile_extension_membership() {
   local profile_dir_name="$1"
   local profile_name="$2"
   local extension_id="$3"
-  local manifest_path manifest_entry tmp_file
+  local manifest_path manifest_entry tmp_file lower_id
 
   manifest_path="$(profile_extensions_manifest_path "$profile_dir_name")"
   [[ -n $manifest_path ]] || return 1
 
   ensure_custom_profile_runtime "$profile_dir_name" "$profile_name"
+  lower_id="$(to_lower "$extension_id")"
 
   manifest_entry="$(new_tmp_file)"
   if ! global_extension_manifest_entry "$extension_id" "$manifest_entry"; then
@@ -646,7 +787,7 @@ add_custom_profile_extension_membership() {
   tmp_file="$(new_tmp_file)"
   jq -S \
     --slurpfile entry "$manifest_entry" \
-    --arg id "${extension_id,,}" \
+    --arg id "$lower_id" \
     '
       [ .[] | select((.identifier.id // "" | ascii_downcase) != $id) ] + [$entry[0]]
     ' "$manifest_path" >"$tmp_file"
@@ -657,16 +798,17 @@ remove_custom_profile_extension_membership() {
   local profile_dir_name="$1"
   local profile_name="$2"
   local extension_id="$3"
-  local manifest_path tmp_file
+  local manifest_path tmp_file lower_id
 
   manifest_path="$(profile_extensions_manifest_path "$profile_dir_name")"
   [[ -n $manifest_path ]] || return 1
 
   ensure_custom_profile_runtime "$profile_dir_name" "$profile_name"
+  lower_id="$(to_lower "$extension_id")"
 
   tmp_file="$(new_tmp_file)"
   jq -S \
-    --arg id "${extension_id,,}" \
+    --arg id "$lower_id" \
     '
       [ .[] | select((.identifier.id // "" | ascii_downcase) != $id) ]
     ' "$manifest_path" >"$tmp_file"
@@ -679,21 +821,16 @@ install_profile_extension() {
   local extension_id="$3"
 
   prune_orphaned_extension_dirs
-
-  if [[ $profile_dir_name == "native" ]]; then
-    run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --install-extension "$extension_id" --force
-  else
-    if add_custom_profile_extension_membership "$profile_dir_name" "$profile_name" "$extension_id"; then
-      return 0
-    fi
-
-    if run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --install-extension "$extension_id" --force; then
-      add_custom_profile_extension_membership "$profile_dir_name" "$profile_name" "$extension_id"
-      return 0
-    fi
-
-    return 1
+  if add_custom_profile_extension_membership "$profile_dir_name" "$profile_name" "$extension_id"; then
+    return 0
   fi
+
+  if run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --install-extension "$extension_id" --force; then
+    add_custom_profile_extension_membership "$profile_dir_name" "$profile_name" "$extension_id"
+    return 0
+  fi
+
+  return 1
 }
 
 uninstall_profile_extension() {
@@ -702,12 +839,7 @@ uninstall_profile_extension() {
   local extension_id="$3"
 
   prune_orphaned_extension_dirs
-
-  if [[ $profile_dir_name == "native" ]]; then
-    run_code_cli "$code_bin" --user-data-dir "$vscode_data_home" --uninstall-extension "$extension_id"
-  else
-    remove_custom_profile_extension_membership "$profile_dir_name" "$profile_name" "$extension_id"
-  fi
+  remove_custom_profile_extension_membership "$profile_dir_name" "$profile_name" "$extension_id"
 }
 
 all_desired_keys_match() {
@@ -837,13 +969,15 @@ classify_profile() {
   local profile_name="$2"
   local desired_settings="$3"
   local desired_extensions="$4"
-  local state_file="$5"
-  local settings_path="$6"
-  local extensions_manifest="$7"
-  local owned_keys_file="$8"
-  local owned_extensions_file="$9"
+  local desired_default_disabled="$5"
+  local state_file="$6"
+  local settings_path="$7"
+  local extensions_manifest="$8"
+  local owned_keys_file="$9"
+  local owned_extensions_file="${10}"
+  local bootstrapped_default_disabled_file="${11}"
   local actual_settings tmp_file state_rc desired_keys stale_keys stale_keys_present combined_keys
-  local actual_extensions stale_extensions desired_missing stale_installed
+  local actual_extensions stale_extensions desired_missing stale_installed pending_default_disabled
 
   PROFILE_STATUS=""
   PROFILE_REASON=""
@@ -858,9 +992,21 @@ classify_profile() {
     return 0
   fi
 
-  if [[ -f $(profile_disabled_file_path "$profile_dir_name") ]]; then
+  if [[ -f $(profile_legacy_disabled_file_path "$profile_dir_name") ]]; then
     PROFILE_STATUS="invalid"
     PROFILE_REASON="apps/vscode/${profile_dir_name}/extensions-disabled.txt is no longer supported"
+    return 0
+  fi
+
+  if [[ -f $managed_dir/_default/launch-disabled-extensions.txt ]]; then
+    PROFILE_STATUS="invalid"
+    PROFILE_REASON="apps/vscode/_default/launch-disabled-extensions.txt has been replaced by default-disabled-extensions.txt"
+    return 0
+  fi
+
+  if [[ -f $(profile_legacy_launch_disabled_file_path "$profile_dir_name") ]]; then
+    PROFILE_STATUS="invalid"
+    PROFILE_REASON="apps/vscode/${profile_dir_name}/launch-disabled-extensions.txt has been replaced by default-disabled-extensions.txt"
     return 0
   fi
 
@@ -873,15 +1019,16 @@ classify_profile() {
   stale_extensions="$(new_tmp_file)"
   desired_missing="$(new_tmp_file)"
   stale_installed="$(new_tmp_file)"
+  pending_default_disabled="$(new_tmp_file)"
 
   state_rc=0
-  if ! load_state_lists "$state_file" "$profile_dir_name" "$profile_name" "$owned_keys_file" "$owned_extensions_file"; then
+  if ! load_state_lists "$state_file" "$profile_dir_name" "$profile_name" "$owned_keys_file" "$owned_extensions_file" "$bootstrapped_default_disabled_file"; then
     state_rc=$?
   fi
 
   if [[ $state_rc -eq 2 ]]; then
-    PROFILE_STATUS="invalid"
-    PROFILE_REASON="state file is malformed"
+    PROFILE_STATUS="needs-apply"
+    PROFILE_REASON="state file schema changed or is malformed"
     return 0
   fi
 
@@ -889,48 +1036,40 @@ classify_profile() {
   file_minus_file "$owned_keys_file" "$desired_keys" "$stale_keys"
   file_minus_file "$owned_extensions_file" "$desired_extensions" "$stale_extensions"
 
-  if [[ $profile_dir_name == "native" ]]; then
-    if [[ ! -f $settings_path ]]; then
-      PROFILE_STATUS="missing"
-      PROFILE_REASON="native profile settings file is missing"
-      return 0
-    fi
-  else
-    if [[ ! -f $storage_json_path ]]; then
-      PROFILE_STATUS="missing"
-      PROFILE_REASON="VS Code profile registry is missing"
-      return 0
-    fi
+  if [[ ! -f $storage_json_path ]]; then
+    PROFILE_STATUS="missing"
+    PROFILE_REASON="VS Code profile registry is missing"
+    return 0
+  fi
 
-    if ! jq -S '.' "$storage_json_path" >/dev/null; then
-      PROFILE_STATUS="invalid"
-      PROFILE_REASON="VS Code profile registry is not valid JSON"
-      return 0
-    fi
+  if ! jq -S '.' "$storage_json_path" >/dev/null; then
+    PROFILE_STATUS="invalid"
+    PROFILE_REASON="VS Code profile registry is not valid JSON"
+    return 0
+  fi
 
-    if ! custom_profile_entry_matches_expected "$profile_dir_name" "$profile_name" "$(profile_id "$profile_dir_name")"; then
-      PROFILE_STATUS="missing"
-      PROFILE_REASON="managed profile is not registered at the expected native profile location"
-      return 0
-    fi
+  if ! custom_profile_entry_matches_expected "$profile_dir_name" "$profile_name" "$(profile_id "$profile_dir_name")"; then
+    PROFILE_STATUS="missing"
+    PROFILE_REASON="managed profile is not registered at the expected native profile location"
+    return 0
+  fi
 
-    if [[ ! -d $(profile_runtime_dir "$profile_dir_name") ]]; then
-      PROFILE_STATUS="missing"
-      PROFILE_REASON="managed profile directory is missing"
-      return 0
-    fi
+  if [[ ! -d $(profile_runtime_dir "$profile_dir_name") ]]; then
+    PROFILE_STATUS="missing"
+    PROFILE_REASON="managed profile directory is missing"
+    return 0
+  fi
 
-    if [[ ! -f $settings_path ]]; then
-      PROFILE_STATUS="missing"
-      PROFILE_REASON="managed profile settings file is missing"
-      return 0
-    fi
+  if [[ ! -f $settings_path ]]; then
+    PROFILE_STATUS="missing"
+    PROFILE_REASON="managed profile settings file is missing"
+    return 0
+  fi
 
-    if [[ -n $extensions_manifest && ! -f $extensions_manifest ]]; then
-      PROFILE_STATUS="missing"
-      PROFILE_REASON="managed profile extensions manifest is missing"
-      return 0
-    fi
+  if [[ -n $extensions_manifest && ! -f $extensions_manifest ]]; then
+    PROFILE_STATUS="missing"
+    PROFILE_REASON="managed profile extensions manifest is missing"
+    return 0
   fi
 
   if ! jq -S '.' "$settings_path" >"$actual_settings"; then
@@ -964,6 +1103,7 @@ classify_profile() {
   project_settings_subset "$actual_settings" "$combined_keys" "$PROFILE_SETTINGS_DIFF_ACTUAL"
   PROFILE_EXTENSIONS_ADD_FILE="$desired_missing"
   PROFILE_EXTENSIONS_REMOVE_FILE="$stale_installed"
+  file_minus_file "$desired_default_disabled" "$bootstrapped_default_disabled_file" "$pending_default_disabled"
 
   if [[ $state_rc -eq 1 ]]; then
     PROFILE_STATUS="needs-apply"
@@ -995,6 +1135,12 @@ classify_profile() {
     return 0
   fi
 
+  if [[ $(line_count "$pending_default_disabled") -gt 0 ]]; then
+    PROFILE_STATUS="needs-apply"
+    PROFILE_REASON="default-disabled extensions have not been bootstrapped yet"
+    return 0
+  fi
+
   PROFILE_STATUS="in-sync"
   PROFILE_REASON="managed settings and extensions match desired state"
 }
@@ -1004,11 +1150,14 @@ apply_profile() {
   local profile_name="$2"
   local desired_settings="$3"
   local desired_extensions="$4"
-  local state_file="$5"
-  local settings_path="$6"
-  local owned_keys_file="$7"
-  local owned_extensions_file="$8"
+  local desired_default_disabled="$5"
+  local state_file="$6"
+  local settings_path="$7"
+  local owned_keys_file="$8"
+  local owned_extensions_file="$9"
+  local bootstrapped_default_disabled_file="${10}"
   local desired_keys stale_keys updated_settings desired_missing stale_installed current_extensions stale_owned_extensions extension_id
+  local updated_bootstrapped_default_disabled
 
   ensure_profile_runtime "$profile_dir_name" "$profile_name"
 
@@ -1018,15 +1167,14 @@ apply_profile() {
   stale_installed="$(new_tmp_file)"
   updated_settings="$(new_tmp_file)"
 
-  if ! load_state_lists "$state_file" "$profile_dir_name" "$profile_name" "$owned_keys_file" "$owned_extensions_file"; then
+  if ! load_state_lists "$state_file" "$profile_dir_name" "$profile_name" "$owned_keys_file" "$owned_extensions_file" "$bootstrapped_default_disabled_file"; then
     : >"$owned_keys_file"
     : >"$owned_extensions_file"
+    : >"$bootstrapped_default_disabled_file"
   fi
 
   jq -r 'keys_unsorted[]' "$desired_settings" >"$desired_keys"
   file_minus_file "$owned_keys_file" "$desired_keys" "$stale_keys"
-  apply_settings_owned_subset "$settings_path" "$desired_settings" "$desired_keys" "$stale_keys" "$updated_settings"
-  write_json_atomically "$updated_settings" "$settings_path"
 
   current_extensions="$(new_tmp_file)"
   stale_owned_extensions="$(new_tmp_file)"
@@ -1045,7 +1193,23 @@ apply_profile() {
     uninstall_profile_extension "$profile_dir_name" "$profile_name" "$extension_id"
   done <"$stale_installed"
 
-  write_state_file "$state_file" "$profile_dir_name" "$profile_name" "$desired_keys" "$desired_extensions"
+  updated_bootstrapped_default_disabled="$(new_tmp_file)"
+  bootstrap_default_disabled_extensions \
+    "$profile_dir_name" \
+    "$desired_default_disabled" \
+    "$bootstrapped_default_disabled_file" \
+    "$updated_bootstrapped_default_disabled"
+
+  apply_settings_owned_subset "$settings_path" "$desired_settings" "$desired_keys" "$stale_keys" "$updated_settings"
+  write_json_atomically "$updated_settings" "$settings_path"
+
+  write_state_file \
+    "$state_file" \
+    "$profile_dir_name" \
+    "$profile_name" \
+    "$desired_keys" \
+    "$desired_extensions" \
+    "$updated_bootstrapped_default_disabled"
 }
 
 list_managed_profiles() {
@@ -1081,27 +1245,33 @@ while IFS= read -r profile_dir_name; do
   profile_name="$(profile_display_name "$profile_dir_name")"
   desired_settings="$(new_tmp_file)"
   desired_extensions="$(new_tmp_file)"
+  desired_default_disabled="$(new_tmp_file)"
   owned_keys_file="$(new_tmp_file)"
   owned_extensions_file="$(new_tmp_file)"
+  bootstrapped_default_disabled_file="$(new_tmp_file)"
   state_file="$(profile_state_file "$profile_dir_name")"
   settings_path="$(profile_settings_path "$profile_dir_name")"
   extensions_manifest="$(profile_extensions_manifest_path "$profile_dir_name")"
 
   build_desired_settings "$profile_dir_name" "$desired_settings"
   build_desired_extensions "$profile_dir_name" "$desired_extensions"
+  build_desired_default_disabled_extensions "$profile_dir_name" "$desired_default_disabled"
   : >"$owned_keys_file"
   : >"$owned_extensions_file"
+  : >"$bootstrapped_default_disabled_file"
 
   classify_profile \
     "$profile_dir_name" \
     "$profile_name" \
     "$desired_settings" \
     "$desired_extensions" \
+    "$desired_default_disabled" \
     "$state_file" \
     "$settings_path" \
     "$extensions_manifest" \
     "$owned_keys_file" \
-    "$owned_extensions_file"
+    "$owned_extensions_file" \
+    "$bootstrapped_default_disabled_file"
 
   case "$PROFILE_STATUS" in
   in-sync)
@@ -1139,20 +1309,24 @@ while IFS= read -r profile_dir_name; do
         "$profile_name" \
         "$desired_settings" \
         "$desired_extensions" \
+        "$desired_default_disabled" \
         "$state_file" \
         "$settings_path" \
         "$owned_keys_file" \
-        "$owned_extensions_file"; then
+        "$owned_extensions_file" \
+        "$bootstrapped_default_disabled_file"; then
         classify_profile \
           "$profile_dir_name" \
           "$profile_name" \
           "$desired_settings" \
           "$desired_extensions" \
+          "$desired_default_disabled" \
           "$state_file" \
           "$settings_path" \
           "$extensions_manifest" \
           "$owned_keys_file" \
-          "$owned_extensions_file"
+          "$owned_extensions_file" \
+          "$bootstrapped_default_disabled_file"
         if [[ $PROFILE_STATUS == "in-sync" ]]; then
           applied=$((applied + 1))
         else
