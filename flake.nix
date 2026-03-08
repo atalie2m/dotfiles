@@ -24,6 +24,11 @@
       url = "github:zhaofengli/nix-homebrew";
     };
 
+    homebrew-emacs-plus = {
+      url = "github:d12frosted/homebrew-emacs-plus";
+      flake = false;
+    };
+
     denix = {
       url = "github:yunfachi/denix";
       inputs = {

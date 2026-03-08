@@ -39,8 +39,7 @@ Options:
 USAGE
 }
 
-set_repo_root
-managed_dir="$ROOT/surfaces/shell/desired"
+managed_dir=""
 mode="check"
 mode_explicit=0
 details=0
@@ -151,6 +150,11 @@ while [[ $# -gt 0 ]]; do
     ;;
   esac
 done
+
+if [[ -z $managed_dir ]]; then
+  set_repo_root
+  managed_dir="$ROOT/surfaces/shell/desired"
+fi
 
 [[ -d $managed_dir ]] || die "managed dir not found: $managed_dir"
 

@@ -30,6 +30,9 @@ delib.module {
         user = userName;
         inherit enableRosetta;
         autoMigrate = cfg.autoMigrate;
+        taps = {
+          "d12frosted/homebrew-emacs-plus" = inputs.homebrew-emacs-plus;
+        };
       };
     };
 }

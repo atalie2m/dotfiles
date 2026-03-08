@@ -48,6 +48,10 @@ delib.host {
       inherit (context) username homeDirectory;
       stateVersion = context.stateVersion.home or "25.11";
     };
+    targets.darwin = {
+      copyApps.enable = false;
+      linkApps.enable = true;
+    };
   };
 
   darwin = { ... }:

@@ -1,5 +1,11 @@
 # shellcheck shell=bash
 
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -x /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+
 psgrep() {
   if [[ -z ${1:-} ]]; then
     echo "Usage: psgrep <pattern>" >&2

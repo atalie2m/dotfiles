@@ -44,6 +44,17 @@ run_shell_sync() {
   HOME="$home_dir" bash "$SYNC_SCRIPT" shell "$@" --managed-dir "$MANAGED_DIR"
 }
 
+run_shell_sync_from_copy() {
+  local copied_root="$tmp_root/scripts-copy"
+
+  if [[ ! -d $copied_root ]]; then
+    cp -R "$ROOT/scripts" "$copied_root"
+    chmod -R u+w "$copied_root"
+  fi
+
+  HOME="$home_dir" bash "$copied_root/sync.sh" shell "$@" --managed-dir "$MANAGED_DIR"
+}
+
 printf 'test: running shell sync smoke test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
@@ -60,6 +71,11 @@ fi
 
 if ! run_shell_sync --check --item bash-rc >/dev/null; then
   echo "FAIL: check after initial apply failed" >&2
+  exit 1
+fi
+
+if ! run_shell_sync_from_copy --check --item bash-rc >/dev/null; then
+  echo "FAIL: check failed when sync script ran outside repo root with explicit managed dir" >&2
   exit 1
 fi
 

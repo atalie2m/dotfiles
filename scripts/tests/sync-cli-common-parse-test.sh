@@ -239,6 +239,101 @@ if ! grep -Fq "SECRETS_DIR is required when SECRETS is not a path:... input (boo
   exit 1
 fi
 
+empty_nix_bin="$tmp_root/empty-nix-bin"
+mkdir -p "$empty_nix_bin"
+cat >"$empty_nix_bin/nix" <<'EOF_EMPTY_NIX'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
+  exit 0
+fi
+
+echo "fake nix: unexpected invocation: $*" >&2
+exit 1
+EOF_EMPTY_NIX
+chmod +x "$empty_nix_bin/nix"
+
+stub_home="$tmp_root/stub-home"
+mkdir -p "$stub_home/.config/dotfiles"
+: >"$stub_home/.config/dotfiles/STUB"
+
+if (
+  HOME="$stub_home" \
+    PATH="$empty_nix_bin:$PATH" \
+    bash "$APPLY_SCRIPT" --host full_mac
+) >"$tmp_root/apply-stub.out" 2>"$tmp_root/apply-stub.err"; then
+  echo "FAIL: apply unexpectedly accepted a stubbed facts input" >&2
+  exit 1
+fi
+
+if ! grep -Fq "no darwinConfigurations found (check local/secrets inputs and STUB)" "$tmp_root/apply-stub.err"; then
+  echo "FAIL: apply missing empty-target guidance" >&2
+  cat "$tmp_root/apply-stub.err" >&2 || true
+  exit 1
+fi
+if ! grep -Fq "facts input: path:$stub_home/.config/dotfiles" "$tmp_root/apply-stub.err"; then
+  echo "FAIL: apply missing facts input path for stubbed inputs" >&2
+  cat "$tmp_root/apply-stub.err" >&2 || true
+  exit 1
+fi
+if ! grep -Fq "facts STUB present: $stub_home/.config/dotfiles/STUB (flake outputs are gated while it exists)" "$tmp_root/apply-stub.err"; then
+  echo "FAIL: apply missing stub-path guidance" >&2
+  cat "$tmp_root/apply-stub.err" >&2 || true
+  exit 1
+fi
+
+failing_nix_bin="$tmp_root/failing-nix-bin"
+mkdir -p "$failing_nix_bin"
+cat >"$failing_nix_bin/nix" <<'EOF_FAILING_NIX'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
+  exit 1
+fi
+
+echo "fake nix: unexpected invocation: $*" >&2
+exit 1
+EOF_FAILING_NIX
+chmod +x "$failing_nix_bin/nix"
+
+failing_home="$tmp_root/failing-home"
+mkdir -p "$failing_home/.config/dotfiles"
+cat >"$failing_home/.config/dotfiles/facts.nix" <<'EOF_FAILING_FACTS'
+{
+  user.username = "tester";
+}
+EOF_FAILING_FACTS
+cat >"$failing_home/.config/dotfiles/secrets.nix" <<'EOF_FAILING_SECRETS'
+{}
+EOF_FAILING_SECRETS
+
+if (
+  HOME="$failing_home" \
+    PATH="$failing_nix_bin:$PATH" \
+    bash "$APPLY_SCRIPT" --host full_mac
+) >"$tmp_root/apply-failing-eval.out" 2>"$tmp_root/apply-failing-eval.err"; then
+  echo "FAIL: apply unexpectedly accepted a failing darwinConfigurations eval" >&2
+  exit 1
+fi
+
+if ! grep -Fq "unable to evaluate darwinConfigurations (check local/secrets inputs and STUB)" "$tmp_root/apply-failing-eval.err"; then
+  echo "FAIL: apply missing darwinConfigurations eval guidance" >&2
+  cat "$tmp_root/apply-failing-eval.err" >&2 || true
+  exit 1
+fi
+if ! grep -Fq "facts input: path:$failing_home/.config/dotfiles" "$tmp_root/apply-failing-eval.err"; then
+  echo "FAIL: apply missing facts input path for eval failures" >&2
+  cat "$tmp_root/apply-failing-eval.err" >&2 || true
+  exit 1
+fi
+if ! grep -Fq "secrets input: path:$failing_home/.config/dotfiles" "$tmp_root/apply-failing-eval.err"; then
+  echo "FAIL: apply missing secrets input path for eval failures" >&2
+  cat "$tmp_root/apply-failing-eval.err" >&2 || true
+  exit 1
+fi
+
 fake_bin="$tmp_root/fake-bin"
 mkdir -p "$fake_bin"
 

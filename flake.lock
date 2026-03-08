@@ -242,6 +242,22 @@
         "type": "github"
       }
     },
+    "homebrew-emacs-plus": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1772943793,
+        "narHash": "sha256-wAGupB0Srp7XhEfD+ZaTvPpslI62ri6vohHrWU3ywkw=",
+        "owner": "d12frosted",
+        "repo": "homebrew-emacs-plus",
+        "rev": "51f594c995b3b29c4827adf72a65c5ba5fbfc291",
+        "type": "github"
+      },
+      "original": {
+        "owner": "d12frosted",
+        "repo": "homebrew-emacs-plus",
+        "type": "github"
+      }
+    },
     "local": {
       "flake": false,
       "locked": {
@@ -471,6 +487,7 @@
         "denix": "denix",
         "flake-parts": "flake-parts",
         "home-manager": "home-manager",
+        "homebrew-emacs-plus": "homebrew-emacs-plus",
         "local": "local",
         "mac-app-util": "mac-app-util",
         "nix-darwin": "nix-darwin",

@@ -1,5 +1,36 @@
 #!/usr/bin/env bash
 
+log_input_resolution_hint() {
+  local label="$1"
+  local ref="$2"
+  local expected_file="$3"
+  local input_dir="" stub_path=""
+
+  log "$label input: $ref"
+
+  input_dir="$(path_ref_to_dir "$ref" 2>/dev/null || true)"
+  if [[ -z $input_dir ]]; then
+    return 0
+  fi
+
+  if [[ ! -f "$input_dir/$expected_file" ]]; then
+    log "$label file missing: $input_dir/$expected_file"
+  fi
+
+  stub_path="$input_dir/STUB"
+  if [[ -f $stub_path ]]; then
+    log "$label STUB present: $stub_path (flake outputs are gated while it exists)"
+  fi
+}
+
+log_darwin_configuration_hints() {
+  local facts="$1"
+  local secrets="$2"
+
+  log_input_resolution_hint "facts" "$facts" "facts.nix"
+  log_input_resolution_hint "secrets" "$secrets" "secrets.nix"
+}
+
 list_darwin_targets() {
   local root="$1"
   local facts="$2"
@@ -35,11 +66,13 @@ resolve_target() {
   local targets
   if ! targets=$(list_darwin_targets "$root" "$facts" "$secrets"); then
     log "unable to evaluate darwinConfigurations (check local/secrets inputs and STUB)"
+    log_darwin_configuration_hints "$facts" "$secrets"
     return 1
   fi
 
   if [[ -z $targets ]]; then
     log "no darwinConfigurations found (check local/secrets inputs and STUB)"
+    log_darwin_configuration_hints "$facts" "$secrets"
     return 1
   fi
 
