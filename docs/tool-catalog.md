@@ -33,7 +33,8 @@ nix run .#list-tools -- --host full_mac --format json
 - `group.enable`
 - `group.tool.enable`
 
-Deeper toggles such as `system.brewNix.autoDock.enable` are intentionally omitted.
+Deeper toggles such as `system.brewNix.autoDock.enable` or
+`editor.vscode.sync.enable` are intentionally omitted.
 
 ### Environment Variables (Optional)
 

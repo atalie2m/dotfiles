@@ -95,7 +95,10 @@ Flags:
 - `--managed-dir <path>`
 - `--state-dir <path>`
 
-`sync vscode --apply` is also run during Home Manager activation when VS Code is enabled.
+`sync vscode --apply` is also run during Home Manager activation when both
+`tools.editor.vscode.enable = true` and `tools.editor.vscode.sync.enable = true`.
+Set `tools.editor.vscode.sync.enable = false` if you want to keep VS Code installed
+but stop automatic activation-time reconciliation.
 
 ## Manual switching
 

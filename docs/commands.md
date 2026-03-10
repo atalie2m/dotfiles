@@ -5,8 +5,8 @@ Canonical command examples and current host names live here. Keep AI helper file
 ## Current hosts and target names
 
 - Hosts: `full_mac` (default rice: `full`), `minimal_mac` (default rice: `minimum`)
-- Rices: `base`, `darwin`, `dev`, `full`, `minimum`
-- Example darwin targets: `full_mac`, `minimal_mac`, `full_mac-minimum`, `minimal_mac-full`
+- Rices: `base`, `darwin`, `dev`, `full`, `minimum`, `partial`
+- Example darwin targets: `full_mac`, `minimal_mac`, `full_mac-minimum`, `minimal_mac-full`, `full_mac-partial`
 - Home Manager outputs: `<user>@full_mac`, `<user>@minimal_mac`, `<user>@a2m_nixos`
 
 ## Operational CLI
@@ -24,6 +24,7 @@ nix run .#apply -- --host full_mac --action build
 # Switch rices explicitly
 nix run .#apply -- --host full_mac --rice minimum
 nix run .#apply -- --host minimal_mac --rice full
+nix run .#apply -- --host full_mac --rice partial
 
 # Inspect effective group/tool toggles
 nix run .#list-tools -- --host full_mac
@@ -78,7 +79,7 @@ code --profile "Python"
 
 Notes:
 
-- `sync vscode --apply` also runs during activation when `tools.editor.vscode.enable = true`.
+- `sync vscode --apply` also runs during activation when both `tools.editor.vscode.enable = true` and `tools.editor.vscode.sync.enable = true`.
 - `apps/vscode/_default/` is the shared layer for all managed profiles.
 - `apps/vscode/native/` is managed as a native profile (`Native`).
 

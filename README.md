@@ -39,17 +39,18 @@ Operational note: this repo keeps shared NixOS and standalone Home Manager trees
 `nixosConfigurations` and `homeConfigurations` remain available as auxiliary outputs for manual evaluation and targeted experiments; the operational CLI does not resolve them, and CI keeps representative builds on Darwin while Linux outputs stay eval-oriented/best-effort.
 
 - Hosts: `full_mac` (default rice: `full`), `minimal_mac` (default rice: `minimum`).
-- Rices: `base`, `darwin`, `dev`, `full`, `minimum`.
+- Rices: `base`, `darwin`, `dev`, `full`, `minimum`, `partial`.
   - `base`: shared essentials (`system.nix`, core CLI, shell, Git, GPG/SOPS).
   - `darwin`: macOS base integrations (Homebrew + hostnames/fonts).
   - `dev`: editor/terminal/workstation stack.
   - `full`: composition of `base + darwin + dev`.
   - `minimum`: minimal base profile alias.
+  - `partial`: composition of `base + darwin + dev` with targeted overrides (AI coding agents off except `codex`, VS Code activation sync off).
 
 Canonical host names and CLI examples live in [`docs/commands.md`](docs/commands.md).
 
 Manual attribute examples (still valid):
-`full_mac`, `minimal_mac`, `full_mac-minimum`, `minimal_mac-full`.
+`full_mac`, `minimal_mac`, `full_mac-minimum`, `minimal_mac-full`, `full_mac-partial`.
 
 When `--rice` is provided, the CLI resolves only `host-rice` (no implicit fallback to `host`).
 
@@ -115,7 +116,7 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - `apps/vscode/native/` is managed as a native profile (`Native`).
 - `apps/vscode/<name>/` for any other name maps to a native custom profile with that display name.
 - Supported inputs are `settings.json`, `extensions.txt`, and bootstrap-only `default-disabled-extensions.txt`.
-- `sync vscode --apply` runs during activation and reconciles repo-owned settings keys and extensions into writable VS Code profile state.
+- `sync vscode --apply` runs during activation when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true, and reconciles repo-owned settings keys and extensions into writable VS Code profile state.
 - `default-disabled-extensions.txt` is seeded once into the profile's extension enablement state; users can later enable those extensions in the VS Code UI and sync will not force them back off.
 - Drift management is mutable by design: repo-owned settings keys and extensions converge, while user-added settings keys and extensions remain untouched.
 

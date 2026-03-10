@@ -7,6 +7,7 @@ delib.module {
 
   options = with delib; moduleOptions {
     enable = boolOption false;
+    sync.enable = boolOption true;
     managedDir = strOption "";
     stateDir = strOption "";
   };
@@ -51,14 +52,12 @@ delib.module {
         ];
     in
     {
-      home-manager.sharedModules = [
-        ({ ... }: {
-          home.activation.syncVscodeProfiles = lib.mkOrder 900 ''
-            export PATH="${runtimePath}:$PATH"
-            state_dir=${stateDirExpr}
-            ${lib.escapeShellArgs applyArgs} --state-dir "$state_dir"
-          '';
-        })
-      ];
+      home-manager.sharedModules = lib.optional cfg.sync.enable ({ ... }: {
+        home.activation.syncVscodeProfiles = lib.mkOrder 900 ''
+          export PATH="${runtimePath}:$PATH"
+          state_dir=${stateDirExpr}
+          ${lib.escapeShellArgs applyArgs} --state-dir "$state_dir"
+        '';
+      });
     };
 }

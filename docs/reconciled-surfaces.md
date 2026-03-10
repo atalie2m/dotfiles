@@ -71,7 +71,7 @@ Behavior:
 - User-added keys/extensions that are not owned by the repo are not removed.
 - Legacy per-profile extension disable lists are not part of this surface and are treated as invalid input.
 - Apply also removes the legacy `~/.local/share/vscode-instances` tree after a successful full reconciliation.
-- Home Manager activation runs `sync vscode --apply` when VS Code is enabled.
+- Home Manager activation runs `sync vscode --apply` when VS Code and VS Code sync are both enabled (`tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable`).
 
 Workflow:
 

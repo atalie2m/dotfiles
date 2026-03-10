@@ -65,7 +65,6 @@ let
     {
       inherit facts user machines machine username homeDirectory platform stateVersion effectiveUser;
     };
-
   riceProfiles = {
     base = {
       inherits = [ ];
@@ -96,6 +95,36 @@ let
         tools.editor.emacs.enable = true;
         tools.editor.neovim.enable = true;
         tools.editor.vscode.enable = true;
+        tools.dev.git.delta.enable = true;
+        tools.shell.defaultShell = "zsh";
+        tools.shell.atuin.enable = true;
+        tools.shell.direnv.enable = true;
+        tools.shell.fzf.enable = true;
+        tools.shell.fzfTab.enable = true;
+        tools.shell.zoxide.enable = true;
+        tools.system.karabiner.enable = true;
+        tools.system.aerospace.enable = true;
+        tools.system.keyclu.enable = true;
+        tools.system.latestApp.enable = true;
+        tools.system.xcodesApp.enable = true;
+        tools.terminal.alacritty.enable = true;
+        tools.terminal.ghostty.enable = true;
+        tools.terminal.wezterm.enable = true;
+        tools.terminal.rio.enable = true;
+      };
+    };
+
+    partial = {
+      inherits = [ "base" "darwin" ];
+      myconfig = {
+        # Keep parity with the dev rice while allowing targeted toggle overrides.
+        tools.aiCodingAgent.enable = false;
+        tools.aiCodingAgent.codex.enable = true;
+        tools.dev.enable = true;
+        tools.editor.emacs.enable = true;
+        tools.editor.neovim.enable = true;
+        tools.editor.vscode.enable = true;
+        tools.editor.vscode.sync.enable = false;
         tools.dev.git.delta.enable = true;
         tools.shell.defaultShell = "zsh";
         tools.shell.atuin.enable = true;

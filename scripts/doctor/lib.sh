@@ -150,7 +150,7 @@ record_strict_sync_checks() {
   local sync_script shell_enabled shell_output shell_summary
   local shell_zsh_enabled="" shell_bash_enabled="" shell_check_args shell_enabled_count
   local root_compat_enabled="" root_compat_output root_compat_summary compat_script
-  local vscode_enabled="" vscode_output="" vscode_summary=""
+  local vscode_enabled="" vscode_sync_enabled="" vscode_output="" vscode_summary=""
 
   sync_script="$SCRIPT_DIR/sync.sh"
   compat_script="$SCRIPT_DIR/zshrc-compat.sh"
@@ -169,6 +169,7 @@ record_strict_sync_checks() {
     shell_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.shell.enable")"
   fi
   vscode_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.editor.vscode.enable")"
+  vscode_sync_enabled="$(eval_darwin_target_bool "$resolved_target" "myconfig.tools.editor.vscode.sync.enable")"
 
   case "$shell_enabled" in
   true)
@@ -246,20 +247,30 @@ record_strict_sync_checks() {
 
   case "$vscode_enabled" in
   true)
-    if [[ -f $sync_script ]]; then
-      if vscode_output=$(bash "$sync_script" vscode --check --details 2>&1); then
-        record_check "vscode.sync" "ok" "VS Code sync check passed"
-      else
-        vscode_summary="$(printf '%s\n' "$vscode_output" | awk '/summary:/ { print; exit }')"
-        if [[ -n $vscode_summary ]]; then
-          record_check "vscode.sync" "fail" "VS Code sync check failed: $vscode_summary (inspect: nix run .#dotfiles -- sync vscode --check --details --diff)"
+    case "$vscode_sync_enabled" in
+    true)
+      if [[ -f $sync_script ]]; then
+        if vscode_output=$(bash "$sync_script" vscode --check --details 2>&1); then
+          record_check "vscode.sync" "ok" "VS Code sync check passed"
         else
-          record_check "vscode.sync" "fail" "VS Code sync check failed (inspect: nix run .#dotfiles -- sync vscode --check --details --diff)"
+          vscode_summary="$(printf '%s\n' "$vscode_output" | awk '/summary:/ { print; exit }')"
+          if [[ -n $vscode_summary ]]; then
+            record_check "vscode.sync" "fail" "VS Code sync check failed: $vscode_summary (inspect: nix run .#dotfiles -- sync vscode --check --details --diff)"
+          else
+            record_check "vscode.sync" "fail" "VS Code sync check failed (inspect: nix run .#dotfiles -- sync vscode --check --details --diff)"
+          fi
         fi
+      else
+        record_check "vscode.sync" "warn" "sync script not found; skipped"
       fi
-    else
-      record_check "vscode.sync" "warn" "sync script not found; skipped"
-    fi
+      ;;
+    false)
+      record_check "vscode.sync" "ok" "sync disabled in target $resolved_target; skipped"
+      ;;
+    *)
+      record_check "vscode.sync" "warn" "unable to resolve VS Code sync enablement for target $resolved_target; skipped"
+      ;;
+    esac
     ;;
   false)
     record_check "vscode.sync" "ok" "disabled in target $resolved_target; skipped"
