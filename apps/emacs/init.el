@@ -5,6 +5,7 @@
 (require 'my-core)
 (require 'my-ui)
 (require 'my-completion)
+(require 'my-navigation)
 (require 'my-meow)
 (require 'my-project)
 

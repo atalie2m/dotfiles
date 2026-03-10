@@ -19,6 +19,9 @@
      '("b" . switch-to-buffer)
      '("s" . save-buffer)
      '("k" . kill-current-buffer)
+     '("o" . ace-window)
+     '("p" . popper-toggle)
+     '("T" . tab-bar-mode)
      '("t" . treemacs))
 
     ;; NORMAL state: Minimal Vim-like set

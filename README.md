@@ -124,6 +124,7 @@ See `docs/vscode.md` for the runtime model and CLI.
 ## Mutable Editor Tooling
 
 - Emacs app/config wiring is declarative, but package installation still happens through `package.el` against GNU ELPA / NonGNU ELPA / MELPA at runtime.
+- Neovim app/config wiring is declarative under `apps/neovim/`, while plugin installation/update happens at runtime through `lazy.nvim` using the repo-owned `lazy-lock.json`.
 - VS Code profile definitions are declarative, but runtime state stays writable; `sync vscode` manages only the owned subset of settings keys and extensions.
 - This repo treats those editor runtimes as a convenience boundary: config is pinned here, package/login/UI state is not.
 

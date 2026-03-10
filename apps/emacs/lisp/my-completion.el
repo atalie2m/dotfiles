@@ -59,5 +59,17 @@
   (add-to-list 'completion-at-point-functions #'cape-file)
   (add-to-list 'completion-at-point-functions #'cape-dabbrev))
 
+(use-package tempel
+  :bind (("M-+" . tempel-complete))
+  :init
+  (defun my/tempel-setup-capf ()
+    "Make `tempel-expand' the first CAPF in the current buffer."
+    (let ((capfs (copy-sequence completion-at-point-functions)))
+      (setq-local completion-at-point-functions
+                  (cons #'tempel-expand
+                        (delq #'tempel-expand capfs)))))
+  (dolist (hook '(prog-mode-hook text-mode-hook conf-mode-hook))
+    (add-hook hook #'my/tempel-setup-capf)))
+
 (provide 'my-completion)
 ;;; my-completion.el ends here

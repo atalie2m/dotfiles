@@ -30,6 +30,27 @@ delib.module {
       emacsDir = repoPaths.apps + "/emacs";
       iconPath = emacsDir + "/emacs-icon-1.0.icns";
       hasIcon = builtins.pathExists iconPath;
+      emacsPackages = with pkgs.emacsPackages; [
+        ace-window
+        avy
+        cape
+        consult
+        corfu
+        embark
+        magit
+        marginalia
+        meow
+        meow-tree-sitter
+        orderless
+        popper
+        tempel
+        treesit-auto
+        treemacs
+        use-package
+        vertico
+        vundo
+        which-key
+      ];
       emacsFiles = {
         ".emacs.d/early-init.el" = {
           force = true;
@@ -56,6 +77,7 @@ delib.module {
       };
     in
     {
+      home.packages = emacsPackages;
       home.file = emacsFiles;
     };
 }
