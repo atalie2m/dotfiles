@@ -116,6 +116,7 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - `apps/vscode/native/` is managed as a native profile (`Native`).
 - `apps/vscode/<name>/` for any other name maps to a native custom profile with that display name.
 - Supported inputs are `settings.json`, `extensions.txt`, and bootstrap-only `default-disabled-extensions.txt`.
+- `sync vscode` uses a Rust engine (`dotfiles-sync-vscode`) when available, with a Bash fallback kept for compatibility.
 - `sync vscode --apply` runs during activation when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true, and reconciles repo-owned settings keys and extensions into writable VS Code profile state.
 - `default-disabled-extensions.txt` is seeded once into the profile's extension enablement state; users can later enable those extensions in the VS Code UI and sync will not force them back off.
 - Drift management is mutable by design: repo-owned settings keys and extensions converge, while user-added settings keys and extensions remain untouched.

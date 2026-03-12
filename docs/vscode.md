@@ -32,6 +32,7 @@ It is applied through `sync vscode --apply`, not at launch time.
 ## Runtime model
 
 `sync vscode` builds the desired profile state from the repo and writes it into VS Code's native profile storage.
+The CLI entrypoint dispatches to a Rust engine (`dotfiles-sync-vscode`) when available, with a legacy Bash fallback.
 
 - Effective settings:
   - `_default/settings.json` recursively merged with `<profile>/settings.json`
@@ -51,6 +52,12 @@ That state records:
 - previously owned top-level settings keys
 - previously owned extension IDs
 - which default-disabled extension IDs have already been bootstrapped for the current profile
+
+State schema notes:
+
+- current schema version is `3`
+- older or malformed state files are treated as `needs-apply`
+- apply rewrites state in the current schema
 
 ## Runtime locations
 

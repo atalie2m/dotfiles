@@ -20,3 +20,7 @@ result-*
 *.backup
 *.orig
 *.rej
+
+# Rust build artifacts
+scripts/sync-adapters/vscode-rs/target
+scripts/sync-adapters/vscode-rs/bin/dotfiles-sync-vscode

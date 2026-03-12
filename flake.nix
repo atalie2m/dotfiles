@@ -119,7 +119,9 @@
           indent_size = 2;
         };
       };
-      mkPortableChecks = { pkgs, formatterWrapper }:
+      mkSyncVscodeRustPackage = pkgs:
+        pkgs.callPackage ./nix/pkgs/dotfiles-sync-vscode { };
+      mkPortableChecks = { pkgs, formatterWrapper, syncVscodeRust }:
         {
           treefmt = pkgs.runCommand "treefmt-check"
             {
@@ -297,10 +299,16 @@
 
           syncVscodeSmoke = pkgs.runCommand "sync-vscode-smoke-test"
             {
-              nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.sqlite ];
+              nativeBuildInputs = [
+                pkgs.bash
+                pkgs.jq
+                pkgs.sqlite
+                syncVscodeRust
+              ];
               src = repoPaths.root;
             } ''
             cd "$src"
+            export DOTFILES_SYNC_VSCODE_BIN="${syncVscodeRust}/bin/dotfiles-sync-vscode"
             bash scripts/tests/sync-vscode-smoke-test.sh
             touch "$out"
           '';
@@ -344,11 +352,15 @@
                 pkgs = import inputs.nixpkgs-linux { inherit system; };
                 treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs (treefmtConfigFor pkgs);
                 formatterWrapper = treefmtEval.config.build.wrapper;
+                syncVscodeRust = mkSyncVscodeRustPackage pkgs;
               in
               {
                 formatter.${system} = formatterWrapper;
-                checks.${system} = mkPortableChecks { inherit pkgs formatterWrapper; };
+                checks.${system} = mkPortableChecks {
+                  inherit pkgs formatterWrapper syncVscodeRust;
+                };
                 devShells.${system}.default = mkPortableDevShell { inherit pkgs formatterWrapper; };
+                packages.${system}.dotfiles-sync-vscode = syncVscodeRust;
                 apps.${system}.format = {
                   type = "app";
                   program = "${pkgs.writeShellScript "dotfiles-format" ''
@@ -484,8 +496,9 @@
               ''}";
               meta.description = description;
             };
+          syncVscodeRust = mkSyncVscodeRustPackage pkgs;
           portableChecks = mkPortableChecks {
-            inherit pkgs;
+            inherit pkgs syncVscodeRust;
             formatterWrapper = config.treefmt.build.wrapper;
           };
         in
@@ -534,6 +547,7 @@
 
           packages = {
             darwin-rebuild = inputs.nix-darwin.packages.${pkgs.stdenv.hostPlatform.system}.darwin-rebuild;
+            dotfiles-sync-vscode = syncVscodeRust;
           };
 
           apps = {

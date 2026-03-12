@@ -43,7 +43,8 @@ nix run .#dotfiles -- sync shell --apply
 
 ## VS Code native profiles
 
-`scripts/sync-adapters/vscode.sh` reconciles declarative profile input from `apps/vscode/` into writable VS Code profile state.
+`scripts/sync-adapters/vscode.sh` is a thin dispatcher. It prefers the Rust engine (`dotfiles-sync-vscode`) and falls back to `vscode-legacy.sh` when no Rust binary is available.
+The Rust engine reconciles declarative profile input from `apps/vscode/` into writable VS Code profile state.
 The design is intentionally mutable: only the repo-owned subset converges.
 
 - Desired:
@@ -58,6 +59,7 @@ The design is intentionally mutable: only the repo-owned subset converges.
 - State:
   - `${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/vscode`
   - one JSON state file per managed profile
+  - state schema is versioned; older state schemas are treated as `needs-apply` and regenerated on apply
 - Model:
   - recursively merge `_default` with the selected profile
   - own the effective settings' top-level keys and effective extension IDs
