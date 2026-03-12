@@ -31,6 +31,7 @@ delib.module {
         pkgs.gawk
         pkgs.gnugrep
         pkgs.jq
+        pkgs.sqlite
         pkgs.vscode
       ];
       stateDirExpr =

@@ -83,6 +83,7 @@ CHECK_STATUS=()
 CHECK_MESSAGE=()
 FAILURES=0
 WARNINGS=0
+INFOS=0
 
 record_check() {
   local name="$1"
@@ -96,6 +97,7 @@ record_check() {
   case "$status" in
   fail) FAILURES=$((FAILURES + 1)) ;;
   warn) WARNINGS=$((WARNINGS + 1)) ;;
+  info) INFOS=$((INFOS + 1)) ;;
   esac
 
   if [[ $json -eq 0 ]]; then
@@ -136,6 +138,7 @@ if [[ $json -eq 1 ]]; then
   printf '"ok":%s,' "$ok"
   printf '"failures":%s,' "$FAILURES"
   printf '"warnings":%s,' "$WARNINGS"
+  printf '"info":%s,' "$INFOS"
   printf '"checks":['
   for i in "${!CHECK_NAMES[@]}"; do
     name=$(json_escape "${CHECK_NAMES[$i]}")

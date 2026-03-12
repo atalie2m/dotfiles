@@ -24,6 +24,7 @@
           devShells.default = pkgs.mkShell {
             name = "web-dev";
             packages = [
+              pkgs.zsh
               node
               pkgs.nodePackages.pnpm
               pkgs.bun
@@ -38,6 +39,9 @@
             ];
             shellHook = ''
               echo "web-dev shell: Node $(node -v), pnpm $(pnpm -v)"
+              if [[ $- == *i* ]]; then
+                exec ${pkgs.zsh}/bin/zsh
+              fi
             '';
           };
 

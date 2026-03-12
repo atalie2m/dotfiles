@@ -319,6 +319,7 @@
         pkgs.mkShell {
           name = "dotfiles-dev";
           packages = [
+            pkgs.zsh
             pkgs.age
             pkgs.deadnix
             pkgs.nvfetcher
@@ -327,6 +328,11 @@
             pkgs.statix
             formatterWrapper
           ];
+          shellHook = ''
+            if [[ $- == *i* ]]; then
+              exec ${pkgs.zsh}/bin/zsh
+            fi
+          '';
         };
       linuxContributorOutputs =
         nixLib.foldl'

@@ -60,7 +60,7 @@ record_basic_system_checks() {
   if [[ -f $secrets_file ]]; then
     record_check "secrets.exists" "ok" "$secrets_file"
   else
-    record_check "secrets.exists" "fail" "$secrets_file missing"
+    record_check "secrets.exists" "info" "$secrets_file missing (optional)"
   fi
 
   age_key_file="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"

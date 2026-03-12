@@ -21,7 +21,6 @@ return {
     },
     config = function()
       local lsp = require("config.lsp")
-      local lspconfig = require("lspconfig")
 
       local servers = {
         nixd = {},
@@ -49,7 +48,13 @@ return {
           capabilities = lsp.capabilities,
           on_attach = lsp.on_attach,
         }, server_opts)
-        lspconfig[server].setup(opts)
+
+        if vim.lsp.config then
+          vim.lsp.config[server] = opts
+          vim.lsp.enable(server)
+        else
+          require("lspconfig")[server].setup(opts)
+        end
       end
 
       vim.diagnostic.config({

@@ -84,6 +84,7 @@ let
         tools.system.homebrewNative.enable = true;
         tools.system.hostnames.enable = true;
         tools.system.fonts.enable = true;
+        tools.system.macosUi.enable = true;
       };
     };
 
@@ -146,7 +147,19 @@ let
 
     full = {
       inherits = [ "base" "darwin" "dev" ];
-      myconfig = { };
+      myconfig = {
+        tools.dev.ansible.enable = false;
+        tools.dev.go.enable = false;
+        tools.dev.nodejs.enable = false;
+        tools.dev.opentofu.enable = false;
+        tools.dev.terraform.enable = false;
+
+        tools.dev.gitAbsorb.enable = true;
+        tools.dev.gnugrep.enable = true;
+        tools.dev.gnused.enable = true;
+        # Keep git-lfs enabled as requested; this is managed by the git module.
+        tools.dev.git.lfs.enable = true;
+      };
     };
 
     minimum = {

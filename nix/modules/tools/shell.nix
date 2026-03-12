@@ -23,7 +23,7 @@ delib.module {
           la = "ls -A";
           l = "ls -CF";
 
-          dev = "nix develop";
+          dev = "nix develop --command zsh";
           build = "nix build";
           run = "nix run";
           search = "nix search";

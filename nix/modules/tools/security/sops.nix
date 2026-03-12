@@ -1,7 +1,12 @@
 { delib, pkgs, lib, dotlib, inputs, ... }:
 
 let
-  localSecrets = import (inputs.secrets + "/secrets.nix");
+  localSecretsFile = inputs.secrets + "/secrets.nix";
+  localSecrets =
+    if builtins.pathExists localSecretsFile then
+      import localSecretsFile
+    else
+      { };
   secretFiles = localSecrets.files or { };
   hasSecrets = secretFiles != { };
 

@@ -1,15 +1,14 @@
 ;;; my-completion.el --- completion UI  -*- lexical-binding: t; -*-
 
 (use-package vertico
-  :init
+  :config
   (vertico-mode 1))
 
 (use-package vertico-multiform
   :after vertico
   :ensure nil
-  :init
-  (vertico-multiform-mode 1)
   :config
+  (vertico-multiform-mode 1)
   (setq vertico-multiform-commands
         '((consult-line buffer)
           (consult-ripgrep buffer)
@@ -25,10 +24,10 @@
      (window-height . 0.33))))
 
 (use-package orderless
-  :init
-  (setq completion-styles '(orderless basic)
-        completion-category-defaults nil
-        completion-category-overrides '((file (styles partial-completion)))))
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-defaults nil)
+  (completion-category-overrides '((file (styles partial-completion)))))
 
 (use-package consult
   :bind (("C-s" . consult-line)
@@ -36,32 +35,32 @@
          ("C-c g" . consult-ripgrep)))
 
 (use-package marginalia
-  :init
+  :config
   (marginalia-mode 1))
 
 (use-package embark
   :bind (("C-." . embark-act)
          ("C-;" . embark-dwim)
          ("C-h B" . embark-bindings))
-  :init
+  :config
   (setq prefix-help-command #'embark-prefix-help-command))
 
 (use-package which-key
-  :init
+  :config
   (which-key-mode 1))
 
 (use-package corfu
-  :init
+  :config
   (global-corfu-mode 1))
 
 (use-package cape
-  :init
+  :config
   (add-to-list 'completion-at-point-functions #'cape-file)
   (add-to-list 'completion-at-point-functions #'cape-dabbrev))
 
 (use-package tempel
   :bind (("M-+" . tempel-complete))
-  :init
+  :config
   (defun my/tempel-setup-capf ()
     "Make `tempel-expand' the first CAPF in the current buffer."
     (let ((capfs (copy-sequence completion-at-point-functions)))

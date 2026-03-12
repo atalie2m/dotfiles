@@ -24,6 +24,9 @@
   awscli2 = { group = "dev"; pkg = "awscli2"; };
   gh = { group = "dev"; pkg = "gh"; };
   go = { group = "dev"; pkg = "go"; };
+  gitAbsorb = { group = "dev"; pkg = "git-absorb"; };
+  gnugrep = { group = "dev"; pkg = "gnugrep"; };
+  gnused = { group = "dev"; pkg = "gnused"; };
   mercurial = { group = "dev"; pkg = "mercurial"; };
   nodejs = { group = "dev"; pkg = "nodejs"; };
   opentofu = { group = "dev"; pkg = "opentofu"; };
