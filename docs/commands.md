@@ -74,7 +74,7 @@ nix run .#dotfiles -- sync vscode --apply
 nix run .#dotfiles -- sync vscode --check --profile web
 nix run .#dotfiles -- sync vscode --apply --profile native
 code --profile "Web"
-code --profile "Python"
+code --profile "Data Science"
 ```
 
 Notes:

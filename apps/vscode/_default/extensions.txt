@@ -1,4 +1,3 @@
-# Core UI / theme
 catppuccin.catppuccin-vsc
 pkief.material-icon-theme
 drcika.apc-extension
@@ -6,8 +5,6 @@ johnpapa.vscode-peacock
 leodevbro.blockman
 oderwat.indent-rainbow
 usernamehw.errorlens
-
-# Editor / navigation
 aaron-bond.better-comments
 adpyke.codesnap
 alefragnani.bookmarks
@@ -19,8 +16,6 @@ natqe.reload
 silesky.toggle-boolean
 sleistner.vscode-fileutils
 vscodevim.vim
-
-# Git / collaboration
 arturock.gitstash
 donjayamanne.githistory
 eamodio.gitlens
@@ -29,19 +24,13 @@ mhutchie.git-graph
 michaelcurrin.auto-commit-msg
 ms-vsliveshare.vsliveshare
 waderyan.gitblame
-
-# Nix
 arrterian.nix-env-selector
 bbenoist.nix
 jnoortheen.nix-ide
-
-# AI assistants
 anthropic.claude-code
 codeium.codeium
 github.copilot
 github.copilot-chat
 openai.chatgpt
 saoudrizwan.claude-dev
-
-# System
 parallelsdesktop.parallels-desktop

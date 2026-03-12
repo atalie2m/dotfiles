@@ -21,16 +21,15 @@
   "git.confirmSync": false,
   "github.copilot.nextEditSuggestions.enabled": true,
   "less.lint.important": "warning",
-  "markdown.marp.html": "all",
   "scss.lint.important": "warning",
   "terminal.integrated.env.osx": {},
-  "window.title": "[WRITING] ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
+  "window.title": "[Data Science] ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
   "window.titleSeparator": " - ",
   "workbench.colorCustomizations": {
     "editor.lineHighlightBackground": "#1073cf2d",
     "editor.lineHighlightBorder": "#9fced11f"
   },
-  "workbench.colorTheme": "Catppuccin Mocha",
+  "workbench.colorTheme": "Catppuccin Frappé",
   "workbench.editor.tabActionLocation": "left",
   "workbench.iconTheme": "material-icon-theme"
 }

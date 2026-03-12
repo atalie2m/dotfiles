@@ -14,9 +14,11 @@ Profiles live under `apps/vscode/<name>/`:
   - Managed as a custom native profile with display name `Native`.
 - `apps/vscode/<name>/`
   - Any other directory maps to a native custom profile.
-  - The display name is derived from the directory name (`python` -> `Python`, `web` -> `Web`).
+  - The display name is derived from the directory name (`data-science` -> `Data Science`, `web` -> `Web`).
 
 Note: VS Code's built-in `Default` profile is intentionally unmanaged. It is left as-is by `sync vscode`, so existing extensions/settings there are preserved.
+
+If you want fully independent profile management, keep files under `apps/vscode/_default/` empty and define all settings/extensions/default-disabled entries per profile.
 
 Supported files:
 
@@ -107,7 +109,7 @@ Switch profiles in the VS Code UI, or launch with upstream profile support such 
 
 ```bash
 code --profile "Web"
-code --profile "Python"
+code --profile "Data Science"
 ```
 
 `sync vscode` manages the underlying profile contents; it does not pick the active profile for you.
@@ -131,7 +133,7 @@ Start VS Code normally with the upstream profile selector:
 
 ```bash
 code --profile "Web"
-code --profile "Python"
+code --profile "Data Science"
 ```
 
 ## Mutable behavior and precedence

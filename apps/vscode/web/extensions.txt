@@ -8,6 +8,7 @@ formulahendry.auto-complete-tag
 formulahendry.auto-rename-tag
 gonishiduka1985.extractioncssselector
 humao.rest-client
+firefox-devtools.vscode-firefox-debug
 kamikillerto.vscode-colorize
 lokalise.i18n-ally
 ms-azuretools.vscode-containers

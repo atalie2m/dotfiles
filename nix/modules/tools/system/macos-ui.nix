@@ -21,11 +21,13 @@ delib.module {
       showRecents = boolOption false;
       tileSize = intOption 54;
       magnification = boolOption true;
+      launchAnimation = boolOption false;
+      minimizeEffect = strOption "scale";
       minimizeToApplication = boolOption true;
       mruSpaces = boolOption false;
-      autohide = boolOption false;
+      autohide = boolOption true;
       autohideDelay = intOption 0;
-      autohideTimeModifier = intOption 0;
+      autohideTimeModifier = intOption 2;
     };
 
     trackpad = {
@@ -68,10 +70,13 @@ delib.module {
       dockDefaults = lib.optionalAttrs cfg.dock.enable {
         autohide = cfg.dock.autohide;
         "autohide-delay" = cfg.dock.autohideDelay;
-        "autohide-time-modifier" = cfg.dock.autohideTimeModifier;
+        # Treat this as 0.1s steps so we can tune smoothly without float options.
+        "autohide-time-modifier" = cfg.dock.autohideTimeModifier / 10;
         "show-recents" = cfg.dock.showRecents;
         tilesize = cfg.dock.tileSize;
         magnification = cfg.dock.magnification;
+        launchanim = cfg.dock.launchAnimation;
+        mineffect = cfg.dock.minimizeEffect;
         "minimize-to-application" = cfg.dock.minimizeToApplication;
         "mru-spaces" = cfg.dock.mruSpaces;
       };
@@ -111,14 +116,13 @@ delib.module {
           "com.apple.swipescrolldirection" = cfg.trackpad.naturalScrolling;
         };
 
-        "com.apple.spaces" = {
-          "spans-displays" = !cfg.dock.onlyPrimaryDisplay;
-        };
-
         CustomUserPreferences = {
           "com.apple.dock" = dockDefaults;
           "com.apple.finder" = finderDefaults;
           "com.apple.desktopservices" = desktopServicesDefaults;
+          "com.apple.spaces" = {
+            "spans-displays" = !cfg.dock.onlyPrimaryDisplay;
+          };
         } // trackpadDefaults;
       };
     };
