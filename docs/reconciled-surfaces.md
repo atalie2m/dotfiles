@@ -43,7 +43,7 @@ nix run .#dotfiles -- sync shell --apply
 
 ## VS Code native profiles
 
-`scripts/sync-adapters/vscode.sh` is a thin dispatcher. It prefers the Rust engine (`dotfiles-sync-vscode`) and falls back to `vscode-legacy.sh` when no Rust binary is available.
+`scripts/sync-adapters/vscode.sh` is a thin dispatcher that executes the Rust engine (`dotfiles-sync-vscode`).
 The Rust engine reconciles declarative profile input from `apps/vscode/` into writable VS Code profile state.
 The design is intentionally mutable: only the repo-owned subset converges.
 

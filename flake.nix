@@ -337,8 +337,11 @@
             formatterWrapper
           ];
           shellHook = ''
-            if [[ $- == *i* ]]; then
-              exec ${pkgs.zsh}/bin/zsh
+            if [[ -z "''${ZSH_VERSION:-}" && -t 0 && -t 1 ]]; then
+              if [[ -f "$HOME/.nix/.zshrc" ]]; then
+                export ZDOTDIR="$HOME/.nix"
+              fi
+              exec ${pkgs.zsh}/bin/zsh -i
             fi
           '';
         };

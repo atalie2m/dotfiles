@@ -406,12 +406,7 @@ fn build_context(args: CliArgs) -> Result<Context, String> {
         ));
     }
 
-    let code_bin = match env::var("VSCODE_CODE_BIN") {
-        Ok(bin) if !bin.is_empty() => bin,
-        _ => find_in_path("code")
-            .map(|path| path.to_string_lossy().to_string())
-            .ok_or_else(|| "VS Code CLI not found in PATH (expected 'code')".to_string())?,
-    };
+    let code_bin = resolve_code_bin()?;
 
     if find_in_path("jq").is_none() {
         return Err("jq is required for sync vscode".to_string());
@@ -706,10 +701,12 @@ fn classify_profile(context: &Context, plan: &ProfilePlan) -> Result<ProfileEval
     let settings_diff_expected = project_settings_subset(&plan.desired_settings, &desired_keys);
     let settings_diff_actual = project_settings_subset(&actual_settings, &combined_keys);
 
-    let pending_default_disabled = file_minus_file(
+    let pending_default_disabled = pending_default_disabled_extensions(
+        context,
+        &plan.profile_dir_name,
         &plan.desired_default_disabled,
         &state_lists.bootstrapped_default_disabled_extensions,
-    );
+    )?;
 
     if state_missing {
         return Ok(ProfileEvaluation {
@@ -1141,12 +1138,13 @@ fn bootstrap_default_disabled_extensions(
     seeded_default_disabled: &[String],
 ) -> Result<Vec<String>, String> {
     let mut output_seeded = file_intersection(seeded_default_disabled, desired_default_disabled);
+    let pending_seed = pending_default_disabled_extensions(
+        context,
+        profile_dir_name,
+        desired_default_disabled,
+        seeded_default_disabled,
+    )?;
 
-    if desired_default_disabled.is_empty() {
-        return Ok(output_seeded);
-    }
-
-    let pending_seed = file_minus_file(desired_default_disabled, &output_seeded);
     if pending_seed.is_empty() {
         return Ok(output_seeded);
     }
@@ -1165,6 +1163,35 @@ fn bootstrap_default_disabled_extensions(
     write_enablement_ids_to_db(&db_path, "extensionsIdentifiers/enabled", &updated_enabled)?;
 
     Ok(output_seeded)
+}
+
+fn pending_default_disabled_extensions(
+    context: &Context,
+    profile_dir_name: &str,
+    desired_default_disabled: &[String],
+    seeded_default_disabled: &[String],
+) -> Result<Vec<String>, String> {
+    let output_seeded = file_intersection(seeded_default_disabled, desired_default_disabled);
+    if desired_default_disabled.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let pending_seed_from_state = file_minus_file(desired_default_disabled, &output_seeded);
+    let db_path = profile_enablement_db_path(context, profile_dir_name);
+    if !db_path.is_file() {
+        return Ok(unique_lines(
+            &[pending_seed_from_state, desired_default_disabled.to_vec()].concat(),
+        ));
+    }
+
+    let current_disabled = read_enablement_ids_from_db(&db_path, "extensionsIdentifiers/disabled")?;
+    let current_enabled = read_enablement_ids_from_db(&db_path, "extensionsIdentifiers/enabled")?;
+    let known_in_db = unique_lines(&[current_disabled, current_enabled].concat());
+    let pending_seed_from_db = file_minus_file(desired_default_disabled, &known_in_db);
+
+    Ok(unique_lines(
+        &[pending_seed_from_state, pending_seed_from_db].concat(),
+    ))
 }
 
 fn run_sqlite3(db_path: &Path, sql: &str) -> Result<String, String> {
@@ -1276,15 +1303,7 @@ fn normalize_custom_profile_extension_manifest(
 
         if let Some(existing_entry) = find_last_extension_manifest_entry(&manifest_entries, &extension_id)
         {
-            let path_ok = existing_entry
-                .get("location")
-                .and_then(Value::as_object)
-                .and_then(|location| location.get("path"))
-                .and_then(Value::as_str)
-                .map(|path| !path.is_empty() && Path::new(path).exists())
-                .unwrap_or(false);
-
-            if path_ok {
+            if extension_manifest_entry_has_existing_payload(context, &existing_entry) {
                 rebuilt.push(existing_entry);
             }
         }
@@ -1306,10 +1325,15 @@ fn global_extension_manifest_entry(
         Err(_) => return Ok(None),
     };
 
-    Ok(find_last_extension_manifest_entry(
-        &manifest_entries,
-        extension_id,
-    ))
+    let Some(entry) = find_last_extension_manifest_entry(&manifest_entries, extension_id) else {
+        return Ok(None);
+    };
+
+    if extension_manifest_entry_has_existing_payload(context, &entry) {
+        return Ok(Some(entry));
+    }
+
+    Ok(None)
 }
 
 fn find_last_extension_manifest_entry(entries: &[Value], extension_id: &str) -> Option<Value> {
@@ -1328,6 +1352,26 @@ fn find_last_extension_manifest_entry(entries: &[Value], extension_id: &str) -> 
                 .unwrap_or(false)
         })
         .cloned()
+}
+
+fn extension_manifest_entry_has_existing_payload(context: &Context, entry: &Value) -> bool {
+    let location_exists = entry
+        .get("location")
+        .and_then(Value::as_object)
+        .and_then(|location| location.get("path"))
+        .and_then(Value::as_str)
+        .map(|path| !path.is_empty() && Path::new(path).exists())
+        .unwrap_or(false);
+    if location_exists {
+        return true;
+    }
+
+    entry.get("relativeLocation")
+        .and_then(Value::as_str)
+        .map(|relative_location| {
+            !relative_location.is_empty() && context.extensions_root.join(relative_location).exists()
+        })
+        .unwrap_or(false)
 }
 
 fn add_custom_profile_extension_membership(
@@ -1470,6 +1514,10 @@ fn list_profile_extensions(context: &Context, profile_dir_name: &str) -> Result<
     let mut extension_ids: Vec<String> = entries
         .iter()
         .filter_map(|entry| {
+            if !extension_manifest_entry_has_existing_payload(context, entry) {
+                return None;
+            }
+
             entry
                 .get("identifier")
                 .and_then(Value::as_object)
@@ -1967,6 +2015,47 @@ fn write_output_bytes(bytes: &[u8], stderr: bool) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn resolve_code_bin() -> Result<String, String> {
+    if let Ok(bin) = env::var("VSCODE_CODE_BIN") {
+        if !bin.is_empty() {
+            let configured = PathBuf::from(&bin);
+            if configured.is_file() {
+                return Ok(bin);
+            }
+            return Err(format!(
+                "configured VS Code CLI is not executable: {}",
+                configured.display()
+            ));
+        }
+    }
+
+    if let Some(path) = find_in_path("code") {
+        return Ok(path.to_string_lossy().to_string());
+    }
+
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if let Ok(home) = env::var("HOME") {
+        candidates.push(
+            PathBuf::from(home)
+                .join("Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"),
+        );
+    }
+    candidates.push(PathBuf::from(
+        "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+    ));
+
+    for candidate in candidates {
+        if candidate.is_file() {
+            return Ok(candidate.to_string_lossy().to_string());
+        }
+    }
+
+    Err(
+        "VS Code CLI not found (set VSCODE_CODE_BIN, install 'code' in PATH, or install Visual Studio Code.app)"
+            .to_string(),
+    )
 }
 
 fn find_in_path(name: &str) -> Option<PathBuf> {

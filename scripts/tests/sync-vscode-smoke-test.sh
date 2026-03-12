@@ -430,6 +430,34 @@ if ! jq -e '.bootstrappedDefaultDisabledExtensions | index("ext.base") and (inde
   exit 1
 fi
 
+rm -rf "$home_dir/.vscode/extensions/ext.native-1.0.0"
+if run_vscode_sync --check >/dev/null; then
+  echo "FAIL: check did not detect missing extension payload directory" >&2
+  exit 1
+fi
+
+if ! run_vscode_sync --apply >/dev/null; then
+  echo "FAIL: apply did not recover missing extension payload directory" >&2
+  exit 1
+fi
+
+if [[ ! -d "$home_dir/.vscode/extensions/ext.native-1.0.0" ]]; then
+  echo "FAIL: missing extension payload directory was not restored" >&2
+  exit 1
+fi
+
+sqlite3 "$web_db" "DELETE FROM ItemTable WHERE key IN ('extensionsIdentifiers/disabled', 'extensionsIdentifiers/enabled');"
+if ! run_vscode_sync --apply >/dev/null; then
+  echo "FAIL: apply did not reseed default-disabled extensions after enablement DB reset" >&2
+  exit 1
+fi
+
+web_disabled_json="$(sqlite3 "$web_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
+if ! printf '%s' "$web_disabled_json" | jq -e 'map(.id) | index("ext.base")' >/dev/null; then
+  echo "FAIL: default-disabled extensions were not re-seeded when enablement DB keys were missing" >&2
+  exit 1
+fi
+
 if ! run_vscode_sync --check >/dev/null; then
   echo "FAIL: final VS Code check failed" >&2
   exit 1

@@ -17,14 +17,10 @@ delib.module {
 
   myconfig = {
     always = dotlib.mkEnableDefault "tools.editor.vscode.enable";
-    ifEnabled = { ... }: dotlib.requireUnfree [ "vscode" ];
   };
 
   home.ifEnabled = { ... }: {
-    home.packages = [
-      pkgs.vscode
-      syncVscodeBin
-    ];
+    home.packages = [ syncVscodeBin ];
   };
 
   darwin.ifEnabled = { cfg, ... }:
@@ -39,7 +35,6 @@ delib.module {
         pkgs.jq
         pkgs.sqlite
         syncVscodeBin
-        pkgs.vscode
       ];
       stateDirExpr =
         if cfg.stateDir != ""
@@ -64,6 +59,13 @@ delib.module {
         home.activation.syncVscodeProfiles = lib.mkOrder 900 ''
           export PATH="${runtimePath}:$PATH"
           export DOTFILES_SYNC_VSCODE_BIN="${syncVscodeBin}/bin/dotfiles-sync-vscode"
+          if [[ -z "''${VSCODE_CODE_BIN:-}" ]]; then
+            if [[ -x "$HOME/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
+              export VSCODE_CODE_BIN="$HOME/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+            elif [[ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
+              export VSCODE_CODE_BIN="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+            fi
+          fi
           state_dir=${stateDirExpr}
           ${lib.escapeShellArgs applyArgs} --state-dir "$state_dir"
         '';

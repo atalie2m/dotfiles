@@ -3,6 +3,9 @@
 This repository manages one VS Code installation and reconciles native VS Code profiles into writable runtime state.
 It no longer uses isolated per-instance runtime directories.
 
+The VS Code application itself is not installed by Nix in this setup.
+Install Visual Studio Code.app separately, or set `VSCODE_CODE_BIN` to the `code` CLI path.
+
 ## Managed layout
 
 Profiles live under `apps/vscode/<name>/`:
@@ -32,7 +35,7 @@ It is applied through `sync vscode --apply`, not at launch time.
 ## Runtime model
 
 `sync vscode` builds the desired profile state from the repo and writes it into VS Code's native profile storage.
-The CLI entrypoint dispatches to a Rust engine (`dotfiles-sync-vscode`) when available, with a legacy Bash fallback.
+The CLI entrypoint dispatches to the Rust engine (`dotfiles-sync-vscode`) only.
 
 - Effective settings:
   - `_default/settings.json` recursively merged with `<profile>/settings.json`
