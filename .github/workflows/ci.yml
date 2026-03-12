@@ -20,6 +20,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Verify clean checkout
+        run: |
+          set -euo pipefail
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "FAIL: checkout is not clean" >&2
+            git status --short >&2
+            exit 1
+          fi
+
+      - name: Run export-clean smoke test
+        run: bash scripts/tests/export-clean-smoke-test.sh
+
       - name: Install Nix (Determinate Systems)
         uses: DeterminateSystems/nix-installer-action@v19
         with:
@@ -46,6 +58,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Verify clean checkout
+        run: |
+          set -euo pipefail
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "FAIL: checkout is not clean" >&2
+            git status --short >&2
+            exit 1
+          fi
+
+      - name: Run export-clean smoke test
+        run: bash scripts/tests/export-clean-smoke-test.sh
 
       - name: Install Nix (Determinate Systems)
         uses: DeterminateSystems/nix-installer-action@v19

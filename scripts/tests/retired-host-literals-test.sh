@@ -6,6 +6,11 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$ROOT"
 
+if ! command -v rg >/dev/null 2>&1; then
+  echo "FAIL: retired host literals test requires rg" >&2
+  exit 1
+fi
+
 if rg -n --fixed-strings "a2m_mac" . \
   --glob '!result/**' \
   --glob '!.direnv/**' \
