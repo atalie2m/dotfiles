@@ -119,7 +119,12 @@ jobs:
               };
             };
             machines = {
-              full_mac = {
+              pro_mac = {
+                computerName = "CI Mac";
+                localHostName = "ci-mac";
+                hostName = "ci-mac.local";
+              };
+              ultra_mac = {
                 computerName = "CI Mac";
                 localHostName = "ci-mac";
                 hostName = "ci-mac.local";
@@ -153,10 +158,11 @@ jobs:
         run: |
           set -euo pipefail
           targets=(
-            full_mac
+            pro_mac
+            ultra_mac
             minimal_mac
-            full_mac-minimum
-            minimal_mac-full
+            ultra_mac-minimum
+            pro_mac-ultra
           )
 
           for target in "${targets[@]}"; do
@@ -170,7 +176,11 @@ jobs:
       - name: Evaluate auxiliary outputs
         run: |
           set -euo pipefail
-          nix eval --raw '.#homeConfigurations."runner@full_mac".activationPackage.drvPath' \
+          nix eval --raw '.#homeConfigurations."runner@pro_mac".activationPackage.drvPath' \
+            --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+            --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
+            >/dev/null
+          nix eval --raw '.#homeConfigurations."runner@ultra_mac".activationPackage.drvPath' \
             --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
             --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
             >/dev/null

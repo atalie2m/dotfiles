@@ -122,9 +122,48 @@ let
       };
     };
 
-    full = {
+    ultra = {
       inherits = [ "base" "darwin" "dev" ];
       myconfig = {
+        tools.dev.ansible.enable = false;
+        tools.dev.go.enable = false;
+        tools.dev.nodejs.enable = false;
+        tools.dev.opentofu.enable = false;
+        tools.dev.terraform.enable = false;
+
+        tools.dev.gitAbsorb.enable = true;
+        tools.dev.gnugrep.enable = true;
+        tools.dev.gnused.enable = true;
+        # Keep git-lfs enabled as requested; this is managed by the git module.
+        tools.dev.git.lfs.enable = true;
+      };
+    };
+
+    pro = {
+      inherits = [ "base" "darwin" ];
+      myconfig = {
+        tools.aiCodingAgent.enable = true;
+        tools.dev.enable = true;
+        tools.editor.emacs.enable = true;
+        tools.editor.neovim.enable = true;
+        tools.editor.vscode.sync.enable = false;
+        tools.dev.git.delta.enable = true;
+        tools.shell.defaultShell = "zsh";
+        tools.shell.atuin.enable = true;
+        tools.shell.direnv.enable = true;
+        tools.shell.fzf.enable = true;
+        tools.shell.fzfTab.enable = true;
+        tools.shell.zoxide.enable = true;
+        tools.system.karabiner.enable = true;
+        tools.system.aerospace.enable = true;
+        tools.system.keyclu.enable = true;
+        tools.system.latestApp.enable = true;
+        tools.system.xcodesApp.enable = true;
+        tools.terminal.alacritty.enable = true;
+        tools.terminal.ghostty.enable = true;
+        tools.terminal.wezterm.enable = true;
+        tools.terminal.rio.enable = true;
+
         tools.dev.ansible.enable = false;
         tools.dev.go.enable = false;
         tools.dev.nodejs.enable = false;

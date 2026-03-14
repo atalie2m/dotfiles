@@ -228,7 +228,7 @@ fi
 
 if (
   unset FACTS FACTS_DIR SECRETS SECRETS_DIR
-  SECRETS="github:example/secrets" bash "$BOOTSTRAP_SCRIPT" --host full_mac
+  SECRETS="github:example/secrets" bash "$BOOTSTRAP_SCRIPT" --host ultra_mac
 ) >"$tmp_root/bootstrap.out" 2>"$tmp_root/bootstrap.err"; then
   echo "FAIL: bootstrap unexpectedly accepted SECRETS without SECRETS_DIR" >&2
   exit 1
@@ -261,7 +261,7 @@ mkdir -p "$stub_home/.config/dotfiles"
 if (
   HOME="$stub_home" \
     PATH="$empty_nix_bin:$PATH" \
-    bash "$APPLY_SCRIPT" --host full_mac
+    bash "$APPLY_SCRIPT" --host ultra_mac
 ) >"$tmp_root/apply-stub.out" 2>"$tmp_root/apply-stub.err"; then
   echo "FAIL: apply unexpectedly accepted a stubbed facts input" >&2
   exit 1
@@ -312,7 +312,7 @@ EOF_FAILING_SECRETS
 if (
   HOME="$failing_home" \
     PATH="$failing_nix_bin:$PATH" \
-    bash "$APPLY_SCRIPT" --host full_mac
+    bash "$APPLY_SCRIPT" --host ultra_mac
 ) >"$tmp_root/apply-failing-eval.out" 2>"$tmp_root/apply-failing-eval.err"; then
   echo "FAIL: apply unexpectedly accepted a failing darwinConfigurations eval" >&2
   exit 1
@@ -355,7 +355,7 @@ EOF_SCHEMA
 fi
 
 if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
-  printf 'full_mac\nminimal_mac\n'
+  printf 'pro_mac\nultra_mac\nminimal_mac\n'
   exit 0
 fi
 
@@ -543,7 +543,7 @@ if ! (
     FAKE_SUDO_LOG_FILE="$tmp_root/apply-sudo.log" \
     FAKE_SUDO_COMMAND_FILE="$tmp_root/apply-sudo-command.log" \
     FAKE_REBUILD_LOG_FILE="$tmp_root/apply-rebuild.log" \
-    bash "$APPLY_SCRIPT" --host full_mac --action build -- --show-trace
+    bash "$APPLY_SCRIPT" --host ultra_mac --action build -- --show-trace
 ) >"$tmp_root/apply-run.out" 2>"$tmp_root/apply-run.err"; then
   echo "FAIL: apply unexpectedly failed under fake sudo/darwin-rebuild" >&2
   cat "$tmp_root/apply-run.out" >&2 || true
@@ -559,7 +559,7 @@ if [[ $(cat "$tmp_root/apply-sudo.log") != "$expected_preserve_env" ]]; then
 fi
 
 expected_facts_ref="path:$apply_home/.config/dotfiles"
-if ! grep -Fq -- "build --flake path:$ROOT#full_mac --no-update-lock-file --override-input local $expected_facts_ref --override-input secrets $expected_facts_ref --show-trace" "$tmp_root/apply-rebuild.log"; then
+if ! grep -Fq -- "build --flake path:$ROOT#ultra_mac --no-update-lock-file --override-input local $expected_facts_ref --override-input secrets $expected_facts_ref --show-trace" "$tmp_root/apply-rebuild.log"; then
   echo "FAIL: apply did not pass the expected darwin-rebuild arguments" >&2
   cat "$tmp_root/apply-rebuild.log" >&2 || true
   exit 1

@@ -1,6 +1,6 @@
 { delib, lib, dotlib, ... }:
 
-# macOS GUI preferences for repeat keys, Dock, trackpad, and Finder.
+# macOS GUI preferences for keyboard, Dock, trackpad, Finder, and window management.
 
 delib.module {
   name = "tools.system.macosUi";
@@ -10,20 +10,18 @@ delib.module {
 
     keyRepeat = {
       enable = boolOption true;
-      rate = intOption 2;
+      rate = intOption 1;
       initialDelay = intOption 15;
       pressAndHold = boolOption false;
     };
 
+    keyboard = {
+      useStandardFunctionKeys = boolOption true;
+    };
+
     dock = {
-      enable = boolOption true;
-      onlyPrimaryDisplay = boolOption false;
       showRecents = boolOption false;
       tileSize = intOption 54;
-      magnification = boolOption true;
-      launchAnimation = boolOption false;
-      minimizeEffect = strOption "scale";
-      minimizeToApplication = boolOption true;
       mruSpaces = boolOption false;
       autohide = boolOption true;
       autohideDelay = intOption 0;
@@ -32,7 +30,11 @@ delib.module {
 
     trackpad = {
       threeFingerDrag = boolOption true;
-      naturalScrolling = boolOption true;
+      naturalScrolling = boolOption false;
+    };
+
+    windowManager = {
+      tiledWindowMargins = boolOption false;
     };
 
     finder = {
@@ -66,6 +68,7 @@ delib.module {
         InitialKeyRepeat = cfg.keyRepeat.initialDelay;
         ApplePressAndHoldEnabled = cfg.keyRepeat.pressAndHold;
         AppleShowAllExtensions = cfg.finder.showAllExtensions;
+        "com.apple.keyboard.fnState" = cfg.keyboard.useStandardFunctionKeys;
       };
       dockDefaults = lib.optionalAttrs cfg.dock.enable {
         autohide = cfg.dock.autohide;
@@ -109,6 +112,10 @@ delib.module {
         DSDontWriteNetworkStores = !cfg.finder.writeDSStoreOnNetworkVolumes;
         DSDontWriteUSBStores = !cfg.finder.writeDSStoreOnUSBVolumes;
       };
+
+      windowManagerDefaults = {
+        EnableTiledWindowMargins = cfg.windowManager.tiledWindowMargins;
+      };
     in
     {
       system.defaults = {
@@ -120,7 +127,9 @@ delib.module {
           "com.apple.dock" = dockDefaults;
           "com.apple.finder" = finderDefaults;
           "com.apple.desktopservices" = desktopServicesDefaults;
+          "com.apple.WindowManager" = windowManagerDefaults;
           "com.apple.spaces" = {
+            # Keep Spaces independent per display so switching one monitor does not move the others.
             "spans-displays" = !cfg.dock.onlyPrimaryDisplay;
           };
         } // trackpadDefaults;

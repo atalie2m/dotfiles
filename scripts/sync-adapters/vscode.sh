@@ -5,7 +5,7 @@ ADAPTER_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 DEFAULT_RUST_BIN="$ADAPTER_DIR/vscode-rs/bin/dotfiles-sync-vscode"
 
 if [[ -n ${DOTFILES_SYNC_VSCODE_BIN:-} ]]; then
-  if [[ ! -x "$DOTFILES_SYNC_VSCODE_BIN" ]]; then
+  if [[ ! -x $DOTFILES_SYNC_VSCODE_BIN ]]; then
     printf 'sync-vscode: configured Rust binary is not executable: %s\n' "$DOTFILES_SYNC_VSCODE_BIN" >&2
     exit 1
   fi

@@ -35,27 +35,28 @@ Shared modules, catalogs, and operational scripts now live outside the Denix hos
 
 See [`docs/architecture.md`](docs/architecture.md) for the current responsibility split.
 
-Operational note: this repo keeps shared NixOS and standalone Home Manager trees, but the day-to-day CLI in this flake (`apply`, `update`, `list-tools`, and target-aware `doctor`) is Darwin-first and resolves `darwinConfigurations`.
+Operational note: this repo keeps shared NixOS and standalone Home Manager trees, but the day-to-day CLI in this flake (`apply`, `update`, `list-tools`, `matrix-tools`, and target-aware `doctor`) is Darwin-first and resolves `darwinConfigurations`.
 `nixosConfigurations` and `homeConfigurations` remain available as auxiliary outputs for manual evaluation and targeted experiments; the operational CLI does not resolve them, and CI keeps representative builds on Darwin while Linux outputs stay eval-oriented/best-effort.
 
-- Hosts: `full_mac` (default rice: `full`), `minimal_mac` (default rice: `minimum`).
-- Rices: `base`, `darwin`, `dev`, `full`, `minimum`, `partial`.
+- Hosts: `pro_mac` (default rice: `pro`), `ultra_mac` (default rice: `ultra`), `minimal_mac` (default rice: `minimum`).
+- Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `minimum`, `partial`.
   - `base`: shared essentials (`system.nix`, core CLI, shell, Git, GPG/SOPS).
   - `darwin`: macOS base integrations (Homebrew + hostnames/fonts).
   - `dev`: editor/terminal/workstation stack.
-  - `full`: composition of `base + darwin + dev`.
+  - `pro`: composition of `base + darwin + dev` with VS Code disabled.
+  - `ultra`: complete profile (`base + darwin + dev`).
   - `minimum`: minimal base profile alias.
   - `partial`: composition of `base + darwin + dev` with targeted overrides (AI coding agents off except `codex`, VS Code activation sync off).
 
 Canonical host names and CLI examples live in [`docs/commands.md`](docs/commands.md).
 
 Manual attribute examples (still valid):
-`full_mac`, `minimal_mac`, `full_mac-minimum`, `minimal_mac-full`, `full_mac-partial`.
+`pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-minimum`, `minimal_mac-ultra`, `pro_mac-partial`.
 
 When `--rice` is provided, the CLI resolves only `host-rice` (no implicit fallback to `host`).
 
 Home Manager outputs are dedicated one-per-host profiles:
-`<user>@full_mac`, `<user>@minimal_mac`, `<user>@a2m_nixos`.
+`<user>@pro_mac`, `<user>@ultra_mac`, `<user>@minimal_mac`, `<user>@a2m_nixos`.
 
 ## Application Source Policy
 
@@ -99,12 +100,12 @@ Example (`flake.nix` for a Terraform repo):
 ## Tool Catalog (myconfig.tools)
 
 Group toggles such as `tools.dev.enable` are bundle switches, not just namespaces. Enabling a group fans out to the catalog-owned tool toggles under that group.
-Use `list-tools` as the canonical way to inspect the expanded group/tool toggle set for a host/rice. It intentionally omits deeper toggles such as `system.brewNix.autoDock.enable`; see [`docs/tool-catalog.md`](docs/tool-catalog.md) for the exact scope and [`docs/commands.md`](docs/commands.md) for examples.
+Use `list-tools` for single host/rice inspection and `matrix-tools` for cross-target matrices. `matrix-tools` shows group-level toggles by default and can expand to deeper toggles with `--full`; see [`docs/tool-catalog.md`](docs/tool-catalog.md) for catalog scope and [`docs/commands.md`](docs/commands.md) for CLI examples.
 
 Manual evaluation (JSON):
 
 ```bash
-nix eval --json .#darwinConfigurations.full_mac-minimum.config.myconfig.tools
+nix eval --json .#darwinConfigurations.ultra_mac-minimum.config.myconfig.tools
 ```
 
 ## VS Code Profiles
@@ -123,6 +124,7 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - Drift management is mutable by design: repo-owned settings keys and extensions converge, while user-added settings keys and extensions remain untouched.
 
 See `docs/vscode.md` for the runtime model and CLI.
+See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs immutable boundary details across shell, VS Code, and system app surfaces.
 
 ## Mutable Editor Tooling
 
@@ -145,7 +147,7 @@ Any modern terminal works with the current Zsh setup. Terminal.app profile sync 
 
 ## Zsh Stack
 
-The default Zsh prompt is Pure. `base` / `minimum` keep that prompt-only setup, while `dev` / `full` also enable:
+The default Zsh prompt is Pure. `base` / `minimum` keep that prompt-only setup, while `dev` / `pro` / `ultra` also enable:
 
 - `fzf` keybindings: `CTRL-T` for file insert, `ALT-C` for directory jump
 - `fzf-tab` on `TAB`
@@ -295,11 +297,18 @@ Example `facts.nix`:
   };
 
   machines = {
-    full_mac = {
+    ultra_mac = {
       computerName = "Your Mac";
       localHostName = "your-mac";
       hostName = "your-mac";
     };
+
+    # Optional if you also use the pro_mac target:
+    # pro_mac = {
+    #   computerName = "Your Mac";
+    #   localHostName = "your-mac";
+    #   hostName = "your-mac";
+    # };
   };
 }
 ```
@@ -342,13 +351,13 @@ fi
 
 ### Build with overrides
 
-All `nix run .#apply|.#update|.#doctor|.#bootstrap|.#list-tools` commands derive `FACTS` and `SECRETS` from `FACTS_DIR` and `SECRETS_DIR` automatically. Manual invocations still need explicit overrides:
+All `nix run .#apply|.#update|.#doctor|.#bootstrap|.#list-tools|.#matrix-tools` commands derive `FACTS` and `SECRETS` from `FACTS_DIR` and `SECRETS_DIR` automatically. Manual invocations still need explicit overrides:
 
 ```bash
 FACTS_DIR="$HOME/.config/dotfiles"
 SECRETS_DIR="$HOME/.config/dotfiles"
 
-nix run .#darwin-rebuild -- build --flake .#full_mac \
+nix run .#darwin-rebuild -- build --flake .#ultra_mac \
   --override-input local path:$FACTS_DIR \
   --override-input secrets path:$SECRETS_DIR
 ```
@@ -506,6 +515,7 @@ All CLI commands automatically append:
 
 These operational CLI commands are Darwin-first: they target `darwinConfigurations` and macOS-specific checks/builds.
 `apply` and `list-tools` require `--host`, a positional host, or `HOST=...`.
+`matrix-tools` evaluates all available `darwinConfigurations` and does not require `--host`.
 `update` only requires a host when build is enabled (the default).
 `bootstrap` only requires a host when `--apply` or `--yes` is used.
 

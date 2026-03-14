@@ -4,9 +4,9 @@ let
   mkDarwinHost = import ../../../lib/mk-darwin-host.nix args;
 in
 mkDarwinHost {
-  name = "full_mac";
-  rice = "full";
-  machineKey = "full_mac";
+  name = "pro_mac";
+  rice = "pro";
+  machineKey = "pro_mac";
   extraMyconfig = {
     tools.terminal.tmux.enable = true;
     tools.system.macAppUtil = {

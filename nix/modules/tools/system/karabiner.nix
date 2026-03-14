@@ -16,51 +16,23 @@ delib.module {
       ruleDir = repoPaths.keyboards + "/karabiner/complex_modifications";
 
       #
-      # 1. Complex-modification rule files
+      # 1. Curated rule bundles (source of truth)
       #
-      # List every JSON file you care about once; easier to reorder / comment out
       ruleFiles = {
-        japaneseToggle = ruleDir + "/japanese-input-toggle.json";
-        spaceShift = ruleDir + "/spacebar-to-shift.json";
-        vyletAlt = ruleDir + "/vylet-alt-layout.json";
-        shingetaEn = ruleDir + "/shingeta/shingeta_en.json";
-        shingetaJp = ruleDir + "/shingeta/shingeta_jp.json";
-        profileToggle = ruleDir + "/profile-toggle.json";
+        standard = ruleDir + "/curated-standard.json";
+        a2m = ruleDir + "/curated-a2m.json";
       };
 
       #
-      # 2. Helper functions to selectively import rules
+      # 2. Import curated rules
       #
-      # Import all rules from a file
       allRulesFrom = path: (lib.importJSON path).rules;
 
-      # Import only specific rules by description from a file
-      specificRulesFrom = path: descriptions:
-        lib.filter (rule: lib.elem (rule.description or "") descriptions)
-          (allRulesFrom path);
-
       #
-      # 3. Build rule sets for each profile by selective import
+      # 3. Build rule sets for each profile from curated bundles
       #
-      # Standard profile: import only specific rules from specific files
-      standardRules = lib.concatLists [
-        (allRulesFrom ruleFiles.profileToggle)
-        (specificRulesFrom ruleFiles.japaneseToggle [
-          "コマンドキーを単体で押したときに、英数・かなキーを送信する。（左コマンドキーは英数、右コマンドキーはかな） (rev 3)"
-        ])
-        (allRulesFrom ruleFiles.spaceShift) # Import all rules from spacebar-to-shift
-      ];
-
-      # Atalie's profile: import specific rules from japanese-input-toggle, all from others
-      ataliesRules = lib.concatLists [
-        (allRulesFrom ruleFiles.profileToggle)
-        (specificRulesFrom ruleFiles.japaneseToggle [
-          "コマンドキーを単体で押したときに、英数・かなキーを送信する。（左コマンドキーは英数、右コマンドキーはかな） (rev 3)"
-        ])
-        (allRulesFrom ruleFiles.spaceShift) # All predefined
-        (allRulesFrom ruleFiles.shingetaJp) # All predefined (excluding shingetaEn)
-        (allRulesFrom ruleFiles.vyletAlt) # All predefined
-      ];
+      standardRules = allRulesFrom ruleFiles.standard;
+      ataliesRules = allRulesFrom ruleFiles.a2m;
 
       #
       # 4. Build Home Manager module for Karabiner

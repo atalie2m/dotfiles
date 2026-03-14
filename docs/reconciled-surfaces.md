@@ -1,9 +1,10 @@
 # Runtime Sync Surfaces
 
-This repository has two runtime sync surfaces:
+This repository has two runtime sync surfaces and one activation-managed system-app boundary:
 
-- shell entrypoints
-- VS Code native profiles
+- shell entrypoints (runtime sync)
+- VS Code native profiles (runtime sync)
+- Homebrew/macOS app ownership (activation-managed)
 
 ## Shell entrypoints
 
@@ -111,6 +112,29 @@ bash scripts/zshrc-compat.sh --check
 bash scripts/zshrc-compat.sh --apply
 bash scripts/zshrc-compat.sh --migrate
 ```
+
+## Homebrew and macOS app ownership boundary
+
+Homebrew and macOS app declarations are reconciled during activation/build (not via `sync`).
+The model is declarative ownership with writable runtime data left to upstream tools.
+
+- Desired:
+  - `myconfig.tools.*` toggles and catalog ownership data
+  - `tools.system.homebrewNative.*` and `tools.system.brewNix.*` declarations
+- Actual:
+  - Homebrew-installed formulas/casks and app bundles on macOS
+- State:
+  - Homebrew's own runtime metadata and Cellar state
+  - no repo-managed `lastApplied` state for this boundary
+- Model:
+  - repo declares ownership and source policy
+  - activation ensures declared installs; runtime app/user data remains mutable
+
+Behavior:
+
+- `flake check` enforces ownership validity (duplicate claims, cross-source overlap, unregistered Homebrew items).
+- Homebrew package manager internals and app runtime data are unmanaged mutable state.
+- Source policy remains: prefer Nix for CLI, Homebrew for macOS-specific/latest-first software.
 
 ## Local extension points
 

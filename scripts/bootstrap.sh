@@ -154,11 +154,17 @@ if [[ ! -f $facts_file ]]; then
 
   # Optional machine metadata for tools.system.hostnames:
   # machines = {
-  #   full_mac = {
+  #   ultra_mac = {
   #     computerName = "Your Mac";
   #     localHostName = "your-mac";
   #     hostName = "your-mac";
   #   };
+  #   # Optional if you also use the pro_mac target:
+  #   # pro_mac = {
+  #   #   computerName = "Your Mac";
+  #   #   localHostName = "your-mac";
+  #   #   hostName = "your-mac";
+  #   # };
   # };
 }
 EOF
