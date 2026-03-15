@@ -11,7 +11,6 @@
 
 { pkgs, config, lib, ... }:
 let
-  scripts = repoPaths.scripts;
   dotfilesRoot = repoPaths.root;
   darwinTargetNames = lib.sort (a: b: a < b) (builtins.attrNames darwinConfigurations);
   toolOwnershipReports =
@@ -57,8 +56,8 @@ let
     let
       execLine =
         if subcommand == null
-        then "exec ${scripts}/dotfiles.sh \"$@\""
-        else "exec ${scripts}/dotfiles.sh ${subcommand} \"$@\"";
+        then "exec ${syncVscodeRust}/bin/dotfiles \"$@\""
+        else "exec ${syncVscodeRust}/bin/dotfiles ${subcommand} \"$@\"";
     in
     {
       type = "app";
@@ -132,6 +131,7 @@ in
 
   packages = {
     darwin-rebuild = inputs.nix-darwin.packages.${pkgs.stdenv.hostPlatform.system}.darwin-rebuild;
+    dotfiles = syncVscodeRust;
     dotfiles-sync-vscode = syncVscodeRust;
   };
 

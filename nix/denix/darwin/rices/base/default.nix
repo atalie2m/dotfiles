@@ -1,11 +1,11 @@
-{ delib, dotlib, ... }:
+{ delib, ... }:
 
 let
-  profile = dotlib.riceProfiles.base;
+  bundles = import ../../../lib/capability-bundles.nix;
 in
 # Base rice: cross-platform essentials.
 delib.rice {
   name = "base";
-  inherits = profile.inherits;
-  inherit (profile) myconfig;
+  inherits = [ ];
+  myconfig = bundles.base;
 }

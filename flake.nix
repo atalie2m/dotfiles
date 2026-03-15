@@ -97,13 +97,11 @@
       };
 
       nixCatalog = import ./nix/catalog/tools/nixpkgs.nix;
-      brewCatalog = import ./nix/catalog/tools/homebrew.nix;
-      dedicatedHomebrewCatalog = import ./nix/catalog/tools/homebrew-dedicated.nix;
+      homebrewOwnership = import ./nix/catalog/tools/homebrew-ownership.nix;
 
       toolOwnershipLib = import ./nix/lib/tool-ownership.nix {
         lib = nixLib;
-        inherit nixCatalog brewCatalog;
-        dedicatedHomebrew = dedicatedHomebrewCatalog;
+        inherit nixCatalog homebrewOwnership;
       };
 
       portable = import ./nix/flake/portable.nix {
@@ -115,8 +113,6 @@
       };
 
       darwinConfigurations = configurations.darwinConfigurations;
-      homeConfigurations = configurations.homeConfigurations;
-      nixosConfigurations = configurations.nixosConfigurations;
 
       perSystemModule = import ./nix/flake/per-system.nix {
         inherit inputs repoPaths dotlib toolOwnershipLib darwinConfigurations;
@@ -142,8 +138,7 @@
             description = "Web development template: devShell with Node 22, pnpm, bun, optional wrangler, awscli2, jq/yq, mkcert, just; Prettier formatting via treefmt-nix; apps.dev/apps.format and checks";
           };
         };
-      } // portable.linuxContributorOutputs // (if localStub then { } else {
-        inherit nixosConfigurations homeConfigurations darwinConfigurations;
-      });
+        inherit darwinConfigurations;
+      };
     };
 }

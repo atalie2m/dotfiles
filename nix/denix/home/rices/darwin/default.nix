@@ -1,13 +1,13 @@
-{ delib, dotlib, ... }:
+{ delib, ... }:
 
 let
-  profile = dotlib.riceProfiles.darwin;
+  bundles = import ../../../lib/capability-bundles.nix;
 in
 # Home darwin rice mirrors host defaults, but is inheritance-only to keep
-  # homeConfigurations at one entry per host.
+  # Retained as an in-repo composition tree; not exported from the root flake.
 delib.rice {
   name = "darwin";
-  inherits = profile.inherits;
+  inherits = [ "base" ];
   inheritanceOnly = true;
-  inherit (profile) myconfig;
+  myconfig = bundles.darwin;
 }

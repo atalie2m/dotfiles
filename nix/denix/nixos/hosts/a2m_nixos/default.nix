@@ -7,4 +7,5 @@ mkNixosHost {
   name = "a2m_nixos";
   rice = "minimum";
   machineKey = "a2m_nixos";
+  system = "x86_64-linux";
 }

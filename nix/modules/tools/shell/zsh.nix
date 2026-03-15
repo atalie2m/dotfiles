@@ -19,7 +19,7 @@ delib.module {
 
   home.ifEnabled = { cfg, myconfig, ... }:
     let
-      homeDir = myconfig.facts.user.homeDirectory or myconfig.constants.homeDirectory or "";
+      homeDir = myconfig.hostContext.user.homeDirectory;
     in
     {
       programs.zsh = {

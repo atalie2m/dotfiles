@@ -15,7 +15,7 @@ delib.module {
 
   darwin.ifEnabled = { myconfig, ... }:
     let
-      m = myconfig.facts.machine or { };
+      m = myconfig.hostContext.machine or { };
     in
     {
       networking =

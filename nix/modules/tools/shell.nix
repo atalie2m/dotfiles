@@ -46,7 +46,7 @@ delib.module {
 
   darwin.ifEnabled = { cfg, myconfig, ... }:
     let
-      userName = myconfig.facts.user.username or myconfig.constants.username or "";
+      userName = myconfig.hostContext.user.username;
       shellPackages = {
         zsh = pkgs.zsh;
         bash = pkgs.bashInteractive;
@@ -63,7 +63,7 @@ delib.module {
             }
             {
               assertion = userName != "";
-              message = "tools.shell.manageSystemShells requires facts.user.username.";
+              message = "tools.shell.manageSystemShells requires myconfig.hostContext.user.username.";
             }
           ]
         else

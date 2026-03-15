@@ -54,10 +54,6 @@ pub(crate) fn build_context(args: CliArgs) -> Result<Context, String> {
         .unwrap_or_else(|_| PathBuf::from(home.clone()).join(".vscode/extensions"));
     let extensions_manifest_path = extensions_root.join("extensions.json");
 
-    let legacy_instances_dir = env::var("VSCODE_LEGACY_INSTANCES_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(home).join(".local/share/vscode-instances"));
-
     let code_cli_retries = env::var("VSCODE_CODE_RETRIES")
         .ok()
         .and_then(|value| value.parse::<u32>().ok())
@@ -80,7 +76,6 @@ pub(crate) fn build_context(args: CliArgs) -> Result<Context, String> {
         storage_json_path,
         extensions_root,
         extensions_manifest_path,
-        legacy_instances_dir,
     })
 }
 

@@ -1,4 +1,4 @@
-{ lib, nixCatalog, brewCatalog, dedicatedHomebrew ? { } }:
+{ lib, nixCatalog, homebrewOwnership }:
 
 let
   enabledAt = optionPath: config:
@@ -49,44 +49,24 @@ let
         else [ ])
       (builtins.attrNames nixCatalog);
 
-  homebrewClaimsFromCatalog = config:
-    lib.concatMap
-      (toolName:
-        let
-          spec = brewCatalog.${toolName};
-          key = "${spec.group}.${toolName}";
-        in
-        if enabledAt [ "myconfig" "tools" spec.group toolName "enable" ] config
-        then
-          homebrewClaimsFor
-            {
-              inherit key;
-              claimSource = "brewCatalog";
-              brews = spec.brews or [ ];
-              casks = spec.casks or [ ];
-              masApps = spec.masApps or { };
-            }
-        else [ ])
-      (builtins.attrNames brewCatalog);
-
-  dedicatedHomebrewClaims = config:
+  homebrewClaimsFromRegistry = config:
     lib.concatMap
       (key:
         let
-          spec = dedicatedHomebrew.${key};
+          spec = homebrewOwnership.${key};
         in
         if enabledAt spec.optionPath config
         then
           homebrewClaimsFor
             {
               inherit key;
-              claimSource = "dedicatedHomebrew";
+              claimSource = "homebrewOwnership:${spec.mode}:${spec.backend}";
               brews = spec.brews or [ ];
               casks = spec.casks or [ ];
               masApps = spec.masApps or { };
             }
         else [ ])
-      (builtins.attrNames dedicatedHomebrew);
+      (builtins.attrNames homebrewOwnership);
 
   registryFromClaims = claims:
     builtins.foldl'
@@ -197,8 +177,7 @@ let
 
   claimsFromConfig = config:
     nixClaimsFromCatalog config
-    ++ homebrewClaimsFromCatalog config
-    ++ dedicatedHomebrewClaims config
+    ++ homebrewClaimsFromRegistry config
     ++ brewNixClaims config;
 
   sourceSummary = claims:

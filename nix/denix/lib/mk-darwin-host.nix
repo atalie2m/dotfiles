@@ -3,41 +3,28 @@
 { name
 , rice
 , machineKey
+, system
 , extraMyconfig ? { }
 ,
 }:
 
 let
-  context = dotlib.mkHostContext {
-    inherit inputs name machineKey;
-    resolveHomeDirectory = { username, user, ... }:
-      let
-        defaultHomeDirectory = if username != "" then "/Users/${username}" else "";
-      in
-        user.homeDirectory or defaultHomeDirectory;
-    resolvePlatform = { machine, user, ... }:
-      let
-        machinePlatform = machine.platform or "";
-        userPlatform = user.platform or "";
-      in
-      if machinePlatform != "" then machinePlatform
-      else if userPlatform != "" then userPlatform
-      else "aarch64-darwin";
+  rawFacts = import (inputs.local + "/facts.nix");
+  host = dotlib.buildHostModel {
+    inherit name machineKey system rawFacts;
   };
-  nixPackage = inputs.nixpkgs.legacyPackages.${context.platform}.nix;
+  normalizedFacts = dotlib.normalizeRawFacts rawFacts;
+  nixPackage = inputs.nixpkgs.legacyPackages.${host.system}.nix;
 in
 delib.host {
   inherit name rice;
   type = "desktop";
-  homeManagerSystem = context.platform;
+  homeManagerSystem = host.system;
 
   myconfig = lib.recursiveUpdate
     {
-      facts = {
-        user = context.effectiveUser;
-        inherit (context) machine machines;
-        binaryCaches = context.facts.binaryCaches or { };
-      };
+      facts = normalizedFacts;
+      hostContext = host;
     }
     extraMyconfig;
 
@@ -45,8 +32,8 @@ delib.host {
     imports = [ inputs.sops-nix.homeManagerModules.sops ];
     nix.package = lib.mkDefault nixPackage;
     home = {
-      inherit (context) username homeDirectory;
-      stateVersion = context.stateVersion.home or "25.11";
+      inherit (host.user) username homeDirectory;
+      stateVersion = host.user.stateVersion.home;
     };
     targets.darwin = {
       copyApps.enable = false;
@@ -56,14 +43,14 @@ delib.host {
 
   darwin = { ... }:
     let
-      userName = context.username;
-      homeDir = context.homeDirectory;
+      userName = host.user.username;
+      homeDir = host.user.homeDirectory;
     in
     {
       imports = [ inputs.sops-nix.darwinModules.sops ];
       nix.package = lib.mkDefault nixPackage;
-      system.stateVersion = context.stateVersion.darwin or 6;
-      nixpkgs.hostPlatform = context.platform;
+      system.stateVersion = host.user.stateVersion.darwin;
+      nixpkgs.hostPlatform = host.system;
       system.primaryUser = userName;
 
       users.users.${userName} = {

@@ -29,14 +29,15 @@ This flake uses [Denix](https://github.com/yunfachi/denix) with system-scoped tr
 Shared modules, catalogs, and operational scripts now live outside the Denix host trees:
 
 - `nix/modules/{shared,tools}`
-- `nix/catalog/tools/{nixpkgs.nix,homebrew.nix}`
-- `scripts/` for shell entrypoints, helpers, adapters, and smoke tests
+- `nix/catalog/tools/{nixpkgs.nix,homebrew-ownership.nix}`
+- `scripts/` for compatibility shims, helpers, adapters, and smoke tests
 - `nix/scripts/` for Nix expressions used by the CLI
 
 See [`docs/architecture.md`](docs/architecture.md) for the current responsibility split.
+See [`docs/architecture-reset.md`](docs/architecture-reset.md) for the reset rationale, before/after changes, and design intent.
 
-Operational note: this repo keeps shared NixOS and standalone Home Manager trees, but the day-to-day CLI in this flake (`apply`, `update`, `list-tools`, `matrix-tools`, and target-aware `doctor`) is Darwin-first and resolves `darwinConfigurations`.
-`nixosConfigurations` and `homeConfigurations` remain available as auxiliary outputs for manual evaluation and targeted experiments; the operational CLI does not resolve them, and CI keeps representative builds on Darwin while Linux outputs stay eval-oriented/best-effort.
+Operational note: the supported root flake API is Darwin-first and exposes `darwinConfigurations` plus `templates.web-dev`.
+Shared NixOS/Home Manager trees remain in-repo as composition/reference material, but they are no longer supported root outputs of this flake.
 
 - Hosts: `pro_mac` (default rice: `pro`), `ultra_mac` (default rice: `ultra`), `minimal_mac` (default rice: `minimum`).
 - Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `minimum`, `partial`.
@@ -55,9 +56,6 @@ Manual attribute examples (still valid):
 
 When `--rice` is provided, the CLI resolves only `host-rice` (no implicit fallback to `host`).
 
-Home Manager outputs are dedicated one-per-host profiles:
-`<user>@pro_mac`, `<user>@ultra_mac`, `<user>@minimal_mac`, `<user>@a2m_nixos`.
-
 ## Application Source Policy
 
 Application/tool sourcing priority is:
@@ -67,7 +65,7 @@ Application/tool sourcing priority is:
 1. Use Nix packages by default for CLI tools and libraries.
 2. Use Homebrew for macOS-specific or intentionally latest-first software, preferably through catalog-backed `myconfig.tools` toggles.
 3. Use `tools.system.brewNix` only when native Homebrew integration is the wrong fit and a pinned cask path is needed.
-4. Direct `tools.system.homebrewNative.{brews,casks,masApps}` edits are for module internals; `flake check` validates the final Homebrew ownership set plus `brew-nix` casks, including duplicate item claims, cross-source overlaps, and unregistered items.
+4. Homebrew backend lists are internal implementation detail; `flake check` validates the unified ownership registry, duplicate item claims, cross-source overlaps, and unregistered items.
 
 ## Terraform / OpenTofu Policy
 
@@ -118,7 +116,7 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - `apps/vscode/<name>/` for any other name maps to a native custom profile with that display name.
 - Supported inputs are `settings.json`, `extensions.txt`, and bootstrap-only `default-disabled-extensions.txt`.
 - VS Code application installation is unmanaged by Nix; install Visual Studio Code.app separately (or provide `VSCODE_CODE_BIN`).
-- `sync vscode` uses the Rust engine (`dotfiles-sync-vscode`) only; legacy Bash integration has been removed.
+- `sync vscode` uses the Rust engine (`dotfiles-sync-vscode`).
 - `sync vscode --apply` runs during activation when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true, and reconciles repo-owned settings keys and extensions into writable VS Code profile state.
 - `default-disabled-extensions.txt` is seeded once into the profile's extension enablement state; users can later enable those extensions in the VS Code UI and sync will not force them back off.
 - Drift management is mutable by design: repo-owned settings keys and extensions converge, while user-added settings keys and extensions remain untouched.
@@ -159,7 +157,7 @@ The default Zsh prompt is Pure. `base` / `minimum` keep that prompt-only setup, 
 ### Shell sync (writable entrypoints)
 
 Shell sync is a small, stateless writable-entrypoint manager.
-Runtime sync operations are implemented through `scripts/sync.sh` (surface: `shell`) with `scripts/sync-adapters/shell.sh` and sourced helpers under `scripts/sync-adapters/shell/`.
+Runtime sync operations are implemented through `nix run .#dotfiles -- sync shell`; `scripts/sync.sh` is a compatibility shim that delegates to the Rust `dotfiles` CLI, while `scripts/sync-adapters/shell.sh` and sourced helpers under `scripts/sync-adapters/shell/` remain the runtime adapter.
 Its job is to keep writable shell entrypoints in place and update only repo-managed blocks/files.
 Shared shell helpers are shipped separately as `apps/shell/common.sh` and linked to `~/.config/shell/common.sh`; they are declarative Home Manager content, not part of runtime sync state.
 
@@ -220,14 +218,6 @@ bash scripts/zshrc-compat.sh --check
 bash scripts/zshrc-compat.sh --migrate
 ```
 
-Legacy CLI migration:
-
-| Old command                            | New command                            |
-| -------------------------------------- | -------------------------------------- |
-| `nix run .#dotfiles -- shell sync ...` | `nix run .#dotfiles -- sync shell ...` |
-| `--target <id>`                        | `--item <id>`                          |
-| `--shell <name>`                       | `--group <name>`                       |
-
 `nix run .#apply -- --host <host>` triggers shell reconciliation during Home Manager activation by running `sync shell --apply` for the enabled shell groups.
 If `tools.shell.zsh.rootZshrcCompat.enable = true`, activation also runs `bash scripts/zshrc-compat.sh --apply`.
 
@@ -243,7 +233,6 @@ These test scripts use a temporary `HOME` and remove all test files on exit.
 Additional sync tests:
 
 ```bash
-scripts/tests/sync-cli-migration-test.sh
 scripts/tests/sync-cli-common-parse-test.sh
 scripts/tests/sync-shell-smoke-test.sh
 scripts/tests/sync-vscode-smoke-test.sh
@@ -270,9 +259,8 @@ Default layout:
 - Create `~/.config/dotfiles/facts.nix`
 - Required: `user.username`
 - Recommended (for Git identity): `user.fullName`, `user.email`
-- Optional overrides:
-  `user.homeDirectory` (auto-derived) and `machines.<host>.platform` (per-host override when you truly need it).
-- Recommended: keep `user.platform` explicit. `bootstrap` auto-detects and writes the supported `arch-os` value for the current Darwin/Linux host.
+- Optional overrides: `user.homeDirectory` (auto-derived) and `machines.<host>.homeDirectory` (per-host override when you truly need it).
+- Platform is no longer a raw facts input. Host declarations own `system`, and modules derive `os`/`arch` from `myconfig.hostContext`.
 
 Example `facts.nix`:
 
@@ -280,7 +268,6 @@ Example `facts.nix`:
 {
   user = {
     username = "yourname";
-    platform = "aarch64-darwin";
 
     # Recommended (used by Git module)
     fullName = "Your Name";
@@ -535,7 +522,7 @@ Canonical command examples live in [`docs/commands.md`](docs/commands.md).
 
 ### Bootstrap (first run)
 
-`bootstrap` creates a minimal `facts.nix` with `user.username` and detected `user.platform`, and leaves extra fields such as `stateVersion` as opt-in comments.
+`bootstrap` creates a minimal `facts.nix` with required `user.username`, optional identity fields, and commented optional machine/stateVersion examples.
 
 ### Doctor (health checks)
 

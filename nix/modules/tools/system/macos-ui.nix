@@ -20,9 +20,15 @@ delib.module {
     };
 
     dock = {
+      enable = boolOption true;
       showRecents = boolOption false;
       tileSize = intOption 54;
+      magnification = boolOption false;
+      launchAnimation = boolOption false;
+      minimizeEffect = strOption "genie";
+      minimizeToApplication = boolOption false;
       mruSpaces = boolOption false;
+      onlyPrimaryDisplay = boolOption false;
       autohide = boolOption true;
       autohideDelay = intOption 0;
       autohideTimeModifier = intOption 2;

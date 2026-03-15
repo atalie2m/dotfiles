@@ -1,11 +1,11 @@
-{ delib, dotlib, ... }:
+{ delib, ... }:
 
 let
-  profile = dotlib.riceProfiles.partial;
+  bundles = import ../../../lib/capability-bundles.nix;
 in
 # Partial rice: keep the dev stack while selectively overriding tool toggles.
 delib.rice {
   name = "partial";
-  inherits = profile.inherits;
-  inherit (profile) myconfig;
+  inherits = [ "base" "darwin" "dev" ];
+  myconfig = bundles.partialOverride;
 }

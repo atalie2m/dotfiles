@@ -24,7 +24,7 @@ let
     };
 
   getHomeDir = myconfig:
-    myconfig.facts.user.homeDirectory or myconfig.constants.homeDirectory or "";
+    myconfig.hostContext.user.homeDirectory;
 
   mkSecrets = { homeDir, userName ? "" }:
     lib.mapAttrs
@@ -62,7 +62,7 @@ delib.module {
   darwin.ifEnabled = { myconfig, ... }:
     let
       homeDir = getHomeDir myconfig;
-      userName = myconfig.facts.user.username or myconfig.constants.username or "";
+      userName = myconfig.hostContext.user.username;
       secrets = mkSecrets { inherit homeDir userName; };
     in
     {

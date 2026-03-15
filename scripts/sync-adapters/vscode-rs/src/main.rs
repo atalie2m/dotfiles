@@ -1,21 +1,23 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::fs;
 use std::path::PathBuf;
 use std::process;
 
 mod apply;
 mod cli;
 mod context;
-mod db;
+mod enablement_db;
+mod extension_manifest;
 mod extensions;
+mod planner;
+mod profile_registry;
 mod settings;
 mod state;
 
 pub(crate) const SCRIPT_LABEL: &str = "sync-vscode";
 pub(crate) const STATE_VERSION: u32 = 3;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Mode {
     Check,
     Apply,
@@ -48,10 +50,9 @@ struct Context {
     storage_json_path: PathBuf,
     extensions_root: PathBuf,
     extensions_manifest_path: PathBuf,
-    legacy_instances_dir: PathBuf,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ProfileStatus {
     InSync,
     NeedsApply,
@@ -172,7 +173,7 @@ fn run() -> Result<(), String> {
             runtime_dir: apply::profile_runtime_dir(&context, &profile_dir_name),
         };
 
-        let eval = apply::classify_profile(&context, &plan)?;
+        let eval = planner::classify_profile(&context, &plan)?;
 
         match eval.status {
             ProfileStatus::InSync => summary.in_sync += 1,
@@ -194,7 +195,7 @@ fn run() -> Result<(), String> {
                 ProfileStatus::InSync => {}
                 ProfileStatus::Missing | ProfileStatus::NeedsApply => {
                     if apply::apply_profile(&context, &plan).is_ok() {
-                        let post = apply::classify_profile(&context, &plan)?;
+                        let post = planner::classify_profile(&context, &plan)?;
                         if post.status == ProfileStatus::InSync {
                             summary.applied += 1;
                         } else {
@@ -229,30 +230,6 @@ fn run() -> Result<(), String> {
             ));
         }
         return Err("no VS Code profiles selected".to_string());
-    }
-
-    if context.mode == Mode::Apply
-        && summary.errors == 0
-        && context.profile_filters.is_empty()
-        && context.legacy_instances_dir.exists()
-    {
-        if context.legacy_instances_dir.is_dir() {
-            fs::remove_dir_all(&context.legacy_instances_dir).map_err(|err| {
-                format!(
-                    "failed to remove legacy VS Code instances dir {}: {}",
-                    context.legacy_instances_dir.display(),
-                    err
-                )
-            })?;
-        } else {
-            fs::remove_file(&context.legacy_instances_dir).map_err(|err| {
-                format!(
-                    "failed to remove legacy VS Code instances path {}: {}",
-                    context.legacy_instances_dir.display(),
-                    err
-                )
-            })?;
-        }
     }
 
     log(&format!(

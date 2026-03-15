@@ -1,13 +1,13 @@
-{ delib, dotlib, ... }:
+{ delib, ... }:
 
 let
-  profile = dotlib.riceProfiles.base;
+  bundles = import ../../../lib/capability-bundles.nix;
 in
 # Home base rice mirrors host defaults, but is inheritance-only to keep
-  # homeConfigurations at one entry per host.
+  # Retained as an in-repo composition tree; not exported from the root flake.
 delib.rice {
   name = "base";
-  inherits = profile.inherits;
+  inherits = [ ];
   inheritanceOnly = true;
-  inherit (profile) myconfig;
+  myconfig = bundles.base;
 }

@@ -1,32 +1,28 @@
 { delib, lib, dotlib, repoPaths, ... }:
 
 let
-  brewCatalog = import (repoPaths.catalog + "/tools/homebrew.nix");
+  homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
+  brewCatalog = lib.filterAttrs (_: spec: spec.mode == "catalog") homebrewOwnership;
 
-  mkBrewToolModule = toolName: spec:
+  mkBrewToolModule = _: spec:
     delib.module {
-      name = "tools.${spec.group}.${toolName}";
+      name = "tools.${spec.group}.${spec.tool}";
 
       options = with delib; moduleOptions {
         enable = boolOption false;
       };
 
       myconfig = {
-        always = dotlib.mkEnableDefault "tools.${spec.group}.${toolName}.enable";
+        always = dotlib.mkEnableDefault "tools.${spec.group}.${spec.tool}.enable";
         ifEnabled = { myconfig, ... }:
-          dotlib.ifDarwin myconfig (dotlib.requireHomebrew {
-            taps = spec.taps or [ ];
-            brews = spec.brews or [ ];
-            casks = spec.casks or [ ];
-            masApps = spec.masApps or { };
-          });
+          dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec spec);
       };
 
       darwin.ifEnabled = { ... }: {
         assertions = lib.optional (!dotlib.hasHomebrewInstallPayload spec) {
           assertion = false;
           message = dotlib.homebrewCatalogFailureMessage {
-            toolKey = "${spec.group}.${toolName}";
+            toolKey = "${spec.group}.${spec.tool}";
           };
         };
       };

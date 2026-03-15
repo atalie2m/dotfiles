@@ -20,9 +20,8 @@ delib.module {
 
   darwin.ifEnabled = { cfg, myconfig, ... }:
     let
-      userName = myconfig.facts.user.username or myconfig.constants.username or "";
-      platform = myconfig.facts.user.platform or myconfig.constants.platform;
-      enableRosetta = platform == "aarch64-darwin";
+      userName = myconfig.hostContext.user.username;
+      enableRosetta = myconfig.hostContext.system == "aarch64-darwin";
     in
     {
       nix-homebrew = {

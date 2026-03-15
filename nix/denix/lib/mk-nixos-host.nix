@@ -3,6 +3,7 @@
 { name
 , rice
 , machineKey
+, system
 , extraMyconfig ? { }
 , extraHome ? { }
 , extraNixos ? { }
@@ -10,45 +11,22 @@
 }:
 
 let
-  context = dotlib.mkHostContext {
-    inherit inputs name machineKey;
-    resolveHomeDirectory = { username, user, machine, ... }:
-      let
-        machineHomeDirectory = machine.homeDirectory or "";
-        userHomeDirectory = user.homeDirectory or "";
-        defaultHomeDirectory = if username != "" then "/home/${username}" else "";
-      in
-      if machineHomeDirectory != "" then machineHomeDirectory
-      else if lib.hasPrefix "/home/" userHomeDirectory then userHomeDirectory
-      else defaultHomeDirectory;
-    resolvePlatform = { machine, user, ... }:
-      let
-        machinePlatform = machine.platform or "";
-        userPlatform = user.platform or "";
-      in
-      if machinePlatform != "" then machinePlatform
-      else if lib.hasSuffix "-linux" userPlatform then userPlatform
-      else "x86_64-linux";
+  rawFacts = import (inputs.local + "/facts.nix");
+  host = dotlib.buildHostModel {
+    inherit name machineKey system rawFacts;
   };
-  nixosStateVersion =
-    if context.stateVersion ? nixos && lib.isString context.stateVersion.nixos && context.stateVersion.nixos != "" then
-      context.stateVersion.nixos
-    else
-      "25.11";
-  nixPackage = inputs.nixpkgs.legacyPackages.${context.platform}.nix;
+  normalizedFacts = dotlib.normalizeRawFacts rawFacts;
+  nixPackage = inputs.nixpkgs.legacyPackages.${host.system}.nix;
 in
 delib.host {
   inherit name rice;
   type = "desktop";
-  homeManagerSystem = context.platform;
+  homeManagerSystem = host.system;
 
   myconfig = lib.recursiveUpdate
     {
-      facts = {
-        user = context.effectiveUser;
-        inherit (context) machine machines;
-        binaryCaches = context.facts.binaryCaches or { };
-      };
+      facts = normalizedFacts;
+      hostContext = host;
     }
     extraMyconfig;
 
@@ -58,8 +36,8 @@ delib.host {
         imports = [ inputs.sops-nix.homeManagerModules.sops ];
         nix.package = lib.mkDefault nixPackage;
         home = {
-          inherit (context) username homeDirectory;
-          stateVersion = context.stateVersion.home or "25.11";
+          inherit (host.user) username homeDirectory;
+          stateVersion = host.user.stateVersion.home;
         };
       }
       extraHome;
@@ -68,8 +46,8 @@ delib.host {
     lib.recursiveUpdate
       ({
         imports = [ inputs.sops-nix.nixosModules.sops ];
-        system.stateVersion = nixosStateVersion;
-        nixpkgs.hostPlatform = context.platform;
+        system.stateVersion = host.user.stateVersion.nixos;
+        nixpkgs.hostPlatform = host.system;
         nix.package = lib.mkDefault nixPackage;
         fileSystems."/" = lib.mkDefault {
           device = "/dev/disk/by-label/nixos";
@@ -80,9 +58,9 @@ delib.host {
           devices = lib.mkDefault [ "/dev/sda" ];
         };
 
-        users.users.${context.username} = {
+        users.users.${host.user.username} = {
           isNormalUser = true;
-          home = context.homeDirectory;
+          home = host.user.homeDirectory;
           extraGroups = [ "wheel" ];
         };
       })

@@ -7,6 +7,7 @@ mkDarwinHost {
   name = "pro_mac";
   rice = "pro";
   machineKey = "pro_mac";
+  system = "aarch64-darwin";
   extraMyconfig = {
     tools.terminal.tmux.enable = true;
     tools.system.macAppUtil = {

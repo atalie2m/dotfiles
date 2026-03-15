@@ -1,8 +1,8 @@
 { delib, lib, dotlib, pkgs, repoPaths, ... }:
 
 let
-  dedicatedHomebrewCatalog = import (repoPaths.catalog + "/tools/homebrew-dedicated.nix");
-  homebrewSpec = dedicatedHomebrewCatalog."editor.emacs";
+  homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
+  homebrewSpec = homebrewOwnership."editor.emacs";
 in
 
 # Emacs (GUI via Homebrew) + Meow configuration
@@ -17,12 +17,7 @@ delib.module {
   myconfig = {
     always = dotlib.mkEnableDefault "tools.editor.emacs.enable";
     ifEnabled = { myconfig, ... }:
-      dotlib.ifDarwin myconfig (dotlib.requireHomebrew {
-        taps = homebrewSpec.taps or [ ];
-        brews = homebrewSpec.brews or [ ];
-        casks = homebrewSpec.casks or [ ];
-        masApps = homebrewSpec.masApps or { };
-      });
+      dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
   };
 
   home.ifEnabled = { ... }:

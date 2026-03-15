@@ -6,4 +6,5 @@ Current helpers:
 
 - `mk-darwin-host.nix`: shared host constructor for Darwin hosts.
 - `mk-nixos-host.nix`: shared host constructor for NixOS hosts.
-- `../../lib/default.nix`: shared `dotlib` helpers, including `mkHostContext` and `riceProfiles`.
+- `capability-bundles.nix`: reusable capability bundles imported by Denix rice definitions.
+- `../../lib/default.nix`: shared `dotlib` helpers, including the canonical host model helpers.

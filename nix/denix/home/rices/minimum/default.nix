@@ -1,13 +1,10 @@
-{ delib, dotlib, ... }:
+{ delib, ... }:
 
-let
-  profile = dotlib.riceProfiles.minimum;
-in
 # Home minimum rice mirrors host defaults, but is inheritance-only to keep
-  # homeConfigurations at one entry per host.
+# Retained as an in-repo composition tree; not exported from the root flake.
 delib.rice {
   name = "minimum";
-  inherits = profile.inherits;
+  inherits = [ "base" ];
   inheritanceOnly = true;
-  inherit (profile) myconfig;
+  myconfig = { };
 }

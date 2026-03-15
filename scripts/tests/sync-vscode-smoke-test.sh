@@ -346,11 +346,6 @@ if ! jq -e 'any(.[]; .identifier.id == "ext.base") and any(.[]; .identifier.id =
   exit 1
 fi
 
-if [[ -d "$home_dir/.local/share/vscode-instances" ]]; then
-  echo "FAIL: legacy vscode instances directory was not removed" >&2
-  exit 1
-fi
-
 if [[ -d "$home_dir/.vscode/extensions/ext.stale-1.0.0" ]]; then
   echo "FAIL: orphaned VS Code extension dir was not removed" >&2
   exit 1

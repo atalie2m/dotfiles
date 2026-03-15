@@ -342,7 +342,8 @@ cat >"$fake_bin/nix" <<'EOF_NIX'
 set -euo pipefail
 
 if [[ $# -ge 4 && $1 == "eval" && $2 == "--raw" && $3 == "--impure" && $4 == "--expr" ]]; then
-  cat <<'EOF_SCHEMA'
+  if [[ "$*" == *"facts-schema.nix"* ]]; then
+    cat <<'EOF_SCHEMA'
 facts.schema.root|ok|facts is an attrset
 facts.schema.user|ok|facts.user is an attrset
 facts.username|ok|tester
@@ -351,7 +352,39 @@ facts.stateVersion.home|ok|25.11
 facts.stateVersion.darwin|ok|6
 facts.stateVersion.nixos|ok|25.11
 EOF_SCHEMA
-  exit 0
+    exit 0
+  fi
+
+  if [[ "$*" == *"facts-template.nix"* ]]; then
+    cat <<'EOF_FACTS'
+{
+  user = {
+    username = "tester";
+
+    # Optional for Git identity:
+    # fullName = "Your Name";
+    # email = "you@example.com";
+
+    # Optional overrides:
+    # homeDirectory = "/Users/tester";
+    # stateVersion = {
+    #   home = "25.11";
+    #   darwin = 6;
+    # };
+  };
+
+  # Optional machine metadata for tools.system.hostnames:
+  # machines = {
+  #   ultra_mac = {
+  #     computerName = "Your Mac";
+  #     localHostName = "your-mac";
+  #     hostName = "your-mac";
+  #   };
+  # };
+}
+EOF_FACTS
+    exit 0
+  fi
 fi
 
 if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
@@ -453,48 +486,19 @@ if [[ ! -f $bootstrap_facts_file || ! -f $bootstrap_secrets_file ]]; then
   echo "FAIL: bootstrap did not create facts/secrets files without host" >&2
   exit 1
 fi
-if ! grep -Fq 'platform = "x86_64-darwin";' "$bootstrap_facts_file"; then
-  echo "FAIL: bootstrap did not record the detected platform" >&2
+if ! grep -Fq 'username = "tester";' "$bootstrap_facts_file"; then
+  echo "FAIL: bootstrap did not render the canonical facts template" >&2
   cat "$bootstrap_facts_file" >&2 || true
   exit 1
 fi
-if ! grep -Fq '# homeDirectory = "/path/to/home/' "$bootstrap_facts_file"; then
-  echo "FAIL: bootstrap homeDirectory example did not stay platform-neutral" >&2
+if ! grep -Fq '# homeDirectory = "/Users/tester";' "$bootstrap_facts_file"; then
+  echo "FAIL: bootstrap homeDirectory example changed unexpectedly" >&2
   cat "$bootstrap_facts_file" >&2 || true
   exit 1
 fi
-
-unsupported_bin="$tmp_root/unsupported-bin"
-mkdir -p "$unsupported_bin"
-cat >"$unsupported_bin/uname" <<'EOF_BAD_UNAME'
-#!/usr/bin/env bash
-set -euo pipefail
-
-case "${1:-}" in
-  -s) printf 'Plan9\n' ;;
-  -m) printf 'loongarch64\n' ;;
-  *) exit 1 ;;
-esac
-EOF_BAD_UNAME
-chmod +x "$unsupported_bin/uname"
-
-unsupported_home="$tmp_root/unsupported-home"
-if (
-  HOME="$unsupported_home" \
-    PATH="$unsupported_bin:$PATH" \
-    bash "$BOOTSTRAP_SCRIPT"
-) >"$tmp_root/bootstrap-unsupported.out" 2>"$tmp_root/bootstrap-unsupported.err"; then
-  echo "FAIL: bootstrap unexpectedly accepted an unsupported platform" >&2
-  exit 1
-fi
-
-if ! grep -Fq "unsupported platform for bootstrap facts generation: loongarch64:Plan9" "$tmp_root/bootstrap-unsupported.err"; then
-  echo "FAIL: bootstrap unsupported-platform error changed" >&2
-  cat "$tmp_root/bootstrap-unsupported.err" >&2 || true
-  exit 1
-fi
-if [[ -f "$unsupported_home/.config/dotfiles/facts.nix" ]]; then
-  echo "FAIL: bootstrap wrote facts.nix after unsupported platform detection" >&2
+if grep -Fq 'platform =' "$bootstrap_facts_file"; then
+  echo "FAIL: bootstrap still emitted deprecated platform facts" >&2
+  cat "$bootstrap_facts_file" >&2 || true
   exit 1
 fi
 
@@ -551,7 +555,10 @@ if ! (
   exit 1
 fi
 
-expected_preserve_env="--preserve-env=PATH,FACTS,FACTS_DIR,SECRETS,SECRETS_DIR,DARWIN_REBUILD_BIN"
+expected_preserve_env="--preserve-env=PATH,DARWIN_REBUILD_BIN"
+if [[ -n ${DOTFILES_ROOT:-} ]]; then
+  expected_preserve_env="${expected_preserve_env},DOTFILES_ROOT"
+fi
 if [[ $(cat "$tmp_root/apply-sudo.log") != "$expected_preserve_env" ]]; then
   echo "FAIL: apply did not use the expected sudo preserve-env set" >&2
   printf 'expected: %s\nactual:   %s\n' "$expected_preserve_env" "$(cat "$tmp_root/apply-sudo.log")" >&2

@@ -1,11 +1,11 @@
-{ delib, dotlib, ... }:
+{ delib, ... }:
 
 let
-  profile = dotlib.riceProfiles.darwin;
+  bundles = import ../../../lib/capability-bundles.nix;
 in
 # Darwin rice: macOS-specific base integrations.
 delib.rice {
   name = "darwin";
-  inherits = profile.inherits;
-  inherit (profile) myconfig;
+  inherits = [ "base" ];
+  myconfig = bundles.darwin;
 }

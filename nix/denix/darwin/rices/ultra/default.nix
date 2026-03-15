@@ -1,11 +1,11 @@
-{ delib, dotlib, ... }:
+{ delib, ... }:
 
 let
-  profile = dotlib.riceProfiles.ultra;
+  bundles = import ../../../lib/capability-bundles.nix;
 in
 # Ultra rice: complete development and productivity environment.
 delib.rice {
   name = "ultra";
-  inherits = profile.inherits;
-  inherit (profile) myconfig;
+  inherits = [ "base" "darwin" "dev" ];
+  myconfig = bundles.ultraOverride;
 }

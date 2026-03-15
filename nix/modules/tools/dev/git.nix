@@ -1,6 +1,6 @@
 { delib, lib, dotlib, ... }:
 
-# Git configuration with user information from constants
+# Git configuration with identity derived from the canonical host model
 
 delib.module {
   name = "tools.dev.git";
@@ -39,8 +39,8 @@ delib.module {
 
   home.ifEnabled = { cfg, myconfig, ... }:
     let
-      fullName = myconfig.constants.fullName;
-      email = myconfig.constants.email;
+      fullName = myconfig.hostContext.user.fullName;
+      email = myconfig.hostContext.user.email;
     in
     {
       programs.git = {
@@ -55,15 +55,19 @@ delib.module {
             core.editor = cfg.editorCmd;
             alias = cfg.aliases;
           }
+          (lib.mkIf (fullName != null || email != null) {
+            user = lib.mkMerge [
+              (lib.mkIf (fullName != null) { name = fullName; })
+              (lib.mkIf (email != null) { email = email; })
+            ];
+          })
           (lib.mkIf cfg.enableSigning {
             commit.gpgsign = true;
             gpg.format = "openpgp";
           })
           cfg.extraConfig
         ];
-      }
-      // lib.optionalAttrs (fullName != "") { userName = fullName; }
-      // lib.optionalAttrs (email != "") { userEmail = email; };
+      };
 
       programs.delta = lib.mkIf cfg.delta.enable {
         enable = true;

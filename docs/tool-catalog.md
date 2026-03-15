@@ -49,9 +49,8 @@ Deeper toggles such as `system.brewNix.autoDock.enable` or
 - Nixpkgs install catalog: `nix/modules/tools/catalog.nix`
 - Nixpkgs install catalog data: `nix/catalog/tools/nixpkgs.nix`
 - Homebrew install catalog: `nix/modules/tools/brew-catalog.nix`
-- Homebrew install catalog data: `nix/catalog/tools/homebrew.nix`
-- Dedicated Homebrew ownership data for bespoke modules: `nix/catalog/tools/homebrew-dedicated.nix`
-- `scripts/list-tools.sh`
+- Homebrew ownership registry: `nix/catalog/tools/homebrew-ownership.nix`
+- `nix run .#list-tools -- ...`
 - `nix/scripts/list-tools.nix`
 
 The toggle filtering logic lives in `list-tools.nix`, so both text and JSON

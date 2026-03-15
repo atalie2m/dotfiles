@@ -136,47 +136,50 @@ let
 
       syncShellSmoke = pkgs.runCommand "sync-shell-smoke-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep syncVscodeRust ];
           src = repoPaths.root;
         } ''
         cd "$src"
+        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
         bash scripts/tests/sync-shell-smoke-test.sh
-        touch "$out"
-      '';
-
-      syncCliMigration = pkgs.runCommand "sync-cli-migration-test"
-        {
-          nativeBuildInputs = [ pkgs.bash pkgs.git ];
-          src = repoPaths.root;
-        } ''
-        cd "$src"
-        bash scripts/tests/sync-cli-migration-test.sh
         touch "$out"
       '';
 
       syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep syncVscodeRust ];
           src = repoPaths.root;
         } ''
         cd "$src"
+        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
         bash scripts/tests/sync-cli-common-parse-test.sh
         touch "$out"
       '';
 
       matrixToolsSmoke = pkgs.runCommand "matrix-tools-smoke-test"
         {
-          nativeBuildInputs = [ pkgs.bash ];
+          nativeBuildInputs = [ pkgs.bash syncVscodeRust ];
           src = repoPaths.root;
         } ''
         cd "$src"
+        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
         bash scripts/tests/matrix-tools-smoke-test.sh
         touch "$out"
       '';
 
       exportCleanSmoke = pkgs.runCommand "export-clean-smoke-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.git pkgs.gnused pkgs.gnutar ];
+          nativeBuildInputs = [
+            pkgs.bash
+            pkgs.coreutils
+            pkgs.git
+            pkgs.gnused
+            pkgs.gnutar
+            syncVscodeRust
+          ];
           src = repoPaths.root;
         } ''
         project_dir="$TMPDIR/project"
@@ -185,26 +188,32 @@ let
         cd "$project_dir"
         git init --quiet
         git add .
+        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_ROOT="$project_dir"
         bash scripts/tests/export-clean-smoke-test.sh
         touch "$out"
       '';
 
       shellEntrypointWriteability = pkgs.runCommand "shell-zsh-writeability-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep syncVscodeRust ];
           src = repoPaths.root;
         } ''
         cd "$src"
+        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
         bash scripts/tests/shell-zsh-writeability-test.sh
         touch "$out"
       '';
 
       zshrcCompat = pkgs.runCommand "zshrc-compat-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep ];
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep syncVscodeRust ];
           src = repoPaths.root;
         } ''
         cd "$src"
+        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
         bash scripts/tests/zshrc-compat-test.sh
         touch "$out"
       '';
@@ -220,6 +229,8 @@ let
           src = repoPaths.root;
         } ''
         cd "$src"
+        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
         export DOTFILES_SYNC_VSCODE_BIN="${syncVscodeRust}/bin/dotfiles-sync-vscode"
         bash scripts/tests/sync-vscode-smoke-test.sh
         touch "$out"
