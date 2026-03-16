@@ -9,5 +9,6 @@ name = "dotfiles"
 path = "src/main.rs"
 
 [dependencies]
+clap = { version = "4.5", features = ["derive", "env"] }
 dotfiles-core = { path = "../dotfiles-core" }
 tempfile = "3"

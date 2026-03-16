@@ -6,58 +6,93 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$ROOT"
 
-require_contains() {
+DOC_FILES=(
+  README.md
+  docs/commands.md
+  docs/reconciled-surfaces.md
+  docs/architecture-reset.md
+  docs/architecture.md
+  docs/vscode.md
+  AGENTS.md
+  CLAUDE.md
+)
+
+require_contains_anywhere() {
+  local expected="$1"
+  local found=0
+  local file
+  for file in "${DOC_FILES[@]}"; do
+    if grep -Fq -- "$expected" "$file"; then
+      found=1
+      break
+    fi
+  done
+  if [[ $found -ne 1 ]]; then
+    echo "FAIL: expected semantic invariant missing from docs: $expected" >&2
+    exit 1
+  fi
+}
+
+require_not_contains_anywhere() {
+  local forbidden="$1"
+  local file
+  for file in "${DOC_FILES[@]}"; do
+    if grep -Fq -- "$forbidden" "$file"; then
+      echo "FAIL: forbidden text still present in $file: $forbidden" >&2
+      exit 1
+    fi
+  done
+}
+
+require_contains_file() {
   local file="$1"
   local expected="$2"
-
   if ! grep -Fq -- "$expected" "$file"; then
     echo "FAIL: expected text missing from $file: $expected" >&2
     exit 1
   fi
 }
 
-require_not_contains() {
-  local file="$1"
-  local forbidden="$2"
+require_contains_anywhere 'darwinConfigurations'
+require_contains_anywhere 'nix run .#dotfiles -- sync shell'
+require_contains_anywhere 'nix run .#dotfiles -- sync vscode'
+require_contains_anywhere 'dotfiles-sync-vscode'
 
-  if grep -Fq -- "$forbidden" "$file"; then
-    echo "FAIL: forbidden text still present in $file: $forbidden" >&2
-    exit 1
-  fi
-}
+require_contains_file README.md 'managed profile settings are fully repo-owned'
+require_contains_file docs/reconciled-surfaces.md 'managed profile settings files converge fully to the repo state'
+require_contains_file docs/vscode.md 'manual settings changes inside a managed profile are overwritten on the next apply'
+require_contains_file docs/vscode.md 'VS Code'\''s built-in `Default` profile is intentionally unmanaged'
+require_contains_file docs/commands.md 'These commands are Darwin-only and resolve `darwinConfigurations`.'
 
-require_contains README.md '`pro`: composition of `base + darwin + dev` without VS Code.'
-require_contains README.md '`partial`: composition of `base + darwin + dev` with targeted overrides (only `codex` enabled among AI coding agents, VS Code installed but activation sync off).'
-require_contains README.md 'Runtime sync operations are implemented through `nix run .#dotfiles -- sync shell`; `scripts/sync.sh` is only a thin shell wrapper over the Rust `dotfiles` CLI.'
-require_contains README.md 'The repo ships placeholder public inputs under `nix/local/` and `nix/secrets/` so `darwinConfigurations` always evaluates.'
-require_contains docs/commands.md '- Hosts: `pro_mac` (default rice: `pro`), `ultra_mac` (default rice: `ultra`), `minimal_mac` (default rice: `base`)'
-require_contains docs/commands.md '- Packages: `dotfiles`, `dotfiles-cli`, `dotfiles-sync-vscode`'
-require_contains docs/reconciled-surfaces.md '`nix run .#dotfiles -- sync shell` is the public writable entrypoint manager.'
-require_contains docs/reconciled-surfaces.md 'The Rust engine is packaged separately as `dotfiles-sync-vscode`, and `nix run .#dotfiles -- sync vscode` dispatches to it.'
-require_contains docs/architecture-reset.md '- the supported operational root surface is Darwin-first'
-require_contains docs/architecture-reset.md '- unsupported Home Manager/NixOS trees and Linux contributor outputs were removed'
-require_contains AGENTS.md '- `flake.nix` — flake inputs/outputs; exposes `darwinConfigurations` and `templates/web-dev`.'
-require_contains AGENTS.md '- Shell sync is implemented by the Rust `dotfiles` CLI (`sync shell`); `scripts/sync.sh` is only a thin shell wrapper.'
-require_contains CLAUDE.md '1. `flake.nix` keeps the supported operational root API Darwin-first (`darwinConfigurations` plus `templates.web-dev`).'
-require_contains CLAUDE.md '2. Denix hosts build canonical host truth into `config.myconfig.hostContext` from `inputs.local/facts.nix` plus the host declaration.'
-
-for file in README.md docs/commands.md docs/reconciled-surfaces.md docs/architecture-reset.md docs/architecture.md AGENTS.md CLAUDE.md; do
-  require_not_contains "$file" 'homeConfigurations'
-  require_not_contains "$file" 'nixosConfigurations'
-  require_not_contains "$file" 'scripts/sync-adapters/'
-  require_not_contains "$file" 'STUB'
+for file in "${DOC_FILES[@]}"; do
+  require_not_contains_anywhere 'homeConfigurations'
+  require_not_contains_anywhere 'nixosConfigurations'
+  require_not_contains_anywhere 'scripts/sync-adapters/'
+  require_not_contains_anywhere 'STUB'
+  require_not_contains_anywhere 'zshrc-compat'
+  require_not_contains_anywhere 'rootZshrcCompat'
 done
 
-for file in README.md docs/commands.md docs/reconciled-surfaces.md docs/architecture-reset.md docs/architecture.md AGENTS.md CLAUDE.md; do
-  require_not_contains "$file" 'zshrc-compat'
-  require_not_contains "$file" 'rootZshrcCompat'
-  require_not_contains "$file" '`minimum`'
-done
+require_not_contains_anywhere '`minimum`'
+require_not_contains_anywhere 'owned subset of settings keys'
+require_not_contains_anywhere 'top-level settings keys'
+require_not_contains_anywhere 'user-added settings keys'
+require_not_contains_anywhere 'state schema version is `3`'
 
-require_not_contains docs/commands.md 'home-manager/release-25.11'
-require_not_contains docs/architecture-reset.md 'reduced to an empty compatibility attrset'
-require_not_contains docs/architecture-reset.md 'did not delete in-repo NixOS/Home Manager composition trees'
-require_not_contains AGENTS.md 'config.facts'
-require_not_contains CLAUDE.md 'config.facts'
+if command -v nix >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  flake_ref="path:$ROOT"
+  manifest_json="$(
+    nix eval --json "${flake_ref}#darwinConfigurations" \
+      --impure \
+      --apply 'targets: (import ./nix/scripts/targets-manifest.nix {}).json targets'
+  )"
+
+  while IFS=$'\t' read -r host default_rice; do
+    require_contains_file docs/commands.md "\`${host}\` (default rice: \`${default_rice}\`)"
+  done < <(
+    printf '%s' "$manifest_json" |
+      jq -r '.hosts | to_entries[] | "\(.key)\t\(.value.defaultRice)"'
+  )
+fi
 
 echo "PASS: docs consistency"

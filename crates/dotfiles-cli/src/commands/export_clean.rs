@@ -1,41 +1,10 @@
+use crate::commands::{ExportCleanArgs, ExportFormat};
 use dotfiles_core::support::{exit_with_status, git_tracked_files, repo_root, run_command_status};
 use std::fs;
-use std::path::PathBuf;
 use std::process::Command;
 
-pub(crate) fn command_export_clean(args: &[String]) -> Result<(), String> {
-    let mut format = "dir".to_string();
-    let mut output = None::<PathBuf>;
-    let mut index = 0usize;
-    while index < args.len() {
-        match args[index].as_str() {
-            "--output" => {
-                let value = args
-                    .get(index + 1)
-                    .ok_or_else(|| "missing value for --output".to_string())?;
-                output = Some(PathBuf::from(value));
-                index += 2;
-            }
-            "--format" => {
-                let value = args
-                    .get(index + 1)
-                    .ok_or_else(|| "missing value for --format".to_string())?;
-                format = value.clone();
-                index += 2;
-            }
-            "-h" | "--help" => {
-                println!("Usage: nix run .#dotfiles -- export-clean --output <path> [--format dir|tar]");
-                return Ok(());
-            }
-            option => return Err(format!("unknown option: {}", option)),
-        }
-    }
-
-    if format != "dir" && format != "tar" {
-        return Err(format!("invalid --format: {} (expected dir or tar)", format));
-    }
-    let output = output.ok_or_else(|| "--output is required".to_string())?;
-
+pub(crate) fn command_export_clean(args: &ExportCleanArgs) -> Result<(), String> {
+    let output = &args.output;
     let root = repo_root()?;
     if output.exists() {
         return Err(format!("output already exists: {}", output.display()));
@@ -76,20 +45,23 @@ pub(crate) fn command_export_clean(args: &[String]) -> Result<(), String> {
             .map_err(|err| format!("failed to copy {}: {}", relative.display(), err))?;
     }
 
-    if format == "dir" {
-        fs::rename(&export_root, &output)
-            .map_err(|err| format!("failed to move export dir: {}", err))?;
-    } else {
-        let mut tar = Command::new("tar");
-        tar.env("COPYFILE_DISABLE", "1");
-        tar.arg("-C");
-        tar.arg(&export_root);
-        tar.arg("-cf");
-        tar.arg(&output);
-        tar.arg(".");
-        let status = run_command_status(&mut tar)?;
-        if !status.success() {
-            exit_with_status(status);
+    match args.format {
+        ExportFormat::Dir => {
+            fs::rename(&export_root, output)
+                .map_err(|err| format!("failed to move export dir: {}", err))?;
+        }
+        ExportFormat::Tar => {
+            let mut tar = Command::new("tar");
+            tar.env("COPYFILE_DISABLE", "1");
+            tar.arg("-C");
+            tar.arg(&export_root);
+            tar.arg("-cf");
+            tar.arg(output);
+            tar.arg(".");
+            let status = run_command_status(&mut tar)?;
+            if !status.success() {
+                exit_with_status(status);
+            }
         }
     }
 

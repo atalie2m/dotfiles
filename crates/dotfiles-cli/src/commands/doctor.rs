@@ -1,38 +1,25 @@
 use crate::commands::sync::resolve_sync_vscode_bin;
-use crate::commands::CheckRecord;
+use crate::commands::{CheckRecord, DoctorArgs};
 use dotfiles_core::shell_sync::{run as run_shell_sync, ShellGroup, ShellSyncMode, ShellSyncOptions};
 use dotfiles_core::support::{
-    evaluate_facts_schema, flake_ref_for_root, json_escape, nix_args_with_inputs, parse_target_args,
-    repo_root, require_input_directories, resolve_inputs, resolve_target, run_command_output,
-    run_command_status,
+    evaluate_facts_schema, flake_ref_for_root, json_escape, nix_args_with_inputs, repo_root,
+    require_input_directories, resolve_inputs, resolve_target, run_command_output, run_command_status,
 };
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
 
-pub(crate) fn command_doctor(args: &[String]) -> Result<(), String> {
-    let parsed = parse_target_args(args, &[])?;
-    if parsed.has_passthrough {
-        return Err("unexpected -- (no passthrough supported)".to_string());
-    }
-
-    let mut strict = false;
-    let mut json = false;
-    for arg in &parsed.args {
-        match arg.as_str() {
-            "--strict" => strict = true,
-            "--json" => json = true,
-            "-h" | "--help" => {
-                println!("Usage: nix run .#doctor -- [--host <host>] [--rice <rice>] [--strict] [--json]");
-                return Ok(());
-            }
-            option if option.starts_with("--") => return Err(format!("unknown option: {}", option)),
-            other => return Err(format!("unexpected argument: {}", other)),
-        }
-    }
-
-    let host = parsed.host.or_else(|| env::var("HOST").ok());
-    let rice = parsed.rice.or_else(|| env::var("RICE").ok());
+pub(crate) fn command_doctor(args: &DoctorArgs) -> Result<(), String> {
+    let host = args
+        .target
+        .host_value()
+        .map(ToOwned::to_owned)
+        .or_else(|| env::var("HOST").ok());
+    let rice = args
+        .target
+        .rice_value()
+        .map(ToOwned::to_owned)
+        .or_else(|| env::var("RICE").ok());
     let root = repo_root()?;
     let inputs = resolve_inputs()?;
     let (facts_dir, secrets_dir) = require_input_directories(&inputs, "doctor")?;
@@ -44,14 +31,16 @@ pub(crate) fn command_doctor(args: &[String]) -> Result<(), String> {
     let resolved_target =
         record_target_checks(&root, &flake_ref, host.as_deref(), rice.as_deref(), &mut checks);
 
-    if strict {
+    if args.strict {
         let mut check = Command::new("nix");
         check.arg("flake");
         check.arg("check");
         check.arg(&flake_ref);
         check.args(nix_args_with_inputs(&inputs));
         match run_command_status(&mut check)? {
-            status if status.success() => checks.push(CheckRecord::new("flake.check", "ok", "nix flake check passed")),
+            status if status.success() => {
+                checks.push(CheckRecord::new("flake.check", "ok", "nix flake check passed"))
+            }
             _ => checks.push(CheckRecord::new("flake.check", "fail", "nix flake check failed")),
         }
 
@@ -67,7 +56,7 @@ pub(crate) fn command_doctor(args: &[String]) -> Result<(), String> {
     let warnings = checks.iter().filter(|check| check.status == "warn").count();
     let infos = checks.iter().filter(|check| check.status == "info").count();
 
-    if json {
+    if args.json {
         print!(
             "{{\"ok\":{},\"failures\":{},\"warnings\":{},\"info\":{},\"checks\":[",
             if failures == 0 { "true" } else { "false" },
@@ -113,7 +102,11 @@ fn record_facts_checks(root: &Path, facts_dir: &Path, checks: &mut Vec<CheckReco
                     }
                 }
             }
-            Err(_) => checks.push(CheckRecord::new("facts.eval", "fail", "unable to evaluate facts schema")),
+            Err(_) => checks.push(CheckRecord::new(
+                "facts.eval",
+                "fail",
+                "unable to evaluate facts schema",
+            )),
         }
     } else {
         checks.push(CheckRecord::new(
@@ -173,7 +166,9 @@ fn record_basic_system_checks(secrets_dir: &Path, checks: &mut Vec<CheckRecord>)
             rosetta_command.arg("/usr/bin/true");
             let rosetta = run_command_status(&mut rosetta_command);
             match rosetta {
-                Ok(status) if status.success() => checks.push(CheckRecord::new("darwin.rosetta", "ok", "Rosetta available")),
+                Ok(status) if status.success() => {
+                    checks.push(CheckRecord::new("darwin.rosetta", "ok", "Rosetta available"))
+                }
                 _ => checks.push(CheckRecord::new("darwin.rosetta", "warn", "Rosetta not available")),
             }
         } else {
@@ -243,7 +238,9 @@ fn record_target_checks(
         eval.arg(format!("{}#darwinConfigurations.{}.system.drvPath", flake_ref, target));
         eval.args(nix_args_with_inputs(&inputs));
         match run_command_status(&mut eval) {
-            Ok(status) if status.success() => checks.push(CheckRecord::new("flake.target", "ok", target.clone())),
+            Ok(status) if status.success() => {
+                checks.push(CheckRecord::new("flake.target", "ok", target.clone()))
+            }
             _ => checks.push(CheckRecord::new(
                 "flake.target",
                 "fail",
@@ -266,12 +263,12 @@ fn record_strict_sync_checks(
     resolved_target: Option<&str>,
     checks: &mut Vec<CheckRecord>,
 ) -> Result<(), String> {
-        let Some(target) = resolved_target else {
-            checks.push(CheckRecord::new(
-                "shell.sync",
-                "warn",
-                "strict sync check skipped (pass --host to resolve target)",
-            ));
+    let Some(target) = resolved_target else {
+        checks.push(CheckRecord::new(
+            "shell.sync",
+            "warn",
+            "strict sync check skipped (pass --host to resolve target)",
+        ));
         checks.push(CheckRecord::new(
             "vscode.sync",
             "warn",
@@ -285,7 +282,8 @@ fn record_strict_sync_checks(
     let shell_enabled = eval_target_bool(&flake_ref, &inputs, target, "myconfig.tools.shell.enable")?;
     let zsh_enabled = eval_target_bool(&flake_ref, &inputs, target, "myconfig.tools.shell.zsh.enable")?;
     let bash_enabled = eval_target_bool(&flake_ref, &inputs, target, "myconfig.tools.shell.bash.enable")?;
-    let vscode_enabled = eval_target_bool(&flake_ref, &inputs, target, "myconfig.tools.editor.vscode.enable")?;
+    let vscode_enabled =
+        eval_target_bool(&flake_ref, &inputs, target, "myconfig.tools.editor.vscode.enable")?;
     let vscode_sync = eval_target_bool(
         &flake_ref,
         &inputs,

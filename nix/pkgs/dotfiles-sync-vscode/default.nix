@@ -1,4 +1,4 @@
-{ lib, rustPlatform, sqlite, makeWrapper }:
+{ lib, rustPlatform, makeWrapper }:
 
 rustPlatform.buildRustPackage {
   pname = "dotfiles-sync-vscode";
@@ -14,8 +14,6 @@ rustPlatform.buildRustPackage {
 
   cargoBuildFlags = [ "-p" "dotfiles-sync-vscode" ];
   cargoTestFlags = [ "-p" "dotfiles-sync-vscode" ];
-
-  nativeCheckInputs = [ sqlite ];
 
   doCheck = true;
 

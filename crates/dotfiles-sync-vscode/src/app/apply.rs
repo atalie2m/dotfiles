@@ -10,17 +10,17 @@ use std::thread;
 use std::time::Duration;
 use tempfile::NamedTempFile;
 
-use crate::enablement_db::bootstrap_default_disabled_extensions;
-use crate::extension_manifest::{
+use crate::app::runtime::Context;
+use crate::domain::model::{ProfileEvaluation, ProfilePlan, StateLists, StateLoad};
+use crate::domain::state::{load_state_lists, write_state_file};
+use crate::infra::enablement_db::bootstrap_default_disabled_extensions;
+use crate::infra::extension_manifest::{
     add_custom_profile_extension_membership as add_manifest_extension_membership,
     ensure_custom_profile_runtime as ensure_manifest_runtime,
     list_profile_extensions as list_manifest_profile_extensions,
     prune_orphaned_extension_dirs,
     remove_custom_profile_extension_membership as remove_manifest_extension_membership,
 };
-use crate::settings::apply_settings_owned_subset;
-use crate::state::{load_state_lists, write_state_file};
-use crate::{Context, ProfileEvaluation, ProfilePlan, StateLists, StateLoad};
 use crate::log;
 
 pub(crate) fn apply_profile(context: &Context, plan: &ProfilePlan) -> Result<(), String> {
@@ -30,9 +30,6 @@ pub(crate) fn apply_profile(context: &Context, plan: &ProfilePlan) -> Result<(),
         StateLoad::Loaded(lists) => lists,
         StateLoad::Missing | StateLoad::Invalid => StateLists::default(),
     };
-
-    let desired_keys = object_keys_unsorted(&plan.desired_settings);
-    let stale_keys = file_minus_file(&state_lists.owned_settings_keys, &desired_keys);
 
     let current_extensions = list_manifest_profile_extensions(context, &plan.profile_dir_name)?;
     let desired_missing = file_minus_file(&plan.desired_extensions, &current_extensions);
@@ -54,20 +51,12 @@ pub(crate) fn apply_profile(context: &Context, plan: &ProfilePlan) -> Result<(),
         &state_lists.bootstrapped_default_disabled_extensions,
     )?;
 
-    let actual_settings = read_json_object(&plan.settings_path)?;
-    let updated_settings = apply_settings_owned_subset(
-        &actual_settings,
-        &plan.desired_settings,
-        &desired_keys,
-        &stale_keys,
-    );
-    write_json_atomically(&Value::Object(updated_settings), &plan.settings_path)?;
+    write_json_atomically(&Value::Object(sort_object(&plan.desired_settings)), &plan.settings_path)?;
 
     write_state_file(
         &plan.state_file,
         &plan.profile_dir_name,
         &plan.profile_name,
-        &desired_keys,
         &plan.desired_extensions,
         &updated_bootstrapped_default_disabled,
     )
@@ -411,10 +400,6 @@ pub(crate) fn sort_object(object: &Map<String, Value>) -> Map<String, Value> {
         Value::Object(sorted) => sorted,
         _ => Map::new(),
     }
-}
-
-pub(crate) fn object_keys_unsorted(object: &Map<String, Value>) -> Vec<String> {
-    object.keys().cloned().collect()
 }
 
 pub(crate) fn file_minus_file(left: &[String], right: &[String]) -> Vec<String> {

@@ -1,14 +1,14 @@
 use std::fs;
 use std::path::Path;
-use std::process::Command;
 
+use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::{Map, Value};
 
-use crate::apply::{
+use crate::app::apply::{
     file_intersection, file_minus_file, profile_enablement_db_path, profile_global_storage_dir,
     unique_lines,
 };
-use crate::Context;
+use crate::app::runtime::Context;
 
 pub(crate) fn ensure_enablement_db(context: &Context, profile_dir_name: &str) -> Result<(), String> {
     let storage_dir = profile_global_storage_dir(context, profile_dir_name);
@@ -20,10 +20,13 @@ pub(crate) fn ensure_enablement_db_path(storage_dir: &Path, db_path: &Path) -> R
     fs::create_dir_all(storage_dir)
         .map_err(|err| format!("failed to create profile globalStorage: {}", err))?;
 
-    run_sqlite3(
-        db_path,
-        "CREATE TABLE IF NOT EXISTS ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB);",
-    )?;
+    let connection = open_connection(db_path)?;
+    connection
+        .execute(
+            "CREATE TABLE IF NOT EXISTS ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB);",
+            [],
+        )
+        .map_err(|err| format!("failed to initialize enablement DB {}: {}", db_path.display(), err))?;
 
     Ok(())
 }
@@ -33,9 +36,16 @@ pub(crate) fn read_enablement_ids_from_db(db_path: &Path, key: &str) -> Result<V
         return Ok(Vec::new());
     }
 
-    let escaped_key = sql_escape_single_quotes(key);
-    let sql = format!("SELECT value FROM ItemTable WHERE key = '{}';", escaped_key);
-    let raw_json = run_sqlite3(db_path, &sql)?;
+    let connection = open_connection(db_path)?;
+    let raw_json = connection
+        .query_row(
+            "SELECT value FROM ItemTable WHERE key = ?1;",
+            [key],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|err| format!("failed to read enablement DB {}: {}", db_path.display(), err))?;
+    let raw_json = raw_json.unwrap_or_default();
     let raw_json = raw_json.trim();
 
     if raw_json.is_empty() {
@@ -85,13 +95,13 @@ pub(crate) fn write_enablement_ids_to_db(
     let value_text = serde_json::to_string(&value_json)
         .map_err(|err| format!("failed to serialize enablement value: {}", err))?;
 
-    let sql = format!(
-        "INSERT INTO ItemTable(key, value) VALUES ('{}', '{}') ON CONFLICT(key) DO UPDATE SET value = excluded.value;",
-        sql_escape_single_quotes(key),
-        sql_escape_single_quotes(&value_text)
-    );
-
-    run_sqlite3(db_path, &sql)?;
+    let connection = open_connection(db_path)?;
+    connection
+        .execute(
+            "INSERT INTO ItemTable(key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value;",
+            params![key, value_text],
+        )
+        .map_err(|err| format!("failed to update enablement DB {}: {}", db_path.display(), err))?;
     Ok(())
 }
 
@@ -158,26 +168,9 @@ pub(crate) fn pending_default_disabled_extensions(
     ))
 }
 
-fn run_sqlite3(db_path: &Path, sql: &str) -> Result<String, String> {
-    let output = Command::new("sqlite3")
-        .arg(db_path)
-        .arg(sql)
-        .output()
-        .map_err(|err| format!("failed to run sqlite3: {}", err))?;
-
-    if !output.status.success() {
-        return Err(format!(
-            "sqlite3 failed for {}: {}",
-            db_path.display(),
-            String::from_utf8_lossy(&output.stderr).trim()
-        ));
-    }
-
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
-}
-
-fn sql_escape_single_quotes(value: &str) -> String {
-    value.replace('\'', "''")
+fn open_connection(db_path: &Path) -> Result<Connection, String> {
+    Connection::open(db_path)
+        .map_err(|err| format!("failed to open enablement DB {}: {}", db_path.display(), err))
 }
 
 #[cfg(test)]
@@ -186,8 +179,8 @@ mod tests {
         bootstrap_default_disabled_extensions, ensure_enablement_db_path,
         pending_default_disabled_extensions, read_enablement_ids_from_db, write_enablement_ids_to_db,
     };
-    use crate::apply::profile_enablement_db_path;
-    use crate::{Context, Mode};
+    use crate::app::apply::profile_enablement_db_path;
+    use crate::app::runtime::{Context, Mode};
     use std::path::Path;
 
     fn test_context(root: &Path) -> Context {

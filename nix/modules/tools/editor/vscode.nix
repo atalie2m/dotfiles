@@ -3,6 +3,7 @@
 # VS Code package wiring plus native profile reconciliation.
 
 let
+  dotfilesCli = pkgs.callPackage ../../../pkgs/dotfiles-cli { };
   syncVscodeBin = pkgs.callPackage ../../../pkgs/dotfiles-sync-vscode { };
   types = lib.types;
 in
@@ -34,14 +35,12 @@ delib.module {
 
   darwin.ifEnabled = { cfg, ... }:
     let
-      syncScript = "${repoPaths.scripts}/sync.sh";
       runtimePath = lib.makeBinPath [
         pkgs.bash
         pkgs.coreutils
         pkgs.diffutils
         pkgs.gawk
         pkgs.gnugrep
-        pkgs.sqlite
         syncVscodeBin
       ];
       stateDirExpr =
@@ -54,8 +53,8 @@ delib.module {
         else "${repoPaths.apps}/vscode";
       applyArgs =
         [
-          "bash"
-          syncScript
+          "${dotfilesCli}/bin/dotfiles"
+          "sync"
           "vscode"
           "--managed-dir"
           managedDirArg

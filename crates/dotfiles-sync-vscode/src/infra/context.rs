@@ -1,14 +1,15 @@
-use std::collections::HashSet;
 use std::env;
 use std::path::PathBuf;
 
-use crate::{CliArgs, Context};
+use dotfiles_core::support::{find_in_path, repo_root};
+
+use crate::app::runtime::{CliArgs, Context};
 
 pub(crate) fn build_context(args: CliArgs) -> Result<Context, String> {
     let managed_dir = if let Some(path) = args.managed_dir.clone() {
         path
     } else {
-        resolve_repo_root()?.join("apps/vscode")
+        repo_root()?.join("apps/vscode")
     };
 
     let home = env::var("HOME").map_err(|_| "HOME is not set".to_string())?;
@@ -32,10 +33,6 @@ pub(crate) fn build_context(args: CliArgs) -> Result<Context, String> {
     }
 
     let code_bin = resolve_code_bin()?;
-
-    if find_in_path("sqlite3").is_none() {
-        return Err("sqlite3 is required for sync vscode".to_string());
-    }
 
     let vscode_data_home = env::var("VSCODE_DATA_HOME")
         .map(PathBuf::from)
@@ -73,53 +70,6 @@ pub(crate) fn build_context(args: CliArgs) -> Result<Context, String> {
         extensions_root,
         extensions_manifest_path,
     })
-}
-
-fn resolve_repo_root() -> Result<PathBuf, String> {
-    if let Ok(dotfiles_root) = env::var("DOTFILES_ROOT") {
-        let root = PathBuf::from(&dotfiles_root);
-        if !root.is_dir() {
-            return Err(format!(
-                "DOTFILES_ROOT is not a readable directory: {}",
-                dotfiles_root
-            ));
-        }
-        if !root.join("flake.nix").is_file() {
-            return Err(format!(
-                "unable to resolve flake root (expected flake.nix under {})",
-                root.display()
-            ));
-        }
-        return Ok(root);
-    }
-
-    let mut candidates: Vec<PathBuf> = Vec::new();
-
-    if let Ok(exe_path) = env::current_exe() {
-        for ancestor in exe_path.ancestors() {
-            candidates.push(ancestor.to_path_buf());
-        }
-    }
-
-    if let Ok(cwd) = env::current_dir() {
-        for ancestor in cwd.ancestors() {
-            candidates.push(ancestor.to_path_buf());
-        }
-    }
-
-    let mut seen = HashSet::new();
-    for candidate in candidates {
-        let candidate_key = candidate.to_string_lossy().to_string();
-        if !seen.insert(candidate_key) {
-            continue;
-        }
-
-        if candidate.join("flake.nix").is_file() {
-            return Ok(candidate);
-        }
-    }
-
-    Err("unable to resolve flake root (expected flake.nix under repository root)".to_string())
 }
 
 fn resolve_code_bin() -> Result<String, String> {
@@ -161,24 +111,4 @@ fn resolve_code_bin() -> Result<String, String> {
         "VS Code CLI not found (set VSCODE_CODE_BIN, install 'code' in PATH, or install Visual Studio Code.app)"
             .to_string(),
     )
-}
-
-fn find_in_path(name: &str) -> Option<PathBuf> {
-    let candidate = PathBuf::from(name);
-    if candidate.components().count() > 1 {
-        if candidate.exists() {
-            return Some(candidate);
-        }
-        return None;
-    }
-
-    let path_var = env::var_os("PATH")?;
-    for dir in env::split_paths(&path_var) {
-        let full = dir.join(name);
-        if full.exists() {
-            return Some(full);
-        }
-    }
-
-    None
 }

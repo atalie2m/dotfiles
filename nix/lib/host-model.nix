@@ -2,7 +2,6 @@ let
   defaultStateVersion = {
     home = "25.11";
     darwin = 6;
-    nixos = "25.11";
   };
 
   optionalNonEmptyString = value:
@@ -52,6 +51,9 @@ let
     let
       value = if builtins.isAttrs raw then raw else { };
     in
+    if value ? nixos then
+      throw "facts.user.stateVersion.nixos has been removed; delete it from facts.nix"
+    else
     {
       home =
         if value ? home && builtins.isString value.home && value.home != "" then
@@ -63,11 +65,6 @@ let
           value.darwin
         else
           defaultStateVersion.darwin;
-      nixos =
-        if value ? nixos && builtins.isString value.nixos && value.nixos != "" then
-          value.nixos
-        else
-          defaultStateVersion.nixos;
     };
 
   normalizeRawFacts = rawFacts:
@@ -181,7 +178,7 @@ let
       stateVersion = if hasUser && user ? stateVersion then user.stateVersion else null;
       stateHome = if builtins.isAttrs stateVersion && stateVersion ? home then stateVersion.home else null;
       stateDarwin = if builtins.isAttrs stateVersion && stateVersion ? darwin then stateVersion.darwin else null;
-      stateNixos = if builtins.isAttrs stateVersion && stateVersion ? nixos then stateVersion.nixos else null;
+      hasRemovedNixosStateVersion = builtins.isAttrs stateVersion && stateVersion ? nixos;
       hasDeprecatedPlatform = hasUser && user ? platform;
       hasDeprecatedSystemType = hasUser && user ? systemType;
       hasDeprecatedArchitecture = hasUser && user ? architecture;
@@ -249,11 +246,6 @@ let
         (if stateDarwin == null then "facts.user.stateVersion.darwin not set (default applies)"
         else if builtins.isInt stateDarwin then builtins.toString stateDarwin
         else "facts.user.stateVersion.darwin must be an integer"))
-      (mk "facts.stateVersion.nixos"
-        (if stateNixos == null || builtins.isString stateNixos then "ok" else "fail")
-        (if stateNixos == null then "facts.user.stateVersion.nixos not set (default applies)"
-        else if builtins.isString stateNixos then stateNixos
-        else "facts.user.stateVersion.nixos must be a string"))
       (mk "facts.machines"
         (if optionalAttrs machines then "ok" else "fail")
         (if machines == null then "facts.machines not set (optional)"

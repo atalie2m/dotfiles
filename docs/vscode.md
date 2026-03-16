@@ -42,23 +42,22 @@ The CLI entrypoint dispatches to the Rust engine (`dotfiles-sync-vscode`) only.
 - Effective extensions:
   - `_default/extensions.txt` plus `<profile>/extensions.txt`, unique by extension ID
 - Runtime ownership:
-  - The repo owns the effective settings' top-level keys
+  - The repo owns the effective managed profile settings file
   - The repo owns the effective extension IDs
 - Mutable drift:
-  - Owned keys and owned extensions converge on apply
-  - User-added settings keys and user-added extensions are preserved
-  - Removed repo-owned keys and extensions are deleted on the next apply
+  - Managed settings files converge on apply
+  - User-added extensions are preserved
+  - Removed repo-owned settings and extensions are deleted on the next apply
 
 To support that mutable model, sync keeps minimal local state per profile under the VS Code sync state directory.
 That state records:
 
-- previously owned top-level settings keys
 - previously owned extension IDs
 - which default-disabled extension IDs have already been bootstrapped for the current profile
 
 State schema notes:
 
-- current schema version is `3`
+- current schema version is `4`
 - older or malformed state files are treated as `needs-apply`
 - apply rewrites state in the current schema
 
@@ -151,14 +150,14 @@ code --profile "Data Science"
 The mutable model is controlled only by `sync vscode --apply`:
 
 - repo-owned extensions from `extensions.txt` are installed or uninstalled
-- repo-owned top-level settings keys from `settings.json` are reconciled
+- managed profile settings from `settings.json` are rewritten as fully repo-owned files
 - user-added extension IDs that are not repo-owned are preserved
-- user-added settings keys that are not repo-owned are preserved
 - default-disabled extension IDs are bootstrapped once from `default-disabled-extensions.txt`
 
 That means:
 
 - adding an extension in the VS Code UI does not make sync remove it unless dotfiles later takes ownership of it
+- manual settings changes inside a managed profile are overwritten on the next apply
 - disabling or enabling an extension in the VS Code UI does not change repo state
 - enabling an extension that was previously bootstrapped from `default-disabled-extensions.txt` is preserved on future applies
 - there is no launch helper and no launch-time disable flag in this model

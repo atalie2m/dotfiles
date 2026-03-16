@@ -113,8 +113,6 @@ let
         cargoBuildFlags = [ "--workspace" ];
         cargoTestFlags = [ "--workspace" ];
 
-        nativeCheckInputs = [ pkgs.sqlite ];
-
         doCheck = true;
 
         installPhase = ''
@@ -285,6 +283,26 @@ let
         } ''
         cd "$src"
         bash scripts/tests/karabiner-curated-rules-test.sh
+        touch "$out"
+      '';
+
+      workflowContract = pkgs.runCommand "workflow-contract-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep pkgs.gawk ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/workflow-contract-test.sh
+        touch "$out"
+      '';
+
+      shimDelegation = pkgs.runCommand "shim-delegation-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/shim-delegation-test.sh
         touch "$out"
       '';
     }

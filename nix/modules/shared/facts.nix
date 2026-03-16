@@ -71,10 +71,6 @@ delib.module {
                     type = types.nullOr types.int;
                     default = null;
                   };
-                  nixos = lib.mkOption {
-                    type = types.nullOr types.str;
-                    default = null;
-                  };
                 };
               };
               default = { };

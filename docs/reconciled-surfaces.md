@@ -31,7 +31,7 @@ Behavior:
 ## VS Code native profiles
 
 The Rust engine is packaged separately as `dotfiles-sync-vscode`, and `nix run .#dotfiles -- sync vscode` dispatches to it.
-The design is intentionally mutable: only the repo-owned subset converges.
+The design is intentionally mutable: managed profile settings files converge fully to the repo state, while extension ownership remains selective.
 
 - Desired:
   - `apps/vscode/_default/settings.json`
@@ -45,15 +45,15 @@ The design is intentionally mutable: only the repo-owned subset converges.
   - one JSON state file per managed profile
 - Model:
   - recursively merge `_default` with the selected profile
-  - own the effective settings top-level keys and effective extension IDs
-  - preserve user-added settings keys and extensions outside that owned subset
+  - write the effective settings file as fully repo-owned profile state
+  - own the effective extension IDs and preserve user-added extensions outside repo ownership
 
 Behavior:
 
 - `sync vscode --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`
-- `sync vscode --apply` creates missing profiles, updates the profile registry, and reconciles owned settings keys and extensions
-- previously owned keys/extensions removed from `apps/vscode/` are removed on apply
-- user-added keys/extensions not owned by the repo are preserved
+- `sync vscode --apply` creates missing profiles, updates the profile registry, rewrites managed settings files, and reconciles repo-owned extensions
+- settings removed from `apps/vscode/` disappear on the next apply because the managed file is fully repo-owned
+- user-added extensions not owned by the repo are preserved
 - activation runs `sync vscode --apply` when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true
 
 ## Homebrew and macOS app ownership

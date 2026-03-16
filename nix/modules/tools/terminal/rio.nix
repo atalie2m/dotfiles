@@ -34,45 +34,23 @@ delib.module {
           { program = "ssh", color = "#e0af68" },
         ]
       '';
-      rioConfig = pkgs.writeText "rio-config.toml" ''
-        # Root keys must stay above any [section] tables.
-        line-height = 1.08
-        padding-x = 10
-        padding-y = [8, 8]
-        hide-mouse-cursor-when-typing = true
-        confirm-before-quit = true
-        ${optionAsAltLine}
-        [fonts]
-        family = "0xProto Nerd Font"
-        size = 15
-        hinting = true
-
-        [cursor]
-        shape = "beam"
-        blinking = false
-
-        [bell]
-        audio = false
-        visual = false
-
-        [keyboard]
-        ime-cursor-positioning = true
-
-        [navigation]
-        mode = "${navigationMode}"
-        use-split = true
-        hide-if-single = true
-        unfocused-split-opacity = 0.92
-        ${colorAutomationBlock}
-        [renderer]
-        backend = "Automatic"
-        disable-occluded-render = true
-        strategy = "events"
-
-        ${platformBlock}
-        [title]
-        content = "{{program}} - {{title || absolute_path}}"
-      '';
+      rioConfigTemplate = builtins.readFile (repoPaths.apps + "/rio/config.toml.template");
+      rioConfig = pkgs.writeText "rio-config.toml" (
+        lib.replaceStrings
+          [
+            "@@OPTION_AS_ALT@@"
+            "@@NAVIGATION_MODE@@"
+            "@@COLOR_AUTOMATION_BLOCK@@"
+            "@@PLATFORM_BLOCK@@"
+          ]
+          [
+            optionAsAltLine
+            navigationMode
+            colorAutomationBlock
+            platformBlock
+          ]
+          rioConfigTemplate
+      );
     in
     {
       xdg.configFile = {

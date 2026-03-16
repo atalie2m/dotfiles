@@ -19,5 +19,5 @@ if command -v dotfiles >/dev/null 2>&1; then
   exec "$(command -v dotfiles)" "$@"
 fi
 
-echo "dotfiles: unable to locate the Rust CLI binary (set DOTFILES_BIN or install $(dotfiles) in PATH)" >&2
+echo "dotfiles: unable to locate the Rust CLI binary (set DOTFILES_BIN or install dotfiles in PATH)" >&2
 exit 1

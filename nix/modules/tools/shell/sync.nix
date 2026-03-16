@@ -1,4 +1,4 @@
-{ delib, lib, repoPaths, ... }:
+{ delib, lib, pkgs, repoPaths, ... }:
 
 # Shell reconciliation via Home Manager activation.
 
@@ -12,7 +12,7 @@ delib.module {
 
   darwin.ifEnabled = { cfg, myconfig, ... }:
     let
-      syncScript = "${repoPaths.scripts}/sync.sh";
+      dotfilesCli = pkgs.callPackage ../../../pkgs/dotfiles-cli { };
       shellCfg = ((myconfig.tools or { }).shell or { });
       zshEnabled = ((shellCfg.zsh or { }).enable or false);
       bashEnabled = ((shellCfg.bash or { }).enable or false);
@@ -22,7 +22,7 @@ delib.module {
       ];
       noSelectedShells = shellFilters == [ ];
       applyArgs =
-        [ "bash" syncScript "shell" "--managed-dir" cfg.managedDir ]
+        [ "${dotfilesCli}/bin/dotfiles" "sync" "shell" "--managed-dir" cfg.managedDir ]
         ++ shellFilters
         ++ [ "--apply" ];
     in

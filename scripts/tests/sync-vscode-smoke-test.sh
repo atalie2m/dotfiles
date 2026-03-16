@@ -31,9 +31,11 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 if ! command -v sqlite3 >/dev/null 2>&1; then
-  echo "test: sqlite3 is required" >&2
+  echo "test: sqlite3 is required for smoke-test assertions" >&2
   exit 1
 fi
+
+sqlite3_bin="$(command -v sqlite3)"
 
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/sync-vscode-smoke.XXXXXX")"
 cleanup() {
@@ -45,6 +47,7 @@ home_dir="$tmp_root/home"
 managed_dir="$tmp_root/managed"
 fake_bin_dir="$tmp_root/bin"
 fake_code="$fake_bin_dir/code"
+fake_sqlite="$fake_bin_dir/sqlite3"
 code_state_dir="$tmp_root/code-state"
 
 mkdir -p "$home_dir" "$managed_dir/_default" "$managed_dir/native" "$managed_dir/web" "$fake_bin_dir" "$code_state_dir"
@@ -218,6 +221,14 @@ esac
 EOF
 chmod +x "$fake_code"
 
+cat >"$fake_sqlite" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "FAIL: runtime unexpectedly invoked sqlite3" >&2
+exit 1
+EOF
+chmod +x "$fake_sqlite"
+
 run_vscode_sync() {
   HOME="$home_dir" \
     PATH="$fake_bin_dir:$PATH" \
@@ -321,8 +332,8 @@ if [[ ! -f $native_db || ! -f $web_db ]]; then
   exit 1
 fi
 
-if ! jq -e '.ownedSettingsKeys | index("files.autoSave")' "$web_state" >/dev/null; then
-  echo "FAIL: web state file does not track owned settings" >&2
+if ! jq -e '.version == 4 and (.ownedSettingsKeys | not)' "$web_state" >/dev/null; then
+  echo "FAIL: web state file did not migrate to schema v4" >&2
   exit 1
 fi
 
@@ -351,8 +362,8 @@ if [[ -d "$home_dir/.vscode/extensions/ext.stale-1.0.0" ]]; then
   exit 1
 fi
 
-native_disabled_json="$(sqlite3 "$native_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
-web_disabled_json="$(sqlite3 "$web_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
+native_disabled_json="$("$sqlite3_bin" "$native_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
+web_disabled_json="$("$sqlite3_bin" "$web_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
 
 if ! printf '%s' "$native_disabled_json" | jq -e 'map(.id) | index("ext.base")' >/dev/null; then
   echo "FAIL: native default-disabled extension was not bootstrapped into enablement storage" >&2
@@ -373,8 +384,8 @@ mkdir -p "$home_dir/.vscode/extensions/ext.user-1.0.0"
 jq '. + [{ "identifier": { "id": "ext.user" }, "relativeLocation": "ext.user-1.0.0", "location": { "$mid": 1, "path": "'"$home_dir"'/.vscode/extensions/ext.user-1.0.0", "scheme": "file" }, "version": "1.0.0" }]' \
   "$home_dir/.vscode/extensions/extensions.json" >"$tmp_root/global-extensions-user.json"
 mv "$tmp_root/global-extensions-user.json" "$home_dir/.vscode/extensions/extensions.json"
-sqlite3 "$web_db" "INSERT INTO ItemTable(key, value) VALUES ('extensionsIdentifiers/disabled', '[]') ON CONFLICT(key) DO UPDATE SET value = excluded.value;"
-sqlite3 "$web_db" "INSERT INTO ItemTable(key, value) VALUES ('extensionsIdentifiers/enabled', '[{\"id\":\"ext.base\"},{\"id\":\"ext.web\"}]') ON CONFLICT(key) DO UPDATE SET value = excluded.value;"
+"$sqlite3_bin" "$web_db" "INSERT INTO ItemTable(key, value) VALUES ('extensionsIdentifiers/disabled', '[]') ON CONFLICT(key) DO UPDATE SET value = excluded.value;"
+"$sqlite3_bin" "$web_db" "INSERT INTO ItemTable(key, value) VALUES ('extensionsIdentifiers/enabled', '[{\"id\":\"ext.base\"},{\"id\":\"ext.web\"}]') ON CONFLICT(key) DO UPDATE SET value = excluded.value;"
 
 cat >"$managed_dir/_default/settings.json" <<'EOF'
 {
@@ -399,8 +410,8 @@ if jq -e 'has("files.autoSave")' "$web_settings" >/dev/null; then
   exit 1
 fi
 
-if [[ $(jq -r '.["editor.minimap.enabled"]' "$web_settings") != "false" ]]; then
-  echo "FAIL: unmanaged user setting was not preserved" >&2
+if jq -e 'has("editor.minimap.enabled")' "$web_settings" >/dev/null; then
+  echo "FAIL: manual managed-profile setting was not removed by full ownership apply" >&2
   exit 1
 fi
 
@@ -414,7 +425,7 @@ if ! jq -e 'any(.[]; .identifier.id == "ext.user")' "$home_dir/Library/Applicati
   exit 1
 fi
 
-web_disabled_json="$(sqlite3 "$web_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
+web_disabled_json="$("$sqlite3_bin" "$web_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
 if ! printf '%s' "$web_disabled_json" | jq -e 'map(.id) | length == 0' >/dev/null; then
   echo "FAIL: manually re-enabled default-disabled extension was bootstrapped again on apply" >&2
   exit 1
@@ -441,13 +452,13 @@ if [[ ! -d "$home_dir/.vscode/extensions/ext.native-1.0.0" ]]; then
   exit 1
 fi
 
-sqlite3 "$web_db" "DELETE FROM ItemTable WHERE key IN ('extensionsIdentifiers/disabled', 'extensionsIdentifiers/enabled');"
+"$sqlite3_bin" "$web_db" "DELETE FROM ItemTable WHERE key IN ('extensionsIdentifiers/disabled', 'extensionsIdentifiers/enabled');"
 if ! run_vscode_sync --apply >/dev/null; then
   echo "FAIL: apply did not reseed default-disabled extensions after enablement DB reset" >&2
   exit 1
 fi
 
-web_disabled_json="$(sqlite3 "$web_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
+web_disabled_json="$("$sqlite3_bin" "$web_db" "SELECT value FROM ItemTable WHERE key = 'extensionsIdentifiers/disabled';")"
 if ! printf '%s' "$web_disabled_json" | jq -e 'map(.id) | index("ext.base")' >/dev/null; then
   echo "FAIL: default-disabled extensions were not re-seeded when enablement DB keys were missing" >&2
   exit 1

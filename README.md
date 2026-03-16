@@ -113,9 +113,9 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - Supported inputs are `settings.json`, `extensions.txt`, and bootstrap-only `default-disabled-extensions.txt`.
 - VS Code application installation is unmanaged by Nix; install Visual Studio Code.app separately (or provide `VSCODE_CODE_BIN`).
 - `sync vscode` uses the Rust engine (`dotfiles-sync-vscode`).
-- `sync vscode --apply` runs during activation when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true, and reconciles repo-owned settings keys and extensions into writable VS Code profile state.
+- `sync vscode --apply` runs during activation when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true, and reconciles fully repo-owned managed profile settings plus repo-owned extensions into writable VS Code profile state.
 - `default-disabled-extensions.txt` is seeded once into the profile's extension enablement state; users can later enable those extensions in the VS Code UI and sync will not force them back off.
-- Drift management is mutable by design: repo-owned settings keys and extensions converge, while user-added settings keys and extensions remain untouched.
+- Drift management is mutable by design: managed profile settings are fully repo-owned, while repo-owned extensions converge without adopting user-added extensions.
 
 See `docs/vscode.md` for the runtime model and CLI.
 See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs immutable boundary details across shell, VS Code, and system app surfaces.
@@ -124,7 +124,7 @@ See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs 
 
 - Emacs app/config wiring and package installation are Nix-first; repo-owned Elisp packages are pinned through Nix, while `use-package` declarations can still install missing packages at runtime when explicitly configured to do so.
 - Neovim app/config wiring is declarative under `apps/neovim/`, while plugin installation/update happens at runtime through `lazy.nvim` using the repo-owned `lazy-lock.json`.
-- VS Code profile definitions are declarative, but runtime state stays writable; `sync vscode` manages only the owned subset of settings keys and extensions.
+- VS Code profile definitions are declarative, but runtime state stays writable; managed profile settings are fully repo-owned and manual settings changes are overwritten on apply, while user-added extensions remain outside repo ownership.
 - This repo treats those editor runtimes as a convenience boundary: config is pinned here, package/login/UI state is not.
 
 ## Terminal Compatibility
@@ -262,7 +262,6 @@ Example `facts.nix`:
     stateVersion = {
       home = "25.11";
       darwin = 6;
-      nixos = "25.11";
     };
   };
 
@@ -362,7 +361,7 @@ CI cache pushes are wired for Cachix. Set these in the GitHub repo:
 - `CACHIX_CACHE_NAME` (repository variable)
 - `CACHIX_AUTH_TOKEN` (repository secret, write-enabled)
 
-Once set, the macOS CI job builds `darwinConfigurations.*.system` and pushes results to the cache.
+Once set, the macOS CI job evaluates every `darwinConfigurations` target and builds the default host targets before pushing results to the cache.
 
 ## Flake Config Trust (`accept-flake-config`)
 

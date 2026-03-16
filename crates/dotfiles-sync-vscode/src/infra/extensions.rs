@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::Path;
 
-use crate::apply::{profile_default_disabled_file_path, unique_lines};
-use crate::Context;
+use crate::app::apply::{profile_default_disabled_file_path, unique_lines};
+use crate::app::runtime::Context;
 
 pub(crate) fn build_desired_extensions(
     context: &Context,
@@ -74,4 +74,3 @@ pub(crate) fn canonical_extension_id(id: &str) -> &str {
         _ => id,
     }
 }
-

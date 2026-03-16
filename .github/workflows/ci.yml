@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  linux-tooling:
+  linux-hygiene:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,27 +29,19 @@ jobs:
             exit 1
           fi
 
-      - name: Run export-clean smoke test
-        run: bash scripts/tests/export-clean-smoke-test.sh
+      - name: Run docs consistency test
+        run: bash scripts/tests/docs-consistency-test.sh
 
-      - name: Install Nix (Determinate Systems)
-        uses: DeterminateSystems/nix-installer-action@v19
-        with:
-          planner: linux
-          extra-conf: |
-            experimental-features = nix-command flakes
-            accept-flake-config = true
+      - name: Run host truth test
+        run: bash scripts/tests/host-truth-test.sh
 
-      - name: Run Linux contributor checks
-        run: nix flake check
+      - name: Run workflow contract test
+        run: bash scripts/tests/workflow-contract-test.sh
 
-      - name: Validate Linux format app
-        run: nix run .#format -- --version
+      - name: Run shim delegation test
+        run: bash scripts/tests/shim-delegation-test.sh
 
-      - name: Validate Linux dev shell
-        run: nix develop --command bash -lc 'treefmt --version && shellcheck --version'
-
-  test:
+  darwin-contract:
     runs-on: macos-latest
     env:
       CACHIX_CACHE_NAME: ${{ vars.CACHIX_CACHE_NAME }}
@@ -67,9 +59,6 @@ jobs:
             git status --short >&2
             exit 1
           fi
-
-      - name: Run export-clean smoke test
-        run: bash scripts/tests/export-clean-smoke-test.sh
 
       - name: Install Nix (Determinate Systems)
         uses: DeterminateSystems/nix-installer-action@v19
@@ -96,14 +85,6 @@ jobs:
           SECRETS_DIR="$RUNNER_TEMP/dotfiles-secrets"
           mkdir -p "$LOCAL_DIR" "$SECRETS_DIR"
 
-          ARCH="$(uname -m)"
-          case "$ARCH" in
-            arm64) ARCH_NIX="aarch64" ;;
-            x86_64) ARCH_NIX="x86_64" ;;
-            *) ARCH_NIX="$ARCH" ;;
-          esac
-          PLATFORM="${ARCH_NIX}-darwin"
-
           cat > "$LOCAL_DIR/facts.nix" <<EOF
           {
             user = {
@@ -111,11 +92,9 @@ jobs:
               fullName = "CI Runner";
               email = "ci@example.invalid";
               homeDirectory = "$HOME";
-              platform = "$PLATFORM";
               stateVersion = {
                 home = "25.11";
                 darwin = 6;
-                nixos = "25.11";
               };
             };
             machines = {
@@ -134,9 +113,6 @@ jobs:
                 localHostName = "ci-mac";
                 hostName = "ci-mac.local";
               };
-              a2m_nixos = {
-                platform = "x86_64-linux";
-              };
             };
           }
           EOF
@@ -154,16 +130,32 @@ jobs:
           --override-input local path:${{ steps.local_inputs.outputs.local_dir }}
           --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
 
+      - name: Run target manifest test
+        run: bash scripts/tests/targets-manifest-test.sh
+
       - name: Evaluate darwin configurations
         run: |
           set -euo pipefail
-          targets=(
-            pro_mac
-            ultra_mac
-            minimal_mac
-            ultra_mac-minimum
-            pro_mac-ultra
+          mapfile -t targets < <(
+            nix eval --raw '.#darwinConfigurations' \
+              --impure \
+              --apply '
+                targets:
+                  let
+                    manifest = (import ./nix/scripts/targets-manifest.nix {}).json targets;
+                    riceTargets = builtins.concatLists (map (host: builtins.attrValues host.targetsByRice) (builtins.attrValues manifest.hosts));
+                    targetSet = builtins.listToAttrs (map (target: { name = target; value = true; }) riceTargets);
+                  in
+                  builtins.concatStringsSep "\n" (builtins.sort builtins.lessThan (builtins.attrNames targetSet))
+              ' \
+              --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+              --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
           )
+
+          if [[ "${#targets[@]}" -eq 0 ]]; then
+            echo "FAIL: no darwinConfigurations resolved" >&2
+            exit 1
+          fi
 
           for target in "${targets[@]}"; do
             echo "Evaluating $target"
@@ -173,32 +165,31 @@ jobs:
               >/dev/null
           done
 
-      - name: Evaluate auxiliary outputs
+      - name: Build default host targets
         run: |
           set -euo pipefail
-          nix eval --raw '.#homeConfigurations."runner@pro_mac".activationPackage.drvPath' \
-            --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
-            --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
-            >/dev/null
-          nix eval --raw '.#homeConfigurations."runner@ultra_mac".activationPackage.drvPath' \
-            --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
-            --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
-            >/dev/null
-          nix eval --raw '.#homeConfigurations."runner@minimal_mac".activationPackage.drvPath' \
-            --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
-            --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
-            >/dev/null
-          nix eval --raw '.#homeConfigurations."runner@a2m_nixos".activationPackage.drvPath' \
-            --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
-            --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
-            >/dev/null
-          nix eval --raw '.#nixosConfigurations.a2m_nixos.config.system.build.toplevel.drvPath' \
-            --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
-            --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
-            >/dev/null
+          mapfile -t default_targets < <(
+            nix eval --raw '.#darwinConfigurations' \
+              --impure \
+              --apply '
+                targets:
+                  let
+                    manifest = (import ./nix/scripts/targets-manifest.nix {}).json targets;
+                  in
+                  builtins.concatStringsSep "\n" (builtins.sort builtins.lessThan (map (host: host.buildTarget) (builtins.attrValues manifest.hosts)))
+              ' \
+              --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+              --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
+          )
 
-      - name: Build representative minimum configuration (minimal_mac)
-        run: >
-          nix build --no-link .#darwinConfigurations.minimal_mac.system
-          --override-input local path:${{ steps.local_inputs.outputs.local_dir }}
-          --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
+          if [[ "${#default_targets[@]}" -eq 0 ]]; then
+            echo "FAIL: no default host targets resolved" >&2
+            exit 1
+          fi
+
+          for target in "${default_targets[@]}"; do
+            echo "Building $target"
+            nix build --no-link ".#darwinConfigurations.${target}.system" \
+              --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+              --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
+          done

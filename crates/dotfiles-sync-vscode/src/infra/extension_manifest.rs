@@ -3,14 +3,14 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
-use crate::apply::{
+use crate::app::apply::{
     profile_extensions_manifest_path, profile_id, profile_runtime_dir, profile_settings_path,
     read_json, read_json_array, write_json_atomically,
 };
-use crate::enablement_db::ensure_enablement_db;
-use crate::extensions::canonical_extension_id;
-use crate::profile_registry::ensure_custom_profile_registry;
-use crate::Context;
+use crate::app::runtime::Context;
+use crate::infra::enablement_db::ensure_enablement_db;
+use crate::infra::extensions::canonical_extension_id;
+use crate::infra::profile_registry::ensure_custom_profile_registry;
 use crate::log;
 
 pub(crate) fn ensure_custom_profile_runtime(
@@ -300,7 +300,7 @@ mod tests {
         add_custom_profile_extension_membership, list_profile_extensions, prune_orphaned_extension_dirs,
         remove_custom_profile_extension_membership,
     };
-    use crate::{Context, Mode};
+    use crate::app::runtime::{Context, Mode};
     use serde_json::json;
     use std::path::Path;
 

@@ -4,6 +4,7 @@ let
   mkConfigurations = { moduleSystem, paths }:
     let
       facts = import (inputs.local + "/facts.nix");
+      hostCatalog = import ../../nix/denix/darwin/host-catalog.nix;
       username = (dotlib.normalizeRawFacts facts).user.username;
     in
     if username == null then
@@ -17,7 +18,7 @@ let
           args
           (base.withConfig { args.enable = true; })
         ];
-        specialArgs = { inherit inputs dotlib repoPaths; };
+        specialArgs = { inherit inputs dotlib repoPaths hostCatalog; };
       };
 
   configurationPaths = {

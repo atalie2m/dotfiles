@@ -158,7 +158,7 @@ if run_real bash "$SYNC_SCRIPT" terminal --check >/dev/null 2>"$tmp_root/termina
   echo "FAIL: sync unexpectedly accepted removed terminal surface" >&2
   exit 1
 fi
-if ! grep -Fq "unknown sync surface: terminal (expected: shell or vscode)" "$tmp_root/terminal.err"; then
+if ! grep -Fq "invalid value 'terminal' for '<SURFACE>'" "$tmp_root/terminal.err"; then
   echo "FAIL: removed terminal surface did not report expected error" >&2
   cat "$tmp_root/terminal.err" >&2 || true
   exit 1
@@ -202,6 +202,13 @@ mkdir -p "$empty_nix_bin"
 cat >"$empty_nix_bin/nix" <<'EOF_EMPTY_NIX'
 #!/usr/bin/env bash
 set -euo pipefail
+
+if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigurations && $4 == "--impure" && $5 == "--apply" ]]; then
+  if [[ $6 == *"targets-manifest.nix"* ]]; then
+    printf '{"hosts":{}}'
+    exit 0
+  fi
+fi
 
 if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
   exit 0
@@ -254,6 +261,12 @@ mkdir -p "$failing_nix_bin"
 cat >"$failing_nix_bin/nix" <<'EOF_FAILING_NIX'
 #!/usr/bin/env bash
 set -euo pipefail
+
+if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigurations && $4 == "--impure" && $5 == "--apply" ]]; then
+  if [[ $6 == *"targets-manifest.nix"* ]]; then
+    exit 1
+  fi
+fi
 
 if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
   exit 1
@@ -315,6 +328,13 @@ set -euo pipefail
 
 if [[ $# -ge 4 && $1 == "eval" && $2 == "--raw" && $3 == "--impure" && $4 == "--expr" ]]; then
   if [[ "$*" == *"facts-schema.nix"* ]]; then
+    if [[ "$*" == *"/doctor-home/.config/dotfiles/facts.nix"* ]]; then
+      cat <<'EOF_SCHEMA'
+facts.migration|fail|facts.user.stateVersion.nixos has been removed; delete it from facts.nix
+EOF_SCHEMA
+      exit 0
+    fi
+
     cat <<'EOF_SCHEMA'
 facts.schema.root|ok|facts is an attrset
 facts.schema.user|ok|facts.user is an attrset
@@ -322,7 +342,6 @@ facts.username|ok|tester
 facts.stateVersion|ok|facts.user.stateVersion set
 facts.stateVersion.home|ok|25.11
 facts.stateVersion.darwin|ok|6
-facts.stateVersion.nixos|ok|25.11
 EOF_SCHEMA
     exit 0
   fi
@@ -356,6 +375,20 @@ EOF_SCHEMA
   # };
 }
 EOF_FACTS
+    exit 0
+  fi
+fi
+
+if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigurations && $4 == "--impure" && $5 == "--apply" ]]; then
+  if [[ $6 == *"targets-manifest.nix"* ]]; then
+    if [[ $3 == *"empty-home"* ]]; then
+      printf '{"hosts":{}}'
+      exit 0
+    fi
+
+    cat <<'EOF_MANIFEST'
+{"hosts":{"pro_mac":{"defaultRice":"pro","buildTarget":"pro_mac","supportedRices":["base","pro","ultra"],"machineKey":"pro_mac","system":"aarch64-darwin","targetsByRice":{"base":"pro_mac-base","pro":"pro_mac-pro","ultra":"pro_mac-ultra"}},"ultra_mac":{"defaultRice":"ultra","buildTarget":"ultra_mac","supportedRices":["base","pro","ultra"],"machineKey":"ultra_mac","system":"aarch64-darwin","targetsByRice":{"base":"ultra_mac-base","pro":"ultra_mac-pro","ultra":"ultra_mac-ultra"}},"minimal_mac":{"defaultRice":"base","buildTarget":"minimal_mac","supportedRices":["base","pro","ultra"],"machineKey":"minimal_mac","system":"aarch64-darwin","targetsByRice":{"base":"minimal_mac-base","pro":"minimal_mac-pro","ultra":"minimal_mac-ultra"}}}}
+EOF_MANIFEST
     exit 0
   fi
 fi
@@ -438,18 +471,23 @@ cat >"$doctor_home/.config/dotfiles/secrets.nix" <<'EOF_DOCTOR_SECRETS'
 }
 EOF_DOCTOR_SECRETS
 
-if ! (
+if (
   HOME="$doctor_home" \
     PATH="$fake_bin:$PATH" \
     run_real bash "$DOCTOR_SCRIPT" --strict
 ) >"$tmp_root/doctor-strict.out" 2>"$tmp_root/doctor-strict.err"; then
-  echo "FAIL: doctor --strict unexpectedly failed without host" >&2
+  echo "FAIL: doctor --strict unexpectedly accepted removed facts.user.stateVersion.nixos" >&2
   cat "$tmp_root/doctor-strict.out" >&2 || true
   cat "$tmp_root/doctor-strict.err" >&2 || true
   exit 1
 fi
 if ! grep -Fq "warn  shell.sync: strict sync check skipped (pass --host to resolve target)" "$tmp_root/doctor-strict.out"; then
   echo "FAIL: doctor --strict did not warn about skipped host-aware sync checks" >&2
+  cat "$tmp_root/doctor-strict.out" >&2 || true
+  exit 1
+fi
+if ! grep -Fq "fail  facts.migration: facts.user.stateVersion.nixos has been removed; delete it from facts.nix" "$tmp_root/doctor-strict.out"; then
+  echo "FAIL: doctor --strict missing removed stateVersion migration error" >&2
   cat "$tmp_root/doctor-strict.out" >&2 || true
   exit 1
 fi

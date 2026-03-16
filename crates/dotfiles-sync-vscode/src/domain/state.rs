@@ -1,14 +1,14 @@
 use std::fs;
 use std::path::Path;
 
-use crate::{StateFile, StateLists, StateLoad, STATE_VERSION};
-use crate::apply::write_json_atomically;
+use crate::app::apply::write_json_atomically;
+use crate::domain::model::{StateFile, StateLists, StateLoad};
+use crate::STATE_VERSION;
 
 pub(crate) fn write_state_file(
     state_file: &Path,
     profile_dir_name: &str,
     profile_name: &str,
-    owned_keys: &[String],
     owned_extensions: &[String],
     bootstrapped_default_disabled_extensions: &[String],
 ) -> Result<(), String> {
@@ -16,7 +16,6 @@ pub(crate) fn write_state_file(
         version: STATE_VERSION,
         profile_dir_name: profile_dir_name.to_string(),
         profile_name: profile_name.to_string(),
-        owned_settings_keys: owned_keys.to_vec(),
         owned_extensions: owned_extensions.to_vec(),
         bootstrapped_default_disabled_extensions: bootstrapped_default_disabled_extensions.to_vec(),
     };
@@ -51,9 +50,7 @@ pub(crate) fn load_state_lists(
     }
 
     Ok(StateLoad::Loaded(StateLists {
-        owned_settings_keys: parsed.owned_settings_keys,
         owned_extensions: parsed.owned_extensions,
         bootstrapped_default_disabled_extensions: parsed.bootstrapped_default_disabled_extensions,
     }))
 }
-

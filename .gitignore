@@ -22,5 +22,6 @@ result-*
 *.rej
 
 # Rust build artifacts
+target/
 scripts/sync-adapters/vscode-rs/target
 scripts/sync-adapters/vscode-rs/bin/dotfiles-sync-vscode

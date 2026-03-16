@@ -1,29 +1,22 @@
+use crate::commands::{ApplyAction, ApplyArgs, TargetSelector, UpdateArgs};
 use dotfiles_core::support::{
     exit_with_status, flake_ref_for_root, list_updateable_root_flake_inputs, nix_args_with_inputs,
-    parse_target_args, repo_root, require_host_argument, require_writable_checkout, resolve_inputs,
-    run_command_status,
+    repo_root, require_host_argument, require_writable_checkout, resolve_inputs, run_command_status,
 };
 use std::env;
 use std::process::Command;
 
-pub(crate) fn command_update(args: &[String]) -> Result<(), String> {
-    let parsed = parse_target_args(args, &[])?;
-    if parsed.has_passthrough {
-        return Err("unexpected -- (no passthrough supported)".to_string());
-    }
-    for arg in &parsed.args {
-        match arg.as_str() {
-            "-h" | "--help" => {
-                println!("Usage: nix run .#update -- [--host <host>] [--rice <rice>]");
-                return Ok(());
-            }
-            option if option.starts_with("--") => return Err(format!("unknown option: {}", option)),
-            other => return Err(format!("unexpected argument: {}", other)),
-        }
-    }
-
-    let host = parsed.host.or_else(|| env::var("HOST").ok());
-    let rice = parsed.rice.or_else(|| env::var("RICE").ok());
+pub(crate) fn command_update(args: &UpdateArgs) -> Result<(), String> {
+    let host = args
+        .target
+        .host_value()
+        .map(ToOwned::to_owned)
+        .or_else(|| env::var("HOST").ok());
+    let rice = args
+        .target
+        .rice_value()
+        .map(ToOwned::to_owned)
+        .or_else(|| env::var("RICE").ok());
     let run_build = env::var("UPDATE_SKIP_BUILD").unwrap_or_default() != "1";
     if run_build {
         require_host_argument(host.as_deref(), "update")?;
@@ -86,16 +79,16 @@ pub(crate) fn command_update(args: &[String]) -> Result<(), String> {
     }
 
     if run_build {
-        let mut apply_args = vec!["--action".to_string(), "build".to_string()];
-        if let Some(host_name) = host {
-            apply_args.push("--host".to_string());
-            apply_args.push(host_name);
-        }
-        if let Some(rice_name) = rice {
-            apply_args.push("--rice".to_string());
-            apply_args.push(rice_name);
-        }
-        super::apply::command_apply(&apply_args)?;
+        super::apply::command_apply(&ApplyArgs {
+            target: TargetSelector {
+                host,
+                rice,
+                host_positional: None,
+            },
+            action: ApplyAction::Build,
+            no_sudo: false,
+            passthrough: Vec::new(),
+        })?;
     }
 
     Ok(())

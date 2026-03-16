@@ -1,3 +1,5 @@
+use clap::error::ErrorKind;
+use clap::{Parser, ValueEnum};
 use crate::support::{log, repo_root};
 use std::fs;
 use std::io::{self, Write};
@@ -34,6 +36,36 @@ pub struct ShellSyncOptions {
     pub diff_output: bool,
     pub group_filters: Vec<ShellGroup>,
     pub item_filter: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum ShellGroupArg {
+    Zsh,
+    Bash,
+    All,
+}
+
+#[derive(Parser, Debug)]
+#[command(
+    name = "sync-shell",
+    about = "Keep writable shell entrypoints aligned with repo-managed blocks/files.",
+    disable_version_flag = true
+)]
+struct ShellSyncCliArgs {
+    #[arg(long, conflicts_with = "apply")]
+    check: bool,
+    #[arg(long, conflicts_with = "check")]
+    apply: bool,
+    #[arg(long)]
+    details: bool,
+    #[arg(long = "diff")]
+    diff_output: bool,
+    #[arg(long = "group", value_enum)]
+    group_filters: Vec<ShellGroupArg>,
+    #[arg(long = "item")]
+    item_filter: Option<String>,
+    #[arg(long = "managed-dir")]
+    managed_dir: Option<PathBuf>,
 }
 
 impl Default for ShellSyncOptions {
@@ -273,103 +305,61 @@ pub fn run(mut options: ShellSyncOptions) -> Result<ShellSyncResult, String> {
 }
 
 fn parse_cli_args(args: &[String]) -> Result<ShellSyncOptions, String> {
-    let mut options = ShellSyncOptions::default();
-    let mut mode_explicit = false;
-    let mut index = 0usize;
-
-    while index < args.len() {
-        match args[index].as_str() {
-            "--check" => {
-                if mode_explicit && options.mode != ShellSyncMode::Check {
-                    return Err("choose only one of --check or --apply".to_string());
-                }
-                options.mode = ShellSyncMode::Check;
-                mode_explicit = true;
-                index += 1;
-            }
-            "--apply" => {
-                if mode_explicit && options.mode != ShellSyncMode::Apply {
-                    return Err("choose only one of --check or --apply".to_string());
-                }
-                options.mode = ShellSyncMode::Apply;
-                mode_explicit = true;
-                index += 1;
-            }
-            "--details" => {
-                options.details = true;
-                index += 1;
-            }
-            "--diff" => {
-                options.diff_output = true;
-                index += 1;
-            }
-            "--group" => {
-                let value = args
-                    .get(index + 1)
-                    .ok_or_else(|| "missing value for --group".to_string())?;
-                match value.as_str() {
-                    "zsh" => push_group_filter(&mut options.group_filters, ShellGroup::Zsh),
-                    "bash" => push_group_filter(&mut options.group_filters, ShellGroup::Bash),
-                    "all" => options.group_filters.clear(),
-                    _ => {
-                        return Err(format!(
-                            "invalid --group value: {} (expected zsh, bash, all)",
-                            value
-                        ))
-                    }
-                }
-                index += 2;
-            }
-            "--item" => {
-                let value = args
-                    .get(index + 1)
-                    .ok_or_else(|| "missing value for --item".to_string())?;
-                options.item_filter = Some(value.clone());
-                index += 2;
-            }
-            "--managed-dir" => {
-                let value = args
-                    .get(index + 1)
-                    .ok_or_else(|| "missing value for --managed-dir".to_string())?;
-                options.managed_dir = Some(PathBuf::from(value));
-                index += 2;
-            }
-            "--help" | "-h" => {
-                print_usage();
-                process::exit(0);
-            }
+    for arg in args {
+        match arg.as_str() {
             "--adopt" | "--forget" | "--migrate" | "--state-dir" | "--force" | "--in-place"
             | "--output-dir" => {
-                return Err(format!("{} is no longer supported for sync shell", args[index]));
+                return Err(format!("{} is no longer supported for sync shell", arg));
             }
-            option => return Err(format!("unknown option for sync shell: {}", option)),
+            _ => {}
         }
     }
 
-    Ok(options)
+    let parsed = parse_cli_or_display(ShellSyncCliArgs::try_parse_from(
+        std::iter::once("sync-shell".to_string()).chain(args.iter().cloned()),
+    ))?;
+
+    let mut group_filters = Vec::new();
+    let group_all = parsed
+        .group_filters
+        .iter()
+        .any(|group| matches!(group, ShellGroupArg::All));
+    if !group_all {
+        for group in parsed.group_filters {
+            match group {
+                ShellGroupArg::Zsh => push_group_filter(&mut group_filters, ShellGroup::Zsh),
+                ShellGroupArg::Bash => push_group_filter(&mut group_filters, ShellGroup::Bash),
+                ShellGroupArg::All => {}
+            }
+        }
+    }
+
+    Ok(ShellSyncOptions {
+        managed_dir: parsed.managed_dir,
+        mode: if parsed.apply {
+            ShellSyncMode::Apply
+        } else {
+            ShellSyncMode::Check
+        },
+        details: parsed.details,
+        diff_output: parsed.diff_output,
+        group_filters,
+        item_filter: parsed.item_filter,
+    })
 }
 
-fn print_usage() {
-    println!(
-        "Usage:
-  nix run .#dotfiles -- sync shell --check [--details] [--diff] [--group <zsh|bash|all>] [--item <id>] [--managed-dir <path>]
-  nix run .#dotfiles -- sync shell --apply [--details] [--diff] [--group <zsh|bash|all>] [--item <id>] [--managed-dir <path>]
-
-Description:
-  Keep writable shell entrypoints aligned with repo-managed blocks/files.
-  - zsh-zdotdir: managed block in ~/.nix/.zshrc
-  - bash-rc: managed block in ~/.bashrc
-
-Options:
-  --check              Report in-sync / needs-apply / missing / invalid (default mode)
-  --apply              Repair writable entrypoints and update managed content
-  --details            Print concise per-target details
-  --diff               Print unified diff for targets that need apply
-  --group <name>       Filter targets by shell group (repeatable, default: all)
-  --item <id>          Restrict to one target id
-  --managed-dir <path> Desired managed content directory (default: <repo>/surfaces/shell/desired)
-  --help               Show this help"
-    );
+fn parse_cli_or_display<T>(result: Result<T, clap::Error>) -> Result<T, String> {
+    match result {
+        Ok(value) => Ok(value),
+        Err(err) => match err.kind() {
+            ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
+                err.print()
+                    .map_err(|io_error| format!("failed to print help: {}", io_error))?;
+                process::exit(0);
+            }
+            _ => Err(err.to_string().trim_end().to_string()),
+        },
+    }
 }
 
 fn push_group_filter(filters: &mut Vec<ShellGroup>, group: ShellGroup) {

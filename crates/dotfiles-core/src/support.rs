@@ -1,3 +1,5 @@
+use serde::Deserialize;
+use std::collections::BTreeMap;
 use std::env;
 use std::ffi::OsString;
 use std::fs;
@@ -14,13 +16,24 @@ pub struct InputRefs {
     pub secrets_ref: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct ParsedTargetArgs {
-    pub host: Option<String>,
-    pub rice: Option<String>,
-    pub passthrough: Vec<String>,
-    pub args: Vec<String>,
-    pub has_passthrough: bool,
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct TargetsManifest {
+    pub hosts: BTreeMap<String, HostTargetsManifest>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct HostTargetsManifest {
+    #[serde(rename = "defaultRice")]
+    pub default_rice: String,
+    #[serde(rename = "buildTarget")]
+    pub build_target: String,
+    #[serde(rename = "supportedRices")]
+    pub supported_rices: Vec<String>,
+    #[serde(rename = "machineKey")]
+    pub machine_key: String,
+    pub system: String,
+    #[serde(rename = "targetsByRice")]
+    pub targets_by_rice: BTreeMap<String, String>,
 }
 
 pub fn log(message: &str) {
@@ -172,8 +185,10 @@ pub fn repo_root() -> Result<PathBuf, String> {
     }
 
     let cwd = env::current_dir().map_err(|err| format!("failed to resolve cwd: {}", err))?;
-    if cwd.join("flake.nix").is_file() {
-        return Ok(cwd);
+    for ancestor in cwd.ancestors() {
+        if ancestor.join("flake.nix").is_file() {
+            return Ok(ancestor.to_path_buf());
+        }
     }
 
     let exe = env::current_exe()
@@ -231,6 +246,38 @@ pub fn list_darwin_targets(root: &Path, inputs: &InputRefs) -> Result<Vec<String
         .collect())
 }
 
+pub fn load_targets_manifest(root: &Path, inputs: &InputRefs) -> Result<TargetsManifest, String> {
+    let manifest_script = root.join("nix/scripts/targets-manifest.nix");
+
+    let mut command = Command::new("nix");
+    command.arg("eval");
+    command.arg("--json");
+    command.arg(format!("{}#darwinConfigurations", flake_ref_for_root(root)));
+    command.arg("--impure");
+    command.arg("--apply");
+    command.arg(format!(
+        "targets: (import {} {{ }}).json targets",
+        manifest_script.display()
+    ));
+    command.args(nix_args_with_inputs(inputs));
+
+    let output = command
+        .output()
+        .map_err(|err| format!("failed to run nix eval: {}", err))?;
+    if !output.status.success() {
+        return Err("unable to evaluate darwinConfigurations".to_string());
+    }
+
+    let manifest: TargetsManifest = serde_json::from_slice(&output.stdout)
+        .map_err(|err| format!("failed to parse darwin target manifest: {}", err))?;
+
+    if manifest.hosts.is_empty() {
+        return Err("no darwinConfigurations found".to_string());
+    }
+
+    Ok(manifest)
+}
+
 pub fn resolve_target(
     root: &Path,
     inputs: &InputRefs,
@@ -241,25 +288,8 @@ pub fn resolve_target(
         return Err("host is required".to_string());
     }
 
-    let targets = list_darwin_targets(root, inputs)?;
-    if targets.is_empty() {
-        return Err("no darwinConfigurations found".to_string());
-    }
-
-    if let Some(rice_name) = rice {
-        let candidate = format!("{}-{}", host, rice_name);
-        if targets.iter().any(|target| target == &candidate) {
-            return Ok(candidate);
-        }
-    } else if targets.iter().any(|target| target == host) {
-        return Ok(host.to_string());
-    }
-
-    Err(format!(
-        "target not found for host '{}'{}",
-        host,
-        rice.map(|value| format!(" and rice '{}'", value)).unwrap_or_default()
-    ))
+    let manifest = load_targets_manifest(root, inputs)?;
+    resolve_target_from_manifest(&manifest, host, rice)
 }
 
 pub fn explain_darwin_targets_error(inputs: &InputRefs, message: &str) -> String {
@@ -277,60 +307,33 @@ pub fn explain_darwin_targets_error(inputs: &InputRefs, message: &str) -> String
     lines.join("\n")
 }
 
-pub fn parse_target_args(
-    args: &[String],
-    value_options: &[&str],
-) -> Result<ParsedTargetArgs, String> {
-    let mut parsed = ParsedTargetArgs::default();
-    let mut index = 0usize;
+fn resolve_target_from_manifest(
+    manifest: &TargetsManifest,
+    host: &str,
+    rice: Option<&str>,
+) -> Result<String, String> {
+    let missing_message = || {
+        format!(
+            "target not found for host '{}'{}",
+            host,
+            rice.map(|value| format!(" and rice '{}'", value))
+                .unwrap_or_default()
+        )
+    };
 
-    while index < args.len() {
-        let arg = &args[index];
-        match arg.as_str() {
-            "--host" => {
-                let value = args
-                    .get(index + 1)
-                    .ok_or_else(|| "missing value for --host".to_string())?;
-                parsed.host = Some(value.clone());
-                index += 2;
-            }
-            "--rice" => {
-                let value = args
-                    .get(index + 1)
-                    .ok_or_else(|| "missing value for --rice".to_string())?;
-                parsed.rice = Some(value.clone());
-                index += 2;
-            }
-            "--" => {
-                parsed.has_passthrough = true;
-                parsed.passthrough = args[index + 1..].to_vec();
-                break;
-            }
-            _ if arg.starts_with("--") => {
-                if value_options.iter().any(|option| option == &arg.as_str()) {
-                    let value = args
-                        .get(index + 1)
-                        .ok_or_else(|| format!("missing value for {}", arg))?;
-                    parsed.args.push(arg.clone());
-                    parsed.args.push(value.clone());
-                    index += 2;
-                } else {
-                    parsed.args.push(arg.clone());
-                    index += 1;
-                }
-            }
-            _ => {
-                if parsed.host.is_none() {
-                    parsed.host = Some(arg.clone());
-                } else {
-                    parsed.args.push(arg.clone());
-                }
-                index += 1;
-            }
-        }
+    let host_manifest = manifest
+        .hosts
+        .get(host)
+        .ok_or_else(missing_message)?;
+
+    match rice {
+        Some(rice_name) => host_manifest
+            .targets_by_rice
+            .get(rice_name)
+            .cloned()
+            .ok_or_else(missing_message),
+        None => Ok(host_manifest.build_target.clone()),
     }
-
-    Ok(parsed)
 }
 
 pub fn require_host_argument(host: Option<&str>, command_name: &str) -> Result<String, String> {
@@ -604,25 +607,11 @@ use std::os::unix::fs::PermissionsExt;
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_target_args, resolve_inputs_from};
+    use super::{
+        resolve_inputs_from, resolve_target_from_manifest, HostTargetsManifest, TargetsManifest,
+    };
+    use std::collections::BTreeMap;
     use std::path::Path;
-
-    #[test]
-    fn parse_target_args_tracks_passthrough_and_values() {
-        let args = vec![
-            "--host".to_string(),
-            "pro_mac".to_string(),
-            "--action".to_string(),
-            "build".to_string(),
-            "--".to_string(),
-            "--show-trace".to_string(),
-        ];
-        let parsed = parse_target_args(&args, &["--action"]).expect("parse");
-        assert_eq!(parsed.host.as_deref(), Some("pro_mac"));
-        assert_eq!(parsed.args, vec!["--action".to_string(), "build".to_string()]);
-        assert!(parsed.has_passthrough);
-        assert_eq!(parsed.passthrough, vec!["--show-trace".to_string()]);
-    }
 
     #[test]
     fn resolve_inputs_defaults_to_home_config_dotfiles() {
@@ -644,5 +633,85 @@ mod tests {
         )
         .expect_err("mismatch");
         assert!(error.contains("FACTS_DIR"));
+    }
+
+    #[test]
+    fn resolve_target_uses_build_target_for_default_host() {
+        let manifest = TargetsManifest {
+            hosts: BTreeMap::from([(
+                "pro_mac".to_string(),
+                HostTargetsManifest {
+                    default_rice: "pro".to_string(),
+                    build_target: "pro_mac".to_string(),
+                    supported_rices: vec!["base".to_string(), "pro".to_string()],
+                    machine_key: "pro_mac".to_string(),
+                    system: "aarch64-darwin".to_string(),
+                    targets_by_rice: BTreeMap::from([
+                        ("base".to_string(), "pro_mac-base".to_string()),
+                        ("pro".to_string(), "pro_mac".to_string()),
+                    ]),
+                },
+            )]),
+        };
+
+        let resolved = resolve_target_from_manifest(&manifest, "pro_mac", None).expect("resolve");
+        assert_eq!(resolved, "pro_mac");
+    }
+
+    #[test]
+    fn resolve_target_uses_targets_by_rice_for_explicit_rice() {
+        let manifest = TargetsManifest {
+            hosts: BTreeMap::from([(
+                "ultra_mac".to_string(),
+                HostTargetsManifest {
+                    default_rice: "ultra".to_string(),
+                    build_target: "ultra_mac".to_string(),
+                    supported_rices: vec!["base".to_string(), "ultra".to_string()],
+                    machine_key: "ultra_mac".to_string(),
+                    system: "aarch64-darwin".to_string(),
+                    targets_by_rice: BTreeMap::from([
+                        ("base".to_string(), "ultra_mac-base".to_string()),
+                        ("ultra".to_string(), "ultra_mac".to_string()),
+                    ]),
+                },
+            )]),
+        };
+
+        let resolved =
+            resolve_target_from_manifest(&manifest, "ultra_mac", Some("base")).expect("resolve");
+        assert_eq!(resolved, "ultra_mac-base");
+    }
+
+    #[test]
+    fn resolve_target_reports_missing_host_or_rice() {
+        let empty_manifest = TargetsManifest {
+            hosts: BTreeMap::new(),
+        };
+        let missing_host =
+            resolve_target_from_manifest(&empty_manifest, "ghost_mac", None).expect_err("err");
+        assert_eq!(missing_host, "target not found for host 'ghost_mac'");
+
+        let manifest = TargetsManifest {
+            hosts: BTreeMap::from([(
+                "minimal_mac".to_string(),
+                HostTargetsManifest {
+                    default_rice: "base".to_string(),
+                    build_target: "minimal_mac".to_string(),
+                    supported_rices: vec!["base".to_string()],
+                    machine_key: "minimal_mac".to_string(),
+                    system: "aarch64-darwin".to_string(),
+                    targets_by_rice: BTreeMap::from([(
+                        "base".to_string(),
+                        "minimal_mac".to_string(),
+                    )]),
+                },
+            )]),
+        };
+        let missing_rice =
+            resolve_target_from_manifest(&manifest, "minimal_mac", Some("ultra")).expect_err("err");
+        assert_eq!(
+            missing_rice,
+            "target not found for host 'minimal_mac' and rice 'ultra'"
+        );
     }
 }

@@ -1,17 +1,17 @@
 use serde_json::Value;
 
-use crate::apply::{
-    file_intersection, file_minus_file, object_keys_unsorted, profile_id, read_json,
-    read_json_object, unique_lines,
+use crate::app::apply::{
+    file_intersection, file_minus_file, profile_id, read_json, read_json_object,
 };
-use crate::enablement_db::pending_default_disabled_extensions;
-use crate::extension_manifest::list_profile_extensions;
-use crate::profile_registry::{
+use crate::app::runtime::Context;
+use crate::domain::model::{ProfileEvaluation, ProfilePlan, ProfileStatus, StateLists, StateLoad};
+use crate::domain::settings::{settings_match, settings_value};
+use crate::domain::state::load_state_lists;
+use crate::infra::enablement_db::pending_default_disabled_extensions;
+use crate::infra::extension_manifest::list_profile_extensions;
+use crate::infra::profile_registry::{
     managed_profile_entry_matches_expected, validate_storage_json_shape,
 };
-use crate::settings::{all_desired_keys_match, project_settings_subset};
-use crate::state::load_state_lists;
-use crate::{Context, ProfileEvaluation, ProfilePlan, ProfileStatus, StateLists, StateLoad};
 
 pub(crate) fn classify_profile(
     context: &Context,
@@ -46,8 +46,6 @@ pub(crate) fn classify_profile(
         StateLoad::Loaded(lists) => (false, lists),
     };
 
-    let desired_keys = object_keys_unsorted(&plan.desired_settings);
-    let stale_keys = file_minus_file(&state_lists.owned_settings_keys, &desired_keys);
     let stale_extensions = file_minus_file(&state_lists.owned_extensions, &plan.desired_extensions);
 
     if !context.storage_json_path.is_file() {
@@ -96,16 +94,8 @@ pub(crate) fn classify_profile(
 
     let stale_installed = file_intersection(&stale_extensions, &actual_extensions);
     let desired_missing = file_minus_file(&plan.desired_extensions, &actual_extensions);
-
-    let stale_keys_present: Vec<String> = stale_keys
-        .iter()
-        .filter(|key| actual_settings.contains_key(*key))
-        .cloned()
-        .collect();
-
-    let combined_keys = unique_lines(&[desired_keys.clone(), stale_keys_present.clone()].concat());
-    let settings_diff_expected = project_settings_subset(&plan.desired_settings, &desired_keys);
-    let settings_diff_actual = project_settings_subset(&actual_settings, &combined_keys);
+    let settings_diff_expected = settings_value(&plan.desired_settings);
+    let settings_diff_actual = settings_value(&actual_settings);
 
     let pending_default_disabled = pending_default_disabled_extensions(
         context,
@@ -124,19 +114,9 @@ pub(crate) fn classify_profile(
         ));
     }
 
-    if !all_desired_keys_match(&actual_settings, &plan.desired_settings, &desired_keys) {
+    if !settings_match(&actual_settings, &plan.desired_settings) {
         return Ok(needs_apply_with_diff(
             "managed settings differ from desired values",
-            settings_diff_expected,
-            settings_diff_actual,
-            desired_missing,
-            stale_installed,
-        ));
-    }
-
-    if !stale_keys_present.is_empty() {
-        return Ok(needs_apply_with_diff(
-            "previously owned settings keys still exist locally",
             settings_diff_expected,
             settings_diff_actual,
             desired_missing,
@@ -177,8 +157,8 @@ pub(crate) fn classify_profile(
     Ok(ProfileEvaluation {
         status: ProfileStatus::InSync,
         reason: "managed settings and extensions match desired state".to_string(),
-        settings_diff_expected: Some(Value::Object(settings_diff_expected)),
-        settings_diff_actual: Some(Value::Object(settings_diff_actual)),
+        settings_diff_expected: Some(settings_diff_expected),
+        settings_diff_actual: Some(settings_diff_actual),
         extensions_add: desired_missing,
         extensions_remove: stale_installed,
     })
@@ -219,16 +199,16 @@ fn needs_apply(reason: impl Into<String>) -> ProfileEvaluation {
 
 fn needs_apply_with_diff(
     reason: impl Into<String>,
-    expected: serde_json::Map<String, Value>,
-    actual: serde_json::Map<String, Value>,
+    expected: Value,
+    actual: Value,
     extensions_add: Vec<String>,
     extensions_remove: Vec<String>,
 ) -> ProfileEvaluation {
     ProfileEvaluation {
         status: ProfileStatus::NeedsApply,
         reason: reason.into(),
-        settings_diff_expected: Some(Value::Object(expected)),
-        settings_diff_actual: Some(Value::Object(actual)),
+        settings_diff_expected: Some(expected),
+        settings_diff_actual: Some(actual),
         extensions_add,
         extensions_remove,
     }
@@ -237,11 +217,12 @@ fn needs_apply_with_diff(
 #[cfg(test)]
 mod tests {
     use super::classify_profile;
-    use crate::apply::{
+    use crate::app::apply::{
         profile_extensions_manifest_path, profile_id, profile_runtime_dir, profile_settings_path,
     };
-    use crate::state::write_state_file;
-    use crate::{Context, Mode, ProfilePlan, ProfileStatus};
+    use crate::app::runtime::{Context, Mode};
+    use crate::domain::model::{ProfilePlan, ProfileStatus};
+    use crate::domain::state::write_state_file;
     use serde_json::Map;
     use serde_json::json;
     use std::path::Path;
@@ -300,7 +281,7 @@ mod tests {
         )
         .expect("storage");
         std::fs::create_dir_all(&context.state_dir).expect("state dir");
-        write_state_file(&state_file, profile_dir_name, profile_name, &[], &[], &[]).expect("state");
+        write_state_file(&state_file, profile_dir_name, profile_name, &[], &[]).expect("state");
 
         ProfilePlan {
             profile_dir_name: profile_dir_name.to_string(),

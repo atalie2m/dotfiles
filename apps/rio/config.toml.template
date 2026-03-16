@@ -1,0 +1,37 @@
+# Root keys must stay above any [section] tables.
+line-height = 1.08
+padding-x = 10
+padding-y = [8, 8]
+hide-mouse-cursor-when-typing = true
+confirm-before-quit = true
+@@OPTION_AS_ALT@@
+[fonts]
+family = "0xProto Nerd Font"
+size = 15
+hinting = true
+
+[cursor]
+shape = "beam"
+blinking = false
+
+[bell]
+audio = false
+visual = false
+
+[keyboard]
+ime-cursor-positioning = true
+
+[navigation]
+mode = "@@NAVIGATION_MODE@@"
+use-split = true
+hide-if-single = true
+unfocused-split-opacity = 0.92
+@@COLOR_AUTOMATION_BLOCK@@
+[renderer]
+backend = "Automatic"
+disable-occluded-render = true
+strategy = "events"
+
+@@PLATFORM_BLOCK@@
+[title]
+content = "{{program}} - {{title || absolute_path}}"

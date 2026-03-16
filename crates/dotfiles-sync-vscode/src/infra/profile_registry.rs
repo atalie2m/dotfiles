@@ -1,8 +1,8 @@
 use serde_json::{Map, Value};
 use std::fs;
 
-use crate::apply::{read_json, write_json_atomically};
-use crate::Context;
+use crate::app::apply::{read_json, write_json_atomically};
+use crate::app::runtime::Context;
 
 pub(crate) fn ensure_custom_profile_registry(
     context: &Context,
@@ -123,7 +123,7 @@ fn read_user_data_profiles(storage_object: &mut Map<String, Value>) -> Result<Ve
 #[cfg(test)]
 mod tests {
     use super::{ensure_custom_profile_registry, validate_storage_json_shape};
-    use crate::{Context, Mode};
+    use crate::app::runtime::{Context, Mode};
     use serde_json::json;
     use std::path::Path;
 
