@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, ... }:
+{ delib, ... }:
 
 # GPG and GPG agent configuration
 
@@ -15,10 +15,6 @@ delib.module {
       defaultCacheTtlSsh = intOption 1800;
       maxCacheTtl = intOption 7200;
     };
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.security.gpg.enable";
   };
 
   home.ifEnabled = { cfg, ... }: {

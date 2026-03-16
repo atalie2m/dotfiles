@@ -1,18 +1,28 @@
-{ lib, rustPlatform, sqlite }:
+{ lib, rustPlatform, sqlite, makeWrapper }:
 
 rustPlatform.buildRustPackage {
   pname = "dotfiles-sync-vscode";
   version = "0.1.0";
 
-  src = ../../../scripts/sync-adapters/vscode-rs;
+  src = ../../..;
+
+  nativeBuildInputs = [ makeWrapper ];
 
   cargoLock = {
-    lockFile = ../../../scripts/sync-adapters/vscode-rs/Cargo.lock;
+    lockFile = ../../../Cargo.lock;
   };
+
+  cargoBuildFlags = [ "-p" "dotfiles-sync-vscode" ];
+  cargoTestFlags = [ "-p" "dotfiles-sync-vscode" ];
 
   nativeCheckInputs = [ sqlite ];
 
   doCheck = true;
+
+  postFixup = ''
+    wrapProgram "$out/bin/dotfiles-sync-vscode" \
+      --set-default DOTFILES_ROOT "${../../..}"
+  '';
 
   meta = with lib; {
     description = "VS Code native profile reconciliation engine for dotfiles sync";

@@ -1,17 +1,17 @@
 # Commands
 
-Canonical command examples and current host names live here. Keep AI helper files and README references aligned to this page instead of duplicating examples.
+Canonical command examples and current host names live here. Keep README and AI helper files aligned to this page instead of duplicating command surfaces elsewhere.
 
-## Current hosts and target names
+## Current hosts and packages
 
-- Hosts: `pro_mac` (default rice: `pro`), `ultra_mac` (default rice: `ultra`), `minimal_mac` (default rice: `minimum`)
-- Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `minimum`, `partial`
-- Example darwin targets: `pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-minimum`, `minimal_mac-ultra`, `pro_mac-partial`
-- Home Manager outputs: `<user>@pro_mac`, `<user>@ultra_mac`, `<user>@minimal_mac`, `<user>@a2m_nixos`
+- Hosts: `pro_mac` (default rice: `pro`), `ultra_mac` (default rice: `ultra`), `minimal_mac` (default rice: `base`)
+- Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `partial`
+- Example darwin targets: `pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-base`, `minimal_mac-ultra`, `pro_mac-partial`
+- Packages: `dotfiles`, `dotfiles-cli`, `dotfiles-sync-vscode`
 
 ## Operational CLI
 
-These commands are Darwin-first and resolve `darwinConfigurations`.
+These commands are Darwin-only and resolve `darwinConfigurations`.
 
 ```bash
 # Apply default rice for each host
@@ -24,15 +24,15 @@ nix run .#apply -- --host ultra_mac --action build
 
 # Switch rices explicitly
 nix run .#apply -- --host pro_mac --rice ultra
-nix run .#apply -- --host ultra_mac --rice minimum
+nix run .#apply -- --host ultra_mac --rice base
 nix run .#apply -- --host minimal_mac --rice ultra
 nix run .#apply -- --host ultra_mac --rice partial
 
 # Inspect effective group/tool toggles
 nix run .#list-tools -- --host pro_mac
-nix run .#list-tools -- --host ultra_mac --rice minimum --format json
+nix run .#list-tools -- --host ultra_mac --rice base --format json
 
-# Inspect cross-target toggle matrix (group-level by default)
+# Inspect cross-target toggle matrix
 nix run .#matrix-tools
 nix run .#matrix-tools -- --format json
 nix run .#matrix-tools -- --full --format json
@@ -55,17 +55,6 @@ UPDATE_ALL=1 nix run .#update -- --host pro_mac
 UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host pro_mac
 ```
 
-## Formatter and checks
-
-```bash
-nix fmt
-nix run .#format
-nix flake check \
-  --override-input local path:$HOME/.config/dotfiles \
-  --override-input secrets path:$HOME/.config/dotfiles
-nix develop
-```
-
 ## Runtime sync
 
 ```bash
@@ -80,15 +69,24 @@ nix run .#dotfiles -- sync vscode --check --details --diff
 nix run .#dotfiles -- sync vscode --apply
 nix run .#dotfiles -- sync vscode --check --profile web
 nix run .#dotfiles -- sync vscode --apply --profile native
-code --profile "Web"
-code --profile "Data Science"
 ```
 
 Notes:
 
+- `scripts/*.sh` are thin shell wrappers over the Rust CLI.
+- `dotfiles-sync-vscode` is packaged separately; `dotfiles` dispatches `sync vscode` to that binary.
 - `sync vscode --apply` also runs during activation when both `tools.editor.vscode.enable = true` and `tools.editor.vscode.sync.enable = true`.
-- `apps/vscode/_default/` is the shared layer for all managed profiles.
-- `apps/vscode/native/` is managed as a native profile (`Native`).
+
+## Checks and development
+
+```bash
+nix fmt
+nix run .#format
+nix flake check \
+  --override-input local path:$HOME/.config/dotfiles \
+  --override-input secrets path:$HOME/.config/dotfiles
+nix develop
+```
 
 ## Clean export
 
@@ -99,17 +97,13 @@ nix run .#dotfiles -- export-clean --format tar --output /tmp/dotfiles-clean.tar
 nix run .#export-clean -- --format dir --output /tmp/dotfiles-clean
 ```
 
-## Manual rebuild commands
+## Manual rebuild
 
 ```bash
 FACTS_DIR="$HOME/.config/dotfiles"
 SECRETS_DIR="$HOME/.config/dotfiles"
 
 nix run .#darwin-rebuild -- switch --flake .#<PROFILE_NAME> \
-  --override-input local path:$FACTS_DIR \
-  --override-input secrets path:$SECRETS_DIR
-
-nix run home-manager/release-25.11 -- switch --flake .#<PROFILE_NAME> \
   --override-input local path:$FACTS_DIR \
   --override-input secrets path:$SECRETS_DIR
 ```

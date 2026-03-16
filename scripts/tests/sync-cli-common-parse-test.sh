@@ -3,47 +3,37 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-LOAD_LIB="$ROOT/scripts/lib/load-lib.sh"
 SYNC_SCRIPT="$ROOT/scripts/sync.sh"
-SOURCE_MANAGED_DIR="$ROOT/surfaces/shell/desired"
 APPLY_SCRIPT="$ROOT/scripts/apply.sh"
 UPDATE_SCRIPT="$ROOT/scripts/update.sh"
 LIST_TOOLS_SCRIPT="$ROOT/scripts/list-tools.sh"
 DOCTOR_SCRIPT="$ROOT/scripts/doctor.sh"
 BOOTSTRAP_SCRIPT="$ROOT/scripts/bootstrap.sh"
+DOTFILES_SCRIPT="$ROOT/scripts/dotfiles.sh"
+SOURCE_MANAGED_DIR="$ROOT/surfaces/shell/desired"
+REAL_DOTFILES_BIN="${DOTFILES_BIN:-$(command -v dotfiles 2>/dev/null || true)}"
 
-if [[ ! -f $SYNC_SCRIPT ]]; then
-  echo "test: sync script not found: $SYNC_SCRIPT" >&2
+for required in \
+  "$SYNC_SCRIPT" \
+  "$APPLY_SCRIPT" \
+  "$UPDATE_SCRIPT" \
+  "$LIST_TOOLS_SCRIPT" \
+  "$DOCTOR_SCRIPT" \
+  "$BOOTSTRAP_SCRIPT" \
+  "$DOTFILES_SCRIPT"; do
+  if [[ ! -f $required ]]; then
+    echo "test: required script not found: $required" >&2
+    exit 1
+  fi
+done
+
+if [[ ! -d $SOURCE_MANAGED_DIR ]]; then
+  echo "test: managed dir not found: $SOURCE_MANAGED_DIR" >&2
   exit 1
 fi
 
-if [[ ! -f $LOAD_LIB ]]; then
-  echo "test: load-lib script not found: $LOAD_LIB" >&2
-  exit 1
-fi
-
-if [[ ! -f $DOCTOR_SCRIPT ]]; then
-  echo "test: doctor script not found: $DOCTOR_SCRIPT" >&2
-  exit 1
-fi
-
-if [[ ! -f $APPLY_SCRIPT ]]; then
-  echo "test: apply script not found: $APPLY_SCRIPT" >&2
-  exit 1
-fi
-
-if [[ ! -f $UPDATE_SCRIPT ]]; then
-  echo "test: update script not found: $UPDATE_SCRIPT" >&2
-  exit 1
-fi
-
-if [[ ! -f $LIST_TOOLS_SCRIPT ]]; then
-  echo "test: list-tools script not found: $LIST_TOOLS_SCRIPT" >&2
-  exit 1
-fi
-
-if [[ ! -f $BOOTSTRAP_SCRIPT ]]; then
-  echo "test: bootstrap script not found: $BOOTSTRAP_SCRIPT" >&2
+if [[ -z $REAL_DOTFILES_BIN || ! -x $REAL_DOTFILES_BIN ]]; then
+  echo "test: DOTFILES_BIN or dotfiles binary is required" >&2
   exit 1
 fi
 
@@ -55,47 +45,40 @@ trap cleanup EXIT
 
 shell_home="$tmp_root/shell-home"
 shell_managed="$tmp_root/shell-managed"
-
 mkdir -p "$shell_home"
 cp -R "$SOURCE_MANAGED_DIR" "$shell_managed"
 chmod -R u+w "$shell_managed"
 
+run_real() {
+  DOTFILES_BIN="$REAL_DOTFILES_BIN" "$@"
+}
+
 run_shell_sync() {
-  HOME="$shell_home" bash "$SYNC_SCRIPT" shell "$@" --managed-dir "$shell_managed"
+  HOME="$shell_home" run_real bash "$SYNC_SCRIPT" shell "$@" --managed-dir "$shell_managed"
 }
 
-run_resolve_inputs() {
-  local home_dir="$1"
-  shift
-
-  (
-    export HOME="$home_dir"
-    mkdir -p "$HOME"
-    unset FACTS FACTS_DIR SECRETS SECRETS_DIR
-
-    while [[ $# -gt 0 ]]; do
-      export "${1%%=*}=${1#*=}"
-      shift
-    done
-
-    export DOTFILES_SCRIPT_LABEL="sync-cli-common-parse-test"
-    # shellcheck source=lib/load-lib.sh
-    source "$LOAD_LIB"
-    resolve_inputs
-    printf 'FACTS_DIR=%s\n' "${FACTS_DIR:-}"
-    printf 'SECRETS_DIR=%s\n' "${SECRETS_DIR:-}"
-    printf 'FACTS=%s\n' "${FACTS:-}"
-    printf 'SECRETS=%s\n' "${SECRETS:-}"
-  )
-}
-
-assert_line() {
-  local file="$1"
+assert_wrapper_subcommand() {
+  local script="$1"
   local expected="$2"
+  shift 2
 
-  if ! grep -Fqx "$expected" "$file"; then
-    echo "FAIL: missing expected line: $expected" >&2
-    cat "$file" >&2 || true
+  local fake_bin="$tmp_root/fake-dotfiles"
+  local log_file
+  log_file="$tmp_root/$(basename "$script").log"
+  cat >"$fake_bin" <<'EOF_FAKE_DOTFILES'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >"${FAKE_DOTFILES_LOG_FILE:?}"
+EOF_FAKE_DOTFILES
+  chmod +x "$fake_bin"
+
+  FAKE_DOTFILES_LOG_FILE="$log_file" \
+    DOTFILES_BIN="$fake_bin" \
+    bash "$script" "$@" >/dev/null
+
+  if ! grep -Fqx "$expected" "$log_file"; then
+    echo "FAIL: wrapper delegation changed for $script" >&2
+    cat "$log_file" >&2 || true
     exit 1
   fi
 }
@@ -108,7 +91,7 @@ assert_missing_host() {
 
   shift 4
 
-  if bash "$script" "$@" >"$stdout_file" 2>"$stderr_file"; then
+  if run_real bash "$script" "$@" >"$stdout_file" 2>"$stderr_file"; then
     echo "FAIL: $command_name unexpectedly accepted missing host" >&2
     exit 1
   fi
@@ -123,12 +106,19 @@ assert_missing_host() {
 printf 'test: running sync cli common parse test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
+assert_wrapper_subcommand "$APPLY_SCRIPT" "apply --host pro_mac --action build" --host pro_mac --action build
+assert_wrapper_subcommand "$DOTFILES_SCRIPT" "sync shell --check" sync shell --check
+
 if ! run_shell_sync --apply --item bash-rc >/dev/null; then
   echo "FAIL: shell apply failed" >&2
   exit 1
 fi
 if ! run_shell_sync --check --item bash-rc >/dev/null; then
   echo "FAIL: shell check failed after apply" >&2
+  exit 1
+fi
+if ! HOME="$shell_home" "$REAL_DOTFILES_BIN" sync shell --check --item bash-rc --managed-dir "$shell_managed" >/dev/null; then
+  echo "FAIL: direct CLI shell check failed after apply" >&2
   exit 1
 fi
 
@@ -164,7 +154,7 @@ for removed in --migrate --adopt --forget --state-dir --force --in-place --outpu
   fi
 done
 
-if bash "$SYNC_SCRIPT" terminal --check >/dev/null 2>"$tmp_root/terminal.err"; then
+if run_real bash "$SYNC_SCRIPT" terminal --check >/dev/null 2>"$tmp_root/terminal.err"; then
   echo "FAIL: sync unexpectedly accepted removed terminal surface" >&2
   exit 1
 fi
@@ -179,43 +169,10 @@ assert_missing_host "$UPDATE_SCRIPT" "update" "$tmp_root/update.out" "$tmp_root/
 assert_missing_host "$LIST_TOOLS_SCRIPT" "list-tools" "$tmp_root/list-tools.out" "$tmp_root/list-tools.err"
 assert_missing_host "$BOOTSTRAP_SCRIPT" "bootstrap" "$tmp_root/bootstrap-missing-host.out" "$tmp_root/bootstrap-missing-host.err" --apply
 
-default_home="$tmp_root/default-home"
-default_out="$tmp_root/default.out"
-run_resolve_inputs "$default_home" >"$default_out"
-assert_line "$default_out" "FACTS_DIR=$default_home/.config/dotfiles"
-assert_line "$default_out" "SECRETS_DIR=$default_home/.config/dotfiles"
-assert_line "$default_out" "FACTS=path:$default_home/.config/dotfiles"
-assert_line "$default_out" "SECRETS=path:$default_home/.config/dotfiles"
-
-explicit_home="$tmp_root/explicit-home"
-explicit_facts_dir="$tmp_root/custom-facts"
-explicit_secrets_dir="$tmp_root/custom-secrets"
-explicit_out="$tmp_root/explicit.out"
-run_resolve_inputs "$explicit_home" \
-  "FACTS_DIR=$explicit_facts_dir" \
-  "SECRETS_DIR=$explicit_secrets_dir" \
-  >"$explicit_out"
-assert_line "$explicit_out" "FACTS_DIR=$explicit_facts_dir"
-assert_line "$explicit_out" "SECRETS_DIR=$explicit_secrets_dir"
-assert_line "$explicit_out" "FACTS=path:$explicit_facts_dir"
-assert_line "$explicit_out" "SECRETS=path:$explicit_secrets_dir"
-
-path_home="$tmp_root/path-home"
-path_facts_dir="$tmp_root/path-facts"
-path_secrets_dir="$tmp_root/path-secrets"
-path_out="$tmp_root/path.out"
-run_resolve_inputs "$path_home" \
-  "FACTS=path:$path_facts_dir" \
-  "SECRETS=path:$path_secrets_dir" \
-  >"$path_out"
-assert_line "$path_out" "FACTS_DIR=$path_facts_dir"
-assert_line "$path_out" "SECRETS_DIR=$path_secrets_dir"
-assert_line "$path_out" "FACTS=path:$path_facts_dir"
-assert_line "$path_out" "SECRETS=path:$path_secrets_dir"
-
 if (
   unset FACTS FACTS_DIR SECRETS SECRETS_DIR
-  FACTS="github:example/facts" bash "$DOCTOR_SCRIPT"
+  export FACTS="github:example/facts"
+  run_real bash "$DOCTOR_SCRIPT"
 ) >"$tmp_root/doctor.out" 2>"$tmp_root/doctor.err"; then
   echo "FAIL: doctor unexpectedly accepted FACTS without FACTS_DIR" >&2
   exit 1
@@ -228,7 +185,8 @@ fi
 
 if (
   unset FACTS FACTS_DIR SECRETS SECRETS_DIR
-  SECRETS="github:example/secrets" bash "$BOOTSTRAP_SCRIPT" --host ultra_mac
+  export SECRETS="github:example/secrets"
+  run_real bash "$BOOTSTRAP_SCRIPT" --host ultra_mac
 ) >"$tmp_root/bootstrap.out" 2>"$tmp_root/bootstrap.err"; then
   echo "FAIL: bootstrap unexpectedly accepted SECRETS without SECRETS_DIR" >&2
   exit 1
@@ -254,32 +212,40 @@ exit 1
 EOF_EMPTY_NIX
 chmod +x "$empty_nix_bin/nix"
 
-stub_home="$tmp_root/stub-home"
-mkdir -p "$stub_home/.config/dotfiles"
-: >"$stub_home/.config/dotfiles/STUB"
+empty_home="$tmp_root/empty-home"
+mkdir -p "$empty_home/.config/dotfiles"
+cat >"$empty_home/.config/dotfiles/facts.nix" <<'EOF_EMPTY_FACTS'
+{
+  user.username = "tester";
+}
+EOF_EMPTY_FACTS
+cat >"$empty_home/.config/dotfiles/secrets.nix" <<'EOF_EMPTY_SECRETS'
+{
+  files = { };
+}
+EOF_EMPTY_SECRETS
 
 if (
-  HOME="$stub_home" \
+  HOME="$empty_home" \
     PATH="$empty_nix_bin:$PATH" \
-    bash "$APPLY_SCRIPT" --host ultra_mac
-) >"$tmp_root/apply-stub.out" 2>"$tmp_root/apply-stub.err"; then
-  echo "FAIL: apply unexpectedly accepted a stubbed facts input" >&2
+    run_real bash "$APPLY_SCRIPT" --host ultra_mac
+) >"$tmp_root/apply-empty.out" 2>"$tmp_root/apply-empty.err"; then
+  echo "FAIL: apply unexpectedly accepted an empty darwinConfigurations set" >&2
   exit 1
 fi
-
-if ! grep -Fq "no darwinConfigurations found (check local/secrets inputs and STUB)" "$tmp_root/apply-stub.err"; then
+if ! grep -Fq "no darwinConfigurations found (check local/secrets inputs)" "$tmp_root/apply-empty.err"; then
   echo "FAIL: apply missing empty-target guidance" >&2
-  cat "$tmp_root/apply-stub.err" >&2 || true
+  cat "$tmp_root/apply-empty.err" >&2 || true
   exit 1
 fi
-if ! grep -Fq "facts input: path:$stub_home/.config/dotfiles" "$tmp_root/apply-stub.err"; then
-  echo "FAIL: apply missing facts input path for stubbed inputs" >&2
-  cat "$tmp_root/apply-stub.err" >&2 || true
+if ! grep -Fq "facts input: path:$empty_home/.config/dotfiles" "$tmp_root/apply-empty.err"; then
+  echo "FAIL: apply missing facts input path for empty target set" >&2
+  cat "$tmp_root/apply-empty.err" >&2 || true
   exit 1
 fi
-if ! grep -Fq "facts STUB present: $stub_home/.config/dotfiles/STUB (flake outputs are gated while it exists)" "$tmp_root/apply-stub.err"; then
-  echo "FAIL: apply missing stub-path guidance" >&2
-  cat "$tmp_root/apply-stub.err" >&2 || true
+if grep -Fq "STUB" "$tmp_root/apply-empty.err"; then
+  echo "FAIL: apply still mentions STUB for empty target set" >&2
+  cat "$tmp_root/apply-empty.err" >&2 || true
   exit 1
 fi
 
@@ -306,19 +272,20 @@ cat >"$failing_home/.config/dotfiles/facts.nix" <<'EOF_FAILING_FACTS'
 }
 EOF_FAILING_FACTS
 cat >"$failing_home/.config/dotfiles/secrets.nix" <<'EOF_FAILING_SECRETS'
-{}
+{
+  files = { };
+}
 EOF_FAILING_SECRETS
 
 if (
   HOME="$failing_home" \
     PATH="$failing_nix_bin:$PATH" \
-    bash "$APPLY_SCRIPT" --host ultra_mac
+    run_real bash "$APPLY_SCRIPT" --host ultra_mac
 ) >"$tmp_root/apply-failing-eval.out" 2>"$tmp_root/apply-failing-eval.err"; then
   echo "FAIL: apply unexpectedly accepted a failing darwinConfigurations eval" >&2
   exit 1
 fi
-
-if ! grep -Fq "unable to evaluate darwinConfigurations (check local/secrets inputs and STUB)" "$tmp_root/apply-failing-eval.err"; then
+if ! grep -Fq "unable to evaluate darwinConfigurations (check local/secrets inputs)" "$tmp_root/apply-failing-eval.err"; then
   echo "FAIL: apply missing darwinConfigurations eval guidance" >&2
   cat "$tmp_root/apply-failing-eval.err" >&2 || true
   exit 1
@@ -330,6 +297,11 @@ if ! grep -Fq "facts input: path:$failing_home/.config/dotfiles" "$tmp_root/appl
 fi
 if ! grep -Fq "secrets input: path:$failing_home/.config/dotfiles" "$tmp_root/apply-failing-eval.err"; then
   echo "FAIL: apply missing secrets input path for eval failures" >&2
+  cat "$tmp_root/apply-failing-eval.err" >&2 || true
+  exit 1
+fi
+if grep -Fq "STUB" "$tmp_root/apply-failing-eval.err"; then
+  echo "FAIL: apply still mentions STUB for eval failures" >&2
   cat "$tmp_root/apply-failing-eval.err" >&2 || true
   exit 1
 fi
@@ -379,6 +351,7 @@ EOF_SCHEMA
   #     computerName = "Your Mac";
   #     localHostName = "your-mac";
   #     hostName = "your-mac";
+  #     domain = "local";
   #   };
   # };
 }
@@ -401,78 +374,11 @@ exit 1
 EOF_NIX
 chmod +x "$fake_bin/nix"
 
-cat >"$fake_bin/darwin-rebuild" <<'EOF_REBUILD'
-#!/usr/bin/env bash
-set -euo pipefail
-
-printf '%s\n' "$*" >"${FAKE_REBUILD_LOG_FILE:?}"
-exit 0
-EOF_REBUILD
-chmod +x "$fake_bin/darwin-rebuild"
-
-cat >"$fake_bin/sudo" <<'EOF_SUDO'
-#!/usr/bin/env bash
-set -euo pipefail
-
-preserve_env=""
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --preserve-env=*)
-      preserve_env="$1"
-      shift
-      ;;
-    --)
-      shift
-      break
-      ;;
-    -*)
-      echo "fake sudo: unexpected option: $1" >&2
-      exit 1
-      ;;
-    *)
-      break
-      ;;
-  esac
-done
-
-printf '%s\n' "$preserve_env" >"${FAKE_SUDO_LOG_FILE:?}"
-printf '%s\n' "$*" >"${FAKE_SUDO_COMMAND_FILE:?}"
-exec "$@"
-EOF_SUDO
-chmod +x "$fake_bin/sudo"
-
-real_uname="$(command -v uname)"
-cat >"$fake_bin/uname" <<EOF_UNAME
-#!/usr/bin/env bash
-set -euo pipefail
-
-case "\${1:-}" in
-  -s) printf 'Darwin\n' ;;
-  -m) printf 'x86_64\n' ;;
-  *) exec "$real_uname" "\$@" ;;
-esac
-EOF_UNAME
-chmod +x "$fake_bin/uname"
-
-cat >"$fake_bin/xcode-select" <<'EOF_XCODE'
-#!/usr/bin/env bash
-set -euo pipefail
-
-if [[ ${1:-} == "-p" ]]; then
-  printf '/Applications/Xcode.app/Contents/Developer\n'
-  exit 0
-fi
-
-exit 1
-EOF_XCODE
-chmod +x "$fake_bin/xcode-select"
-
 bootstrap_home="$tmp_root/bootstrap-home"
 if ! (
   HOME="$bootstrap_home" \
     PATH="$fake_bin:$PATH" \
-    bash "$BOOTSTRAP_SCRIPT"
+    run_real bash "$BOOTSTRAP_SCRIPT"
 ) >"$tmp_root/bootstrap-hostless.out" 2>"$tmp_root/bootstrap-hostless.err"; then
   echo "FAIL: bootstrap unexpectedly failed without host" >&2
   cat "$tmp_root/bootstrap-hostless.out" >&2 || true
@@ -496,15 +402,25 @@ if ! grep -Fq '# homeDirectory = "/Users/tester";' "$bootstrap_facts_file"; then
   cat "$bootstrap_facts_file" >&2 || true
   exit 1
 fi
+if ! grep -Fq '#     domain = "local";' "$bootstrap_facts_file"; then
+  echo "FAIL: bootstrap machine schema example is missing domain" >&2
+  cat "$bootstrap_facts_file" >&2 || true
+  exit 1
+fi
 if grep -Fq 'platform =' "$bootstrap_facts_file"; then
   echo "FAIL: bootstrap still emitted deprecated platform facts" >&2
   cat "$bootstrap_facts_file" >&2 || true
   exit 1
 fi
+if grep -Fq 'STUB' "$tmp_root/bootstrap-hostless.err"; then
+  echo "FAIL: bootstrap still mentioned STUB" >&2
+  cat "$tmp_root/bootstrap-hostless.err" >&2 || true
+  exit 1
+fi
 
 doctor_home="$tmp_root/doctor-home"
 mkdir -p "$doctor_home/.config/dotfiles"
-cat >"$doctor_home/.config/dotfiles/facts.nix" <<'EOF_FACTS'
+cat >"$doctor_home/.config/dotfiles/facts.nix" <<'EOF_DOCTOR_FACTS'
 {
   user = {
     username = "tester";
@@ -515,133 +431,27 @@ cat >"$doctor_home/.config/dotfiles/facts.nix" <<'EOF_FACTS'
     };
   };
 }
-EOF_FACTS
-cat >"$doctor_home/.config/dotfiles/secrets.nix" <<'EOF_SECRETS'
-{}
-EOF_SECRETS
+EOF_DOCTOR_FACTS
+cat >"$doctor_home/.config/dotfiles/secrets.nix" <<'EOF_DOCTOR_SECRETS'
+{
+  files = { };
+}
+EOF_DOCTOR_SECRETS
 
 if ! (
   HOME="$doctor_home" \
     PATH="$fake_bin:$PATH" \
-    bash "$DOCTOR_SCRIPT" --strict
+    run_real bash "$DOCTOR_SCRIPT" --strict
 ) >"$tmp_root/doctor-strict.out" 2>"$tmp_root/doctor-strict.err"; then
   echo "FAIL: doctor --strict unexpectedly failed without host" >&2
   cat "$tmp_root/doctor-strict.out" >&2 || true
   cat "$tmp_root/doctor-strict.err" >&2 || true
   exit 1
 fi
-
 if ! grep -Fq "warn  shell.sync: strict sync check skipped (pass --host to resolve target)" "$tmp_root/doctor-strict.out"; then
   echo "FAIL: doctor --strict did not warn about skipped host-aware sync checks" >&2
   cat "$tmp_root/doctor-strict.out" >&2 || true
   exit 1
 fi
-
-apply_home="$tmp_root/apply-home"
-mkdir -p "$apply_home/.config/dotfiles"
-
-if ! (
-  HOME="$apply_home" \
-    PATH="$fake_bin:$PATH" \
-    DARWIN_REBUILD_BIN="$fake_bin/darwin-rebuild" \
-    FAKE_SUDO_LOG_FILE="$tmp_root/apply-sudo.log" \
-    FAKE_SUDO_COMMAND_FILE="$tmp_root/apply-sudo-command.log" \
-    FAKE_REBUILD_LOG_FILE="$tmp_root/apply-rebuild.log" \
-    bash "$APPLY_SCRIPT" --host ultra_mac --action build -- --show-trace
-) >"$tmp_root/apply-run.out" 2>"$tmp_root/apply-run.err"; then
-  echo "FAIL: apply unexpectedly failed under fake sudo/darwin-rebuild" >&2
-  cat "$tmp_root/apply-run.out" >&2 || true
-  cat "$tmp_root/apply-run.err" >&2 || true
-  exit 1
-fi
-
-expected_preserve_env="--preserve-env=PATH,DARWIN_REBUILD_BIN"
-if [[ -n ${DOTFILES_ROOT:-} ]]; then
-  expected_preserve_env="${expected_preserve_env},DOTFILES_ROOT"
-fi
-if [[ $(cat "$tmp_root/apply-sudo.log") != "$expected_preserve_env" ]]; then
-  echo "FAIL: apply did not use the expected sudo preserve-env set" >&2
-  printf 'expected: %s\nactual:   %s\n' "$expected_preserve_env" "$(cat "$tmp_root/apply-sudo.log")" >&2
-  exit 1
-fi
-
-expected_facts_ref="path:$apply_home/.config/dotfiles"
-if ! grep -Fq -- "build --flake path:$ROOT#ultra_mac --no-update-lock-file --override-input local $expected_facts_ref --override-input secrets $expected_facts_ref --show-trace" "$tmp_root/apply-rebuild.log"; then
-  echo "FAIL: apply did not pass the expected darwin-rebuild arguments" >&2
-  cat "$tmp_root/apply-rebuild.log" >&2 || true
-  exit 1
-fi
-
-tool_path_bin="$tmp_root/tool-path-bin"
-tool_path_log="$tmp_root/tool-path.log"
-tool_path_home="$tmp_root/tool-path-home"
-tool_path_managed="$tmp_root/tool-path-managed"
-mkdir -p "$tool_path_bin" "$tool_path_home"
-cp -R "$SOURCE_MANAGED_DIR" "$tool_path_managed"
-chmod -R u+w "$tool_path_managed"
-
-real_awk="$(command -v awk)"
-real_diff="$(command -v diff)"
-real_grep="$(command -v grep)"
-
-cat >"$tool_path_bin/awk" <<EOF_AWK
-#!/usr/bin/env bash
-set -euo pipefail
-printf 'awk\n' >>"$tool_path_log"
-exec "$real_awk" "\$@"
-EOF_AWK
-chmod +x "$tool_path_bin/awk"
-
-cat >"$tool_path_bin/diff" <<EOF_DIFF
-#!/usr/bin/env bash
-set -euo pipefail
-printf 'diff\n' >>"$tool_path_log"
-exec "$real_diff" "\$@"
-EOF_DIFF
-chmod +x "$tool_path_bin/diff"
-
-cat >"$tool_path_bin/grep" <<EOF_GREP
-#!/usr/bin/env bash
-set -euo pipefail
-printf 'grep\n' >>"$tool_path_log"
-exec "$real_grep" "\$@"
-EOF_GREP
-chmod +x "$tool_path_bin/grep"
-
-run_with_fake_tools() {
-  HOME="$tool_path_home" PATH="$tool_path_bin:$PATH" "$@"
-}
-
-if ! run_with_fake_tools bash "$SYNC_SCRIPT" shell --apply --item bash-rc --managed-dir "$tool_path_managed" >/dev/null; then
-  echo "FAIL: shell apply failed under fake PATH tools" >&2
-  exit 1
-fi
-
-cat >"$tool_path_home/.bashrc" <<'EOF_BASHRC'
-# >>> dotfiles-managed:bashrc >>>
-# drift
-# <<< dotfiles-managed:bashrc <<<
-EOF_BASHRC
-
-if run_with_fake_tools bash "$SYNC_SCRIPT" shell --check --diff --item bash-rc --managed-dir "$tool_path_managed" >"$tmp_root/tool-path-shell.out" 2>"$tmp_root/tool-path-shell.err"; then
-  echo "FAIL: shell diff unexpectedly succeeded for drifted content" >&2
-  exit 1
-fi
-
-printf '%s\n' '# user zshrc' >"$tool_path_home/.zshrc"
-if ! run_with_fake_tools bash "$ROOT/scripts/zshrc-compat.sh" --migrate >"$tmp_root/tool-path-zshrc.out" 2>"$tmp_root/tool-path-zshrc.err"; then
-  echo "FAIL: zshrc migrate failed under fake PATH tools" >&2
-  cat "$tmp_root/tool-path-zshrc.out" >&2 || true
-  cat "$tmp_root/tool-path-zshrc.err" >&2 || true
-  exit 1
-fi
-
-for tool_name in awk diff grep; do
-  if ! grep -Fqx "$tool_name" "$tool_path_log"; then
-    echo "FAIL: expected PATH-resolved $tool_name wrapper was not used" >&2
-    cat "$tool_path_log" >&2 || true
-    exit 1
-  fi
-done
 
 echo "PASS: sync cli common parse"

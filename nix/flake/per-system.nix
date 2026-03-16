@@ -3,6 +3,8 @@
 , dotlib
 , toolOwnershipLib
 , darwinConfigurations
+, mkDotfilesCliPackage
+, mkDotfilesPackage
 , mkSyncVscodeRustPackage
 , mkPortableChecks
 , mkPortableDevShell
@@ -56,8 +58,8 @@ let
     let
       execLine =
         if subcommand == null
-        then "exec ${syncVscodeRust}/bin/dotfiles \"$@\""
-        else "exec ${syncVscodeRust}/bin/dotfiles ${subcommand} \"$@\"";
+        then "exec ${dotfilesPackage}/bin/dotfiles \"$@\""
+        else "exec ${dotfilesPackage}/bin/dotfiles ${subcommand} \"$@\"";
     in
     {
       type = "app";
@@ -80,9 +82,13 @@ let
       meta.description = description;
     };
 
+  dotfilesCli = mkDotfilesCliPackage pkgs;
   syncVscodeRust = mkSyncVscodeRustPackage pkgs;
+  dotfilesPackage = mkDotfilesPackage {
+    inherit pkgs dotfilesCli syncVscodeRust;
+  };
   portableChecks = mkPortableChecks {
-    inherit pkgs syncVscodeRust;
+    inherit pkgs syncVscodeRust dotfilesPackage;
     formatterWrapper = config.treefmt.build.wrapper;
   };
 in
@@ -131,7 +137,8 @@ in
 
   packages = {
     darwin-rebuild = inputs.nix-darwin.packages.${pkgs.stdenv.hostPlatform.system}.darwin-rebuild;
-    dotfiles = syncVscodeRust;
+    dotfiles = dotfilesPackage;
+    dotfiles-cli = dotfilesCli;
     dotfiles-sync-vscode = syncVscodeRust;
   };
 

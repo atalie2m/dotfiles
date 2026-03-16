@@ -1,14 +1,10 @@
-{ delib, lib, dotlib, repoPaths, ... }:
+{ delib, lib, repoPaths, ... }:
 
 delib.module {
   name = "tools.system.karabiner";
 
   options = with delib; moduleOptions {
     enable = boolOption false;
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.system.karabiner.enable";
   };
 
   darwin.ifEnabled = { ... }:

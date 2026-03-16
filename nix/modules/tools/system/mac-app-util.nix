@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, inputs, pkgs, ... }:
+{ delib, lib, inputs, pkgs, ... }:
 
 # mac-app-util integration for Spotlight/Dock trampolines
 # https://github.com/hraban/mac-app-util
@@ -19,10 +19,6 @@ delib.module {
       fromDir = strOption "$HOME/Applications/Home Manager Apps";
       toDir = strOption "$HOME/Applications/Home Manager Trampolines";
     };
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.system.macAppUtil.enable";
   };
 
   darwin.always = { ... }: {

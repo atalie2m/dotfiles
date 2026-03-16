@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, repoPaths, ... }:
+{ delib, lib, repoPaths, ... }:
 
 # Shell reconciliation via Home Manager activation.
 
@@ -8,10 +8,6 @@ delib.module {
   options = with delib; moduleOptions {
     enable = boolOption false;
     managedDir = strOption "${repoPaths.surfaces}/shell/desired";
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.shell.sync.enable";
   };
 
   darwin.ifEnabled = { cfg, myconfig, ... }:

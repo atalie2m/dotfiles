@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
-    nixpkgs-linux.url = "github:NixOS/nixpkgs/nixos-25.11";
 
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
@@ -83,7 +82,6 @@
   outputs = inputs @ { denix, flake-parts, ... }:
     let
       nixLib = inputs.nixpkgs.lib;
-      localStub = builtins.pathExists (inputs.local + "/STUB");
       dotlib = import ./nix/lib { lib = nixLib; };
 
       repoPaths = rec {
@@ -109,7 +107,7 @@
       };
 
       configurations = import ./nix/flake/configurations.nix {
-        inherit inputs denix dotlib repoPaths localStub;
+        inherit inputs denix dotlib repoPaths;
       };
 
       darwinConfigurations = configurations.darwinConfigurations;
@@ -117,6 +115,8 @@
       perSystemModule = import ./nix/flake/per-system.nix {
         inherit inputs repoPaths dotlib toolOwnershipLib darwinConfigurations;
         inherit (portable)
+          mkDotfilesCliPackage
+          mkDotfilesPackage
           mkSyncVscodeRustPackage
           mkPortableChecks
           mkPortableDevShell

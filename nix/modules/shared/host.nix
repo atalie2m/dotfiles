@@ -2,6 +2,34 @@
 
 let
   types = lib.types;
+  machineType = types.submodule {
+    options = {
+      homeDirectory = lib.mkOption {
+        type = types.nullOr types.str;
+        readOnly = true;
+      };
+      computerName = lib.mkOption {
+        type = types.nullOr types.str;
+        readOnly = true;
+      };
+      localHostName = lib.mkOption {
+        type = types.nullOr types.str;
+        readOnly = true;
+      };
+      hostName = lib.mkOption {
+        type = types.nullOr types.str;
+        readOnly = true;
+      };
+      domain = lib.mkOption {
+        type = types.nullOr types.str;
+        readOnly = true;
+      };
+      extra = lib.mkOption {
+        type = types.attrsOf types.anything;
+        readOnly = true;
+      };
+    };
+  };
   stateVersionType = types.submodule {
     options = {
       home = lib.mkOption {
@@ -76,11 +104,11 @@ delib.module {
       readOnly = true;
     };
     machine = lib.mkOption {
-      type = types.attrsOf types.anything;
+      type = machineType;
       readOnly = true;
     };
     machines = lib.mkOption {
-      type = types.attrsOf types.anything;
+      type = types.attrsOf machineType;
       readOnly = true;
     };
     binaryCaches = {

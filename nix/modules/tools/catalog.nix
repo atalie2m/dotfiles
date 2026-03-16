@@ -16,7 +16,6 @@ let
   mkToolModule = toolName: spec:
     let
       toolKey = "${spec.group}.${toolName}";
-      optionPath = [ "tools" spec.group toolName "enable" ];
       supportedSystems = spec.systems or [ "darwin" "linux" ];
       package = resolvePkg spec;
       isSupportedSystem = builtins.elem systemName supportedSystems;
@@ -28,16 +27,12 @@ let
         enable = boolOption false;
       };
 
-      myconfig =
-        {
-          always = dotlib.mkEnableDefault (lib.concatStringsSep "." optionPath);
-          ifEnabled = { ... }:
-            lib.mkMerge [
-              (lib.optionalAttrs (spec ? unfree && spec.unfree != [ ]) (
-                dotlib.requireUnfree spec.unfree
-              ))
-            ];
-        };
+      myconfig.ifEnabled = { ... }:
+        lib.mkMerge [
+          (lib.optionalAttrs (spec ? unfree && spec.unfree != [ ]) (
+            dotlib.requireUnfree spec.unfree
+          ))
+        ];
 
       home.ifEnabled = { ... }: {
         assertions = lib.optional (isSupportedSystem && package == null) {

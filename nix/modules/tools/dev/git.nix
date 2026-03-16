@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, ... }:
+{ delib, lib, ... }:
 
 # Git configuration with identity derived from the canonical host model
 
@@ -28,13 +28,6 @@ delib.module {
       last = "log -1 HEAD";
       visual = "!gitk";
     };
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefaults [
-      "tools.dev.git.enable"
-      "tools.dev.git.lfs.enable"
-    ];
   };
 
   home.ifEnabled = { cfg, myconfig, ... }:

@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, ... }:
+{ delib, lib, ... }:
 
 # Bash configuration
 
@@ -9,10 +9,6 @@ delib.module {
     enable = boolOption false;
     enableCompletion = boolOption true;
     historySize = intOption 10000;
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.shell.bash.enable";
   };
 
   home.ifEnabled = { cfg, ... }: {

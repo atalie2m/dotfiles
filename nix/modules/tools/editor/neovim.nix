@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, pkgs, repoPaths, ... }:
+{ delib, pkgs, repoPaths, ... }:
 
 # Neovim (plugin-managed config via lazy.nvim)
 
@@ -7,10 +7,6 @@ delib.module {
 
   options = with delib; moduleOptions {
     enable = boolOption false;
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.editor.neovim.enable";
   };
 
   home.ifEnabled = { ... }:

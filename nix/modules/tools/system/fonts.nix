@@ -1,14 +1,10 @@
-{ delib, lib, dotlib, pkgs, ... }:
+{ delib, pkgs, ... }:
 
 delib.module {
   name = "tools.system.fonts";
 
   options = with delib; moduleOptions {
     enable = boolOption false;
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.system.fonts.enable";
   };
 
   home.ifEnabled = { cfg, ... }: {

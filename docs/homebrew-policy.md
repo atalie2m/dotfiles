@@ -8,7 +8,7 @@ This document defines package-source boundaries for this dotfiles flake.
 2. Use Homebrew only for software that is macOS-specific or intentionally latest-first (typically GUI apps and a small number of fast-moving CLIs).
 3. Route Homebrew installs through catalog-backed toggles under `myconfig.tools` whenever possible, not ad-hoc backend lists.
 4. Register Homebrew ownership in `nix/catalog/tools/homebrew-ownership.nix`, including backend metadata for `homebrewNative` vs `brewNix`.
-5. Use `tools.system.brewNix` as a pinned fallback when native Homebrew integration is unsuitable; treat both backend surfaces as internal machinery rather than public configuration API.
+5. Use `tools.system.brewNix` only as an explicit alternative backend when native Homebrew integration is unsuitable; treat both backend surfaces as internal machinery rather than public configuration API.
 
 ## Duplication Rules
 

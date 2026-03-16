@@ -5,7 +5,7 @@ let
 in
 mkDarwinHost {
   name = "minimal_mac";
-  rice = "minimum";
+  rice = "base";
   machineKey = "minimal_mac";
   system = "aarch64-darwin";
 }

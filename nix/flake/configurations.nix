@@ -1,4 +1,4 @@
-{ inputs, denix, dotlib, repoPaths, localStub }:
+{ inputs, denix, dotlib, repoPaths }:
 
 let
   mkConfigurations = { moduleSystem, paths }:
@@ -35,7 +35,7 @@ let
         or (throw "unsupported moduleSystem '${moduleSystem}'");
     };
 
-  darwinConfigurations = if localStub then { } else mkLatestConfigurations "darwin";
+  darwinConfigurations = mkLatestConfigurations "darwin";
 in
 {
   inherit darwinConfigurations;

@@ -17,7 +17,7 @@ catalog-owned tools in that group.
 
 ```bash
 nix run .#list-tools -- --host pro_mac
-nix run .#list-tools -- --host ultra_mac --rice minimum
+nix run .#list-tools -- --host ultra_mac --rice base
 ```
 
 ### JSON Output

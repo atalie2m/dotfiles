@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, ... }:
+{ delib, ... }:
 
 # Tmux configuration
 
@@ -9,10 +9,6 @@ delib.module {
     enable = boolOption false;
     utf8Locale = strOption "en_US.UTF-8";
     extraConfig = strOption "";
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.terminal.tmux.enable";
   };
 
   home.ifEnabled = { cfg, ... }: {

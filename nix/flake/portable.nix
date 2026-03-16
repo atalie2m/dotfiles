@@ -1,8 +1,6 @@
 { inputs, nixLib, repoPaths }:
 
 let
-  linuxSystems = [ "aarch64-linux" "x86_64-linux" ];
-
   treefmtConfigFor = pkgs: {
     projectRootFile = "flake.nix";
     settings = {
@@ -20,10 +18,20 @@ let
     };
   };
 
+  mkDotfilesCliPackage = pkgs:
+    pkgs.callPackage ../pkgs/dotfiles-cli { };
+
   mkSyncVscodeRustPackage = pkgs:
     pkgs.callPackage ../pkgs/dotfiles-sync-vscode { };
 
-  mkPortableChecks = { pkgs, formatterWrapper, syncVscodeRust }:
+  mkDotfilesPackage = { pkgs, dotfilesCli, syncVscodeRust }:
+    pkgs.writeShellScriptBin "dotfiles" ''
+      export DOTFILES_ROOT="''${DOTFILES_ROOT:-${repoPaths.root}}"
+      export DOTFILES_SYNC_VSCODE_BIN="''${DOTFILES_SYNC_VSCODE_BIN:-${syncVscodeRust}/bin/dotfiles-sync-vscode}"
+      exec "${dotfilesCli}/bin/dotfiles" "$@"
+    '';
+
+  mkPortableChecks = { pkgs, formatterWrapper, dotfilesPackage, syncVscodeRust }:
     {
       treefmt = pkgs.runCommand "treefmt-check"
         {
@@ -92,6 +100,28 @@ let
         touch "$out"
       '';
 
+      cargoWorkspaceTests = pkgs.rustPlatform.buildRustPackage {
+        pname = "cargo-workspace-tests";
+        version = "0.1.0";
+
+        src = repoPaths.root;
+
+        cargoLock = {
+          lockFile = "${repoPaths.root}/Cargo.lock";
+        };
+
+        cargoBuildFlags = [ "--workspace" ];
+        cargoTestFlags = [ "--workspace" ];
+
+        nativeCheckInputs = [ pkgs.sqlite ];
+
+        doCheck = true;
+
+        installPhase = ''
+          mkdir -p "$out"
+        '';
+      };
+
       shellcheck = pkgs.runCommand "shellcheck-check"
         {
           nativeBuildInputs = [ pkgs.findutils pkgs.shellcheck ];
@@ -136,11 +166,11 @@ let
 
       syncShellSmoke = pkgs.runCommand "sync-shell-smoke-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep syncVscodeRust ];
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep dotfilesPackage ];
           src = repoPaths.root;
         } ''
         cd "$src"
-        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
         export DOTFILES_ROOT="$src"
         bash scripts/tests/sync-shell-smoke-test.sh
         touch "$out"
@@ -148,11 +178,11 @@ let
 
       syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep syncVscodeRust ];
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep dotfilesPackage ];
           src = repoPaths.root;
         } ''
         cd "$src"
-        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
         export DOTFILES_ROOT="$src"
         bash scripts/tests/sync-cli-common-parse-test.sh
         touch "$out"
@@ -160,11 +190,11 @@ let
 
       matrixToolsSmoke = pkgs.runCommand "matrix-tools-smoke-test"
         {
-          nativeBuildInputs = [ pkgs.bash syncVscodeRust ];
+          nativeBuildInputs = [ pkgs.bash dotfilesPackage ];
           src = repoPaths.root;
         } ''
         cd "$src"
-        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
         export DOTFILES_ROOT="$src"
         bash scripts/tests/matrix-tools-smoke-test.sh
         touch "$out"
@@ -178,43 +208,44 @@ let
             pkgs.git
             pkgs.gnused
             pkgs.gnutar
-            syncVscodeRust
+            dotfilesPackage
           ];
           src = repoPaths.root;
         } ''
-        project_dir="$TMPDIR/project"
-        cp -r "$src" "$project_dir"
-        chmod -R u+w "$project_dir"
-        cd "$project_dir"
-        git init --quiet
-        git add .
-        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
-        export DOTFILES_ROOT="$project_dir"
-        bash scripts/tests/export-clean-smoke-test.sh
-        touch "$out"
+                project_dir="$TMPDIR/project"
+                cp -r "$src" "$project_dir"
+                chmod -R u+w "$project_dir"
+                rm -rf "$project_dir/.git"
+                cd "$project_dir"
+                export HOME="$TMPDIR/home"
+                mkdir -p "$HOME"
+                cat >"$HOME/.gitconfig" <<'GITCONFIG'
+        [user]
+          name = Nix
+          email = nix@localhost
+        [init]
+          defaultBranch = main
+        [safe]
+          directory = *
+        GITCONFIG
+                export GIT_CONFIG_NOSYSTEM=1
+                git init --quiet
+                git add -A .
+                export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
+                export DOTFILES_ROOT="$project_dir"
+                bash scripts/tests/export-clean-smoke-test.sh
+                touch "$out"
       '';
 
       shellEntrypointWriteability = pkgs.runCommand "shell-zsh-writeability-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep syncVscodeRust ];
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep dotfilesPackage ];
           src = repoPaths.root;
         } ''
         cd "$src"
-        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
         export DOTFILES_ROOT="$src"
         bash scripts/tests/shell-zsh-writeability-test.sh
-        touch "$out"
-      '';
-
-      zshrcCompat = pkgs.runCommand "zshrc-compat-test"
-        {
-          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep syncVscodeRust ];
-          src = repoPaths.root;
-        } ''
-        cd "$src"
-        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
-        export DOTFILES_ROOT="$src"
-        bash scripts/tests/zshrc-compat-test.sh
         touch "$out"
       '';
 
@@ -224,12 +255,13 @@ let
             pkgs.bash
             pkgs.jq
             pkgs.sqlite
+            dotfilesPackage
             syncVscodeRust
           ];
           src = repoPaths.root;
         } ''
         cd "$src"
-        export DOTFILES_BIN="${syncVscodeRust}/bin/dotfiles"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
         export DOTFILES_ROOT="$src"
         export DOTFILES_SYNC_VSCODE_BIN="${syncVscodeRust}/bin/dotfiles-sync-vscode"
         bash scripts/tests/sync-vscode-smoke-test.sh
@@ -253,6 +285,27 @@ let
         } ''
         cd "$src"
         bash scripts/tests/karabiner-curated-rules-test.sh
+        touch "$out"
+      '';
+    }
+    // {
+      docsConsistency = pkgs.runCommand "docs-consistency-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/docs-consistency-test.sh
+        touch "$out"
+      '';
+
+      hostTruth = pkgs.runCommand "host-truth-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.ripgrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/host-truth-test.sh
         touch "$out"
       '';
     };
@@ -280,41 +333,14 @@ let
       '';
     };
 
-  linuxContributorOutputs =
-    nixLib.foldl'
-      nixLib.recursiveUpdate
-      { }
-      (map
-        (system:
-          let
-            pkgs = import inputs.nixpkgs-linux { inherit system; };
-            treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs (treefmtConfigFor pkgs);
-            formatterWrapper = treefmtEval.config.build.wrapper;
-            syncVscodeRust = mkSyncVscodeRustPackage pkgs;
-          in
-          {
-            formatter.${system} = formatterWrapper;
-            checks.${system} = mkPortableChecks {
-              inherit pkgs formatterWrapper syncVscodeRust;
-            };
-            devShells.${system}.default = mkPortableDevShell { inherit pkgs formatterWrapper; };
-            packages.${system}.dotfiles-sync-vscode = syncVscodeRust;
-            apps.${system}.format = {
-              type = "app";
-              program = "${pkgs.writeShellScript "dotfiles-format" ''
-                exec ${formatterWrapper}/bin/treefmt "$@"
-              ''}";
-              meta.description = "Format Nix and shell files with treefmt.";
-            };
-          })
-        linuxSystems);
 in
 {
   inherit
     treefmtConfigFor
+    mkDotfilesCliPackage
+    mkDotfilesPackage
     mkSyncVscodeRustPackage
     mkPortableChecks
     mkPortableDevShell
-    linuxContributorOutputs
     ;
 }

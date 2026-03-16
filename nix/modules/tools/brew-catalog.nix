@@ -12,11 +12,8 @@ let
         enable = boolOption false;
       };
 
-      myconfig = {
-        always = dotlib.mkEnableDefault "tools.${spec.group}.${spec.tool}.enable";
-        ifEnabled = { myconfig, ... }:
-          dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec spec);
-      };
+      myconfig.ifEnabled = { myconfig, ... }:
+        dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec spec);
 
       darwin.ifEnabled = { ... }: {
         assertions = lib.optional (!dotlib.hasHomebrewInstallPayload spec) {

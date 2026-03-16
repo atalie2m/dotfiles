@@ -10,16 +10,14 @@ if [[ $# -lt 1 ]]; then
 fi
 
 if [[ -n ${DOTFILES_BIN:-} && -x ${DOTFILES_BIN} ]]; then
+  export DOTFILES_ROOT="$ROOT"
   exec "${DOTFILES_BIN}" "$@"
 fi
 
 if command -v dotfiles >/dev/null 2>&1; then
+  export DOTFILES_ROOT="$ROOT"
   exec "$(command -v dotfiles)" "$@"
 fi
 
-if command -v nix >/dev/null 2>&1; then
-  exec nix run "path:${ROOT}#dotfiles" -- "$@"
-fi
-
-echo "dotfiles: unable to locate the Rust CLI binary or nix" >&2
+echo "dotfiles: unable to locate the Rust CLI binary (set DOTFILES_BIN or install $(dotfiles) in PATH)" >&2
 exit 1

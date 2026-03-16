@@ -1,4 +1,4 @@
-{ delib, dotlib, inputs, ... }:
+{ delib, inputs, ... }:
 
 # nix-homebrew: install Homebrew declaratively for nix-darwin
 
@@ -8,10 +8,6 @@ delib.module {
   options = with delib; moduleOptions {
     enable = boolOption false;
     autoMigrate = boolOption true;
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.system.nixHomebrew.enable";
   };
 
   darwin.always = { ... }: {

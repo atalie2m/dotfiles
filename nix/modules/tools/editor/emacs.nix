@@ -14,11 +14,8 @@ delib.module {
     enable = boolOption false;
   };
 
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.editor.emacs.enable";
-    ifEnabled = { myconfig, ... }:
-      dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
-  };
+  myconfig.ifEnabled = { myconfig, ... }:
+    dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 
   home.ifEnabled = { ... }:
     let

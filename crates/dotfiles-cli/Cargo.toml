@@ -1,0 +1,13 @@
+[package]
+name = "dotfiles-cli"
+version = "0.1.0"
+edition = "2021"
+autobins = false
+
+[[bin]]
+name = "dotfiles"
+path = "src/main.rs"
+
+[dependencies]
+dotfiles-core = { path = "../dotfiles-core" }
+tempfile = "3"

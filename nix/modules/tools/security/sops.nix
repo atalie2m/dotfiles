@@ -1,4 +1,4 @@
-{ delib, pkgs, lib, dotlib, inputs, ... }:
+{ delib, pkgs, lib, inputs, ... }:
 
 let
   localSecretsFile = inputs.secrets + "/secrets.nix";
@@ -39,10 +39,6 @@ delib.module {
 
   options = with delib; moduleOptions {
     enable = boolOption false;
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.security.sops.enable";
   };
 
   home.ifEnabled = { myconfig, ... }:

@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, inputs, pkgs, ... }:
+{ delib, lib, inputs, pkgs, ... }:
 
 # Brew-nix integration for managing macOS applications via Nix.
 # Kept as a secondary path for pinned/verified casks (empty by default).
@@ -18,17 +18,13 @@ delib.module {
     extraCasks = attrsOption { };
   };
 
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.system.brewNix.enable";
-  };
-
   darwin.always = { ... }: {
     imports = [
       inputs.brew-nix.darwinModules.default
     ];
   };
 
-  darwin.ifEnabled = { cfg, ... }:
+  darwin.ifEnabled = { cfg, myconfig, ... }:
     let
       caskApps = cfg.casks // cfg.extraCasks;
       caskNames = lib.attrNames caskApps;
@@ -41,10 +37,9 @@ delib.module {
       # Enable brew-nix
       brew-nix.enable = true;
 
-      # Dependency signal only: mac-app-util ownership lives in tools.system.macAppUtil.
-      myconfig.tools.system.macAppUtil = lib.mkIf (cfg.autoTrampolines.enable && !cfg.appLinks.enable) {
-        enable = lib.mkOverride 900 true;
-        systemService.enable = lib.mkOverride 900 true;
+      assertions = lib.optional (cfg.autoTrampolines.enable && !cfg.appLinks.enable) {
+        assertion = (((myconfig.tools or { }).system or { }).macAppUtil or { }).enable or false;
+        message = "tools.system.brewNix.autoTrampolines.enable requires tools.system.macAppUtil.enable.";
       };
 
       # Install casks as system packages

@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, ... }:
+{ delib, ... }:
 
 # Native Homebrew integration for macOS applications and tools.
 # Preferred for fast-moving apps/tools that should stay up to date.
@@ -24,10 +24,6 @@ delib.module {
     # Cleanup settings
     enableCleanup = boolOption true;
     enableAutoUpdate = boolOption true;
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.system.homebrewNative.enable";
   };
 
   darwin.ifEnabled = { cfg, myconfig, ... }: {

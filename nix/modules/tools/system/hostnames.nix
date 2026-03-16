@@ -1,16 +1,12 @@
-{ delib, lib, dotlib, ... }:
+{ delib, lib, ... }:
 
-# Manage macOS host naming from facts.machines.<host>
+# Manage macOS host naming from the canonical host model.
 
 delib.module {
   name = "tools.system.hostnames";
 
   options = with delib; moduleOptions {
     enable = boolOption false;
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.system.hostnames.enable";
   };
 
   darwin.ifEnabled = { myconfig, ... }:
@@ -20,16 +16,16 @@ delib.module {
     {
       networking =
         { }
-        // lib.optionalAttrs (m ? computerName && lib.isString m.computerName && m.computerName != "") {
+        // lib.optionalAttrs (m.computerName != null) {
           computerName = m.computerName;
         }
-        // lib.optionalAttrs (m ? localHostName && lib.isString m.localHostName && m.localHostName != "") {
+        // lib.optionalAttrs (m.localHostName != null) {
           localHostName = m.localHostName;
         }
-        // lib.optionalAttrs (m ? hostName && lib.isString m.hostName && m.hostName != "") {
+        // lib.optionalAttrs (m.hostName != null) {
           hostName = m.hostName;
         }
-        // lib.optionalAttrs (m ? domain && lib.isString m.domain && m.domain != "") {
+        // lib.optionalAttrs (m.domain != null) {
           domain = m.domain;
         };
     };

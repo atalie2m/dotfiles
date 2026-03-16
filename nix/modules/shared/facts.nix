@@ -7,6 +7,34 @@ delib.module {
   options.facts =
     let
       types = lib.types;
+      machineType = types.submodule {
+        options = {
+          homeDirectory = lib.mkOption {
+            type = types.nullOr types.str;
+            default = null;
+          };
+          computerName = lib.mkOption {
+            type = types.nullOr types.str;
+            default = null;
+          };
+          localHostName = lib.mkOption {
+            type = types.nullOr types.str;
+            default = null;
+          };
+          hostName = lib.mkOption {
+            type = types.nullOr types.str;
+            default = null;
+          };
+          domain = lib.mkOption {
+            type = types.nullOr types.str;
+            default = null;
+          };
+          extra = lib.mkOption {
+            type = types.attrsOf types.anything;
+            default = { };
+          };
+        };
+      };
     in
     {
       user = lib.mkOption {
@@ -57,7 +85,7 @@ delib.module {
       };
 
       machines = lib.mkOption {
-        type = types.attrsOf types.anything;
+        type = types.attrsOf machineType;
         default = { };
       };
 

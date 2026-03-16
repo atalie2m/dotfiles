@@ -20,39 +20,35 @@ It provides:
 
 ## Profiles (Denix hosts/rices)
 
-This flake uses [Denix](https://github.com/yunfachi/denix) with system-scoped trees:
+This flake uses [Denix](https://github.com/yunfachi/denix) with Darwin-only host/rice trees:
 
 - `nix/denix/darwin/{hosts,rices}`
-- `nix/denix/nixos/{hosts,rices}`
-- `nix/denix/home/{hosts,rices}`
 
 Shared modules, catalogs, and operational scripts now live outside the Denix host trees:
 
 - `nix/modules/{shared,tools}`
 - `nix/catalog/tools/{nixpkgs.nix,homebrew-ownership.nix}`
-- `scripts/` for compatibility shims, helpers, adapters, and smoke tests
+- `scripts/` for thin shell entrypoints and smoke tests
 - `nix/scripts/` for Nix expressions used by the CLI
 
 See [`docs/architecture.md`](docs/architecture.md) for the current responsibility split.
 See [`docs/architecture-reset.md`](docs/architecture-reset.md) for the reset rationale, before/after changes, and design intent.
 
 Operational note: the supported root flake API is Darwin-first and exposes `darwinConfigurations` plus `templates.web-dev`.
-Shared NixOS/Home Manager trees remain in-repo as composition/reference material, but they are no longer supported root outputs of this flake.
 
-- Hosts: `pro_mac` (default rice: `pro`), `ultra_mac` (default rice: `ultra`), `minimal_mac` (default rice: `minimum`).
-- Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `minimum`, `partial`.
+- Hosts: `pro_mac` (default rice: `pro`), `ultra_mac` (default rice: `ultra`), `minimal_mac` (default rice: `base`).
+- Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `partial`.
   - `base`: shared essentials (`system.nix`, core CLI, shell, Git, GPG/SOPS).
   - `darwin`: macOS base integrations (Homebrew + hostnames/fonts).
   - `dev`: editor/terminal/workstation stack.
-  - `pro`: composition of `base + darwin + dev` with VS Code disabled.
+  - `pro`: composition of `base + darwin + dev` without VS Code.
   - `ultra`: complete profile (`base + darwin + dev`).
-  - `minimum`: minimal base profile alias.
-  - `partial`: composition of `base + darwin + dev` with targeted overrides (AI coding agents off except `codex`, VS Code activation sync off).
+  - `partial`: composition of `base + darwin + dev` with targeted overrides (only `codex` enabled among AI coding agents, VS Code installed but activation sync off).
 
 Canonical host names and CLI examples live in [`docs/commands.md`](docs/commands.md).
 
 Manual attribute examples (still valid):
-`pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-minimum`, `minimal_mac-ultra`, `pro_mac-partial`.
+`pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-base`, `minimal_mac-ultra`, `pro_mac-partial`.
 
 When `--rice` is provided, the CLI resolves only `host-rice` (no implicit fallback to `host`).
 
@@ -103,7 +99,7 @@ Use `list-tools` for single host/rice inspection and `matrix-tools` for cross-ta
 Manual evaluation (JSON):
 
 ```bash
-nix eval --json .#darwinConfigurations.ultra_mac-minimum.config.myconfig.tools
+nix eval --json .#darwinConfigurations.ultra_mac-base.config.myconfig.tools
 ```
 
 ## VS Code Profiles
@@ -126,7 +122,7 @@ See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs 
 
 ## Mutable Editor Tooling
 
-- Emacs app/config wiring is declarative, but package installation still happens through `package.el` against GNU ELPA / NonGNU ELPA / MELPA at runtime.
+- Emacs app/config wiring and package installation are Nix-first; repo-owned Elisp packages are pinned through Nix, while `use-package` declarations can still install missing packages at runtime when explicitly configured to do so.
 - Neovim app/config wiring is declarative under `apps/neovim/`, while plugin installation/update happens at runtime through `lazy.nvim` using the repo-owned `lazy-lock.json`.
 - VS Code profile definitions are declarative, but runtime state stays writable; `sync vscode` manages only the owned subset of settings keys and extensions.
 - This repo treats those editor runtimes as a convenience boundary: config is pinned here, package/login/UI state is not.
@@ -145,7 +141,7 @@ Any modern terminal works with the current Zsh setup. Terminal.app profile sync 
 
 ## Zsh Stack
 
-The default Zsh prompt is Pure. `base` / `minimum` keep that prompt-only setup, while `dev` / `pro` / `ultra` also enable:
+The default Zsh prompt is Pure. `base` keeps that prompt-only setup, while `dev` / `pro` / `ultra` also enable:
 
 - `fzf` keybindings: `CTRL-T` for file insert, `ALT-C` for directory jump
 - `fzf-tab` on `TAB`
@@ -157,7 +153,7 @@ The default Zsh prompt is Pure. `base` / `minimum` keep that prompt-only setup, 
 ### Shell sync (writable entrypoints)
 
 Shell sync is a small, stateless writable-entrypoint manager.
-Runtime sync operations are implemented through `nix run .#dotfiles -- sync shell`; `scripts/sync.sh` is a compatibility shim that delegates to the Rust `dotfiles` CLI, while `scripts/sync-adapters/shell.sh` and sourced helpers under `scripts/sync-adapters/shell/` remain the runtime adapter.
+Runtime sync operations are implemented through `nix run .#dotfiles -- sync shell`; `scripts/sync.sh` is only a thin shell wrapper over the Rust `dotfiles` CLI.
 Its job is to keep writable shell entrypoints in place and update only repo-managed blocks/files.
 Shared shell helpers are shipped separately as `apps/shell/common.sh` and linked to `~/.config/shell/common.sh`; they are declarative Home Manager content, not part of runtime sync state.
 
@@ -179,14 +175,6 @@ Shared shell helpers are shipped separately as `apps/shell/common.sh` and linked
 - Content outside the managed markers is preserved.
 - Shell sync does not keep machine-local `lastApplied` state and does not adopt local changes back into the repo.
 - Managed macOS login-shell switching supports `zsh` and `bash`.
-
-Opt-in zsh root compatibility:
-
-- Runtime zsh still uses `~/.nix/.zshrc`.
-- If you enable `tools.shell.zsh.rootZshrcCompat.enable = true`, activation keeps `~/.zshrc` as a symlink to `.nix/.zshrc`.
-- This is for installers that append to `~/.zshrc`; the write lands in the writable runtime wrapper.
-- Existing regular-file `~/.zshrc` is never overwritten automatically.
-- If you need to migrate an existing regular-file `~/.zshrc`, use `bash scripts/zshrc-compat.sh --migrate`.
 
 Managed block markers:
 
@@ -213,19 +201,14 @@ nix run .#dotfiles -- sync shell --apply
 nix run .#dotfiles -- sync shell --apply --group zsh
 nix run .#dotfiles -- sync shell --check --item bash-rc
 
-# Optional: inspect or repair the ~/.zshrc compat symlink when enabled
-bash scripts/zshrc-compat.sh --check
-bash scripts/zshrc-compat.sh --migrate
 ```
 
 `nix run .#apply -- --host <host>` triggers shell reconciliation during Home Manager activation by running `sync shell --apply` for the enabled shell groups.
-If `tools.shell.zsh.rootZshrcCompat.enable = true`, activation also runs `bash scripts/zshrc-compat.sh --apply`.
 
 Shell entrypoint writeability regression tests (isolated + auto cleanup):
 
 ```bash
 scripts/tests/shell-zsh-writeability-test.sh
-scripts/tests/zshrc-compat-test.sh
 ```
 
 These test scripts use a temporary `HOME` and remove all test files on exit.
@@ -351,7 +334,7 @@ nix run .#darwin-rebuild -- build --flake .#ultra_mac \
 
 `nix run .#darwin-rebuild -- ...` uses the nix-darwin wrapper pinned by this repo's `flake.lock`.
 
-**Note**: `nix/local/` and `nix/secrets/` in the repo are stubs for public evaluation (templates only). Real configurations require `--override-input` and should not include a `STUB` file.
+**Note**: The repo ships placeholder public inputs under `nix/local/` and `nix/secrets/` so `darwinConfigurations` always evaluates. Real machines should still override both inputs with `~/.config/dotfiles/`.
 
 ## Binary Cache (Cachix / Attic)
 
@@ -539,13 +522,13 @@ For target evaluation and strict sync checks, pass `--host` so `doctor` can gate
 
 `export-clean` is tracked-only and requires Git to access a trusted worktree. It fails closed if Git is unavailable or refuses the repository; see [`docs/commands.md`](docs/commands.md) for examples.
 
-## Manual commands (darwin-rebuild / home-manager)
+## Manual commands (darwin-rebuild)
 
 Manual rebuild examples live in [`docs/commands.md`](docs/commands.md).
 
 ## Troubleshooting
 
-- **`attribute 'darwinConfigurations' missing`** → Your local inputs are stubbed (or missing). Ensure `~/.config/dotfiles/facts.nix` exists and remove any `STUB` file, then rerun `nix run .#doctor`.
+- **`no darwinConfigurations found` / `unable to evaluate darwinConfigurations`** → Verify your overridden `facts.nix` and `secrets.nix`, then rerun `nix run .#doctor`.
 - **`target not found for host/rice`** → Run `nix run .#doctor -- --host <host> --rice <rice>` to see available targets.
 - **`FACTS_DIR is required ...` / `SECRETS_DIR is required ...`** → `doctor` and `bootstrap` need local file paths. If you override `FACTS` or `SECRETS` with a non-`path:` ref, also set the matching `*_DIR` variable.
 - **`darwin-rebuild: command not found`** → Use `nix run .#darwin-rebuild -- ...` for manual runs; `nix run .#apply` and `nix run .#update` already use the pinned wrapper automatically.

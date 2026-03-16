@@ -22,6 +22,32 @@ let
   stringList = value:
     if builtins.isList value then builtins.filter builtins.isString value else [ ];
 
+  defaultMachine = {
+    homeDirectory = null;
+    computerName = null;
+    localHostName = null;
+    hostName = null;
+    domain = null;
+    extra = { };
+  };
+
+  normalizeMachine = raw:
+    let
+      machine = if builtins.isAttrs raw then raw else { };
+    in
+    {
+      homeDirectory = optionalAbsolutePath (machine.homeDirectory or null);
+      computerName = optionalNonEmptyString (machine.computerName or null);
+      localHostName = optionalNonEmptyString (machine.localHostName or null);
+      hostName = optionalNonEmptyString (machine.hostName or null);
+      domain = optionalNonEmptyString (machine.domain or null);
+      extra =
+        if machine ? extra && builtins.isAttrs machine.extra then
+          machine.extra
+        else
+          { };
+    };
+
   normalizeStateVersion = raw:
     let
       value = if builtins.isAttrs raw then raw else { };
@@ -73,7 +99,7 @@ let
       };
       machines =
         if facts ? machines && builtins.isAttrs facts.machines then
-          facts.machines
+          builtins.mapAttrs (_: normalizeMachine) facts.machines
         else
           { };
       binaryCaches = {
@@ -107,7 +133,7 @@ let
     let
       normalizedFacts = normalizeRawFacts rawFacts;
       parsedSystem = parseSystem system;
-      machine = normalizedFacts.machines.${machineKey} or { };
+      machine = normalizedFacts.machines.${machineKey} or defaultMachine;
       username = normalizedFacts.user.username;
     in
     if username == null then
@@ -118,7 +144,7 @@ let
           os = parsedSystem.os;
           inherit username;
           rawUserHomeDirectory = normalizedFacts.user.homeDirectory;
-          machineHomeDirectory = machine.homeDirectory or null;
+          machineHomeDirectory = machine.homeDirectory;
         };
       in
       {
@@ -281,6 +307,7 @@ let
         #     computerName = "Your Mac";
         #     localHostName = "your-mac";
         #     hostName = "your-mac";
+        #     domain = "local";
         #   };
         # };
       }

@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, ... }:
+{ delib, lib, ... }:
 
 # macOS GUI preferences for keyboard, Dock, trackpad, Finder, and window management.
 
@@ -59,10 +59,6 @@ delib.module {
       warnOnEmptyTrash = boolOption true;
       showRecentTags = boolOption false;
     };
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.system.macosUi.enable";
   };
 
   darwin.ifEnabled = { cfg, ... }:

@@ -1,4 +1,4 @@
-{ delib, lib, pkgs, dotlib, ... }:
+{ delib, lib, pkgs, ... }:
 
 # Zsh configuration
 
@@ -11,10 +11,6 @@ delib.module {
     enableSyntaxHighlighting = boolOption true;
     enableCompletion = boolOption true;
     historySize = intOption 10000;
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.shell.zsh.enable";
   };
 
   home.ifEnabled = { cfg, myconfig, ... }:

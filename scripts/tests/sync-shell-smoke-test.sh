@@ -109,6 +109,29 @@ if ! run_shell_sync --check --item bash-rc >/dev/null; then
   exit 1
 fi
 
+materialized_source="$tmp_root/bashrc.source"
+cat >"$materialized_source" <<'EOF_SOURCE'
+# source content
+export BASH_SOURCE_MARKER=1
+EOF_SOURCE
+rm -f "$bash_rc"
+ln -s "$materialized_source" "$bash_rc"
+
+if ! run_shell_sync --apply --item bash-rc >/dev/null; then
+  echo "FAIL: apply failed to materialize non-store symlink" >&2
+  exit 1
+fi
+
+if [[ ! -f $bash_rc || -L $bash_rc ]]; then
+  echo "FAIL: bashrc was not materialized into a writable regular file" >&2
+  exit 1
+fi
+
+if ! grep -Fqx 'export BASH_SOURCE_MARKER=1' "$bash_rc"; then
+  echo "FAIL: materialized symlink content was not preserved" >&2
+  exit 1
+fi
+
 printf '\n# smoke tail\n' >>"$bash_rc"
 if ! run_shell_sync --apply --item bash-rc >/dev/null; then
   echo "FAIL: apply failed after adding unmanaged tail" >&2

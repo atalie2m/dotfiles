@@ -1,23 +1,32 @@
-{ delib, lib, dotlib, pkgs, repoPaths, ... }:
+{ delib, lib, pkgs, repoPaths, ... }:
 
 # VS Code package wiring plus native profile reconciliation.
 
 let
   syncVscodeBin = pkgs.callPackage ../../../pkgs/dotfiles-sync-vscode { };
+  types = lib.types;
 in
 delib.module {
   name = "tools.editor.vscode";
 
-  options = with delib; moduleOptions {
-    enable = boolOption false;
-    sync.enable = boolOption true;
-    managedDir = strOption "";
-    stateDir = strOption "";
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.editor.vscode.enable";
-  };
+  options = with delib; args:
+    (moduleOptions
+      {
+        enable = boolOption false;
+        sync = {
+          enable = boolOption true;
+          managedDir = lib.mkOption {
+            type = types.nullOr types.path;
+            default = null;
+          };
+          stateDir = lib.mkOption {
+            type = types.nullOr types.str;
+            default = null;
+          };
+        };
+      }
+      args)
+  ;
 
   home.ifEnabled = { ... }: {
     home.packages = [ syncVscodeBin ];
@@ -32,17 +41,16 @@ delib.module {
         pkgs.diffutils
         pkgs.gawk
         pkgs.gnugrep
-        pkgs.jq
         pkgs.sqlite
         syncVscodeBin
       ];
       stateDirExpr =
-        if cfg.stateDir != ""
-        then lib.escapeShellArg cfg.stateDir
+        if cfg.sync.stateDir != null
+        then lib.escapeShellArg cfg.sync.stateDir
         else "\"\${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/vscode\"";
       managedDirArg =
-        if cfg.managedDir != ""
-        then cfg.managedDir
+        if cfg.sync.managedDir != null
+        then toString cfg.sync.managedDir
         else "${repoPaths.apps}/vscode";
       applyArgs =
         [

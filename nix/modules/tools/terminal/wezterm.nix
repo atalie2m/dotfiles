@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, pkgs, repoPaths, ... }:
+{ delib, dotlib, pkgs, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
@@ -14,11 +14,8 @@ delib.module {
     enable = boolOption false;
   };
 
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.terminal.wezterm.enable";
-    ifEnabled = { myconfig, ... }:
-      dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
-  };
+  myconfig.ifEnabled = { myconfig, ... }:
+    dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 
   home.ifEnabled = { ... }:
     let

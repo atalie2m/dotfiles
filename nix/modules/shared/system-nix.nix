@@ -3,7 +3,7 @@
 let
   mkBinaryCaches = cfg:
     let
-      factCaches = config.host.binaryCaches or { };
+      factCaches = config.myconfig.hostContext.binaryCaches or { };
     in
     {
       extraSubstituters = lib.unique (cfg.binaryCaches.substituters ++ (factCaches.substituters or [ ]));

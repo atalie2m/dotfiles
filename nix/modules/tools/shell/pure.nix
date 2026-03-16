@@ -1,4 +1,4 @@
-{ delib, lib, pkgs, dotlib, ... }:
+{ delib, lib, pkgs, ... }:
 
 # Pure prompt configuration
 
@@ -7,10 +7,6 @@ delib.module {
 
   options = with delib; moduleOptions {
     enable = boolOption false;
-  };
-
-  myconfig = {
-    always = dotlib.mkEnableDefault "tools.shell.pure.enable";
   };
 
   home.ifEnabled = { myconfig, ... }:

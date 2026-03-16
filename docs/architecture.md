@@ -1,29 +1,34 @@
 # Architecture
 
-This repository keeps Denix orchestration, reusable modules, catalog data, and runtime scripts in separate trees so each layer can evolve independently.
+This repository keeps Darwin composition, reusable modules, catalog data, and runtime tooling in separate trees so each layer can evolve independently.
 
-For the before/after rationale behind the current shape, see [`docs/architecture-reset.md`](architecture-reset.md).
+For the reset rationale and before/after summary, see [`docs/architecture-reset.md`](architecture-reset.md).
 
 ## Layout
 
-- `nix/denix/{darwin,home,nixos}`: host and rice declarations only.
-- `nix/denix/lib`: host constructors and Denix-specific helpers.
-- `nix/modules/shared`: cross-cutting modules such as raw `facts`, canonical `host`, `system.nix`, and `nixpkgs.unfree`.
-- `nix/modules/tools`: user-facing tool modules grouped by capability (`shell`, `editor`, `system`, `terminal`, etc.).
-- `nix/catalog/tools`: declarative tool ownership data for Nixpkgs, catalog-backed Homebrew tools, and dedicated Homebrew-backed modules.
-- `scripts/`: operational shell entrypoints, shared shell helpers, runtime adapters, and smoke/integration tests.
-- `nix/scripts/`: Nix expressions used by the CLI, currently `list-tools.nix` and `doctor/facts-schema.nix`.
-- `apps/`, `surfaces/`, and `keyboards/`: repo-managed assets consumed by modules and runtime scripts.
+- `nix/denix/darwin`: Darwin host and rice declarations only
+- `nix/denix/lib`: Darwin host constructors and Denix-specific helpers
+- `nix/modules/shared`: raw facts schema, canonical host model wiring, system modules, and shared Nixpkgs policy
+- `nix/modules/tools`: user-facing tool modules grouped by capability
+- `nix/catalog/tools`: declarative tool ownership data for Nixpkgs and Homebrew-backed tools
+- `crates/dotfiles-core`: shared Rust support and shell sync implementation
+- `crates/dotfiles-cli`: operational CLI (`apply`, `update`, `doctor`, `bootstrap`, `export-clean`, `list-tools`, `matrix-tools`, `sync`)
+- `crates/dotfiles-sync-vscode`: dedicated VS Code native profile reconciliation engine
+- `scripts/`: thin shell entrypoints and smoke/integration tests
+- `nix/scripts/`: Nix expressions used by CLI helpers (`list-tools.nix`, `matrix-tools.nix`, `doctor/facts-schema.nix`)
+- `apps/`, `surfaces/`, and `keyboards/`: repo-managed assets consumed by modules and runtime sync
 
-## Wiring Rules
+## Wiring rules
 
-- `flake.nix` passes `repoPaths` through `specialArgs`, and modules use that instead of deep relative imports.
-- User-facing option paths stay under `myconfig.*`; directory moves should not rename options or hosts/rices.
-- Runtime shell scripts live under `scripts/`; Nix expressions evaluated by those scripts stay under `nix/scripts/`.
+- `flake.nix` passes `repoPaths` through `specialArgs`, and modules use that instead of deep relative imports
+- user-facing option paths stay under `myconfig.*`
+- host truth for modules lives under `myconfig.hostContext.*`
+- raw facts imports are limited to the host-model/bootstrap boundary
+- shell under `scripts/` is limited to thin entrypoints, not the control plane
 
-## Practical Implications
+## Practical implications
 
-- The operational CLI and supported root flake API are Darwin-first; in-repo NixOS/Home Manager trees remain for composition/reference, not as supported root outputs.
-- If you add a reusable feature, put it in `nix/modules/` and keep `nix/denix/` focused on composition.
-- If you add catalog-owned tools, update the relevant registry/catalog data under `nix/catalog/tools/` and the matching module/docs.
-- If you add a new operational CLI behavior, implement it in the Rust `dotfiles` CLI and keep shell under `scripts/` as compatibility shims or OS-leaf adapters.
+- the supported operational root flake API is Darwin-first
+- if you add a reusable feature, put it in `nix/modules/` and keep `nix/denix/darwin` focused on composition
+- if you add catalog-owned tools, update the relevant registry/catalog data under `nix/catalog/tools/`
+- if you add operational CLI behavior, implement it in the Rust workspace first and keep shell thin
