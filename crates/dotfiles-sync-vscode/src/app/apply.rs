@@ -1,10 +1,8 @@
-use serde_json::{Map, Value};
-use sha2::{Digest, Sha256};
-use std::collections::HashSet;
+use serde_json::Value;
 use std::ffi::OsString;
 use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
@@ -21,6 +19,8 @@ use crate::infra::extension_manifest::{
     prune_orphaned_extension_dirs,
     remove_custom_profile_extension_membership as remove_manifest_extension_membership,
 };
+use crate::infra::collections::{file_intersection, file_minus_file};
+use crate::infra::json::{sort_object, write_json_atomically};
 use crate::log;
 
 pub(crate) fn apply_profile(context: &Context, plan: &ProfilePlan) -> Result<(), String> {
@@ -251,197 +251,6 @@ pub(crate) fn profile_selected(profile_filters: &[String], profile_name: &str) -
     }
 
     profile_filters.iter().any(|filter| filter == profile_name)
-}
-
-pub(crate) fn profile_display_name(profile_dir_name: &str) -> String {
-    let words: Vec<String> = profile_dir_name
-        .split(|c| c == '-' || c == '_')
-        .filter(|word| !word.is_empty())
-        .map(|word| {
-            let lower = word.to_ascii_lowercase();
-            let mut chars = lower.chars();
-            if let Some(first) = chars.next() {
-                format!("{}{}", first.to_ascii_uppercase(), chars.collect::<String>())
-            } else {
-                String::new()
-            }
-        })
-        .filter(|word| !word.is_empty())
-        .collect();
-
-    words.join(" ")
-}
-
-pub(crate) fn profile_id(profile_dir_name: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(format!("dotfiles:vscode-profile:{}", profile_dir_name));
-    let digest = hasher.finalize();
-    let hex = format!("{:x}", digest);
-    hex.chars().take(32).collect()
-}
-
-pub(crate) fn profile_state_file(context: &Context, profile_dir_name: &str) -> PathBuf {
-    context.state_dir.join(format!("{}.json", profile_dir_name))
-}
-
-pub(crate) fn profile_runtime_dir(context: &Context, profile_dir_name: &str) -> PathBuf {
-    context.profiles_home.join(profile_id(profile_dir_name))
-}
-
-pub(crate) fn profile_settings_path(context: &Context, profile_dir_name: &str) -> PathBuf {
-    profile_runtime_dir(context, profile_dir_name).join("settings.json")
-}
-
-pub(crate) fn profile_extensions_manifest_path(context: &Context, profile_dir_name: &str) -> PathBuf {
-    profile_runtime_dir(context, profile_dir_name).join("extensions.json")
-}
-
-pub(crate) fn profile_default_disabled_file_path(context: &Context, profile_dir_name: &str) -> PathBuf {
-    context
-        .managed_dir
-        .join(profile_dir_name)
-        .join("default-disabled-extensions.txt")
-}
-
-pub(crate) fn profile_global_storage_dir(context: &Context, profile_dir_name: &str) -> PathBuf {
-    profile_runtime_dir(context, profile_dir_name).join("globalStorage")
-}
-
-pub(crate) fn profile_enablement_db_path(context: &Context, profile_dir_name: &str) -> PathBuf {
-    profile_global_storage_dir(context, profile_dir_name).join("state.vscdb")
-}
-
-pub(crate) fn read_json(path: &Path) -> Result<Value, String> {
-    let data = fs::read_to_string(path)
-        .map_err(|err| format!("failed to read JSON file {}: {}", path.display(), err))?;
-
-    serde_json::from_str(&data)
-        .map_err(|err| format!("failed to parse JSON file {}: {}", path.display(), err))
-}
-
-pub(crate) fn read_json_object(path: &Path) -> Result<Map<String, Value>, String> {
-    match read_json(path)? {
-        Value::Object(object) => Ok(object),
-        _ => Err(format!("JSON object expected at {}", path.display())),
-    }
-}
-
-pub(crate) fn read_json_array(path: &Path) -> Result<Vec<Value>, String> {
-    match read_json(path)? {
-        Value::Array(items) => Ok(items),
-        _ => Err(format!("JSON array expected at {}", path.display())),
-    }
-}
-
-pub(crate) fn write_json_atomically(value: &Value, target_json: &Path) -> Result<(), String> {
-    let parent = target_json
-        .parent()
-        .ok_or_else(|| format!("path has no parent: {}", target_json.display()))?;
-
-    fs::create_dir_all(parent)
-        .map_err(|err| format!("failed to create parent dir {}: {}", parent.display(), err))?;
-
-    let mut temp_file = NamedTempFile::new_in(parent)
-        .map_err(|err| format!("failed to create temp file in {}: {}", parent.display(), err))?;
-
-    let sorted = sort_json(value);
-    let bytes = json_bytes(&sorted)?;
-
-    temp_file
-        .write_all(&bytes)
-        .map_err(|err| format!("failed to write temp JSON file: {}", err))?;
-
-    temp_file
-        .persist(target_json)
-        .map_err(|err| format!("failed to replace {}: {}", target_json.display(), err.error))?;
-
-    Ok(())
-}
-
-pub(crate) fn deep_merge(base: &mut Value, overlay: &Value) {
-    match (base, overlay) {
-        (Value::Object(base_map), Value::Object(overlay_map)) => {
-            for (key, value) in overlay_map {
-                match base_map.get_mut(key) {
-                    Some(existing) => deep_merge(existing, value),
-                    None => {
-                        base_map.insert(key.clone(), value.clone());
-                    }
-                }
-            }
-        }
-        (base_slot, overlay_value) => {
-            *base_slot = overlay_value.clone();
-        }
-    }
-}
-
-pub(crate) fn sort_json(value: &Value) -> Value {
-    match value {
-        Value::Object(object) => {
-            let mut keys: Vec<String> = object.keys().cloned().collect();
-            keys.sort();
-
-            let mut sorted = Map::new();
-            for key in keys {
-                if let Some(child) = object.get(&key) {
-                    sorted.insert(key, sort_json(child));
-                }
-            }
-            Value::Object(sorted)
-        }
-        Value::Array(items) => Value::Array(items.iter().map(sort_json).collect()),
-        _ => value.clone(),
-    }
-}
-
-pub(crate) fn sort_object(object: &Map<String, Value>) -> Map<String, Value> {
-    match sort_json(&Value::Object(object.clone())) {
-        Value::Object(sorted) => sorted,
-        _ => Map::new(),
-    }
-}
-
-pub(crate) fn file_minus_file(left: &[String], right: &[String]) -> Vec<String> {
-    if left.is_empty() {
-        return Vec::new();
-    }
-
-    if right.is_empty() {
-        return left.to_vec();
-    }
-
-    let right_set: HashSet<&str> = right.iter().map(String::as_str).collect();
-    left.iter()
-        .filter(|item| !right_set.contains(item.as_str()))
-        .cloned()
-        .collect()
-}
-
-pub(crate) fn file_intersection(left: &[String], right: &[String]) -> Vec<String> {
-    if left.is_empty() || right.is_empty() {
-        return Vec::new();
-    }
-
-    let left_set: HashSet<&str> = left.iter().map(String::as_str).collect();
-    right
-        .iter()
-        .filter(|item| left_set.contains(item.as_str()))
-        .cloned()
-        .collect()
-}
-
-pub(crate) fn unique_lines(lines: &[String]) -> Vec<String> {
-    let mut seen = HashSet::new();
-    let mut unique = Vec::new();
-
-    for line in lines {
-        if seen.insert(line.clone()) {
-            unique.push(line.clone());
-        }
-    }
-
-    unique
 }
 
 fn json_bytes(value: &Value) -> Result<Vec<u8>, String> {

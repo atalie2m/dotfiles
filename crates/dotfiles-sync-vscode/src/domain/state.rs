@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::Path;
 
-use crate::app::apply::write_json_atomically;
 use crate::domain::model::{StateFile, StateLists, StateLoad};
+use crate::infra::json::write_json_atomically;
 use crate::STATE_VERSION;
 
 pub(crate) fn write_state_file(

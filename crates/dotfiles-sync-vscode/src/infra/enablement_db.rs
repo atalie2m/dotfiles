@@ -4,11 +4,9 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::{Map, Value};
 
-use crate::app::apply::{
-    file_intersection, file_minus_file, profile_enablement_db_path, profile_global_storage_dir,
-    unique_lines,
-};
 use crate::app::runtime::Context;
+use crate::infra::collections::{file_intersection, file_minus_file, unique_lines};
+use crate::infra::paths::{profile_enablement_db_path, profile_global_storage_dir};
 
 pub(crate) fn ensure_enablement_db(context: &Context, profile_dir_name: &str) -> Result<(), String> {
     let storage_dir = profile_global_storage_dir(context, profile_dir_name);
@@ -179,8 +177,8 @@ mod tests {
         bootstrap_default_disabled_extensions, ensure_enablement_db_path,
         pending_default_disabled_extensions, read_enablement_ids_from_db, write_enablement_ids_to_db,
     };
-    use crate::app::apply::profile_enablement_db_path;
     use crate::app::runtime::{Context, Mode};
+    use crate::infra::paths::profile_enablement_db_path;
     use std::path::Path;
 
     fn test_context(root: &Path) -> Context {

@@ -52,6 +52,26 @@ if ! printf '%s' "$manifest_json" | jq -e '.hosts | to_entries | all(.[]; (.valu
   exit 1
 fi
 
+if ! printf '%s' "$manifest_json" | jq -e '.hosts | to_entries | all(.[]; .value.targetsByRice[.value.defaultRice] == .value.buildTarget)' >/dev/null; then
+  echo "FAIL: targetsByRice.defaultRice must equal buildTarget for every host" >&2
+  exit 1
+fi
+
+if ! jq -n --argjson manifest "$manifest_json" --argjson metadata "$target_metadata_json" -e '
+  def manifestTargets:
+    ([ $manifest.hosts
+      | to_entries[]
+      | .value
+      | [ .buildTarget, (.targetsByRice | to_entries[] | .value) ]
+    ] | flatten | unique | sort);
+  def actualTargets:
+    ($metadata | keys | sort);
+  manifestTargets == actualTargets
+' >/dev/null; then
+  echo "FAIL: manifest target set does not exactly match darwinConfigurations attrNames" >&2
+  exit 1
+fi
+
 while IFS=$'\t' read -r host default_rice build_target; do
   if ! grep -Fq "\`${host}\` (default rice: \`${default_rice}\`)" docs/commands.md; then
     echo "FAIL: docs/commands.md is missing host/default-rice pair for $host" >&2
@@ -61,12 +81,12 @@ while IFS=$'\t' read -r host default_rice build_target; do
   actual_host="$(printf '%s' "$target_metadata_json" | jq -r --arg target "$build_target" '.[$target].host')"
   actual_rice="$(printf '%s' "$target_metadata_json" | jq -r --arg target "$build_target" '.[$target].rice')"
 
-  if [[ "$actual_host" != "$host" ]]; then
+  if [[ $actual_host != "$host" ]]; then
     echo "FAIL: buildTarget $build_target resolved host $actual_host, expected $host" >&2
     exit 1
   fi
 
-  if [[ "$actual_rice" != "$default_rice" ]]; then
+  if [[ $actual_rice != "$default_rice" ]]; then
     echo "FAIL: buildTarget $build_target resolved rice $actual_rice, expected $default_rice" >&2
     exit 1
   fi
@@ -79,12 +99,12 @@ while IFS=$'\t' read -r host rice target; do
   actual_host="$(printf '%s' "$target_metadata_json" | jq -r --arg target "$target" '.[$target].host')"
   actual_rice="$(printf '%s' "$target_metadata_json" | jq -r --arg target "$target" '.[$target].rice')"
 
-  if [[ "$actual_host" != "$host" ]]; then
+  if [[ $actual_host != "$host" ]]; then
     echo "FAIL: target $target resolved host $actual_host, expected $host" >&2
     exit 1
   fi
 
-  if [[ "$actual_rice" != "$rice" ]]; then
+  if [[ $actual_rice != "$rice" ]]; then
     echo "FAIL: target $target resolved rice $actual_rice, expected $rice" >&2
     exit 1
   fi

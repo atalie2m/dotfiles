@@ -40,7 +40,7 @@ pub fn run() -> Result<(), String> {
         summary.selected_count += 1;
         summary.checked += 1;
 
-        let profile_name = app::apply::profile_display_name(&profile_dir_name);
+        let profile_name = infra::paths::profile_display_name(&profile_dir_name);
         let desired_settings = domain::settings::build_desired_settings(&context, &profile_dir_name)?;
         let desired_extensions =
             infra::extensions::build_desired_extensions(&context, &profile_dir_name)?;
@@ -53,13 +53,13 @@ pub fn run() -> Result<(), String> {
             desired_settings,
             desired_extensions,
             desired_default_disabled,
-            state_file: app::apply::profile_state_file(&context, &profile_dir_name),
-            settings_path: app::apply::profile_settings_path(&context, &profile_dir_name),
-            extensions_manifest: app::apply::profile_extensions_manifest_path(
+            state_file: infra::paths::profile_state_file(&context, &profile_dir_name),
+            settings_path: infra::paths::profile_settings_path(&context, &profile_dir_name),
+            extensions_manifest: infra::paths::profile_extensions_manifest_path(
                 &context,
                 &profile_dir_name,
             ),
-            runtime_dir: app::apply::profile_runtime_dir(&context, &profile_dir_name),
+            runtime_dir: infra::paths::profile_runtime_dir(&context, &profile_dir_name),
         };
 
         let eval = app::planner::classify_profile(&context, &plan)?;

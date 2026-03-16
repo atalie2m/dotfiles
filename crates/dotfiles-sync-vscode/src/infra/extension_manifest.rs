@@ -3,11 +3,11 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
-use crate::app::apply::{
-    profile_extensions_manifest_path, profile_id, profile_runtime_dir, profile_settings_path,
-    read_json, read_json_array, write_json_atomically,
-};
 use crate::app::runtime::Context;
+use crate::infra::json::{read_json, read_json_array, write_json_atomically};
+use crate::infra::paths::{
+    profile_extensions_manifest_path, profile_id, profile_runtime_dir, profile_settings_path,
+};
 use crate::infra::enablement_db::ensure_enablement_db;
 use crate::infra::extensions::canonical_extension_id;
 use crate::infra::profile_registry::ensure_custom_profile_registry;

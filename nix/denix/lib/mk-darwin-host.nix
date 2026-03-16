@@ -13,7 +13,6 @@ let
   host = dotlib.buildHostModel {
     inherit name machineKey system rawFacts;
   };
-  normalizedFacts = dotlib.normalizeRawFacts rawFacts;
   nixPackage = inputs.nixpkgs.legacyPackages.${host.system}.nix;
 in
 delib.host {
@@ -23,7 +22,6 @@ delib.host {
 
   myconfig = lib.recursiveUpdate
     {
-      facts = normalizedFacts;
       hostContext = host;
     }
     extraMyconfig;

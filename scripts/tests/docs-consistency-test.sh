@@ -93,6 +93,13 @@ if command -v nix >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     printf '%s' "$manifest_json" |
       jq -r '.hosts | to_entries[] | "\(.key)\t\(.value.defaultRice)"'
   )
+
+  while IFS= read -r rice; do
+    require_contains_file docs/commands.md "\`${rice}\`"
+  done < <(
+    printf '%s' "$manifest_json" |
+      jq -r '[.hosts | to_entries[] | .value.supportedRices[]] | unique[]'
+  )
 fi
 
 echo "PASS: docs consistency"

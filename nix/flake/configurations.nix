@@ -1,10 +1,11 @@
 { inputs, denix, dotlib, repoPaths }:
 
 let
+  hostCatalog = import ../../nix/denix/darwin/host-catalog.nix;
+
   mkConfigurations = { moduleSystem, paths }:
     let
       facts = import (inputs.local + "/facts.nix");
-      hostCatalog = import ../../nix/denix/darwin/host-catalog.nix;
       username = (dotlib.normalizeRawFacts facts).user.username;
     in
     if username == null then
@@ -36,7 +37,23 @@ let
         or (throw "unsupported moduleSystem '${moduleSystem}'");
     };
 
-  darwinConfigurations = mkLatestConfigurations "darwin";
+  pruneDefaultRiceAliases = configurations:
+    let
+      aliasesToRemove =
+        builtins.filter
+          (targetName: targetName != null && builtins.hasAttr targetName configurations)
+          (map
+            (hostName:
+              let
+                hostSpec = hostCatalog.hosts.${hostName};
+                alias = "${hostName}-${hostSpec.defaultRice}";
+              in
+              if alias == hostSpec.buildTarget then null else alias)
+            (builtins.attrNames hostCatalog.hosts));
+    in
+    builtins.removeAttrs configurations aliasesToRemove;
+
+  darwinConfigurations = pruneDefaultRiceAliases (mkLatestConfigurations "darwin");
 in
 {
   inherit darwinConfigurations;

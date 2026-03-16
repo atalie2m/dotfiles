@@ -1,24 +1,28 @@
-{ }:
+{}:
 
 let
   catalog = import ../denix/darwin/host-catalog.nix;
   hostSpecs = catalog.hosts;
 
-  targetHostName = targetName: cfg:
+  targetHostName =
+    targetName: cfg:
     if cfg ? myconfig && cfg.myconfig ? hostContext && cfg.myconfig.hostContext ? name then
       cfg.myconfig.hostContext.name
     else
       throw "target '${targetName}' is missing config.myconfig.hostContext.name";
 
-  targetRiceName = targetName: cfg:
+  targetRiceName =
+    targetName: cfg:
     if cfg ? myconfig && cfg.myconfig ? rice && cfg.myconfig.rice ? name then
       cfg.myconfig.rice.name
     else
       throw "target '${targetName}' is missing config.myconfig.rice.name";
 
-  targetEntries = targets:
+  targetEntries =
+    targets:
     map
-      (targetName:
+      (
+        targetName:
         let
           cfg = targets.${targetName}.config;
         in
@@ -26,10 +30,12 @@ let
           name = targetName;
           host = targetHostName targetName cfg;
           rice = targetRiceName targetName cfg;
-        })
+        }
+      )
       (builtins.attrNames targets);
 
-  uniqueTargetFor = entries: hostName: riceName:
+  uniqueTargetFor =
+    entries: hostName: riceName:
     let
       matches = builtins.filter (entry: entry.host == hostName && entry.rice == riceName) entries;
       explicitTarget = "${hostName}-${riceName}";
@@ -42,7 +48,8 @@ let
     else
       (builtins.head matches).name;
 
-  validateBuildTarget = entries: hostName: hostSpec:
+  validateBuildTarget =
+    entries: hostName: hostSpec:
     let
       matches = builtins.filter (entry: entry.name == hostSpec.buildTarget) entries;
     in
@@ -61,33 +68,89 @@ let
       in
       builtins.seq _ hostSpec.buildTarget;
 
-  manifestFor = targets:
+  sortedStrings = values: builtins.sort builtins.lessThan values;
+
+  manifestTargetNames =
+    hosts:
+    sortedStrings (
+      builtins.attrNames (
+        builtins.listToAttrs (
+          builtins.concatLists (
+            map
+              (
+                hostName:
+                let
+                  hostManifest = hosts.${hostName};
+                in
+                [
+                  {
+                    name = hostManifest.buildTarget;
+                    value = true;
+                  }
+                ]
+                ++ (map
+                  (targetName: {
+                    name = targetName;
+                    value = true;
+                  })
+                  (builtins.attrValues hostManifest.targetsByRice))
+              )
+              (builtins.attrNames hosts)
+          )
+        )
+      )
+    );
+
+  manifestFor =
+    targets:
     let
       entries = targetEntries targets;
-    in
-    {
-      hosts =
-        builtins.mapAttrs
-          (hostName: hostSpec:
+      hosts = builtins.mapAttrs
+        (
+          hostName: hostSpec:
             let
-              targetsByRice =
-                builtins.listToAttrs
-                  (map
-                    (riceName: {
-                      name = riceName;
-                      value = uniqueTargetFor entries hostName riceName;
-                    })
-                    hostSpec.supportedRices);
-            in
-            {
-              defaultRice = hostSpec.defaultRice;
+              targetsByRice = builtins.listToAttrs (
+                map
+                  (riceName: {
+                    name = riceName;
+                    value = uniqueTargetFor entries hostName riceName;
+                  })
+                  hostSpec.supportedRices
+              );
               buildTarget = validateBuildTarget entries hostName hostSpec;
+              _defaultRiceTargetCheck =
+                let
+                  defaultTarget =
+                    if builtins.hasAttr hostSpec.defaultRice targetsByRice then
+                      targetsByRice.${hostSpec.defaultRice}
+                    else
+                      throw "host '${hostName}' defaultRice '${hostSpec.defaultRice}' is missing from targetsByRice";
+                in
+                if defaultTarget != buildTarget then
+                  throw "host '${hostName}' default rice target '${defaultTarget}' must equal buildTarget '${buildTarget}'"
+                else
+                  null;
+            in
+            builtins.seq _defaultRiceTargetCheck {
+              defaultRice = hostSpec.defaultRice;
+              inherit buildTarget;
               supportedRices = hostSpec.supportedRices;
               machineKey = hostSpec.machineKey;
               system = hostSpec.system;
               inherit targetsByRice;
-            })
-          hostSpecs;
+            }
+        )
+        hostSpecs;
+      actualTargets = sortedStrings (builtins.attrNames targets);
+      declaredTargets = manifestTargetNames hosts;
+      _targetSetCheck =
+        if declaredTargets != actualTargets then
+          throw "targets manifest does not exactly match darwinConfigurations (declared=${builtins.toJSON declaredTargets}, actual=${builtins.toJSON actualTargets})"
+        else
+          null;
+    in
+    builtins.seq _targetSetCheck {
+      inherit hosts;
     };
 in
 {

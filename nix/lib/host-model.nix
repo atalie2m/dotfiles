@@ -54,18 +54,18 @@ let
     if value ? nixos then
       throw "facts.user.stateVersion.nixos has been removed; delete it from facts.nix"
     else
-    {
-      home =
-        if value ? home && builtins.isString value.home && value.home != "" then
-          value.home
-        else
-          defaultStateVersion.home;
-      darwin =
-        if value ? darwin && builtins.isInt value.darwin then
-          value.darwin
-        else
-          defaultStateVersion.darwin;
-    };
+      {
+        home =
+          if value ? home && builtins.isString value.home && value.home != "" then
+            value.home
+          else
+            defaultStateVersion.home;
+        darwin =
+          if value ? darwin && builtins.isInt value.darwin then
+            value.darwin
+          else
+            defaultStateVersion.darwin;
+      };
 
   normalizeRawFacts = rawFacts:
     let
@@ -178,7 +178,6 @@ let
       stateVersion = if hasUser && user ? stateVersion then user.stateVersion else null;
       stateHome = if builtins.isAttrs stateVersion && stateVersion ? home then stateVersion.home else null;
       stateDarwin = if builtins.isAttrs stateVersion && stateVersion ? darwin then stateVersion.darwin else null;
-      hasRemovedNixosStateVersion = builtins.isAttrs stateVersion && stateVersion ? nixos;
       hasDeprecatedPlatform = hasUser && user ? platform;
       hasDeprecatedSystemType = hasUser && user ? systemType;
       hasDeprecatedArchitecture = hasUser && user ? architecture;

@@ -40,10 +40,6 @@ let
         type = types.int;
         readOnly = true;
       };
-      nixos = lib.mkOption {
-        type = types.str;
-        readOnly = true;
-      };
     };
   };
   userType = types.submodule {

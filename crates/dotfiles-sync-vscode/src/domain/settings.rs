@@ -1,7 +1,7 @@
 use serde_json::{Map, Value};
 
-use crate::app::apply::{deep_merge, read_json_object, sort_json, sort_object};
 use crate::app::runtime::Context;
+use crate::infra::json::{deep_merge, read_json_object, sort_json, sort_object};
 
 pub(crate) fn settings_match(
     actual_settings: &Map<String, Value>,

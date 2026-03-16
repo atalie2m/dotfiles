@@ -1,8 +1,8 @@
 use serde_json::{Map, Value};
 use std::fs;
 
-use crate::app::apply::{read_json, write_json_atomically};
 use crate::app::runtime::Context;
+use crate::infra::json::{read_json, write_json_atomically};
 
 pub(crate) fn ensure_custom_profile_registry(
     context: &Context,

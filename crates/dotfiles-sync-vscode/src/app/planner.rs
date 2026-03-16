@@ -1,14 +1,14 @@
 use serde_json::Value;
 
-use crate::app::apply::{
-    file_intersection, file_minus_file, profile_id, read_json, read_json_object,
-};
 use crate::app::runtime::Context;
 use crate::domain::model::{ProfileEvaluation, ProfilePlan, ProfileStatus, StateLists, StateLoad};
 use crate::domain::settings::{settings_match, settings_value};
 use crate::domain::state::load_state_lists;
 use crate::infra::enablement_db::pending_default_disabled_extensions;
 use crate::infra::extension_manifest::list_profile_extensions;
+use crate::infra::collections::{file_intersection, file_minus_file};
+use crate::infra::json::{read_json, read_json_object};
+use crate::infra::paths::profile_id;
 use crate::infra::profile_registry::{
     managed_profile_entry_matches_expected, validate_storage_json_shape,
 };
@@ -217,12 +217,12 @@ fn needs_apply_with_diff(
 #[cfg(test)]
 mod tests {
     use super::classify_profile;
-    use crate::app::apply::{
-        profile_extensions_manifest_path, profile_id, profile_runtime_dir, profile_settings_path,
-    };
     use crate::app::runtime::{Context, Mode};
     use crate::domain::model::{ProfilePlan, ProfileStatus};
     use crate::domain::state::write_state_file;
+    use crate::infra::paths::{
+        profile_extensions_manifest_path, profile_id, profile_runtime_dir, profile_settings_path,
+    };
     use serde_json::Map;
     use serde_json::json;
     use std::path::Path;

@@ -1,8 +1,9 @@
 use std::fs;
 use std::path::Path;
 
-use crate::app::apply::{profile_default_disabled_file_path, unique_lines};
 use crate::app::runtime::Context;
+use crate::infra::collections::unique_lines;
+use crate::infra::paths::profile_default_disabled_file_path;
 
 pub(crate) fn build_desired_extensions(
     context: &Context,
