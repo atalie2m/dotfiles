@@ -137,6 +137,10 @@
             path = ./templates/web-dev;
             description = "Web development template: devShell with Node 22, pnpm, bun, optional wrangler, awscli2, jq/yq, mkcert, just; Prettier formatting via treefmt-nix; apps.dev/apps.format and checks";
           };
+          rust-dev = {
+            path = ./templates/rust-dev;
+            description = "Rust development template: stable toolchain (rust-overlay, rust-src), rust-analyzer, libclang/pkg-config, cargo-nextest/bacon/deny/llvm-cov/expand/sccache, cmake/ninja/protobuf/sqlite";
+          };
         };
         inherit darwinConfigurations;
       };

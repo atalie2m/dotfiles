@@ -4,7 +4,7 @@ This repository is a Darwin-first Nix flake for macOS system configuration. Keep
 
 ## Project Structure
 
-- `flake.nix` — flake inputs/outputs; exposes `darwinConfigurations` and `templates/web-dev`.
+- `flake.nix` — flake inputs/outputs; exposes `darwinConfigurations` and `templates` (`web-dev`, `rust-dev`).
 - `nix/denix/darwin/{hosts,rices}/` — Darwin host/rice profiles.
 - `nix/denix/lib/` — Darwin host constructors and Denix helpers.
 - `nix/modules/` — reusable modules, split into `shared/` and `tools/`.
@@ -32,6 +32,7 @@ Local inputs live outside Git at `~/.config/dotfiles/`:
 - `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles`
 - `nix run .#apply -- --host <host> --action build`
 - `nix flake init -t github:atalie2m/dotfiles#web-dev`
+- `nix flake init -t github:atalie2m/dotfiles#rust-dev`
 
 ## Coding Style
 
