@@ -61,7 +61,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Local facts (non-flake)
+    # Local facts (non-flake). Do not lock these path inputs with narHash in
+    # flake.lock: Nix then fetches path:./…?narHash=… and errors on “relative path”
+    # once the flake source is realised in the store (common in CI).
     local = {
       url = "path:./nix/local";
       flake = false;
