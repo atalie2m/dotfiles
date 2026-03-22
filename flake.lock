@@ -261,6 +261,8 @@
     "local": {
       "flake": false,
       "locked": {
+        "lastModified": 1774138669,
+        "narHash": "sha256-/HD+CO3N+XSoK5DKylyqtCDVYAYiJYBEkpX+te23mDI=",
         "path": "./nix/local",
         "type": "path"
       },
@@ -485,6 +487,8 @@
     "secrets": {
       "flake": false,
       "locked": {
+        "lastModified": 1774138669,
+        "narHash": "sha256-xy5G/OgQYxMFjdlxDEoNQO3+ab3iFYQ5gMgr3dHIl7Q=",
         "path": "./nix/secrets",
         "type": "path"
       },

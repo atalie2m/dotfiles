@@ -29,6 +29,9 @@ jobs:
             exit 1
           fi
 
+      - name: Install ripgrep (host-truth-test)
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Run docs consistency test
         run: bash scripts/tests/docs-consistency-test.sh
 
@@ -136,7 +139,11 @@ jobs:
       - name: Evaluate darwin configurations
         run: |
           set -euo pipefail
-          mapfile -t targets < <(
+          # macOS default bash is 3.2 (no mapfile); use a portable read loop.
+          targets=()
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -n "$line" ]] && targets+=("$line")
+          done < <(
             nix eval --raw '.#darwinConfigurations' \
               --impure \
               --apply '
@@ -168,7 +175,10 @@ jobs:
       - name: Build default host targets
         run: |
           set -euo pipefail
-          mapfile -t default_targets < <(
+          default_targets=()
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -n "$line" ]] && default_targets+=("$line")
+          done < <(
             nix eval --raw '.#darwinConfigurations' \
               --impure \
               --apply '
