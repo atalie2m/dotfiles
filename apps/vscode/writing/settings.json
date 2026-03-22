@@ -1,4 +1,36 @@
 {
-    "workbench.colorTheme": "Catppuccin Mocha",
-    "markdown.marp.html": "all"
+  "console-ninja.featureSet": "Community",
+  "css.lint.important": "warning",
+  "debug.toolBarLocation": "docked",
+  "diffEditor.ignoreTrimWhitespace": false,
+  "diffEditor.wordWrap": "off",
+  "editor.cursorBlinking": "phase",
+  "editor.fontFamily": "\"0xProto\", \"LINE Seed JP_OTF\", Menlo, Monaco, 'Courier New', monospace",
+  "editor.fontLigatures": true,
+  "editor.fontWeight": "normal",
+  "editor.guides.bracketPairs": false,
+  "editor.guides.indentation": false,
+  "editor.inlayHints.enabled": "off",
+  "editor.wordWrap": "off",
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "files.autoSave": "onFocusChange",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "less.lint.important": "warning",
+  "markdown.marp.html": "all",
+  "scss.lint.important": "warning",
+  "terminal.integrated.env.osx": {},
+  "window.title": "[WRITING] ${dirty}${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}${appName}",
+  "window.titleSeparator": " - ",
+  "workbench.colorCustomizations": {
+    "editor.lineHighlightBackground": "#1073cf2d",
+    "editor.lineHighlightBorder": "#9fced11f"
+  },
+  "workbench.colorTheme": "Catppuccin Mocha",
+  "workbench.editor.tabActionLocation": "left",
+  "workbench.iconTheme": "material-icon-theme"
 }

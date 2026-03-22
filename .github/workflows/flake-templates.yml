@@ -14,9 +14,17 @@ jobs:
         target:
           - ./
           - ./templates/web-dev
+          - ./templates/rust-dev
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v27
+        with:
+          # Align with repo-local checks; avoids path-input lock churn (narHash on
+          # path:./… breaks fetchTree “relative path” in some Nix versions) and
+          # stricter unlocked-input errors on very new Nix.
+          install_url: https://releases.nixos.org/nix/nix-2.29.1/install
+          extra_nix_config: |
+            experimental-features = nix-command flakes
       - name: nix flake check
         run: nix flake check -L "${{ matrix.target }}"
 

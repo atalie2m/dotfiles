@@ -1,0 +1,117 @@
+{
+  "rules": [
+    {
+      "description": "Change Profile Cmd_L + Cmd_R",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "simultaneous": [
+              {
+                "key_code": "left_command"
+              },
+              {
+                "key_code": "right_command"
+              }
+            ],
+            "simultaneous_options": {
+              "detect_key_down_uninterruptedly": true,
+              "key_down_order": "insensitive",
+              "key_up_order": "insensitive"
+            }
+          },
+          "to": [
+            {
+              "shell_command": "cli='/Library/Application Support/org.pqrs/Karabiner-Elements/bin/karabiner_cli'; if [ \"$(\"$cli\" --show-current-profile-name)\" = 'Std' ]; then \"$cli\" --select-profile 'A2m'; else \"$cli\" --select-profile 'Std'; fi"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": "コマンドキーを単体で押したときに、英数・かなキーを送信する。（左コマンドキーは英数、右コマンドキーはかな） (rev 3)",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "left_command",
+            "modifiers": {
+              "optional": ["any"]
+            }
+          },
+          "parameters": {
+            "basic.to_if_held_down_threshold_milliseconds": 100
+          },
+          "to": [
+            {
+              "key_code": "left_command",
+              "lazy": true
+            }
+          ],
+          "to_if_held_down": [
+            {
+              "key_code": "left_command"
+            }
+          ],
+          "to_if_alone": [
+            {
+              "key_code": "japanese_eisuu"
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "right_command",
+            "modifiers": {
+              "optional": ["any"]
+            }
+          },
+          "parameters": {
+            "basic.to_if_held_down_threshold_milliseconds": 100
+          },
+          "to": [
+            {
+              "key_code": "right_command",
+              "lazy": true
+            }
+          ],
+          "to_if_held_down": [
+            {
+              "key_code": "right_command"
+            }
+          ],
+          "to_if_alone": [
+            {
+              "key_code": "japanese_kana"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "description": "Change spacebar to left_shift. (Post spacebar if pressed alone)",
+      "manipulators": [
+        {
+          "from": {
+            "key_code": "spacebar",
+            "modifiers": {
+              "optional": ["any"]
+            }
+          },
+          "to": [
+            {
+              "key_code": "left_shift"
+            }
+          ],
+          "to_if_alone": [
+            {
+              "key_code": "spacebar"
+            }
+          ],
+          "type": "basic"
+        }
+      ]
+    }
+  ]
+}

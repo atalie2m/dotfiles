@@ -5,6 +5,7 @@ result-*
 # macOS
 .DS_Store
 .AppleDouble
+._*
 .LSOverride
 
 # Temporary files
@@ -12,9 +13,15 @@ result-*
 *.swp
 *.swo
 *~
+.cache
 
 # Backup files
 *.bak
 *.backup
 *.orig
 *.rej
+
+# Rust build artifacts
+target/
+scripts/sync-adapters/vscode-rs/target
+scripts/sync-adapters/vscode-rs/bin/dotfiles-sync-vscode

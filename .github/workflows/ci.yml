@@ -3,74 +3,65 @@ name: "CI"
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
     branches:
-      - '**'
+      - "**"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
-    runs-on: macos-latest
+  linux-hygiene:
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Git filters for CI
+      - name: Verify clean checkout
         run: |
-          echo "=== CI Environment Setup ==="
-          echo "macOS version:" 
-          sw_vers
-          echo
-          echo "Available commands:"
-          command -v scutil && echo "scutil: $(which scutil)" || echo "scutil: MISSING"
-          command -v hostname && echo "hostname: $(which hostname)" || echo "hostname: MISSING" 
-          command -v whoami && echo "whoami: $(which whoami)" || echo "whoami: MISSING"
-          command -v perl && echo "perl: $(which perl)" || echo "perl: MISSING"
-          echo
-          echo "Current user: $(whoami)"
-          echo "Hostname: $(hostname)"
-          if command -v scutil >/dev/null 2>&1; then
-            echo "ComputerName: $(scutil --get ComputerName 2>/dev/null || echo 'N/A')"
-            echo "LocalHostName: $(scutil --get LocalHostName 2>/dev/null || echo 'N/A')"
+          set -euo pipefail
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "FAIL: checkout is not clean" >&2
+            git status --short >&2
+            exit 1
           fi
-          echo
-          
-          echo "=== Setting up Git filters ==="
-          # Make filter scripts executable
-          chmod +x .git-filters/*.sh
-          
-          # Show original env.nix content
-          echo "Original env.nix username line:"
-          grep "username" nix/env.nix | head -1
-          
-          # Configure git filters
-          git config filter.system-info.clean './.git-filters/clean.sh'
-          git config filter.system-info.smudge './.git-filters/smudge.sh' 
-          git config filter.system-info.required true
-          
-          # Test the smudge script directly
-          echo "Testing smudge script directly:"
-          echo 'username = "{{USER_NAME}}";' | ./.git-filters/smudge.sh
-          
-          # Apply smudge filter directly to files that need it
-          echo "Applying git filters to files with placeholders..."
-          
-          # Find all files with .gitattributes filter applied and containing placeholders
-          for file in $(git ls-files | grep -E '\.(nix|sh|yml|yaml|json|toml|txt)$'); do
-            if [[ -f "$file" ]] && grep -q "{{.*}}" "$file" 2>/dev/null; then
-              echo "Processing: $file"
-              ./.git-filters/smudge.sh < "$file" > "$file.tmp" && mv "$file.tmp" "$file"
-            fi
-          done
-          
-          echo "Direct filter application completed"
-          
-          # Verify env.nix was processed correctly
-          echo "env.nix username after filter:"
-          grep "username" nix/env.nix | head -1
-          
-          echo "Git filters setup completed"
+
+      - name: Install ripgrep (host-truth-test)
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Run docs consistency test
+        run: bash scripts/tests/docs-consistency-test.sh
+
+      - name: Run host truth test
+        run: bash scripts/tests/host-truth-test.sh
+
+      - name: Run workflow contract test
+        run: bash scripts/tests/workflow-contract-test.sh
+
+      - name: Run shim delegation test
+        run: bash scripts/tests/shim-delegation-test.sh
+
+  darwin-contract:
+    runs-on: macos-latest
+    env:
+      CACHIX_CACHE_NAME: ${{ vars.CACHIX_CACHE_NAME }}
+      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify clean checkout
+        run: |
+          set -euo pipefail
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "FAIL: checkout is not clean" >&2
+            git status --short >&2
+            exit 1
+          fi
 
       - name: Install Nix (Determinate Systems)
         uses: DeterminateSystems/nix-installer-action@v19
@@ -82,42 +73,133 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Run Statix Check
-        run: nix run github:nerdypepper/statix -- check .
+      - name: Configure Cachix
+        if: ${{ env.CACHIX_CACHE_NAME != '' && env.CACHIX_AUTH_TOKEN != '' }}
+        uses: cachix/cachix-action@v14
+        with:
+          name: ${{ env.CACHIX_CACHE_NAME }}
+          authToken: ${{ env.CACHIX_AUTH_TOKEN }}
+
+      - name: Prepare local inputs
+        id: local_inputs
+        run: |
+          set -euo pipefail
+          LOCAL_DIR="$RUNNER_TEMP/dotfiles-local"
+          SECRETS_DIR="$RUNNER_TEMP/dotfiles-secrets"
+          mkdir -p "$LOCAL_DIR" "$SECRETS_DIR"
+
+          cat > "$LOCAL_DIR/facts.nix" <<EOF
+          {
+            user = {
+              username = "runner";
+              fullName = "CI Runner";
+              email = "ci@example.invalid";
+              homeDirectory = "$HOME";
+              stateVersion = {
+                home = "25.11";
+                darwin = 6;
+              };
+            };
+            machines = {
+              pro_mac = {
+                computerName = "CI Mac";
+                localHostName = "ci-mac";
+                hostName = "ci-mac.local";
+              };
+              ultra_mac = {
+                computerName = "CI Mac";
+                localHostName = "ci-mac";
+                hostName = "ci-mac.local";
+              };
+              minimal_mac = {
+                computerName = "CI Mac";
+                localHostName = "ci-mac";
+                hostName = "ci-mac.local";
+              };
+            };
+          }
+          EOF
+
+          cat > "$SECRETS_DIR/secrets.nix" <<'EOF'
+          { }
+          EOF
+
+          echo "local_dir=$LOCAL_DIR" >> "$GITHUB_OUTPUT"
+          echo "secrets_dir=$SECRETS_DIR" >> "$GITHUB_OUTPUT"
 
       - name: Run Nix Flake Check
-        run: nix flake check
+        run: >
+          nix flake check
+          --override-input local path:${{ steps.local_inputs.outputs.local_dir }}
+          --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
 
-      - name: Check if git filters worked
-        id: check_filters
+      - name: Run target manifest test
+        run: bash scripts/tests/targets-manifest-test.sh
+
+      - name: Evaluate darwin configurations
         run: |
-          if grep -q "{{USER_NAME}}" nix/env.nix; then
-            echo "Git filters failed - placeholders still present"
-            echo "filters_success=false" >> $GITHUB_OUTPUT
-          else
-            echo "Git filters successful - placeholders replaced"  
-            echo "filters_success=true" >> $GITHUB_OUTPUT
+          set -euo pipefail
+          # macOS default bash is 3.2 (no mapfile); use a portable read loop.
+          targets=()
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -n "$line" ]] && targets+=("$line")
+          done < <(
+            nix eval --raw '.#darwinConfigurations' \
+              --impure \
+              --apply '
+                targets:
+                  let
+                    manifest = (import ./nix/scripts/targets-manifest.nix {}).json targets;
+                    riceTargets = builtins.concatLists (map (host: builtins.attrValues host.targetsByRice) (builtins.attrValues manifest.hosts));
+                    targetSet = builtins.listToAttrs (map (target: { name = target; value = true; }) riceTargets);
+                  in
+                  builtins.concatStringsSep "\n" (builtins.sort builtins.lessThan (builtins.attrNames targetSet))
+              ' \
+              --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+              --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
+          )
+
+          if [[ "${#targets[@]}" -eq 0 ]]; then
+            echo "FAIL: no darwinConfigurations resolved" >&2
+            exit 1
           fi
 
-      - name: Build darwin configuration (common)
-        if: steps.check_filters.outputs.filters_success == 'true'
-        run: nix build .#darwinConfigurations.common.system
+          for target in "${targets[@]}"; do
+            echo "Evaluating $target"
+            nix eval --raw ".#darwinConfigurations.${target}.system.drvPath" \
+              --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+              --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }} \
+              >/dev/null
+          done
 
-      - name: Build darwin configuration (commercial)
-        if: steps.check_filters.outputs.filters_success == 'true'  
-        run: nix build .#darwinConfigurations.commercial.system
-
-      - name: Build minimum configuration (common-minimum)
-        if: steps.check_filters.outputs.filters_success == 'true'
-        run: nix build .#darwinConfigurations.common-minimum.system
-
-      - name: Build full configuration (common-full)
-        if: steps.check_filters.outputs.filters_success == 'true'
-        run: nix build .#darwinConfigurations.common-full.system
-        
-      - name: Skip builds (git filters not working)
-        if: steps.check_filters.outputs.filters_success == 'false'
+      - name: Build default host targets
         run: |
-          echo "⚠️  Skipping build steps because git filters are not working in CI environment"
-          echo "💡 This is expected if CI environment doesn't support git filters properly"
-          echo "✅ Static analysis (statix, flake check) passed successfully"
+          set -euo pipefail
+          default_targets=()
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            [[ -n "$line" ]] && default_targets+=("$line")
+          done < <(
+            nix eval --raw '.#darwinConfigurations' \
+              --impure \
+              --apply '
+                targets:
+                  let
+                    manifest = (import ./nix/scripts/targets-manifest.nix {}).json targets;
+                  in
+                  builtins.concatStringsSep "\n" (builtins.sort builtins.lessThan (map (host: host.buildTarget) (builtins.attrValues manifest.hosts)))
+              ' \
+              --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+              --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
+          )
+
+          if [[ "${#default_targets[@]}" -eq 0 ]]; then
+            echo "FAIL: no default host targets resolved" >&2
+            exit 1
+          fi
+
+          for target in "${default_targets[@]}"; do
+            echo "Building $target"
+            nix build --no-link ".#darwinConfigurations.${target}.system" \
+              --override-input local path:${{ steps.local_inputs.outputs.local_dir }} \
+              --override-input secrets path:${{ steps.local_inputs.outputs.secrets_dir }}
+          done

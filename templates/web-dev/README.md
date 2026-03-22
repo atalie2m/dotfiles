@@ -12,7 +12,7 @@ nix develop
 
 What you get:
 
-- DevShell: Node.js 22, pnpm, bun, wrangler, awscli2, jq, yq, mkcert, just
+- DevShell: Node.js 22, pnpm, bun, awscli2, jq, yq, mkcert, just (`wrangler` is optional; uncomment it in `flake.nix` when needed)
 - Formatters: Prettier via treefmt (run: `nix run .#format`)
-- Checks: `nix flake check` runs treefmt and pre-commit hooks
+- Checks: `nix flake check` runs the template's treefmt-based checks
 - App: `nix run .#dev`

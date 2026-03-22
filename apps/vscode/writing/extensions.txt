@@ -1,13 +1,16 @@
-jeandeaual.lilypond-syntax
-rickaym.manim-sideview
-jeandeaual.scheme
-ms-python.debugpy
-lhl2617.lilypond-pdf-preview
+# Writing / docs
 james-yu.latex-workshop
-ms-python.python
+jeandeaual.lilypond-syntax
+jeandeaual.scheme
 lhl2617.lilypond-formatter
-myriad-dreamin.tinymist
+lhl2617.lilypond-pdf-preview
 lhl2617.lilypond-snippets
 lhl2617.vslilypond
-ms-python.vscode-pylance
 marp-team.marp-vscode
+ms-python.debugpy
+ms-python.python
+ms-python.vscode-pylance
+myriad-dreamin.tinymist
+rickaym.manim-sideview
+shd101wyy.markdown-preview-enhanced
+streetsidesoftware.code-spell-checker

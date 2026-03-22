@@ -1,0 +1,3 @@
+codeium.codeium
+saoudrizwan.claude-dev
+parallelsdesktop.parallels-desktop

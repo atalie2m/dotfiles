@@ -1,0 +1,7 @@
+[workspace]
+members = [
+  "crates/dotfiles-core",
+  "crates/dotfiles-cli",
+  "crates/dotfiles-sync-vscode",
+]
+resolver = "2"
