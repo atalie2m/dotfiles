@@ -15,7 +15,7 @@ delib.module {
       {
         enable = boolOption false;
         sync = {
-          enable = boolOption true;
+          enable = boolOption false;
           managedDir = lib.mkOption {
             type = types.nullOr types.path;
             default = null;

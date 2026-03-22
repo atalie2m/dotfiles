@@ -32,8 +32,13 @@
           default = pkgs.mkShell {
             name = "rust-dev";
             packages = with pkgs; [
+              zsh
               (rust-bin.stable.latest.default.override {
-                extensions = [ "rust-src" ];
+                # llvm-tools-preview: required by cargo-llvm-cov
+                extensions = [
+                  "rust-src"
+                  "llvm-tools-preview"
+                ];
                 # targets = [ "wasm32-unknown-unknown" ];
               })
 
@@ -59,6 +64,10 @@
 
             shellHook = ''
               export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
+              echo "rust-dev: $(rustc -vV | head -n1), $(cargo -V), rust-analyzer $(rust-analyzer --version | head -n1)"
+              if [[ $- == *i* ]]; then
+                exec ${pkgs.zsh}/bin/zsh
+              fi
             '';
           };
         }

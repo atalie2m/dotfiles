@@ -113,7 +113,9 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - Supported inputs are `settings.json`, `extensions.txt`, and bootstrap-only `default-disabled-extensions.txt`.
 - VS Code application installation is unmanaged by Nix; install Visual Studio Code.app separately (or provide `VSCODE_CODE_BIN`).
 - `sync vscode` uses the Rust engine (`dotfiles-sync-vscode`).
-- `sync vscode --apply` runs during activation when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true, and reconciles fully repo-owned managed profile settings plus repo-owned extensions into writable VS Code profile state.
+- **Ultra rice only:** stock Darwin bundles enable the VS Code module and run `sync vscode --apply` during Home Manager activation (`tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable`). Other stock rices do not; run `nix run .#dotfiles -- sync vscode --apply` manually if you want the same behavior elsewhere.
+- **Extension bulk install:** repo-owned extension IDs live under `apps/vscode/` — chiefly `_default/extensions.txt` plus each profile's `extensions.txt` (for example `web/`, `native/`). That directory is the source of truth for what sync installs or uninstalls.
+- `sync vscode --apply` reconciles fully repo-owned managed profile settings plus those repo-owned extensions into writable VS Code profile state when the toggles above are true (or whenever you invoke the CLI).
 - `default-disabled-extensions.txt` is seeded once into the profile's extension enablement state; users can later enable those extensions in the VS Code UI and sync will not force them back off.
 - Drift management is mutable by design: managed profile settings are fully repo-owned, while repo-owned extensions converge without adopting user-added extensions.
 

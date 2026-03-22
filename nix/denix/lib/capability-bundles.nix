@@ -91,7 +91,7 @@
     tools.aiCodingAgent.geminiCli.enable = false;
     tools.aiCodingAgent.githubCopilotCli.enable = false;
     tools.aiCodingAgent.opencode.enable = false;
-    tools.editor.vscode.enable = true;
+    tools.editor.vscode.enable = false;
     tools.editor.vscode.sync.enable = false;
   };
 
@@ -102,6 +102,7 @@
     tools.aiCodingAgent.githubCopilotCli.enable = true;
     tools.aiCodingAgent.opencode.enable = true;
     tools.editor.vscode.enable = true;
+    tools.editor.vscode.sync.enable = true;
   };
 
   proOverride = {

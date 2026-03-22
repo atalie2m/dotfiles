@@ -21,6 +21,19 @@ Profiles live under `apps/vscode/<name>/`:
 
 Note: VS Code's built-in `Default` profile is intentionally unmanaged. It is left as-is by `sync vscode`, so existing extensions/settings there are preserved.
 
+## Stock Darwin rices and VS Code
+
+Only the **`ultra`** rice turns on the VS Code Home Manager module (`tools.editor.vscode.enable`) and activation-time `sync vscode --apply` (`tools.editor.vscode.sync.enable`). The other stock rices (`base`, `darwin`, `dev`, `pro`, `partial`) do not; VS Code is still optional on the machine, but dotfiles will not install `dotfiles-sync-vscode` into the profile or reconcile profiles during activation unless you enable those options in your own config. You can always run `nix run .#dotfiles -- sync vscode --apply` by hand.
+
+### Bulk extension install: source of truth
+
+Ultra is meant to carry a large, repo-owned extension set. **What gets installed or removed is whatever is listed under `apps/vscode/`**, not an ad hoc list elsewhere:
+
+- `apps/vscode/_default/extensions.txt` — shared extension IDs merged into every managed profile
+- `apps/vscode/<profile>/extensions.txt` — extra IDs for that profile (for example `native/`, `web/`, `data-science/`, `writing/`)
+
+Effective repo-owned extensions per profile are the union of `_default` and that profile's file, unique by extension ID (see Effective extensions below). Adding or removing lines there changes the next apply.
+
 If you want fully independent profile management, keep files under `apps/vscode/_default/` empty and define all settings/extensions/default-disabled entries per profile.
 
 Supported files:
@@ -108,8 +121,8 @@ Flags:
 
 `sync vscode --apply` is also run during Home Manager activation when both
 `tools.editor.vscode.enable = true` and `tools.editor.vscode.sync.enable = true`.
-Set `tools.editor.vscode.sync.enable = false` if you want to keep VS Code installed
-but stop automatic activation-time reconciliation.
+In the stock capability bundles, only **`ultra`** sets both; keep `tools.editor.vscode.sync.enable = false`
+(or leave the module disabled) if you want VS Code on disk but no automatic activation-time reconciliation.
 
 ## Manual switching
 

@@ -54,7 +54,7 @@ Behavior:
 - `sync vscode --apply` creates missing profiles, updates the profile registry, rewrites managed settings files, and reconciles repo-owned extensions
 - settings removed from `apps/vscode/` disappear on the next apply because the managed file is fully repo-owned
 - user-added extensions not owned by the repo are preserved
-- activation runs `sync vscode --apply` when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true
+- activation runs `sync vscode --apply` when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true (stock bundles: **`ultra` rice only**)
 
 ## Homebrew and macOS app ownership
 
