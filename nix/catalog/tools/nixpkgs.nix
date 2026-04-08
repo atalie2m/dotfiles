@@ -10,6 +10,7 @@
   jq = { group = "core"; pkg = "jq"; };
   just = { group = "core"; pkg = "just"; };
   nmap = { group = "core"; pkg = "nmap"; };
+  nkf = { group = "core"; pkg = "nkf"; };
   python3 = { group = "core"; pkg = "python3"; };
   ripgrep = { group = "core"; pkg = "ripgrep"; };
   tree = { group = "core"; pkg = "tree"; };

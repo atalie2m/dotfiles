@@ -12,6 +12,7 @@
     tools.core.jq.enable = true;
     tools.core.just.enable = true;
     tools.core.nmap.enable = true;
+    tools.core.nkf.enable = true;
     tools.core.python3.enable = true;
     tools.core.ripgrep.enable = true;
     tools.core.tree.enable = true;

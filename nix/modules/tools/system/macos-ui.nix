@@ -23,12 +23,10 @@ delib.module {
       enable = boolOption true;
       showRecents = boolOption false;
       tileSize = intOption 54;
-      magnification = boolOption false;
-      launchAnimation = boolOption false;
-      minimizeEffect = strOption "genie";
       minimizeToApplication = boolOption false;
       mruSpaces = boolOption false;
-      onlyPrimaryDisplay = boolOption false;
+      # "Displays have separate Spaces" in Mission Control: each screen has its own Space strip.
+      separateSpacesPerDisplay = boolOption true;
       autohide = boolOption true;
       autohideDelay = intOption 0;
       autohideTimeModifier = intOption 2;
@@ -79,9 +77,6 @@ delib.module {
         "autohide-time-modifier" = cfg.dock.autohideTimeModifier / 10;
         "show-recents" = cfg.dock.showRecents;
         tilesize = cfg.dock.tileSize;
-        magnification = cfg.dock.magnification;
-        launchanim = cfg.dock.launchAnimation;
-        mineffect = cfg.dock.minimizeEffect;
         "minimize-to-application" = cfg.dock.minimizeToApplication;
         "mru-spaces" = cfg.dock.mruSpaces;
       };
@@ -131,8 +126,8 @@ delib.module {
           "com.apple.desktopservices" = desktopServicesDefaults;
           "com.apple.WindowManager" = windowManagerDefaults;
           "com.apple.spaces" = {
-            # Keep Spaces independent per display so switching one monitor does not move the others.
-            "spans-displays" = !cfg.dock.onlyPrimaryDisplay;
+            # spans-displays false => separate Spaces per display (not one strip spanning monitors).
+            "spans-displays" = !cfg.dock.separateSpacesPerDisplay;
           };
         } // trackpadDefaults;
       };

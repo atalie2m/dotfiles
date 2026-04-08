@@ -22,6 +22,20 @@ delib.module {
         enableNushellIntegration = false;
         enableZshIntegration = false;
         flags = [ atuinFlags ];
+        # Atuin rewrites config.toml after commands; HM must own the file or activation conflicts.
+        forceOverwriteSettings = true;
+        # Prefer cwd-scoped history in the Atuin UI (Ctrl+R). ↑ stays zsh native (--disable-up-arrow).
+        settings = {
+          filter_mode = "directory";
+          search.filters = [
+            "directory"
+            "global"
+            "host"
+            "session"
+            "session-preload"
+            "workspace"
+          ];
+        };
       };
 
       programs.zsh.initContent = lib.mkOrder 1090 ''
