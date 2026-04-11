@@ -69,9 +69,11 @@
       flake = false;
     };
 
-    # Local secrets (non-flake)
+    # Default secrets input is intentionally inert: the repo ships no
+    # `secrets.nix`, and machines override this input to a local path when
+    # secrets are actually needed.
     secrets = {
-      url = "path:./nix/secrets";
+      url = "path:./nix/local";
       flake = false;
     };
   };

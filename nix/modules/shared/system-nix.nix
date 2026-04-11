@@ -20,6 +20,8 @@ let
         ++ (lib.optionals cfg.enableFlakes [ "flakes" ])
         ++ cfg.extraExperimentalFeatures;
 
+      # This keeps day-to-day flake usage convenient, but only because the
+      # trusted-users set is narrowed to the current host owner.
       accept-flake-config = cfg.acceptFlakeConfig;
     }
     // lib.optionalAttrs (caches.extraSubstituters != [ ]) {
@@ -46,11 +48,14 @@ delib.module {
     };
   };
 
-  darwin.ifEnabled = { cfg, ... }:
+  darwin.ifEnabled = { cfg, myconfig, ... }:
+    let
+      primaryUser = myconfig.hostContext.user.username or "";
+    in
     {
       nix = {
         settings = (mkCommonSettings cfg) // {
-          trusted-users = [ "@admin" ];
+          trusted-users = lib.optional (primaryUser != "") primaryUser;
         };
 
         # Enable garbage collection and optimization

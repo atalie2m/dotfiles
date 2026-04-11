@@ -1,23 +1,12 @@
 { delib, lib, ... }:
 
-# macOS GUI preferences for keyboard, Dock, trackpad, Finder, and window management.
+# macOS GUI preferences for Dock, trackpad, Finder, and window management.
 
 delib.module {
   name = "tools.system.macosUi";
 
   options = with delib; moduleOptions {
     enable = boolOption false;
-
-    keyRepeat = {
-      enable = boolOption true;
-      rate = intOption 1;
-      initialDelay = intOption 15;
-      pressAndHold = boolOption false;
-    };
-
-    keyboard = {
-      useStandardFunctionKeys = boolOption true;
-    };
 
     dock = {
       enable = boolOption true;
@@ -30,8 +19,14 @@ delib.module {
       # "Displays have separate Spaces" in Mission Control: each screen has its own Space strip.
       separateSpacesPerDisplay = boolOption true;
       autohide = boolOption true;
-      autohideDelay = intOption 0;
-      autohideTimeModifier = intOption 2;
+      autohideDelay = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+      };
+      autohideTimeModifier = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+      };
     };
 
     trackpad = {
@@ -65,24 +60,23 @@ delib.module {
     let
       threeFingerDragEnabled = if cfg.trackpad.threeFingerDrag then 1 else 0;
       searchScope = if cfg.finder.searchCurrentFolderByDefault then "SCcf" else "MC";
-      keyRepeatDefaults = lib.optionalAttrs cfg.keyRepeat.enable {
-        KeyRepeat = cfg.keyRepeat.rate;
-        InitialKeyRepeat = cfg.keyRepeat.initialDelay;
-        ApplePressAndHoldEnabled = cfg.keyRepeat.pressAndHold;
-        AppleShowAllExtensions = cfg.finder.showAllExtensions;
-        "com.apple.keyboard.fnState" = cfg.keyboard.useStandardFunctionKeys;
-      };
       dockDefaults = lib.optionalAttrs cfg.dock.enable {
         autohide = cfg.dock.autohide;
-        "autohide-delay" = cfg.dock.autohideDelay;
-        # Treat this as 0.1s steps so we can tune smoothly without float options.
-        "autohide-time-modifier" = cfg.dock.autohideTimeModifier / 10;
         showhidden = cfg.dock.showHiddenApplications;
         "show-recents" = cfg.dock.showRecents;
         tilesize = cfg.dock.tileSize;
         "minimize-to-application" = cfg.dock.minimizeToApplication;
         "mru-spaces" = cfg.dock.mruSpaces;
       };
+      dockTimingDefaults =
+        lib.optionalAttrs (cfg.dock.enable && cfg.dock.autohideDelay != null)
+          {
+            "autohide-delay" = cfg.dock.autohideDelay;
+          }
+        // lib.optionalAttrs (cfg.dock.enable && cfg.dock.autohideTimeModifier != null) {
+          # Treat this as 0.1s steps so we can tune smoothly without float options.
+          "autohide-time-modifier" = cfg.dock.autohideTimeModifier / 10;
+        };
       trackpadDefaults = lib.optionalAttrs cfg.trackpad.threeFingerDrag {
         "com.apple.AppleMultitouchTrackpad" = {
           TrackpadThreeFingerDrag = threeFingerDragEnabled;
@@ -119,12 +113,12 @@ delib.module {
     in
     {
       system.defaults = {
-        NSGlobalDomain = keyRepeatDefaults // {
+        NSGlobalDomain = {
           "com.apple.swipescrolldirection" = cfg.trackpad.naturalScrolling;
         };
 
         CustomUserPreferences = {
-          "com.apple.dock" = dockDefaults;
+          "com.apple.dock" = dockDefaults // dockTimingDefaults;
           "com.apple.finder" = finderDefaults;
           "com.apple.desktopservices" = desktopServicesDefaults;
           "com.apple.WindowManager" = windowManagerDefaults;

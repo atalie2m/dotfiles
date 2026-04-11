@@ -13,7 +13,6 @@ let
     tools.system.macAppUtil = {
       enable = true;
       systemService.enable = false;
-      homeTrampolines.syncDock = true;
       homeTrampolines.timeoutSeconds = 15;
     };
   };

@@ -1,4 +1,6 @@
 let
+  validKeyboardTypes = [ "ansi" "jis" ];
+
   defaultStateVersion = {
     home = "25.11";
     darwin = 6;
@@ -27,6 +29,7 @@ let
     localHostName = null;
     hostName = null;
     domain = null;
+    keyboardType = null;
     extra = { };
   };
 
@@ -40,6 +43,11 @@ let
       localHostName = optionalNonEmptyString (machine.localHostName or null);
       hostName = optionalNonEmptyString (machine.hostName or null);
       domain = optionalNonEmptyString (machine.domain or null);
+      keyboardType =
+        let
+          value = machine.keyboardType or null;
+        in
+        if builtins.elem value validKeyboardTypes then value else null;
       extra =
         if machine ? extra && builtins.isAttrs machine.extra then
           machine.extra
@@ -299,6 +307,7 @@ let
         #     localHostName = "your-mac";
         #     hostName = "your-mac";
         #     domain = "local";
+        #     keyboardType = "ansi";
         #   };
         # };
       }

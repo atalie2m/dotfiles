@@ -1,7 +1,9 @@
 # shellcheck shell=bash
 
 dedupePath() {
-  export PATH="$(
+  local dedupedPath
+
+  dedupedPath="$(
     printf '%s' "$PATH" | awk -v RS=':' '
       BEGIN { ORS = ""; first = 1 }
       length($0) == 0 { next }
@@ -14,10 +16,12 @@ dedupePath() {
       }
     '
   )"
+
+  export PATH="$dedupedPath"
 }
 
 hmSessionVars="$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
-if [[ -f "$hmSessionVars" ]]; then
+if [[ -f $hmSessionVars ]]; then
   # Home Manager writes sessionPath/sessionVariables here; source it so
   # interactive shells pick up managed PATH entries like ~/.local/bin.
   # Clear the HM guard first because shells may inherit __HM_SESS_VARS_SOURCED

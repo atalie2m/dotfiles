@@ -75,7 +75,7 @@ Notes:
 
 - `scripts/*.sh` are thin shell wrappers over the Rust CLI.
 - `dotfiles-sync-vscode` is packaged separately; `dotfiles` dispatches `sync vscode` to that binary.
-- `sync vscode --apply` also runs during activation when both `tools.editor.vscode.enable = true` and `tools.editor.vscode.sync.enable = true` (stock capability bundles: **`ultra` rice only**). Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).
+- Stock bundles do not run `sync vscode --apply` during activation. Enable `tools.editor.vscode.sync.enable = true` yourself if you want that automation. Visual Studio Code.app itself is installed manually, and activation skips cleanly when `code` or the app bundle is absent. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).
 
 ## Checks and development
 

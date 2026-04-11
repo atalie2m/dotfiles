@@ -1,6 +1,7 @@
 {
   base = {
     system.nix.enable = true;
+    tools.system.keyboard.enable = true;
     tools.core.enable = true;
     tools.core.bat.enable = true;
     tools.core.coreutils.enable = true;
@@ -38,11 +39,17 @@
 
   darwin = {
     tools.system.enable = true;
+    tools.system.brewNix.enable = false;
+    tools.system.brewNix.appLinks.enable = false;
+    tools.system.brewNix.autoDock.enable = false;
     tools.system.nixHomebrew.enable = true;
+    tools.system.nixHomebrew.autoMigrate = false;
     tools.system.homebrewNative.enable = true;
     tools.system.hostnames.enable = true;
     tools.system.fonts.enable = true;
     tools.system.macosUi.enable = true;
+    tools.system.macAppUtil.systemService.enable = false;
+    tools.system.macAppUtil.homeTrampolines.syncDock = false;
     # Show hidden apps as translucent Dock icons.
     tools.system.macosUi.dock.showHiddenApplications = true;
     # Keep Finder from writing .DS_Store on removable/network volumes.
@@ -108,7 +115,7 @@
     tools.aiCodingAgent.githubCopilotCli.enable = true;
     tools.aiCodingAgent.opencode.enable = true;
     tools.editor.vscode.enable = true;
-    tools.editor.vscode.sync.enable = true;
+    tools.editor.vscode.sync.enable = false;
   };
 
   proOverride = {

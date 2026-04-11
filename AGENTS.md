@@ -10,7 +10,6 @@ This repository is a Darwin-first Nix flake for macOS system configuration. Keep
 - `nix/modules/` — reusable modules, split into `shared/` and `tools/`.
 - `nix/catalog/` — catalog data used by tool modules and ownership checks.
 - `nix/local/` — placeholder public facts input for public evaluation.
-- `nix/secrets/` — placeholder public secrets input for public evaluation.
 - `crates/dotfiles-core` — shared Rust support and shell sync implementation.
 - `crates/dotfiles-cli` — operational CLI.
 - `crates/dotfiles-sync-vscode` — VS Code native profile sync engine.

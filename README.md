@@ -43,7 +43,7 @@ Operational note: the supported root flake API is Darwin-first and exposes `darw
   - `dev`: editor/terminal/workstation stack.
   - `pro`: composition of `base + darwin + dev` without VS Code.
   - `ultra`: complete profile (`base + darwin + dev`).
-  - `partial`: composition of `base + darwin + dev` with targeted overrides (only `codex` enabled among AI coding agents, VS Code installed but activation sync off).
+  - `partial`: composition of `base + darwin + dev` with targeted overrides (only `codex` enabled among AI coding agents, VS Code disabled).
 
 Canonical host names and CLI examples live in [`docs/commands.md`](docs/commands.md).
 
@@ -75,7 +75,7 @@ managed PATH picks up `~/.local/bin`.
 
 1. Terraform/OpenTofu are managed per project via each repo's `flake.nix` (recommended default).
 2. Dotfiles/Home Manager can also provide them through `myconfig.tools.dev` for convenience.
-3. Unfree allow-list is derived from enabled tools (for example `terraform`, `vscode`) via helper wiring; `allowAll` remains disabled.
+3. Unfree allow-list is derived from enabled tools (for example `terraform`, `emacs`) via helper wiring; `allowAll` remains disabled.
 4. For Terraform-only repos, set `nixpkgs.config.allowUnfreePredicate` in that repo's flake and include `pkgs.terraform` in the devShell.
 
 Example (`flake.nix` for a Terraform repo):
@@ -112,18 +112,18 @@ nix eval --json .#darwinConfigurations.ultra_mac-base.config.myconfig.tools
 
 ## VS Code Profiles
 
-This repo now uses a single VS Code installation with native VS Code profiles.
+This repo targets a single manually installed VS Code app with native VS Code profiles.
 The declarative source stays under `apps/vscode/<name>/`, and runtime materialization happens through `sync vscode`.
 
 - `apps/vscode/_default/` is the shared layer applied to every managed profile.
 - `apps/vscode/native/` is managed as a native profile (`Native`).
 - `apps/vscode/<name>/` for any other name maps to a native custom profile with that display name.
 - Supported inputs are `settings.json`, `extensions.txt`, and bootstrap-only `default-disabled-extensions.txt`.
-- VS Code application installation is unmanaged by Nix; install Visual Studio Code.app separately (or provide `VSCODE_CODE_BIN`).
+- `tools.editor.vscode.enable` installs `dotfiles-sync-vscode` into Home Manager; Visual Studio Code.app itself is expected to be installed manually.
 - `sync vscode` uses the Rust engine (`dotfiles-sync-vscode`).
-- **Ultra rice only:** stock Darwin bundles enable the VS Code module and run `sync vscode --apply` during Home Manager activation (`tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable`). Other stock rices do not; run `nix run .#dotfiles -- sync vscode --apply` manually if you want the same behavior elsewhere.
+- **Stock `ultra` behavior:** stock Darwin bundles enable the VS Code module, but they do not run `sync vscode --apply` during Home Manager activation. Apply managed profiles explicitly with `nix run .#dotfiles -- sync vscode --apply` after installing VS Code.
 - **Extension bulk install:** repo-owned extension IDs live under `apps/vscode/` — chiefly `_default/extensions.txt` plus each profile's `extensions.txt` (for example `web/`, `native/`). That directory is the source of truth for what sync installs or uninstalls.
-- `sync vscode --apply` reconciles fully repo-owned managed profile settings plus those repo-owned extensions into writable VS Code profile state when the toggles above are true (or whenever you invoke the CLI).
+- `sync vscode --apply` reconciles fully repo-owned managed profile settings plus those repo-owned extensions into writable VS Code profile state when you invoke the CLI.
 - `default-disabled-extensions.txt` is seeded once into the profile's extension enablement state; users can later enable those extensions in the VS Code UI and sync will not force them back off.
 - Drift management is mutable by design: managed profile settings are fully repo-owned, while repo-owned extensions converge without adopting user-added extensions.
 
@@ -253,6 +253,7 @@ Default layout:
 - Required: `user.username`
 - Recommended (for Git identity): `user.fullName`, `user.email`
 - Optional overrides: `user.homeDirectory` (auto-derived) and `machines.<host>.homeDirectory` (per-host override when you truly need it).
+- Optional host input metadata: `machines.<host>.keyboardType = "ansi" | "jis"` for input-device-specific Karabiner behavior.
 - Platform is no longer a raw facts input. Host declarations own `system`, and modules derive `os`/`arch` from `myconfig.hostContext`.
 
 Example `facts.nix`:
@@ -280,6 +281,7 @@ Example `facts.nix`:
       computerName = "Your Mac";
       localHostName = "your-mac";
       hostName = "your-mac";
+      keyboardType = "ansi";
     };
 
     # Optional if you also use the pro_mac target:
@@ -287,6 +289,7 @@ Example `facts.nix`:
     #   computerName = "Your Mac";
     #   localHostName = "your-mac";
     #   hostName = "your-mac";
+    #   keyboardType = "jis";
     # };
   };
 }
@@ -343,7 +346,7 @@ nix run .#darwin-rebuild -- build --flake .#ultra_mac \
 
 `nix run .#darwin-rebuild -- ...` uses the nix-darwin wrapper pinned by this repo's `flake.lock`.
 
-**Note**: The repo ships placeholder public inputs under `nix/local/` and `nix/secrets/` so `darwinConfigurations` always evaluates. Real machines should still override both inputs with `~/.config/dotfiles/`.
+**Note**: The repo ships placeholder public facts under `nix/local/`, and the default secrets input is intentionally inert so `darwinConfigurations` still evaluates without in-repo secrets. Real machines should still override both inputs with `~/.config/dotfiles/`.
 
 ## Binary Cache (Cachix / Attic)
 
@@ -424,56 +427,34 @@ This repository includes comprehensive keyboard layouts and input method configu
    - Full Japanese input support
    - Same layout as above but for general Japanese typing
 
-### Manual Setup
+### Declarative Setup
 
-To use the keyboard configurations from this dotfiles repository:
-
-#### Option 1: Automated Setup with Nix (Recommended)
-
-If you're using this dotfiles repository with Nix and home-manager, the Karabiner-Elements configurations are set up declaratively through symbolic links.
+If `tools.system.karabiner.enable = true`, dotfiles manages Karabiner-Elements as one feature.
 
 The configuration is managed in `nix/modules/tools/system/karabiner.nix` and will automatically:
 
-1. Create the necessary directories
-2. Generate symbolic links for the managed rule files and `karabiner.json`
-3. Keep the links updated when you rebuild your configuration
+1. Install `karabiner-elements` through Homebrew
+2. Create the necessary directories
+3. Generate symbolic links for the managed rule files and `karabiner.json`
+4. Keep the links updated when you rebuild your configuration
 
-**Configuration Details:**
+Keyboard hardware differences stay in host facts:
+
+```nix
+{
+  machines.ultra_mac.keyboardType = "ansi";
+  # or "jis"
+}
+```
+
+**Configuration details:**
 
 - Configuration files are sourced from the `keyboards/` directory in this repo
 - The linked complex-modification set comes from the explicit `ruleFiles` list in the module
-- The setup is declarative and version-controlled
+- The generated `karabiner.json` uses `machines.<host>.keyboardType` when set and falls back to `ansi`
 - Changes take effect after running `nix run .#darwin-rebuild -- switch --flake .#<PROFILE_NAME>`
 
-#### Option 2: Manual Setup
-
-For manual setup or if not using Nix:
-
-1. Create the Karabiner-Elements configuration directory:
-
-   ```bash
-   mkdir -p ~/.config/karabiner/assets/complex_modifications
-   ```
-
-2. Create symbolic links to the JSON files in your dotfiles:
-
-   ```bash
-   # Replace /path/to/your/dotfiles with your actual dotfiles path
-   DOTFILES_PATH="/path/to/your/dotfiles"
-
-   # Link all JSON files
-   ln -sf "$DOTFILES_PATH/keyboards/karabiner/complex_modifications/japanese-input-toggle.json" ~/.config/karabiner/assets/complex_modifications/
-   ln -sf "$DOTFILES_PATH/keyboards/karabiner/complex_modifications/spacebar-to-shift.json" ~/.config/karabiner/assets/complex_modifications/
-   ln -sf "$DOTFILES_PATH/keyboards/karabiner/complex_modifications/vylet-alt-layout.json" ~/.config/karabiner/assets/complex_modifications/
-   ln -sf "$DOTFILES_PATH/keyboards/karabiner/complex_modifications/shingeta/shingeta_en.json" ~/.config/karabiner/assets/complex_modifications/
-   ln -sf "$DOTFILES_PATH/keyboards/karabiner/complex_modifications/shingeta/shingeta_jp.json" ~/.config/karabiner/assets/complex_modifications/
-   ```
-
-3. Restart Karabiner-Elements or go to Settings > Complex Modifications to see the new configurations.
-
-4. Enable the desired rules in Karabiner-Elements Settings > Complex Modifications > Add rule.
-
-**Note**: Karabiner-Elements only reads JSON files directly from the `complex_modifications` directory and does not recursively search subdirectories. The symbolic links allow you to keep your configurations organized in your dotfiles while making them available to Karabiner-Elements.
+If you choose not to enable the Karabiner module, manual management is outside this repo's supported runtime model.
 
 ### Credits
 

@@ -6,6 +6,7 @@ let
     if builtins.pathExists localSecretsFile then
       import localSecretsFile
     else
+    # Missing secrets.nix is an intentional no-op for public evaluation.
       { };
   secretFiles = localSecrets.files or { };
   hasSecrets = secretFiles != { };

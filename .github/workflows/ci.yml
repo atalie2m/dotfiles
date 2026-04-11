@@ -120,10 +120,6 @@ jobs:
           }
           EOF
 
-          cat > "$SECRETS_DIR/secrets.nix" <<'EOF'
-          { }
-          EOF
-
           echo "local_dir=$LOCAL_DIR" >> "$GITHUB_OUTPUT"
           echo "secrets_dir=$SECRETS_DIR" >> "$GITHUB_OUTPUT"
 

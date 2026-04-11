@@ -57,6 +57,7 @@ require_contains_anywhere 'darwinConfigurations'
 require_contains_anywhere 'nix run .#dotfiles -- sync shell'
 require_contains_anywhere 'nix run .#dotfiles -- sync vscode'
 require_contains_anywhere 'dotfiles-sync-vscode'
+require_contains_anywhere 'activation skips cleanly'
 
 require_contains_file README.md 'managed profile settings are fully repo-owned'
 require_contains_file docs/reconciled-surfaces.md 'managed profile settings files converge fully to the repo state'

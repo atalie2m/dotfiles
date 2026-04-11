@@ -29,6 +29,10 @@ delib.module {
             type = types.nullOr types.str;
             default = null;
           };
+          keyboardType = lib.mkOption {
+            type = types.nullOr (types.enum [ "ansi" "jis" ]);
+            default = null;
+          };
           extra = lib.mkOption {
             type = types.attrsOf types.anything;
             default = { };

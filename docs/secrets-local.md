@@ -4,7 +4,7 @@ This repository no longer stores secrets inside the repo. Instead, provide a loc
 
 - `~/.config/dotfiles/` (contains `secrets.nix` and `files/`)
 
-The in-repo `nix/secrets/` directory is a stub for public evaluation only. Do not place secrets in this repo.
+The repo's default secrets input is intentionally inert. If `secrets.nix` is absent, secrets materialization becomes a no-op. Do not place secrets in this repo.
 
 Minimum layout
 

@@ -4,8 +4,8 @@ use dotfiles_core::shell_sync::{
     run as run_shell_sync, ShellGroup, ShellSyncMode, ShellSyncOptions,
 };
 use dotfiles_core::support::{
-    evaluate_facts_schema, flake_ref_for_root, json_escape, nix_args_with_inputs, repo_root,
-    require_input_directories, resolve_inputs, resolve_target, run_command_output,
+    evaluate_facts_schema, find_in_path, flake_ref_for_root, json_escape, nix_args_with_inputs,
+    repo_root, require_input_directories, resolve_inputs, resolve_target, run_command_output,
     run_command_status,
 };
 use std::env;
@@ -419,6 +419,15 @@ fn record_strict_sync_checks(
     }
 
     if vscode_enabled == Some(true) && vscode_sync == Some(true) {
+        if vscode_cli_missing() {
+            checks.push(CheckRecord::new(
+                "vscode.sync",
+                "ok",
+                "VS Code CLI not found; skipped",
+            ));
+            return Ok(());
+        }
+
         let mut sync = Command::new(resolve_sync_vscode_bin()?);
         sync.arg("--check");
         sync.arg("--details");
@@ -454,4 +463,26 @@ fn record_strict_sync_checks(
     }
 
     Ok(())
+}
+
+fn vscode_cli_missing() -> bool {
+    if let Ok(bin) = env::var("VSCODE_CODE_BIN") {
+        if !bin.is_empty() {
+            return false;
+        }
+    }
+
+    if find_in_path("code").is_some() {
+        return false;
+    }
+
+    if let Ok(home) = env::var("HOME") {
+        let candidate = PathBuf::from(home)
+            .join("Applications/Visual Studio Code.app/Contents/Resources/app/bin/code");
+        if candidate.is_file() {
+            return false;
+        }
+    }
+
+    !PathBuf::from("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code").is_file()
 }

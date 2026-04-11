@@ -485,11 +485,11 @@
     "secrets": {
       "flake": false,
       "locked": {
-        "path": "./nix/secrets",
+        "path": "./nix/local",
         "type": "path"
       },
       "original": {
-        "path": "./nix/secrets",
+        "path": "./nix/local",
         "type": "path"
       },
       "parent": []

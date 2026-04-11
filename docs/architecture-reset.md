@@ -107,8 +107,8 @@ Intent:
 ## Important repository facts
 
 - the canonical host model lives at `myconfig.hostContext.*`
-- `pro` now truly disables VS Code installation
-- `partial` keeps VS Code installed but disables activation sync, and only `codex` remains enabled among AI coding agents
+- `pro` now truly disables the VS Code module
+- `partial` disables the VS Code module and activation sync, and only `codex` remains enabled among AI coding agents
 - `tools.system.brewNix` no longer auto-enables `tools.system.macAppUtil`
 
 ## What did not change

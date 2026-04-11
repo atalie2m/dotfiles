@@ -371,6 +371,7 @@ EOF_SCHEMA
   #     localHostName = "your-mac";
   #     hostName = "your-mac";
   #     domain = "local";
+  #     keyboardType = "ansi";
   #   };
   # };
 }
@@ -437,6 +438,11 @@ if ! grep -Fq '# homeDirectory = "/Users/tester";' "$bootstrap_facts_file"; then
 fi
 if ! grep -Fq '#     domain = "local";' "$bootstrap_facts_file"; then
   echo "FAIL: bootstrap machine schema example is missing domain" >&2
+  cat "$bootstrap_facts_file" >&2 || true
+  exit 1
+fi
+if ! grep -Fq '#     keyboardType = "ansi";' "$bootstrap_facts_file"; then
+  echo "FAIL: bootstrap machine schema example is missing keyboardType" >&2
   cat "$bootstrap_facts_file" >&2 || true
   exit 1
 fi

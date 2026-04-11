@@ -24,6 +24,10 @@ let
         type = types.nullOr types.str;
         readOnly = true;
       };
+      keyboardType = lib.mkOption {
+        type = types.nullOr (types.enum [ "ansi" "jis" ]);
+        readOnly = true;
+      };
       extra = lib.mkOption {
         type = types.attrsOf types.anything;
         readOnly = true;

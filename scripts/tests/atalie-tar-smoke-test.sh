@@ -96,7 +96,7 @@ if ! bash "$ARCHIVE_SCRIPT" --gitignore -czf "$archive_outside" -C .. "$repo_nam
 fi
 popd >/dev/null
 
-if [[ ! -f "$archive_outside" ]]; then
+if [[ ! -f $archive_outside ]]; then
   echo "FAIL: archive helper did not create nested output archive" >&2
   exit 1
 fi

@@ -55,7 +55,8 @@ Behavior:
 - `sync vscode --apply` creates missing profiles, updates the profile registry, rewrites managed settings files, and reconciles repo-owned extensions
 - settings removed from `apps/vscode/` disappear on the next apply because the managed file is fully repo-owned
 - user-added extensions not owned by the repo are preserved
-- activation runs `sync vscode --apply` when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true (stock bundles: **`ultra` rice only**)
+- `tools.editor.vscode.enable` owns the VS Code sync tooling and managed profile surface; Visual Studio Code.app itself is installed manually
+- stock bundles do not run `sync vscode --apply` during activation; set `tools.editor.vscode.sync.enable = true` yourself if you want activation-time reconciliation, which still skips cleanly if VS Code is not installed yet
 
 ## Homebrew and macOS app ownership
 
@@ -72,6 +73,7 @@ The model is declarative ownership with writable runtime data left to upstream t
 - Model:
   - repo declares ownership and source policy
   - activation ensures declared installs; runtime app/user data remains mutable
+  - dedicated feature modules such as `tools.system.karabiner` own install policy, while `tools.editor.vscode` owns repo-managed profile state plus its sync tooling
 
 ## Removed surfaces
 

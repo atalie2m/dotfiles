@@ -7,7 +7,7 @@ delib.module {
 
   options = with delib; moduleOptions {
     enable = boolOption false;
-    autoMigrate = boolOption true;
+    autoMigrate = boolOption false;
   };
 
   darwin.always = { ... }: {

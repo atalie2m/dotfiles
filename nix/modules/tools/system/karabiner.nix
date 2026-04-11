@@ -1,4 +1,9 @@
-{ delib, lib, repoPaths, ... }:
+{ delib, lib, dotlib, pkgs, repoPaths, ... }:
+
+let
+  homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
+  homebrewSpec = homebrewOwnership."system.karabiner";
+in
 
 delib.module {
   name = "tools.system.karabiner";
@@ -7,9 +12,17 @@ delib.module {
     enable = boolOption false;
   };
 
-  darwin.ifEnabled = { ... }:
+  myconfig.ifEnabled = { myconfig, ... }:
+    dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
+
+  darwin.ifEnabled = { myconfig, ... }:
     let
       ruleDir = repoPaths.keyboards + "/karabiner/complex_modifications";
+      keyboardType =
+        let
+          configured = myconfig.hostContext.machine.keyboardType or null;
+        in
+        if configured == null then "ansi" else configured;
 
       #
       # 1. Curated rule bundles (source of truth)
@@ -33,7 +46,7 @@ delib.module {
       #
       # 4. Build Home Manager module for Karabiner
       #
-      mkKarabinerHomeModule = { pkgs, ... }:
+      mkKarabinerHomeModule = { ... }:
         let
           # 4. Full Karabiner config
           #
@@ -50,7 +63,7 @@ delib.module {
                 selected = false;
                 complex_modifications.rules = ataliesRules;
                 virtual_hid_keyboard = {
-                  keyboard_type_v2 = "ansi";
+                  keyboard_type_v2 = keyboardType;
                 };
               }
               {
@@ -58,7 +71,7 @@ delib.module {
                 selected = true;
                 complex_modifications.rules = standardRules;
                 virtual_hid_keyboard = {
-                  keyboard_type_v2 = "ansi";
+                  keyboard_type_v2 = keyboardType;
                 };
               }
             ];
