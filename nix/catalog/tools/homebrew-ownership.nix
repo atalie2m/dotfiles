@@ -66,14 +66,6 @@
     casks = [ "wezterm" ];
   };
 
-  "aiCodingAgent.claudeCode" = {
-    group = "aiCodingAgent";
-    tool = "claudeCode";
-    optionPath = [ "myconfig" "tools" "aiCodingAgent" "claudeCode" "enable" ];
-    mode = "catalog";
-    backend = "homebrewNative";
-    casks = [ "claude-code" ];
-  };
   "aiCodingAgent.codex" = {
     group = "aiCodingAgent";
     tool = "codex";

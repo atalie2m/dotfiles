@@ -21,6 +21,8 @@ delib.module {
 
     dock = {
       enable = boolOption true;
+      # Show hidden apps as translucent Dock icons.
+      showHiddenApplications = boolOption true;
       showRecents = boolOption false;
       tileSize = intOption 54;
       minimizeToApplication = boolOption false;
@@ -75,6 +77,7 @@ delib.module {
         "autohide-delay" = cfg.dock.autohideDelay;
         # Treat this as 0.1s steps so we can tune smoothly without float options.
         "autohide-time-modifier" = cfg.dock.autohideTimeModifier / 10;
+        showhidden = cfg.dock.showHiddenApplications;
         "show-recents" = cfg.dock.showRecents;
         tilesize = cfg.dock.tileSize;
         "minimize-to-application" = cfg.dock.minimizeToApplication;

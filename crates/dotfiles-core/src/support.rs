@@ -50,9 +50,7 @@ pub fn exit_with_status(status: ExitStatus) -> ! {
 }
 
 pub fn path_ref_to_dir(reference: &str) -> Option<PathBuf> {
-    reference
-        .strip_prefix("path:")
-        .map(PathBuf::from)
+    reference.strip_prefix("path:").map(PathBuf::from)
 }
 
 pub fn resolve_inputs() -> Result<InputRefs, String> {
@@ -173,7 +171,10 @@ pub fn repo_root() -> Result<PathBuf, String> {
     if let Ok(root) = env::var("DOTFILES_ROOT") {
         let path = PathBuf::from(&root);
         if !path.is_dir() {
-            return Err(format!("DOTFILES_ROOT is not a readable directory: {}", root));
+            return Err(format!(
+                "DOTFILES_ROOT is not a readable directory: {}",
+                root
+            ));
         }
         if !path.join("flake.nix").is_file() {
             return Err(format!(
@@ -191,8 +192,8 @@ pub fn repo_root() -> Result<PathBuf, String> {
         }
     }
 
-    let exe = env::current_exe()
-        .map_err(|err| format!("failed to resolve executable path: {}", err))?;
+    let exe =
+        env::current_exe().map_err(|err| format!("failed to resolve executable path: {}", err))?;
     for ancestor in exe.ancestors() {
         if ancestor.join("flake.nix").is_file() {
             return Ok(ancestor.to_path_buf());
@@ -293,14 +294,13 @@ pub fn resolve_target(
 }
 
 pub fn explain_darwin_targets_error(inputs: &InputRefs, message: &str) -> String {
-    if message != "no darwinConfigurations found" && message != "unable to evaluate darwinConfigurations" {
+    if message != "no darwinConfigurations found"
+        && message != "unable to evaluate darwinConfigurations"
+    {
         return message.to_string();
     }
 
-    let mut lines = vec![format!(
-        "{} (check local/secrets inputs)",
-        message
-    )];
+    let mut lines = vec![format!("{} (check local/secrets inputs)", message)];
     lines.push(format!("facts input: {}", inputs.facts_ref));
     lines.push(format!("secrets input: {}", inputs.secrets_ref));
 
@@ -321,10 +321,7 @@ fn resolve_target_from_manifest(
         )
     };
 
-    let host_manifest = manifest
-        .hosts
-        .get(host)
-        .ok_or_else(missing_message)?;
+    let host_manifest = manifest.hosts.get(host).ok_or_else(missing_message)?;
 
     match rice {
         Some(rice_name) => host_manifest

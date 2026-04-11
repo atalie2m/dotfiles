@@ -41,11 +41,15 @@ pub fn run() -> Result<(), String> {
         summary.checked += 1;
 
         let profile_name = infra::paths::profile_display_name(&profile_dir_name);
-        let desired_settings = domain::settings::build_desired_settings(&context, &profile_dir_name)?;
+        let desired_settings =
+            domain::settings::build_desired_settings(&context, &profile_dir_name)?;
         let desired_extensions =
             infra::extensions::build_desired_extensions(&context, &profile_dir_name)?;
         let desired_default_disabled =
-            infra::extensions::build_desired_default_disabled_extensions(&context, &profile_dir_name)?;
+            infra::extensions::build_desired_default_disabled_extensions(
+                &context,
+                &profile_dir_name,
+            )?;
 
         let plan = domain::model::ProfilePlan {
             profile_dir_name: profile_dir_name.clone(),

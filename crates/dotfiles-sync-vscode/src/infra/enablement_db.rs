@@ -8,7 +8,10 @@ use crate::app::runtime::Context;
 use crate::infra::collections::{file_intersection, file_minus_file, unique_lines};
 use crate::infra::paths::{profile_enablement_db_path, profile_global_storage_dir};
 
-pub(crate) fn ensure_enablement_db(context: &Context, profile_dir_name: &str) -> Result<(), String> {
+pub(crate) fn ensure_enablement_db(
+    context: &Context,
+    profile_dir_name: &str,
+) -> Result<(), String> {
     let storage_dir = profile_global_storage_dir(context, profile_dir_name);
     let db_path = profile_enablement_db_path(context, profile_dir_name);
     ensure_enablement_db_path(&storage_dir, &db_path)
@@ -29,7 +32,10 @@ pub(crate) fn ensure_enablement_db_path(storage_dir: &Path, db_path: &Path) -> R
     Ok(())
 }
 
-pub(crate) fn read_enablement_ids_from_db(db_path: &Path, key: &str) -> Result<Vec<String>, String> {
+pub(crate) fn read_enablement_ids_from_db(
+    db_path: &Path,
+    key: &str,
+) -> Result<Vec<String>, String> {
     if !db_path.is_file() {
         return Ok(Vec::new());
     }
@@ -42,7 +48,13 @@ pub(crate) fn read_enablement_ids_from_db(db_path: &Path, key: &str) -> Result<V
             |row| row.get::<_, String>(0),
         )
         .optional()
-        .map_err(|err| format!("failed to read enablement DB {}: {}", db_path.display(), err))?;
+        .map_err(|err| {
+            format!(
+                "failed to read enablement DB {}: {}",
+                db_path.display(),
+                err
+            )
+        })?;
     let raw_json = raw_json.unwrap_or_default();
     let raw_json = raw_json.trim();
 
@@ -60,7 +72,11 @@ pub(crate) fn read_enablement_ids_from_db(db_path: &Path, key: &str) -> Result<V
         .map(|items| {
             items
                 .iter()
-                .filter_map(|item| item.get("id").and_then(Value::as_str).map(ToOwned::to_owned))
+                .filter_map(|item| {
+                    item.get("id")
+                        .and_then(Value::as_str)
+                        .map(ToOwned::to_owned)
+                })
                 .collect()
         })
         .unwrap_or_default();
@@ -131,7 +147,11 @@ pub(crate) fn bootstrap_default_disabled_extensions(
     let updated_enabled = file_minus_file(&current_enabled, &pending_seed);
     output_seeded = unique_lines(&[output_seeded, pending_seed].concat());
 
-    write_enablement_ids_to_db(&db_path, "extensionsIdentifiers/disabled", &updated_disabled)?;
+    write_enablement_ids_to_db(
+        &db_path,
+        "extensionsIdentifiers/disabled",
+        &updated_disabled,
+    )?;
     write_enablement_ids_to_db(&db_path, "extensionsIdentifiers/enabled", &updated_enabled)?;
 
     Ok(output_seeded)
@@ -167,15 +187,21 @@ pub(crate) fn pending_default_disabled_extensions(
 }
 
 fn open_connection(db_path: &Path) -> Result<Connection, String> {
-    Connection::open(db_path)
-        .map_err(|err| format!("failed to open enablement DB {}: {}", db_path.display(), err))
+    Connection::open(db_path).map_err(|err| {
+        format!(
+            "failed to open enablement DB {}: {}",
+            db_path.display(),
+            err
+        )
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
         bootstrap_default_disabled_extensions, ensure_enablement_db_path,
-        pending_default_disabled_extensions, read_enablement_ids_from_db, write_enablement_ids_to_db,
+        pending_default_disabled_extensions, read_enablement_ids_from_db,
+        write_enablement_ids_to_db,
     };
     use crate::app::runtime::{Context, Mode};
     use crate::infra::paths::profile_enablement_db_path;

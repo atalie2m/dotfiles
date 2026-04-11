@@ -4,9 +4,9 @@ use crate::app::runtime::Context;
 use crate::domain::model::{ProfileEvaluation, ProfilePlan, ProfileStatus, StateLists, StateLoad};
 use crate::domain::settings::{settings_match, settings_value};
 use crate::domain::state::load_state_lists;
+use crate::infra::collections::{file_intersection, file_minus_file};
 use crate::infra::enablement_db::pending_default_disabled_extensions;
 use crate::infra::extension_manifest::list_profile_extensions;
-use crate::infra::collections::{file_intersection, file_minus_file};
 use crate::infra::json::{read_json, read_json_object};
 use crate::infra::paths::profile_id;
 use crate::infra::profile_registry::{
@@ -37,7 +37,8 @@ pub(crate) fn classify_profile(
         ));
     }
 
-    let state_load = load_state_lists(&plan.state_file, &plan.profile_dir_name, &plan.profile_name)?;
+    let state_load =
+        load_state_lists(&plan.state_file, &plan.profile_dir_name, &plan.profile_name)?;
     let (state_missing, state_lists) = match state_load {
         StateLoad::Invalid => {
             return Ok(needs_apply("state file schema changed or is malformed"));
@@ -223,8 +224,8 @@ mod tests {
     use crate::infra::paths::{
         profile_extensions_manifest_path, profile_id, profile_runtime_dir, profile_settings_path,
     };
-    use serde_json::Map;
     use serde_json::json;
+    use serde_json::Map;
     use std::path::Path;
 
     fn test_context(root: &Path) -> Context {
@@ -258,14 +259,19 @@ mod tests {
         }
     }
 
-    fn write_minimal_runtime(context: &Context, profile_dir_name: &str, profile_name: &str) -> ProfilePlan {
+    fn write_minimal_runtime(
+        context: &Context,
+        profile_dir_name: &str,
+        profile_name: &str,
+    ) -> ProfilePlan {
         let runtime_dir = profile_runtime_dir(context, profile_dir_name);
         let settings_path = profile_settings_path(context, profile_dir_name);
         let extensions_manifest = profile_extensions_manifest_path(context, profile_dir_name);
         let state_file = context.state_dir.join(format!("{}.json", profile_dir_name));
 
         std::fs::create_dir_all(&runtime_dir).expect("runtime");
-        std::fs::create_dir_all(settings_path.parent().expect("settings parent")).expect("settings parent");
+        std::fs::create_dir_all(settings_path.parent().expect("settings parent"))
+            .expect("settings parent");
         std::fs::create_dir_all(context.storage_json_path.parent().expect("storage parent"))
             .expect("storage parent");
         std::fs::write(&settings_path, "{}\n").expect("settings");

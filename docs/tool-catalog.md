@@ -2,9 +2,16 @@
 
 This repository manages tool/group enablement under `myconfig.tools` using
 `*.enable` toggles. Denix modules follow a simple rule: when `enable = true`,
-the tool is installed/configured.
+the tool is installed/configured. For externally managed tools, `enable = true`
+may configure the integration surface instead of installing the upstream binary.
 Group toggles such as `tools.dev.enable` act as bundle switches for the
 catalog-owned tools in that group.
+
+`tools.aiCodingAgent.claudeCode.enable` is the current exception: it prepares
+the native Claude Code PATH surface and `apply` advisories, while the actual
+Claude Code binary is installed and updated by Anthropic's native installer.
+Follow <https://code.claude.com/docs/en/quickstart> for current install steps,
+then run `nix run .#apply -- --host <host>` and refresh with `exec zsh -l`.
 
 ## Toggle Rules
 

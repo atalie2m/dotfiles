@@ -11,7 +11,11 @@ pub(crate) fn profile_display_name(profile_dir_name: &str) -> String {
             let lower = word.to_ascii_lowercase();
             let mut chars = lower.chars();
             if let Some(first) = chars.next() {
-                format!("{}{}", first.to_ascii_uppercase(), chars.collect::<String>())
+                format!(
+                    "{}{}",
+                    first.to_ascii_uppercase(),
+                    chars.collect::<String>()
+                )
             } else {
                 String::new()
             }
@@ -42,11 +46,17 @@ pub(crate) fn profile_settings_path(context: &Context, profile_dir_name: &str) -
     profile_runtime_dir(context, profile_dir_name).join("settings.json")
 }
 
-pub(crate) fn profile_extensions_manifest_path(context: &Context, profile_dir_name: &str) -> PathBuf {
+pub(crate) fn profile_extensions_manifest_path(
+    context: &Context,
+    profile_dir_name: &str,
+) -> PathBuf {
     profile_runtime_dir(context, profile_dir_name).join("extensions.json")
 }
 
-pub(crate) fn profile_default_disabled_file_path(context: &Context, profile_dir_name: &str) -> PathBuf {
+pub(crate) fn profile_default_disabled_file_path(
+    context: &Context,
+    profile_dir_name: &str,
+) -> PathBuf {
     context
         .managed_dir
         .join(profile_dir_name)

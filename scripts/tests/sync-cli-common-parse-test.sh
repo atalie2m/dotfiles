@@ -492,4 +492,87 @@ if ! grep -Fq "fail  facts.migration: facts.user.stateVersion.nixos has been rem
   exit 1
 fi
 
+apply_advisory_bin="$tmp_root/apply-advisory-bin"
+mkdir -p "$apply_advisory_bin"
+
+cat >"$apply_advisory_bin/nix" <<'EOF_APPLY_ADVISORY_NIX'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigurations && $4 == "--impure" && $5 == "--apply" ]]; then
+  if [[ $6 == *"targets-manifest.nix"* ]]; then
+    cat <<'EOF_MANIFEST'
+{"hosts":{"pro_mac":{"defaultRice":"pro","buildTarget":"pro_mac","supportedRices":["base","darwin","dev","partial","pro","ultra"],"machineKey":"pro_mac","system":"aarch64-darwin","targetsByRice":{"base":"pro_mac-base","darwin":"pro_mac-darwin","dev":"pro_mac-dev","partial":"pro_mac-partial","pro":"pro_mac","ultra":"pro_mac-ultra"}}}}
+EOF_MANIFEST
+    exit 0
+  fi
+fi
+
+if [[ $# -ge 7 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations.pro_mac.config.myconfig.tools.aiCodingAgent.claudeCode.enable && $4 == "--apply" ]]; then
+  printf 'true'
+  exit 0
+fi
+
+if [[ $# -ge 3 && $1 == "build" && $2 == "--no-link" && $3 == "--print-out-paths" ]]; then
+  printf '/unused/darwin-rebuild\n'
+  exit 0
+fi
+
+echo "fake nix: unexpected invocation: $*" >&2
+exit 1
+EOF_APPLY_ADVISORY_NIX
+chmod +x "$apply_advisory_bin/nix"
+
+cat >"$apply_advisory_bin/darwin-rebuild" <<'EOF_APPLY_ADVISORY_REBUILD'
+#!/usr/bin/env bash
+set -euo pipefail
+exit 0
+EOF_APPLY_ADVISORY_REBUILD
+chmod +x "$apply_advisory_bin/darwin-rebuild"
+
+apply_advisory_home="$tmp_root/apply-advisory-home"
+mkdir -p "$apply_advisory_home/.config/dotfiles"
+cat >"$apply_advisory_home/.config/dotfiles/facts.nix" <<'EOF_APPLY_ADVISORY_FACTS'
+{
+  user.username = "tester";
+}
+EOF_APPLY_ADVISORY_FACTS
+cat >"$apply_advisory_home/.config/dotfiles/secrets.nix" <<'EOF_APPLY_ADVISORY_SECRETS'
+{
+  files = { };
+}
+EOF_APPLY_ADVISORY_SECRETS
+
+if ! (
+  HOME="$apply_advisory_home" \
+    PATH="$apply_advisory_bin:$PATH" \
+    DARWIN_REBUILD_BIN="$apply_advisory_bin/darwin-rebuild" \
+    run_real bash "$APPLY_SCRIPT" --host pro_mac --action build
+) >"$tmp_root/apply-advisory.out" 2>"$tmp_root/apply-advisory.err"; then
+  echo "FAIL: apply advisory scenario unexpectedly failed" >&2
+  cat "$tmp_root/apply-advisory.out" >&2 || true
+  cat "$tmp_root/apply-advisory.err" >&2 || true
+  exit 1
+fi
+if ! grep -Fq "Claude Code is enabled for this target, but dotfiles does not install it." "$tmp_root/apply-advisory.err"; then
+  echo "FAIL: apply missing Claude Code native-install advisory" >&2
+  cat "$tmp_root/apply-advisory.err" >&2 || true
+  exit 1
+fi
+if ! grep -Fq "https://code.claude.com/docs/en/quickstart" "$tmp_root/apply-advisory.err"; then
+  echo "FAIL: apply missing Claude Code quickstart link" >&2
+  cat "$tmp_root/apply-advisory.err" >&2 || true
+  exit 1
+fi
+if ! grep -Fq 'nix run .#apply -- --host pro_mac' "$tmp_root/apply-advisory.err"; then
+  echo "FAIL: apply missing Claude Code post-install apply command" >&2
+  cat "$tmp_root/apply-advisory.err" >&2 || true
+  exit 1
+fi
+if ! grep -Fq 'exec zsh -l' "$tmp_root/apply-advisory.err"; then
+  echo "FAIL: apply missing exec zsh -l guidance" >&2
+  cat "$tmp_root/apply-advisory.err" >&2 || true
+  exit 1
+fi
+
 echo "PASS: sync cli common parse"

@@ -59,5 +59,8 @@ pub(crate) fn resolve_sync_vscode_bin() -> Result<PathBuf, String> {
         return Ok(local);
     }
 
-    Err("dotfiles-sync-vscode binary not found (set DOTFILES_SYNC_VSCODE_BIN or add it to PATH)".to_string())
+    Err(
+        "dotfiles-sync-vscode binary not found (set DOTFILES_SYNC_VSCODE_BIN or add it to PATH)"
+            .to_string(),
+    )
 }

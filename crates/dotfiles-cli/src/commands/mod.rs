@@ -8,7 +8,9 @@ pub(crate) mod update;
 
 use clap::error::ErrorKind;
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use dotfiles_core::support::{nix_args_with_inputs, run_command_output, InputRefs};
 use std::process;
+use std::process::Command;
 
 #[derive(Clone)]
 pub(crate) struct CheckRecord {
@@ -233,4 +235,31 @@ pub(crate) fn is_effective_root() -> bool {
         .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
         .as_deref()
         == Some("0")
+}
+
+pub(crate) fn eval_target_bool(
+    flake_ref: &str,
+    inputs: &InputRefs,
+    target: &str,
+    option_path: &str,
+) -> Result<Option<bool>, String> {
+    let mut command = Command::new("nix");
+    command.arg("eval");
+    command.arg("--raw");
+    command.arg(format!(
+        "{}#darwinConfigurations.{}.config.{}",
+        flake_ref, target, option_path
+    ));
+    command.arg("--apply");
+    command.arg(r#"x: if x then "true" else "false""#);
+    command.args(nix_args_with_inputs(inputs));
+    let output = run_command_output(&mut command)?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+    match String::from_utf8_lossy(&output.stdout).trim() {
+        "true" => Ok(Some(true)),
+        "false" => Ok(Some(false)),
+        _ => Ok(None),
+    }
 }

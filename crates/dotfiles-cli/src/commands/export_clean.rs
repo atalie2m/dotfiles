@@ -25,7 +25,9 @@ pub(crate) fn command_export_clean(args: &ExportCleanArgs) -> Result<(), String>
     git_rev_parse.arg("--show-toplevel");
     let git_status = run_command_status(&mut git_rev_parse)?;
     if !git_status.success() {
-        return Err("export-clean requires a trusted Git worktree with a working git binary".to_string());
+        return Err(
+            "export-clean requires a trusted Git worktree with a working git binary".to_string(),
+        );
     }
 
     for relative in git_tracked_files(&root)? {

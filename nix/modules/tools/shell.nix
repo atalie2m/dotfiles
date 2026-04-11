@@ -35,7 +35,9 @@ delib.module {
           gl = "git log --oneline";
         } // cfg.extraAliases;
 
-        sessionPath = lib.optional pkgs.stdenv.isDarwin "${pkgs.coreutils}/libexec/gnubin";
+        sessionPath =
+          [ "${repoPaths.scripts}" ]
+          ++ lib.optional pkgs.stdenv.isDarwin "${pkgs.coreutils}/libexec/gnubin";
       };
 
       xdg.configFile."shell/common.sh" = {

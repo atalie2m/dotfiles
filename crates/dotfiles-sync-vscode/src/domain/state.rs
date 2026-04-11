@@ -34,8 +34,13 @@ pub(crate) fn load_state_lists(
         return Ok(StateLoad::Missing);
     }
 
-    let state_text = fs::read_to_string(state_file)
-        .map_err(|err| format!("failed to read state file {}: {}", state_file.display(), err))?;
+    let state_text = fs::read_to_string(state_file).map_err(|err| {
+        format!(
+            "failed to read state file {}: {}",
+            state_file.display(),
+            err
+        )
+    })?;
 
     let parsed: StateFile = match serde_json::from_str(&state_text) {
         Ok(state) => state,

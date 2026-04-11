@@ -1,6 +1,6 @@
 use crate::commands::{ListToolsArgs, MatrixToolsArgs, OutputFormat};
 use dotfiles_core::support::{
-    explain_darwin_targets_error, exit_with_status, flake_ref_for_root, nix_args_with_inputs,
+    exit_with_status, explain_darwin_targets_error, flake_ref_for_root, nix_args_with_inputs,
     repo_root, require_host_argument, resolve_inputs, resolve_target, run_command_output,
 };
 use std::env;
@@ -21,7 +21,11 @@ pub(crate) fn command_list_tools(args: &ListToolsArgs) -> Result<(), String> {
     let inputs = resolve_inputs()?;
     let target = resolve_target(&root, &inputs, &host, rice.as_deref())
         .map_err(|err| explain_darwin_targets_error(&inputs, &err))?;
-    let attr = format!("{}#darwinConfigurations.{}.config", flake_ref_for_root(&root), target);
+    let attr = format!(
+        "{}#darwinConfigurations.{}.config",
+        flake_ref_for_root(&root),
+        target
+    );
     let tools_expr = root.join("nix/scripts/list-tools.nix");
     let mut command = Command::new("nix");
     command.arg("eval");
@@ -59,7 +63,10 @@ pub(crate) fn command_matrix_tools(args: &MatrixToolsArgs) -> Result<(), String>
         OutputFormat::Json => "--json",
         OutputFormat::Text => "--raw",
     });
-    command.arg(format!("{}#darwinConfigurations", flake_ref_for_root(&root)));
+    command.arg(format!(
+        "{}#darwinConfigurations",
+        flake_ref_for_root(&root)
+    ));
     command.arg("--impure");
     command.arg("--apply");
     command.arg(format!(

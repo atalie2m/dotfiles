@@ -43,6 +43,11 @@
     tools.system.hostnames.enable = true;
     tools.system.fonts.enable = true;
     tools.system.macosUi.enable = true;
+    # Show hidden apps as translucent Dock icons.
+    tools.system.macosUi.dock.showHiddenApplications = true;
+    # Keep Finder from writing .DS_Store on removable/network volumes.
+    tools.system.macosUi.finder.writeDSStoreOnNetworkVolumes = false;
+    tools.system.macosUi.finder.writeDSStoreOnUSBVolumes = false;
   };
 
   dev = {

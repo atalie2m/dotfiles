@@ -9,7 +9,8 @@ pub(crate) fn build_desired_extensions(
     context: &Context,
     profile_dir_name: &str,
 ) -> Result<Vec<String>, String> {
-    let default_extensions = filter_extensions_file(&context.managed_dir.join("_default/extensions.txt"))?;
+    let default_extensions =
+        filter_extensions_file(&context.managed_dir.join("_default/extensions.txt"))?;
     let profile_extensions = filter_extensions_file(
         &context
             .managed_dir
@@ -27,8 +28,10 @@ pub(crate) fn build_desired_default_disabled_extensions(
 ) -> Result<Vec<String>, String> {
     let default_disabled =
         filter_extensions_file(&profile_default_disabled_file_path(context, "_default"))?;
-    let profile_disabled =
-        filter_extensions_file(&profile_default_disabled_file_path(context, profile_dir_name))?;
+    let profile_disabled = filter_extensions_file(&profile_default_disabled_file_path(
+        context,
+        profile_dir_name,
+    ))?;
 
     let combined = [default_disabled, profile_disabled].concat();
     Ok(canonicalize_extension_ids(&combined))

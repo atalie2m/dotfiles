@@ -11,37 +11,48 @@ use tempfile::NamedTempFile;
 use crate::app::runtime::Context;
 use crate::domain::model::{ProfileEvaluation, ProfilePlan, StateLists, StateLoad};
 use crate::domain::state::{load_state_lists, write_state_file};
+use crate::infra::collections::{file_intersection, file_minus_file};
 use crate::infra::enablement_db::bootstrap_default_disabled_extensions;
 use crate::infra::extension_manifest::{
     add_custom_profile_extension_membership as add_manifest_extension_membership,
     ensure_custom_profile_runtime as ensure_manifest_runtime,
-    list_profile_extensions as list_manifest_profile_extensions,
-    prune_orphaned_extension_dirs,
+    list_profile_extensions as list_manifest_profile_extensions, prune_orphaned_extension_dirs,
     remove_custom_profile_extension_membership as remove_manifest_extension_membership,
 };
-use crate::infra::collections::{file_intersection, file_minus_file};
 use crate::infra::json::{sort_object, write_json_atomically};
 use crate::log;
 
 pub(crate) fn apply_profile(context: &Context, plan: &ProfilePlan) -> Result<(), String> {
     ensure_profile_runtime(context, &plan.profile_dir_name, &plan.profile_name)?;
 
-    let state_lists = match load_state_lists(&plan.state_file, &plan.profile_dir_name, &plan.profile_name)? {
-        StateLoad::Loaded(lists) => lists,
-        StateLoad::Missing | StateLoad::Invalid => StateLists::default(),
-    };
+    let state_lists =
+        match load_state_lists(&plan.state_file, &plan.profile_dir_name, &plan.profile_name)? {
+            StateLoad::Loaded(lists) => lists,
+            StateLoad::Missing | StateLoad::Invalid => StateLists::default(),
+        };
 
     let current_extensions = list_manifest_profile_extensions(context, &plan.profile_dir_name)?;
     let desired_missing = file_minus_file(&plan.desired_extensions, &current_extensions);
-    let stale_owned_extensions = file_minus_file(&state_lists.owned_extensions, &plan.desired_extensions);
+    let stale_owned_extensions =
+        file_minus_file(&state_lists.owned_extensions, &plan.desired_extensions);
     let stale_installed = file_intersection(&stale_owned_extensions, &current_extensions);
 
     for extension_id in desired_missing {
-        install_profile_extension(context, &plan.profile_dir_name, &plan.profile_name, &extension_id)?;
+        install_profile_extension(
+            context,
+            &plan.profile_dir_name,
+            &plan.profile_name,
+            &extension_id,
+        )?;
     }
 
     for extension_id in stale_installed {
-        uninstall_profile_extension(context, &plan.profile_dir_name, &plan.profile_name, &extension_id)?;
+        uninstall_profile_extension(
+            context,
+            &plan.profile_dir_name,
+            &plan.profile_name,
+            &extension_id,
+        )?;
     }
 
     let updated_bootstrapped_default_disabled = bootstrap_default_disabled_extensions(
@@ -51,7 +62,10 @@ pub(crate) fn apply_profile(context: &Context, plan: &ProfilePlan) -> Result<(),
         &state_lists.bootstrapped_default_disabled_extensions,
     )?;
 
-    write_json_atomically(&Value::Object(sort_object(&plan.desired_settings)), &plan.settings_path)?;
+    write_json_atomically(
+        &Value::Object(sort_object(&plan.desired_settings)),
+        &plan.settings_path,
+    )?;
 
     write_state_file(
         &plan.state_file,
@@ -99,7 +113,8 @@ pub(crate) fn profile_diff(plan: &ProfilePlan, eval: &ProfileEvaluation) -> Resu
 }
 
 fn print_unified_diff(expected: &Value, actual: &Value) -> Result<(), String> {
-    let mut left_file = NamedTempFile::new().map_err(|err| format!("failed to create temp file: {}", err))?;
+    let mut left_file =
+        NamedTempFile::new().map_err(|err| format!("failed to create temp file: {}", err))?;
     let mut right_file =
         NamedTempFile::new().map_err(|err| format!("failed to create temp file: {}", err))?;
 
@@ -220,9 +235,13 @@ fn run_code_cli(context: &Context, args: &[OsString]) -> Result<bool, String> {
 pub(crate) fn list_managed_profiles(managed_dir: &Path) -> Result<Vec<String>, String> {
     let mut profiles = Vec::new();
 
-    for entry in fs::read_dir(managed_dir)
-        .map_err(|err| format!("failed to read managed dir {}: {}", managed_dir.display(), err))?
-    {
+    for entry in fs::read_dir(managed_dir).map_err(|err| {
+        format!(
+            "failed to read managed dir {}: {}",
+            managed_dir.display(),
+            err
+        )
+    })? {
         let entry = entry.map_err(|err| format!("failed to read managed dir entry: {}", err))?;
         let path = entry.path();
 

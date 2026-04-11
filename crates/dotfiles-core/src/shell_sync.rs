@@ -1,6 +1,6 @@
+use crate::support::{log, repo_root};
 use clap::error::ErrorKind;
 use clap::{Parser, ValueEnum};
-use crate::support::{log, repo_root};
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -104,7 +104,11 @@ impl ShellSyncResult {
                 }
             }
             ShellSyncMode::Check => {
-                if self.needs_apply == 0 && self.missing == 0 && self.invalid == 0 && self.errors == 0 {
+                if self.needs_apply == 0
+                    && self.missing == 0
+                    && self.invalid == 0
+                    && self.errors == 0
+                {
                     0
                 } else {
                     1
@@ -263,12 +267,18 @@ pub fn run(mut options: ShellSyncOptions) -> Result<ShellSyncResult, String> {
                         }
                     } else {
                         result.errors += 1;
-                        log(&format!("apply failed for '{}': {}", target.id, evaluation.reason));
+                        log(&format!(
+                            "apply failed for '{}': {}",
+                            target.id, evaluation.reason
+                        ));
                     }
                 }
                 TargetStatus::Invalid => {
                     result.errors += 1;
-                    log(&format!("apply refused for '{}': {}", target.id, evaluation.reason));
+                    log(&format!(
+                        "apply refused for '{}': {}",
+                        target.id, evaluation.reason
+                    ));
                 }
             }
         }
@@ -402,7 +412,10 @@ fn target_selected(options: &ShellSyncOptions, target: &TargetDefinition) -> boo
         return true;
     }
 
-    options.group_filters.iter().any(|group| group == &target.shell_name)
+    options
+        .group_filters
+        .iter()
+        .any(|group| group == &target.shell_name)
 }
 
 fn classify_target(target: &TargetDefinition) -> Result<TargetEvaluation, String> {
@@ -413,7 +426,10 @@ fn classify_target(target: &TargetDefinition) -> Result<TargetEvaluation, String
         status: TargetStatus::Invalid,
         reason: String::new(),
         actual_kind: actual_kind.clone(),
-        shape_needs_rewrite: matches!(actual_kind, PathKind::SymlinkStore(_) | PathKind::SymlinkRegular(_)),
+        shape_needs_rewrite: matches!(
+            actual_kind,
+            PathKind::SymlinkStore(_) | PathKind::SymlinkRegular(_)
+        ),
         desired_text,
         actual_text: String::new(),
     };
@@ -438,8 +454,13 @@ fn classify_target(target: &TargetDefinition) -> Result<TargetEvaluation, String
             Ok(evaluation)
         }
         PathKind::Regular | PathKind::SymlinkStore(_) | PathKind::SymlinkRegular(_) => {
-            let actual_source = read_existing_source(&target.actual_path, &actual_kind)
-                .map_err(|_| format!("failed to inspect target contents: {}", target.actual_path.display()))?;
+            let actual_source =
+                read_existing_source(&target.actual_path, &actual_kind).map_err(|_| {
+                    format!(
+                        "failed to inspect target contents: {}",
+                        target.actual_path.display()
+                    )
+                })?;
             match extract_managed_block(&actual_source, target.begin_marker, target.end_marker) {
                 Ok(actual_text) => {
                     evaluation.actual_text = actual_text;
@@ -467,7 +488,8 @@ fn classify_target(target: &TargetDefinition) -> Result<TargetEvaluation, String
                 }
                 Err(ExtractError::InvalidBlock) => {
                     evaluation.status = TargetStatus::Invalid;
-                    evaluation.reason = "managed block markers are duplicated or malformed".to_string();
+                    evaluation.reason =
+                        "managed block markers are duplicated or malformed".to_string();
                     Ok(evaluation)
                 }
             }
@@ -489,12 +511,18 @@ fn print_target_details(target: &TargetDefinition, evaluation: &TargetEvaluation
             detail
         ));
     } else {
-        log(&format!("  actual-type: {}", evaluation.actual_kind.label()));
+        log(&format!(
+            "  actual-type: {}",
+            evaluation.actual_kind.label()
+        ));
     }
     log(&format!("  reason: {}", evaluation.reason));
 }
 
-fn print_target_diff(target: &TargetDefinition, evaluation: &TargetEvaluation) -> Result<(), String> {
+fn print_target_diff(
+    target: &TargetDefinition,
+    evaluation: &TargetEvaluation,
+) -> Result<(), String> {
     log(&format!("diff: {}", target.id));
     if evaluation.shape_needs_rewrite && evaluation.actual_text == evaluation.desired_text {
         log("  note: content matches desired, but target must be rewritten as a writable regular file");
@@ -526,14 +554,15 @@ fn print_unified_diff(desired: &str, actual: &str) -> Result<(), String> {
 
 fn apply_target(target: &TargetDefinition, evaluation: &TargetEvaluation) -> Result<(), String> {
     match evaluation.actual_kind {
-        PathKind::Missing | PathKind::Regular | PathKind::SymlinkStore(_) | PathKind::SymlinkRegular(_) => {
-            write_entrypoint_file(
-                &target.actual_path,
-                &target.desired_path,
-                target.begin_marker,
-                target.end_marker,
-            )
-        }
+        PathKind::Missing
+        | PathKind::Regular
+        | PathKind::SymlinkStore(_)
+        | PathKind::SymlinkRegular(_) => write_entrypoint_file(
+            &target.actual_path,
+            &target.desired_path,
+            target.begin_marker,
+            target.end_marker,
+        ),
         _ => Err("target is not writable".to_string()),
     }
 }
@@ -577,8 +606,8 @@ fn write_file_atomically(target_file: &Path, contents: &str) -> Result<(), Strin
         .ok_or_else(|| format!("path has no parent: {}", target_file.display()))?;
     fs::create_dir_all(parent)
         .map_err(|err| format!("failed to create {}: {}", parent.display(), err))?;
-    let mut temp =
-        NamedTempFile::new_in(parent).map_err(|err| format!("failed to create temp file: {}", err))?;
+    let mut temp = NamedTempFile::new_in(parent)
+        .map_err(|err| format!("failed to create temp file: {}", err))?;
     temp.write_all(contents.as_bytes())
         .map_err(|err| format!("failed to write temp file: {}", err))?;
     temp.persist(target_file)
@@ -627,7 +656,11 @@ fn canonicalize_text(source: &str) -> String {
     normalized
 }
 
-fn extract_managed_block(source: &str, begin_marker: &str, end_marker: &str) -> Result<String, ExtractError> {
+fn extract_managed_block(
+    source: &str,
+    begin_marker: &str,
+    end_marker: &str,
+) -> Result<String, ExtractError> {
     let mut begin_count = 0u32;
     let mut end_count = 0u32;
     let mut in_block = false;
@@ -771,7 +804,8 @@ fn write_output(bytes: &[u8], stderr: bool) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        classify_target, write_entrypoint_file, TargetDefinition, TargetStatus, PathKind, ShellGroup,
+        classify_target, write_entrypoint_file, PathKind, ShellGroup, TargetDefinition,
+        TargetStatus,
     };
     use std::fs;
     use tempfile::tempdir;

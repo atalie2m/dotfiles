@@ -37,7 +37,11 @@ pub(crate) fn parse_args() -> Result<CliArgs, String> {
     Ok(CliArgs {
         managed_dir: parsed.managed_dir,
         state_dir: parsed.state_dir,
-        mode: if parsed.apply { Mode::Apply } else { Mode::Check },
+        mode: if parsed.apply {
+            Mode::Apply
+        } else {
+            Mode::Check
+        },
         details: parsed.details,
         diff_output: parsed.diff_output,
         profile_filters: parsed.profile_filters,

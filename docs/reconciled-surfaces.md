@@ -10,7 +10,7 @@ This repository has two runtime sync surfaces and one activation-managed system-
 
 `nix run .#dotfiles -- sync shell` is the public writable entrypoint manager.
 The control plane is implemented in Rust. `scripts/sync.sh` is only a thin shell wrapper.
-Shared shell helpers still come from Home Manager at `~/.config/shell/common.sh`; that file is not part of runtime sync state.
+Shared shell helpers still come from Home Manager at `~/.config/shell/common.sh`, and the repo's `scripts/` directory is added to `PATH` when shell tooling is enabled; neither surface is part of runtime sync state.
 
 - Desired:
   - `surfaces/shell/desired/zdotdir.zshrc.block.sh`
@@ -27,6 +27,7 @@ Behavior:
 - `sync shell --apply` repairs missing files, writable regular files, `/nix/store/...` symlinks, and readable non-store symlinks
 - `sync shell --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`
 - shell sync does not adopt local changes back into the repo
+- native tools that rely on repo-managed `PATH` changes (for example Claude Code under `~/.local/bin`) become available in new shells after `apply`
 
 ## VS Code native profiles
 

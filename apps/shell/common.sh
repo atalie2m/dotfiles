@@ -1,10 +1,39 @@
 # shellcheck shell=bash
 
+dedupePath() {
+  export PATH="$(
+    printf '%s' "$PATH" | awk -v RS=':' '
+      BEGIN { ORS = ""; first = 1 }
+      length($0) == 0 { next }
+      !seen[$0]++ {
+        if (!first) {
+          printf ":"
+        }
+        printf "%s", $0
+        first = 0
+      }
+    '
+  )"
+}
+
+hmSessionVars="$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+if [[ -f "$hmSessionVars" ]]; then
+  # Home Manager writes sessionPath/sessionVariables here; source it so
+  # interactive shells pick up managed PATH entries like ~/.local/bin.
+  # Clear the HM guard first because shells may inherit __HM_SESS_VARS_SOURCED
+  # without inheriting the managed PATH entries we expect.
+  unset __HM_SESS_VARS_SOURCED
+  # shellcheck disable=SC1090
+  source "$hmSessionVars"
+fi
+
 if [[ -x /opt/homebrew/bin/brew ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 elif [[ -x /usr/local/bin/brew ]]; then
   eval "$(/usr/local/bin/brew shellenv)"
 fi
+
+dedupePath
 
 psgrep() {
   if [[ -z ${1:-} ]]; then

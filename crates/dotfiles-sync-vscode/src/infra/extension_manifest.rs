@@ -4,12 +4,12 @@ use std::fs;
 use std::path::Path;
 
 use crate::app::runtime::Context;
+use crate::infra::enablement_db::ensure_enablement_db;
+use crate::infra::extensions::canonical_extension_id;
 use crate::infra::json::{read_json, read_json_array, write_json_atomically};
 use crate::infra::paths::{
     profile_extensions_manifest_path, profile_id, profile_runtime_dir, profile_settings_path,
 };
-use crate::infra::enablement_db::ensure_enablement_db;
-use crate::infra::extensions::canonical_extension_id;
 use crate::infra::profile_registry::ensure_custom_profile_registry;
 use crate::log;
 
@@ -71,7 +71,8 @@ pub(crate) fn prune_orphaned_extension_dirs(context: &Context) -> Result<(), Str
             err
         )
     })? {
-        let dir_entry = dir_entry.map_err(|err| format!("failed to read extension dir entry: {}", err))?;
+        let dir_entry =
+            dir_entry.map_err(|err| format!("failed to read extension dir entry: {}", err))?;
         let path = dir_entry.path();
         if !path.is_dir() {
             continue;
@@ -133,7 +134,8 @@ pub(crate) fn normalize_custom_profile_extension_manifest(
             continue;
         }
 
-        if let Some(existing_entry) = find_last_extension_manifest_entry(&manifest_entries, &extension_id)
+        if let Some(existing_entry) =
+            find_last_extension_manifest_entry(&manifest_entries, &extension_id)
         {
             if extension_manifest_entry_has_existing_payload(context, &existing_entry) {
                 rebuilt.push(existing_entry);
@@ -286,10 +288,12 @@ fn extension_manifest_entry_has_existing_payload(context: &Context, entry: &Valu
         return true;
     }
 
-    entry.get("relativeLocation")
+    entry
+        .get("relativeLocation")
         .and_then(Value::as_str)
         .map(|relative_location| {
-            !relative_location.is_empty() && context.extensions_root.join(relative_location).exists()
+            !relative_location.is_empty()
+                && context.extensions_root.join(relative_location).exists()
         })
         .unwrap_or(false)
 }
@@ -297,8 +301,8 @@ fn extension_manifest_entry_has_existing_payload(context: &Context, entry: &Valu
 #[cfg(test)]
 mod tests {
     use super::{
-        add_custom_profile_extension_membership, list_profile_extensions, prune_orphaned_extension_dirs,
-        remove_custom_profile_extension_membership,
+        add_custom_profile_extension_membership, list_profile_extensions,
+        prune_orphaned_extension_dirs, remove_custom_profile_extension_membership,
     };
     use crate::app::runtime::{Context, Mode};
     use serde_json::json;
@@ -352,8 +356,9 @@ mod tests {
         )
         .expect("write");
 
-        let added = add_custom_profile_extension_membership(&context, "focus", "Focus", "zed.alpha")
-            .expect("add");
+        let added =
+            add_custom_profile_extension_membership(&context, "focus", "Focus", "zed.alpha")
+                .expect("add");
         assert!(added);
 
         let listed = list_profile_extensions(&context, "focus").expect("list");

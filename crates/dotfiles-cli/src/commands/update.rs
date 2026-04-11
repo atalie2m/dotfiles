@@ -1,7 +1,8 @@
 use crate::commands::{ApplyAction, ApplyArgs, TargetSelector, UpdateArgs};
 use dotfiles_core::support::{
     exit_with_status, flake_ref_for_root, list_updateable_root_flake_inputs, nix_args_with_inputs,
-    repo_root, require_host_argument, require_writable_checkout, resolve_inputs, run_command_status,
+    repo_root, require_host_argument, require_writable_checkout, resolve_inputs,
+    run_command_status,
 };
 use std::env;
 use std::process::Command;

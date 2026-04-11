@@ -63,6 +63,14 @@ Application/tool sourcing priority is:
 3. Use `tools.system.brewNix` only when native Homebrew integration is the wrong fit and a pinned cask path is needed.
 4. Homebrew backend lists are internal implementation detail; `flake check` validates the unified ownership registry, duplicate item claims, cross-source overlaps, and unregistered items.
 
+`Claude Code` is intentionally an exception: this repo does not install it via Homebrew.
+Enablement under `tools.aiCodingAgent.claudeCode` prepares the native install path
+surface (`~/.local/bin`) and lets `nix run .#apply` remind you when the upstream
+native install is missing or shadowed by another launcher. Install/update steps
+should come from <https://code.claude.com/docs/en/quickstart>; after installing,
+run `nix run .#apply -- --host <host>`, then refresh with `exec zsh -l` so the
+managed PATH picks up `~/.local/bin`.
+
 ## Terraform / OpenTofu Policy
 
 1. Terraform/OpenTofu are managed per project via each repo's `flake.nix` (recommended default).
@@ -157,7 +165,7 @@ The default Zsh prompt is Pure. `base` keeps that prompt-only setup, while `dev`
 Shell sync is a small, stateless writable-entrypoint manager.
 Runtime sync operations are implemented through `nix run .#dotfiles -- sync shell`; `scripts/sync.sh` is only a thin shell wrapper over the Rust `dotfiles` CLI.
 Its job is to keep writable shell entrypoints in place and update only repo-managed blocks/files.
-Shared shell helpers are shipped separately as `apps/shell/common.sh` and linked to `~/.config/shell/common.sh`; they are declarative Home Manager content, not part of runtime sync state.
+Shared shell helpers are shipped separately as `apps/shell/common.sh` and linked to `~/.config/shell/common.sh`; the repo's `scripts/` directory is also added to `PATH` when shell tooling is enabled. Both are declarative Home Manager content, not part of runtime sync state.
 
 - Desired source:
   - `surfaces/shell/desired/zdotdir.zshrc.block.sh`
