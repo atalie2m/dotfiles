@@ -1,3 +1,5 @@
+[日本語版はこちら](ja/homebrew-policy.md)
+
 # Homebrew Policy
 
 This document defines package-source boundaries for this dotfiles flake.

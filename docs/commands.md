@@ -1,3 +1,5 @@
+[日本語版はこちら](ja/commands.md)
+
 # Commands
 
 Canonical command examples and current host names live here. Keep README and AI helper files aligned to this page instead of duplicating command surfaces elsewhere.
@@ -70,6 +72,16 @@ nix run .#dotfiles -- sync vscode --apply
 nix run .#dotfiles -- sync vscode --check --profile web
 nix run .#dotfiles -- sync vscode --apply --profile native
 ```
+
+## Runtime overrides
+
+- `HOME` is required for `nix run .#dotfiles -- sync shell ...` and `nix run .#dotfiles -- sync vscode ...`, and it is also required whenever a command needs repo-default user-scoped paths.
+- `DOTFILES_ROOT` overrides flake-root discovery for the Rust CLI and shell wrappers.
+- `FACTS_DIR` / `SECRETS_DIR` default to `~/.config/dotfiles`; `FACTS` / `SECRETS` default to `path:$FACTS_DIR` / `path:$SECRETS_DIR`.
+- `DARWIN_REBUILD_BIN` overrides the pinned `darwin-rebuild` path used by `apply`.
+- `DOTFILES_SYNC_VSCODE_BIN` overrides the `sync vscode` engine path.
+- `VSCODE_CODE_BIN` overrides the `code` CLI path; `VSCODE_DATA_HOME`, `VSCODE_EXTENSIONS_DIR`, and `VSCODE_CODE_RETRIES` override VS Code runtime locations and retry behavior.
+- `SOPS_AGE_KEY_FILE` overrides the bootstrap / doctor age-key location; otherwise those commands default to `~/.config/sops/age/keys.txt` when `HOME` is available.
 
 Notes:
 

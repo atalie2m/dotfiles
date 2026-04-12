@@ -30,6 +30,8 @@ require_contains "linux-hygiene:"
 require_contains "darwin-contract:"
 require_contains "targets-manifest.nix"
 require_contains "host.buildTarget"
+require_contains 'if host.defaultRice == "base" then "ultra" else "base"'
+require_contains 'host.targetsByRice.${extraRice}'
 require_contains "Run target manifest test"
 
 require_not_contains "homeConfigurations"

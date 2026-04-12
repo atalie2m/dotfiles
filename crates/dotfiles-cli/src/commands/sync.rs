@@ -1,6 +1,8 @@
 use crate::commands::{SyncArgs, SyncSurface};
 use dotfiles_core::shell_sync;
-use dotfiles_core::support::{exit_with_status, find_in_path, repo_root, run_command_status};
+use dotfiles_core::support::{
+    exit_with_status, find_in_path, is_executable_file, repo_root, run_command_status,
+};
 use std::env;
 use std::path::PathBuf;
 use std::process::{self, Command};
@@ -39,7 +41,7 @@ pub(crate) fn resolve_sync_vscode_bin() -> Result<PathBuf, String> {
     if let Ok(bin) = env::var("DOTFILES_SYNC_VSCODE_BIN") {
         if !bin.is_empty() {
             let configured = PathBuf::from(&bin);
-            if configured.is_file() {
+            if is_executable_file(&configured) {
                 return Ok(configured);
             }
             return Err(format!(
@@ -55,7 +57,7 @@ pub(crate) fn resolve_sync_vscode_bin() -> Result<PathBuf, String> {
 
     let root = repo_root()?;
     let local = root.join("result/bin/dotfiles-sync-vscode");
-    if local.is_file() {
+    if is_executable_file(&local) {
         return Ok(local);
     }
 

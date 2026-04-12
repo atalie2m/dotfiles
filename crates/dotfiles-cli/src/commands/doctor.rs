@@ -4,9 +4,9 @@ use dotfiles_core::shell_sync::{
     run as run_shell_sync, ShellGroup, ShellSyncMode, ShellSyncOptions,
 };
 use dotfiles_core::support::{
-    evaluate_facts_schema, find_in_path, flake_ref_for_root, json_escape, nix_args_with_inputs,
-    repo_root, require_input_directories, resolve_inputs, resolve_target, run_command_output,
-    run_command_status,
+    evaluate_facts_schema, find_in_path, flake_ref_for_root, home_dir, is_executable_file,
+    json_escape, nix_args_with_inputs, repo_root, require_input_directories, resolve_inputs,
+    resolve_target, run_command_output, run_command_status,
 };
 use std::env;
 use std::path::{Path, PathBuf};
@@ -159,24 +159,24 @@ fn record_basic_system_checks(secrets_dir: &Path, checks: &mut Vec<CheckRecord>)
         ));
     }
 
-    let age_key = env::var("SOPS_AGE_KEY_FILE")
+    match env::var("SOPS_AGE_KEY_FILE")
         .ok()
         .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            PathBuf::from(env::var("HOME").unwrap_or_default()).join(".config/sops/age/keys.txt")
-        });
-    if age_key.is_file() {
-        checks.push(CheckRecord::new(
+        .filter(|path| !path.as_os_str().is_empty())
+        .map(Ok)
+        .unwrap_or_else(|| home_dir().map(|home| home.join(".config/sops/age/keys.txt")))
+    {
+        Ok(age_key) if age_key.is_file() => checks.push(CheckRecord::new(
             "sops.ageKey",
             "ok",
             age_key.display().to_string(),
-        ));
-    } else {
-        checks.push(CheckRecord::new(
+        )),
+        Ok(age_key) => checks.push(CheckRecord::new(
             "sops.ageKey",
             "warn",
             format!("{} missing", age_key.display()),
-        ));
+        )),
+        Err(err) => checks.push(CheckRecord::new("sops.ageKey", "warn", err)),
     }
 
     if cfg!(target_os = "macos") {
@@ -468,7 +468,7 @@ fn record_strict_sync_checks(
 fn vscode_cli_missing() -> bool {
     if let Ok(bin) = env::var("VSCODE_CODE_BIN") {
         if !bin.is_empty() {
-            return false;
+            return !is_executable_file(&PathBuf::from(bin));
         }
     }
 
@@ -476,13 +476,15 @@ fn vscode_cli_missing() -> bool {
         return false;
     }
 
-    if let Ok(home) = env::var("HOME") {
-        let candidate = PathBuf::from(home)
-            .join("Applications/Visual Studio Code.app/Contents/Resources/app/bin/code");
-        if candidate.is_file() {
+    if let Ok(home) = home_dir() {
+        let candidate =
+            home.join("Applications/Visual Studio Code.app/Contents/Resources/app/bin/code");
+        if is_executable_file(&candidate) {
             return false;
         }
     }
 
-    !PathBuf::from("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code").is_file()
+    !is_executable_file(&PathBuf::from(
+        "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+    ))
 }

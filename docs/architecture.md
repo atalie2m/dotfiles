@@ -1,3 +1,5 @@
+[日本語版はこちら](ja/architecture.md)
+
 # Architecture
 
 This repository keeps Darwin composition, reusable modules, catalog data, and runtime tooling in separate trees so each layer can evolve independently.

@@ -1,3 +1,5 @@
+[日本語版はこちら](ja/vscode.md)
+
 # VS Code Profiles
 
 This repository targets one manually installed VS Code app and reconciles native VS Code profiles into writable runtime state.
@@ -7,6 +9,7 @@ When `tools.editor.vscode.enable = true`, dotfiles installs the `dotfiles-sync-v
 It does not install Visual Studio Code.app for you.
 If activation-time sync is enabled but VS Code is not installed yet, dotfiles logs a skip instead of failing.
 If you keep the module disabled but still want to run sync manually, either install VS Code normally or provide `VSCODE_CODE_BIN` yourself.
+`sync vscode` also requires `HOME`; other supported runtime overrides are summarized in [`docs/commands.md`](commands.md#runtime-overrides).
 
 ## Managed layout
 

@@ -1,4 +1,6 @@
-Local secrets (sops + age)
+[日本語版はこちら](ja/secrets-local.md)
+
+# Local secrets (sops + age)
 
 This repository no longer stores secrets inside the repo. Instead, provide a local secrets input at:
 

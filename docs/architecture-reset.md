@@ -1,3 +1,5 @@
+[日本語版はこちら](ja/architecture-reset.md)
+
 # Architecture Reset
 
 This document explains the Darwin-only reset: what was removed, what became stricter, and what the repository now treats as its supported architecture.

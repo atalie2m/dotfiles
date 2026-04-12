@@ -1,0 +1,39 @@
+[English version](../homebrew-policy.md)
+
+# Homebrew ポリシー
+
+この文書は、この dotfiles flake における package source boundary を定義します。
+
+## source boundary
+
+1. CLI tool と library は原則として Nix package を使います。
+2. Homebrew は macOS 固有、または意図的に latest-first にしたい software にのみ使います。通常は GUI app と一部の更新頻度が高い CLI が対象です。
+3. Homebrew install は可能な限り `myconfig.tools` 配下の catalog-backed toggle を通してください。ad-hoc な backend list は避けます。
+4. Homebrew ownership は `nix/catalog/tools/homebrew-ownership.nix` に登録し、`homebrewNative` と `brewNix` の backend metadata も含めます。
+5. `tools.system.brewNix` は native Homebrew integration が不適切な場合の明示的な代替 backend としてのみ使ってください。両 backend surface は public configuration API ではなく internal machinery と見なします。
+
+## 重複ルール
+
+1. 同じ CLI を Nix と Homebrew の両方から install しないでください。
+2. tool source を移行するとき（Nix <-> Homebrew）は、同じ変更で古い宣言を削除してください。
+3. GUI app は、Nix で package 化する強い理由がない限り Homebrew cask に置いてください。
+4. `flake check` は最終 Darwin config を検証し、Homebrew item が未登録、複数 owner に claim されている、`brew-nix` cask と重複している、または `group.tool` key が複数 registry に claim されている場合に fail します。
+
+## PATH と runtime ルール
+
+1. 再現性のため、`PATH` 上では Nix 提供の CLI を優先します。
+2. Homebrew CLI を残す必要がある場合は、それを有効化する module または catalog entry に理由を記述してください。
+3. apply/build の変更後は `command -v <tool>` で実効 binary を確認してください。
+
+## review checklist
+
+1. 各 tool は source を 1 つだけ持っていますか。
+2. source choice はこのポリシーと整合していますか。
+3. Homebrew item は ownership registry に含まれていますか。
+4. `PATH` は意図した executable を解決していますか。
+
+## tool ごとのメモ
+
+1. Cloudflare `wrangler`: default source は Nix（`home-manager` または project `flake.nix`）を推奨します。
+2. Homebrew `wrangler` は、workflow 上 Nix packaging が使えない場合に限って残してください。
+3. `Claude Code`: Anthropic の upstream native installer を優先してください。最新の install 手順は <https://code.claude.com/docs/en/quickstart> を参照し、dotfiles 側では `~/.local/bin` を managed shell environment に組み込み、`apply` 時に reminder を出すだけにしてください。

@@ -6,7 +6,9 @@ use crate::domain::settings::{settings_match, settings_value};
 use crate::domain::state::load_state_lists;
 use crate::infra::collections::{file_intersection, file_minus_file};
 use crate::infra::enablement_db::pending_default_disabled_extensions;
-use crate::infra::extension_manifest::list_profile_extensions;
+use crate::infra::extension_manifest::{
+    list_profile_extensions, validate_global_extension_manifest,
+};
 use crate::infra::json::{read_json, read_json_object};
 use crate::infra::paths::profile_id;
 use crate::infra::profile_registry::{
@@ -83,6 +85,10 @@ pub(crate) fn classify_profile(
         return Ok(missing("managed profile extensions manifest is missing"));
     }
 
+    if let Err(reason) = validate_global_extension_manifest(context) {
+        return Ok(invalid(reason));
+    }
+
     let actual_settings = match read_json_object(&plan.settings_path) {
         Ok(object) => object,
         Err(_) => return Ok(invalid("settings file is not valid JSON")),
@@ -90,7 +96,7 @@ pub(crate) fn classify_profile(
 
     let actual_extensions = match list_profile_extensions(context, &plan.profile_dir_name) {
         Ok(items) => items,
-        Err(_) => return Ok(invalid("failed to inspect installed extensions")),
+        Err(reason) => return Ok(invalid(reason)),
     };
 
     let stale_installed = file_intersection(&stale_extensions, &actual_extensions);
@@ -98,12 +104,15 @@ pub(crate) fn classify_profile(
     let settings_diff_expected = settings_value(&plan.desired_settings);
     let settings_diff_actual = settings_value(&actual_settings);
 
-    let pending_default_disabled = pending_default_disabled_extensions(
+    let pending_default_disabled = match pending_default_disabled_extensions(
         context,
         &plan.profile_dir_name,
         &plan.desired_default_disabled,
         &state_lists.bootstrapped_default_disabled_extensions,
-    )?;
+    ) {
+        Ok(items) => items,
+        Err(reason) => return Ok(invalid(reason)),
+    };
 
     if state_missing {
         return Ok(needs_apply_with_diff(
@@ -316,5 +325,58 @@ mod tests {
         let eval = classify_profile(&context, &plan).expect("classify");
         assert_eq!(eval.status, ProfileStatus::Invalid);
         assert!(eval.reason.contains("userDataProfiles"));
+    }
+
+    #[test]
+    fn classify_profile_marks_invalid_global_manifest() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let context = test_context(temp.path());
+        let plan = write_minimal_runtime(&context, "focus", "Focus");
+        std::fs::write(&context.extensions_manifest_path, "{not-json\n").expect("manifest");
+
+        let eval = classify_profile(&context, &plan).expect("classify");
+        assert_eq!(eval.status, ProfileStatus::Invalid);
+        assert!(eval.reason.contains("global extensions manifest is invalid"));
+    }
+
+    #[test]
+    fn classify_profile_marks_invalid_profile_manifest() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let context = test_context(temp.path());
+        let plan = write_minimal_runtime(&context, "focus", "Focus");
+        std::fs::write(&plan.extensions_manifest, "{not-json\n").expect("manifest");
+
+        let eval = classify_profile(&context, &plan).expect("classify");
+        assert_eq!(eval.status, ProfileStatus::Invalid);
+        assert!(eval.reason.contains("failed to parse JSON file"));
+    }
+
+    #[test]
+    fn classify_profile_marks_invalid_enablement_db() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let context = test_context(temp.path());
+        let mut plan = write_minimal_runtime(&context, "focus", "Focus");
+        plan.desired_default_disabled = vec!["zed.alpha".to_string()];
+
+        let profile_storage = plan.runtime_dir.join("globalStorage");
+        std::fs::create_dir_all(&profile_storage).expect("storage");
+        let db_path = profile_storage.join("state.vscdb");
+        let connection = rusqlite::Connection::open(&db_path).expect("open");
+        connection
+            .execute(
+                "CREATE TABLE IF NOT EXISTS ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB);",
+                [],
+            )
+            .expect("table");
+        connection
+            .execute(
+                "INSERT INTO ItemTable(key, value) VALUES (?1, ?2)",
+                rusqlite::params!["extensionsIdentifiers/disabled", "{not-json"],
+            )
+            .expect("insert");
+
+        let eval = classify_profile(&context, &plan).expect("classify");
+        assert_eq!(eval.status, ProfileStatus::Invalid);
+        assert!(eval.reason.contains("contains invalid JSON"));
     }
 }

@@ -169,6 +169,19 @@ if ! run_shell_sync --check --group zsh >/dev/null; then
   exit 1
 fi
 
+rm -rf "$home_dir/.nix"
+printf 'not a directory\n' >"$home_dir/.nix"
+if run_shell_sync --apply --item zsh-zdotdir >"$tmp_root/zsh-apply-failure.out" 2>"$tmp_root/zsh-apply-failure.err"; then
+  echo "FAIL: apply unexpectedly succeeded when the zsh wrapper parent path was a file" >&2
+  exit 1
+fi
+
+if ! grep -Fq "apply failed for 'zsh-zdotdir': failed to create $home_dir/.nix" "$tmp_root/zsh-apply-failure.err"; then
+  echo "FAIL: shell sync did not report the root-cause apply error" >&2
+  cat "$tmp_root/zsh-apply-failure.err" >&2 || true
+  exit 1
+fi
+
 mkdir -p "$home_dir/.nix-profile/etc/profile.d"
 cat >"$home_dir/.nix-profile/etc/profile.d/hm-session-vars.sh" <<'EOF_HM_SESSION_VARS'
 # test fixture

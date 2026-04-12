@@ -1,3 +1,5 @@
+[日本語版はこちら](docs/ja/CLAUDE.md)
+
 # CLAUDE.md
 
 This file provides repository guidance for coding agents working in this repo.
@@ -5,6 +7,7 @@ This file provides repository guidance for coding agents working in this repo.
 ## Core facts
 
 - Canonical command examples and current host names live in `docs/commands.md`.
+- Canonical runtime overrides also live in `docs/commands.md` (`HOME`, `DOTFILES_ROOT`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`).
 - The supported operational root API is Darwin-first: `darwinConfigurations` plus `templates.web-dev`.
 - Placeholder public facts live in `nix/local/`; the default secrets input is intentionally inert, and real machines should override both inputs with `~/.config/dotfiles/`.
 

@@ -97,6 +97,16 @@ pub(crate) fn prune_orphaned_extension_dirs(context: &Context) -> Result<(), Str
     Ok(())
 }
 
+pub(crate) fn validate_global_extension_manifest(context: &Context) -> Result<(), String> {
+    if !context.extensions_manifest_path.is_file() {
+        return Ok(());
+    }
+
+    read_json_array(&context.extensions_manifest_path)
+        .map(|_| ())
+        .map_err(|err| format!("global extensions manifest is invalid: {}", err))
+}
+
 pub(crate) fn normalize_custom_profile_extension_manifest(
     context: &Context,
     profile_dir_name: &str,
@@ -242,10 +252,8 @@ fn global_extension_manifest_entry(
         return Ok(None);
     }
 
-    let manifest_entries = match read_json_array(&context.extensions_manifest_path) {
-        Ok(entries) => entries,
-        Err(_) => return Ok(None),
-    };
+    let manifest_entries = read_json_array(&context.extensions_manifest_path)
+        .map_err(|err| format!("global extensions manifest is invalid: {}", err))?;
 
     let Some(entry) = find_last_extension_manifest_entry(&manifest_entries, extension_id) else {
         return Ok(None);

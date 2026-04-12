@@ -1,3 +1,5 @@
+[日本語版はこちら](docs/ja/README.md)
+
 ## Flake templates
 
 This repository publishes a web development template that you can use via Nix flakes:
@@ -374,7 +376,7 @@ CI cache pushes are wired for Cachix. Set these in the GitHub repo:
 - `CACHIX_CACHE_NAME` (repository variable)
 - `CACHIX_AUTH_TOKEN` (repository secret, write-enabled)
 
-Once set, the macOS CI job evaluates every `darwinConfigurations` target and builds the default host targets before pushing results to the cache.
+Once set, the macOS CI job evaluates every `darwinConfigurations` target and builds each host's default target plus one deterministic non-default rice target before pushing results to the cache.
 
 ## Flake Config Trust (`accept-flake-config`)
 
@@ -490,6 +492,9 @@ Advanced overrides:
 
 - `FACTS` and `SECRETS` may point to other flake input references when needed.
 - `doctor` and `bootstrap` still require matching `FACTS_DIR` / `SECRETS_DIR` when those overrides are not `path:...`, because they read or write local files directly.
+- `HOME` is required for `sync shell`, `sync vscode`, and any command that needs default user-scoped paths.
+
+Runtime override details live in [`docs/commands.md`](docs/commands.md#runtime-overrides).
 
 Canonical command examples live in [`docs/commands.md`](docs/commands.md).
 
@@ -521,6 +526,7 @@ Manual rebuild examples live in [`docs/commands.md`](docs/commands.md).
 - **`no darwinConfigurations found` / `unable to evaluate darwinConfigurations`** → Verify your overridden `facts.nix` and `secrets.nix`, then rerun `nix run .#doctor`.
 - **`target not found for host/rice`** → Run `nix run .#doctor -- --host <host> --rice <rice>` to see available targets.
 - **`FACTS_DIR is required ...` / `SECRETS_DIR is required ...`** → `doctor` and `bootstrap` need local file paths. If you override `FACTS` or `SECRETS` with a non-`path:` ref, also set the matching `*_DIR` variable.
+- **`HOME is not set`** → `sync shell`, `sync vscode`, and default user-scoped runtime paths require `HOME`. Export it, or provide the explicit overrides documented in [`docs/commands.md`](docs/commands.md#runtime-overrides).
 - **`darwin-rebuild: command not found`** → Use `nix run .#darwin-rebuild -- ...` for manual runs; `nix run .#apply` and `nix run .#update` already use the pinned wrapper automatically.
 - **`error: unrecognised flag '--flake'`** → Ensure you invoke `nix run <flake>#<pkg> -- <cmd>`. Everything after `--` is passed through to `darwin-rebuild`.
 - **Using `sudo`** → macOS resets `PATH` under `sudo`; `nix run .#apply` preserves `PATH` plus the dotfiles input override variables it needs, while manual runs should use the pinned wrapper via `nix run .#darwin-rebuild -- ...`.

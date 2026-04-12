@@ -1,3 +1,5 @@
+[日本語版はこちら](ja/reconciled-surfaces.md)
+
 # Runtime Sync Surfaces
 
 This repository has two runtime sync surfaces and one activation-managed system-app boundary:

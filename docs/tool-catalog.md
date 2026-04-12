@@ -1,3 +1,5 @@
+[日本語版はこちら](ja/tool-catalog.md)
+
 # Tool Catalog & Toggles
 
 This repository manages tool/group enablement under `myconfig.tools` using
