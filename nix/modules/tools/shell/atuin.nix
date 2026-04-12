@@ -12,7 +12,8 @@ delib.module {
   home.ifEnabled = { myconfig, ... }:
     let
       zshEnabled = (((myconfig.tools or { }).shell or { }).zsh or { }).enable or false;
-      atuinFlags = "--disable-up-arrow";
+      atuinFlags = [ ];
+      atuinInitArgs = lib.optionalString (atuinFlags != [ ]) (" " + lib.concatStringsSep " " atuinFlags);
     in
     lib.mkIf zshEnabled {
       programs.atuin = {
@@ -21,26 +22,30 @@ delib.module {
         enableFishIntegration = false;
         enableNushellIntegration = false;
         enableZshIntegration = false;
-        flags = [ atuinFlags ];
+        flags = atuinFlags;
         # Atuin rewrites config.toml after commands; HM must own the file or activation conflicts.
         forceOverwriteSettings = true;
-        # Prefer cwd-scoped history in the Atuin UI (Ctrl+R). ↑ stays zsh native (--disable-up-arrow).
+        # Let Atuin own history navigation and autosuggestions. Bias searches
+        # toward the current workspace, with directory/global fallbacks.
         settings = {
-          filter_mode = "directory";
+          workspaces = true;
+          filter_mode = "workspace";
+          filter_mode_shell_up_key_binding = "workspace";
+          search_mode_shell_up_key_binding = "prefix";
           search.filters = [
+            "workspace"
             "directory"
             "global"
             "host"
             "session"
             "session-preload"
-            "workspace"
           ];
         };
       };
 
       programs.zsh.initContent = lib.mkOrder 1090 ''
         if [[ $options[zle] = on ]]; then
-          eval "$(${lib.getExe pkgs.atuin} init zsh ${atuinFlags})"
+          eval "$(${lib.getExe pkgs.atuin} init zsh${atuinInitArgs})"
         fi
       '';
     };
