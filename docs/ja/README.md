@@ -68,12 +68,13 @@ reset の理由、before/after、設計意図は [`docs/architecture-reset.md`](
 `Claude Code` は意図的な例外です。この repo は Homebrew でそれを install しません。
 `tools.aiCodingAgent.claudeCode` を有効にすると native install path surface（`~/.local/bin`）を準備し、upstream の native install が欠けている、あるいは他 launcher に shadow されている場合に `nix run .#apply` が reminder を出します。install / update 手順は <https://code.claude.com/docs/en/quickstart> を参照してください。install 後に `nix run .#apply -- --host <host>` を実行し、`exec zsh -l` で shell を更新すると、managed PATH が `~/.local/bin` を拾います。
 
-## Terraform / OpenTofu ポリシー
+## リポジトリ単位のツールチェイン方針
 
-1. Terraform / OpenTofu は各 project の `flake.nix` で管理するのが推奨 default。
-2. 利便性のために、dotfiles / Home Manager から `myconfig.tools.dev` 経由で提供することもできる。
-3. unfree allow-list は helper wiring によって有効化 tool（例: `terraform`, `emacs`）から導出する。`allowAll` は無効のまま。
-4. Terraform 専用 repo では、その repo の flake で `nixpkgs.config.allowUnfreePredicate` を設定し、devShell に `pkgs.terraform` を含める。
+1. `terraform`, `opentofu`, `nodejs`, `go` は、その repo 自身の `flake.nix` / devShell で pin する前提にする。
+2. stock Darwin bundle（`dev`, `pro`, `ultra`, `partial`）では、この 4 つを global に有効化しない。machine-wide version が repo 間に漏れないようにするため。
+3. どうしても machine-global に必要なら `myconfig.tools.dev.<tool>.enable = true` を明示する。ただし stock bundle には戻さない。
+4. Terraform は引き続き unfree。allow-list は helper wiring によって有効化 tool（例: `terraform`, `emacs`）から導出し、`allowAll` は無効のままにする。
+5. Terraform / OpenTofu repo では、その repo の flake で `nixpkgs.config.allowUnfreePredicate` を設定し、devShell に `pkgs.terraform` / `pkgs.opentofu` を含める。
 
 例（Terraform repo の `flake.nix`）:
 

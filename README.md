@@ -73,12 +73,13 @@ should come from <https://code.claude.com/docs/en/quickstart>; after installing,
 run `nix run .#apply -- --host <host>`, then refresh with `exec zsh -l` so the
 managed PATH picks up `~/.local/bin`.
 
-## Terraform / OpenTofu Policy
+## Repository-Scoped Toolchain Policy
 
-1. Terraform/OpenTofu are managed per project via each repo's `flake.nix` (recommended default).
-2. Dotfiles/Home Manager can also provide them through `myconfig.tools.dev` for convenience.
-3. Unfree allow-list is derived from enabled tools (for example `terraform`, `emacs`) via helper wiring; `allowAll` remains disabled.
-4. For Terraform-only repos, set `nixpkgs.config.allowUnfreePredicate` in that repo's flake and include `pkgs.terraform` in the devShell.
+1. `terraform`, `opentofu`, `nodejs`, and `go` should be pinned per repository via that repo's own `flake.nix` / devShell.
+2. Stock Darwin bundles (`dev`, `pro`, `ultra`, `partial`) leave those four tools disabled globally so one machine-wide version does not leak across repos.
+3. If a machine really needs one globally, enable it explicitly with `myconfig.tools.dev.<tool>.enable = true`; do not add it back to the stock bundles.
+4. Terraform remains unfree. The allow-list is derived from enabled tools (for example `terraform`, `emacs`) via helper wiring, and `allowAll` remains disabled.
+5. For Terraform/OpenTofu repos, set `nixpkgs.config.allowUnfreePredicate` in that repo's flake and include `pkgs.terraform` / `pkgs.opentofu` in the devShell.
 
 Example (`flake.nix` for a Terraform repo):
 

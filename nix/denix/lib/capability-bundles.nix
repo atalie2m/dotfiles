@@ -64,14 +64,10 @@
     tools.dev.ansible.enable = true;
     tools.dev.awscli2.enable = true;
     tools.dev.gh.enable = true;
-    tools.dev.go.enable = true;
     tools.dev.gitAbsorb.enable = true;
     tools.dev.gnugrep.enable = true;
     tools.dev.gnused.enable = true;
     tools.dev.mercurial.enable = true;
-    tools.dev.nodejs.enable = true;
-    tools.dev.opentofu.enable = true;
-    tools.dev.terraform.enable = true;
     tools.dev.git.delta.enable = true;
 
     tools.editor.enable = true;

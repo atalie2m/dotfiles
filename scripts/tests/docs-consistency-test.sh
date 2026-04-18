@@ -86,7 +86,7 @@ require_contains_file() {
 
 require_file_exists() {
   local file="$1"
-  if [[ ! -f "$file" ]]; then
+  if [[ ! -f $file ]]; then
     echo "FAIL: expected file missing: $file" >&2
     exit 1
   fi

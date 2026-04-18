@@ -38,6 +38,9 @@ jobs:
       - name: Run host truth test
         run: bash scripts/tests/host-truth-test.sh
 
+      - name: Run repo toolchain policy test
+        run: bash scripts/tests/repo-toolchain-policy-test.sh
+
       - name: Run workflow contract test
         run: bash scripts/tests/workflow-contract-test.sh
 

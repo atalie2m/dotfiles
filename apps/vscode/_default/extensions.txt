@@ -19,6 +19,7 @@ vscodevim.vim
 arturock.gitstash
 donjayamanne.githistory
 eamodio.gitlens
+github.vscode-github-actions
 github.vscode-pull-request-github
 mhutchie.git-graph
 michaelcurrin.auto-commit-msg
