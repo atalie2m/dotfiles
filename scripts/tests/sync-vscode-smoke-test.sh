@@ -474,6 +474,35 @@ if ! run_vscode_sync_from_copy --check >/dev/null; then
   exit 1
 fi
 
+printf '{\n  "editor.fontLigatures": true,\n}\n' >"$web_settings"
+
+if run_vscode_sync --check --details --profile web >"$tmp_root/vscode-invalid-settings.out" 2>"$tmp_root/vscode-invalid-settings.err"; then
+  echo "FAIL: check unexpectedly accepted malformed managed settings JSON" >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: needs-apply" "$tmp_root/vscode-invalid-settings.err"; then
+  echo "FAIL: VS Code check did not mark malformed managed settings as needs-apply" >&2
+  cat "$tmp_root/vscode-invalid-settings.err" >&2 || true
+  exit 1
+fi
+
+if ! grep -Fq "will be replaced on apply" "$tmp_root/vscode-invalid-settings.err"; then
+  echo "FAIL: VS Code check did not explain that malformed managed settings will be repaired" >&2
+  cat "$tmp_root/vscode-invalid-settings.err" >&2 || true
+  exit 1
+fi
+
+if ! run_vscode_sync --apply >/dev/null; then
+  echo "FAIL: apply did not repair malformed managed settings JSON" >&2
+  exit 1
+fi
+
+if ! jq -e '.["editor.fontLigatures"] == true and .["workbench.colorTheme"] == "Abyss"' "$web_settings" >/dev/null; then
+  echo "FAIL: apply did not restore the managed web settings file after malformed JSON" >&2
+  exit 1
+fi
+
 cp "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json" "$tmp_root/web-extensions.backup.json"
 printf '{not-json\n' >"$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json"
 

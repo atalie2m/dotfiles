@@ -176,6 +176,7 @@ That means:
 
 - adding an extension in the VS Code UI does not make sync remove it unless dotfiles later takes ownership of it
 - manual settings changes inside a managed profile are overwritten on the next apply
+- malformed JSON in a managed profile `settings.json` is treated as drift and overwritten on the next apply
 - disabling or enabling an extension in the VS Code UI does not change repo state
 - enabling an extension that was previously bootstrapped from `default-disabled-extensions.txt` is preserved on future applies
 - there is no launch helper and no launch-time disable flag in this model

@@ -34,8 +34,13 @@ pub(crate) fn ensure_custom_profile_runtime(
 
     if !settings_path.is_file() {
         write_json_atomically(&Value::Object(Map::new()), &settings_path)?;
-    } else {
-        read_json(&settings_path)?;
+    } else if let Err(err) = read_json(&settings_path) {
+        log(&format!(
+            "Repairing malformed managed settings file: {} ({})",
+            settings_path.display(),
+            err
+        ));
+        write_json_atomically(&Value::Object(Map::new()), &settings_path)?;
     }
 
     if !extensions_manifest.is_file() {

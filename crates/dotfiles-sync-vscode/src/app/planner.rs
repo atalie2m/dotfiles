@@ -91,7 +91,12 @@ pub(crate) fn classify_profile(
 
     let actual_settings = match read_json_object(&plan.settings_path) {
         Ok(object) => object,
-        Err(_) => return Ok(invalid("settings file is not valid JSON")),
+        Err(reason) => {
+            return Ok(needs_apply(format!(
+                "managed profile settings file is invalid JSON and will be replaced on apply: {}",
+                reason
+            )))
+        }
     };
 
     let actual_extensions = match list_profile_extensions(context, &plan.profile_dir_name) {
@@ -348,6 +353,19 @@ mod tests {
 
         let eval = classify_profile(&context, &plan).expect("classify");
         assert_eq!(eval.status, ProfileStatus::Invalid);
+        assert!(eval.reason.contains("failed to parse JSON file"));
+    }
+
+    #[test]
+    fn classify_profile_marks_invalid_settings_as_needs_apply() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let context = test_context(temp.path());
+        let plan = write_minimal_runtime(&context, "focus", "Focus");
+        std::fs::write(&plan.settings_path, "{\n  \"broken\": true,\n}\n").expect("settings");
+
+        let eval = classify_profile(&context, &plan).expect("classify");
+        assert_eq!(eval.status, ProfileStatus::NeedsApply);
+        assert!(eval.reason.contains("will be replaced on apply"));
         assert!(eval.reason.contains("failed to parse JSON file"));
     }
 

@@ -175,6 +175,7 @@ mutable model を制御するのは `sync vscode --apply` のみです。
 
 - VS Code UI で extension を追加しても、後で dotfiles が ownership を持たない限り sync はそれを削除しない
 - managed profile 内で manual に settings を変えても、次の apply で上書きされる
+- managed profile の `settings.json` に malformed な JSON があっても、次の apply で drift として上書き修復される
 - VS Code UI で extension を disable / enable しても repo state は変わらない
 - `default-disabled-extensions.txt` から bootstrap 済みだった extension を後で user が有効化した場合、その状態は将来の apply でも保持される
 - この model には launch helper や launch-time disable flag はない
