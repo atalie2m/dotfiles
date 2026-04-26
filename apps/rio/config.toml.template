@@ -1,13 +1,14 @@
 # Root keys must stay above any [section] tables.
 line-height = 1.08
-padding-x = 10
+padding-x = 8
 padding-y = [8, 8]
+opacity = 0.92
 hide-mouse-cursor-when-typing = true
 confirm-before-quit = true
 @@OPTION_AS_ALT@@
 [fonts]
-family = "0xProto Nerd Font"
-size = 15
+family = "JetBrainsMono Nerd Font"
+size = 14
 hinting = true
 
 [cursor]

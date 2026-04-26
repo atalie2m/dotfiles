@@ -182,7 +182,7 @@ delib.module {
         if cfg.bootstrap.emacsDir != null
         then lib.escapeShellArg cfg.bootstrap.emacsDir
         else "\"\${EMACSDIR:-$HOME/.emacs.d}\"";
-      applyArgs = [
+      syncArgs = [
         "${dotfilesCli}/bin/dotfiles"
         "sync"
         "emacs"
@@ -192,27 +192,20 @@ delib.module {
       ];
     in
     {
-      home-manager.sharedModules =
-        (lib.optional cfg.sync.enable ({ ... }: {
-          home.activation.syncEmacsDoom = lib.mkOrder 890 ''
-            export PATH="${runtimePath}:$PATH"
-            doom_dir=${doomDirExpr}
-            ${lib.escapeShellArgs applyArgs} --doom-dir "$doom_dir"
-          '';
-        }))
-        ++ (lib.optional cfg.bootstrap.enable ({ ... }: {
-          home.activation.bootstrapDoomEmacs = lib.mkOrder 895 ''
-            export PATH="${runtimePath}:$PATH"
-            emacs_dir=${emacsDirExpr}
-            doom_dir=${doomDirExpr}
-            if [[ -x "$emacs_dir/bin/doom" ]]; then
-              echo "emacs bootstrap: Doom already installed at $emacs_dir; skipping"
-            else
-              export EMACSDIR="$emacs_dir"
-              export DOOMDIR="$doom_dir"
-              ${doomBootstrap}/bin/dotfiles-doom bootstrap
-            fi
-          '';
-        }));
+      home-manager.sharedModules = lib.optional (cfg.sync.enable || cfg.bootstrap.enable) ({ ... }: {
+        home.activation.syncEmacsDoom = lib.mkOrder 890 ''
+          export PATH="${runtimePath}:$PATH"
+          doom_dir=${doomDirExpr}
+          emacs_dir=${emacsDirExpr}
+          ${lib.optionalString cfg.sync.enable ''
+            ${lib.escapeShellArgs syncArgs} --doom-dir "$doom_dir"
+          ''}
+          ${lib.optionalString cfg.bootstrap.enable ''
+            export EMACSDIR="$emacs_dir"
+            export DOOMDIR="$doom_dir"
+            ${doomBootstrap}/bin/dotfiles-doom bootstrap
+          ''}
+        '';
+      });
     };
 }

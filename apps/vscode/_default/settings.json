@@ -1,3 +1,18 @@
 {
+  "nix.serverPath": "nixd",
+  "nix.serverSettings": {
+    "nixd": {
+      "formatting": {
+        "command": [
+          "alejandra"
+        ]
+      },
+      "options": {
+        "darwin": {
+          "expr": "(builtins.getFlake (toString ./.)).darwinConfigurations.pro_mac.options"
+        }
+      }
+    }
+  },
   "nixEnvSelector.useFlakes": true
 }

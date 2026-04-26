@@ -131,6 +131,7 @@
   nixOperatorNurl = { group = "nixOperator"; tool = "nurl"; pkg = "nurl"; };
   nixOperatorNixUpdate = { group = "nixOperator"; tool = "nixUpdate"; pkg = "nix-update"; };
   nixOperatorTopgrade = { group = "nixOperator"; tool = "topgrade"; pkg = "topgrade"; };
+  nixOperatorAlejandra = { group = "nixOperator"; tool = "alejandra"; pkg = "alejandra"; };
 
   # Observability
   observabilityBottom = { group = "observability"; tool = "bottom"; pkg = "bottom"; };

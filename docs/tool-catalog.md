@@ -24,6 +24,13 @@ cockpit: `shellUx`, `filesNavigation`, `viewersPreview`, `searchText`,
 `containerK8sPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`,
 `modelHfPersonal`, `backupRecovery`, and `terminalVisual`.
 
+The companion `tools.profileDefaults` module has no public toggle. It watches
+those explicit tool toggles and writes matching default user configs for shell
+UX, preview/search tools, Git/GitHub, observability TUIs, terminal apps,
+AeroSpace, and project-template `.envrc` files. Secret-bearing operations such
+as restic repositories, restic passwords, age recipients, and machine-specific
+SSH keys stay outside the repo and must come from local mutable state.
+
 ## Toggle Rules
 
 - Group: `myconfig.tools.<group>.enable`

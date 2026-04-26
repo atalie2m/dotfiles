@@ -34,6 +34,33 @@ delib.module {
     let
       fullName = myconfig.hostContext.user.fullName;
       email = myconfig.hostContext.user.email;
+      tools = myconfig.tools or { };
+      toolEnabled = group: tool:
+        let
+          groupCfg =
+            if builtins.hasAttr group tools
+            then builtins.getAttr group tools
+            else { };
+          toolCfg =
+            if builtins.hasAttr tool groupCfg
+            then builtins.getAttr tool groupCfg
+            else { };
+        in
+        (toolCfg.enable or false);
+      difftasticEnabled = toolEnabled "searchText" "difftastic";
+      gitAbsorbEnabled =
+        (toolEnabled "dev" "gitAbsorb") || (toolEnabled "gitPersonal" "gitAbsorb");
+      deltaOptions = {
+        navigate = true;
+        light = false;
+        side-by-side = true;
+        line-numbers = true;
+        syntax-theme = "Catppuccin Mocha";
+        plus-style = "syntax #003800";
+        minus-style = "syntax #3f0001";
+        hyperlinks = true;
+        features = "decorations";
+      } // cfg.delta.options;
     in
     {
       programs.git = {
@@ -48,6 +75,17 @@ delib.module {
             core.editor = cfg.editorCmd;
             alias = cfg.aliases;
           }
+          (lib.mkIf difftasticEnabled {
+            diff.tool = "difftastic";
+            difftool.difftastic.cmd = ''difft "$LOCAL" "$REMOTE"'';
+            pager.difftool = true;
+          })
+          (lib.mkIf gitAbsorbEnabled {
+            alias = {
+              absorb = "!git absorb";
+              abs = "absorb --and-rebase";
+            };
+          })
           (lib.mkIf (fullName != null || email != null) {
             user = lib.mkMerge [
               (lib.mkIf (fullName != null) { name = fullName; })
@@ -65,7 +103,7 @@ delib.module {
       programs.delta = lib.mkIf cfg.delta.enable {
         enable = true;
         enableGitIntegration = true;
-        options = cfg.delta.options;
+        options = deltaOptions;
       };
     };
 }

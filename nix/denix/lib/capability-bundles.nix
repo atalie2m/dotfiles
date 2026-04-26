@@ -78,6 +78,7 @@
     tools.nixOperator.nixd.enable = true;
     tools.nixOperator.nil.enable = true;
     tools.nixOperator.topgrade.enable = true;
+    tools.nixOperator.alejandra.enable = true;
 
     tools.observability.enable = true;
     tools.observability.btop.enable = true;

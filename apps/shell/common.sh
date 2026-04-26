@@ -88,3 +88,155 @@ if [[ $- == *i* ]]; then
     export GPG_TTY="${gpgTty}"
   fi
 fi
+
+if [[ -f "$HOME/.ripgreprc" ]]; then
+  export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
+fi
+
+if [[ -f "$HOME/.nix-profile/etc/profile.d/command-not-found.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$HOME/.nix-profile/etc/profile.d/command-not-found.sh"
+fi
+
+export LESS='-R --mouse --wheel-lines=3'
+
+if command -v bat >/dev/null 2>&1; then
+  export LESSOPEN='|bat --paging=never --color=always %s'
+  alias cat='bat --paging=never'
+  alias less='bat --paging=always'
+  alias f='fzf --preview "bat --color=always --style=numbers,changes {}"'
+fi
+
+if command -v batman >/dev/null 2>&1; then
+  alias man='batman'
+fi
+if command -v batdiff >/dev/null 2>&1; then
+  alias diff='batdiff'
+fi
+if command -v batgrep >/dev/null 2>&1; then
+  alias grep='batgrep'
+fi
+
+if command -v tldr >/dev/null 2>&1; then
+  alias tldru='tldr --update'
+fi
+if command -v chafa >/dev/null 2>&1; then
+  alias img='chafa --fill=block --symbols=block'
+fi
+if command -v hexyl >/dev/null 2>&1; then
+  alias hex='hexyl'
+fi
+
+if command -v rg >/dev/null 2>&1; then
+  alias rg='rg --smart-case'
+  alias rgi='rg -i'
+  alias rgm='rg --files-with-matches'
+fi
+if command -v rga >/dev/null 2>&1; then
+  alias rga='rga --smart-case'
+fi
+if command -v fd >/dev/null 2>&1; then
+  alias fd='fd --hidden --follow --exclude .git'
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+fi
+if command -v fzf >/dev/null 2>&1 && command -v bat >/dev/null 2>&1; then
+  export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers,changes {}'"
+fi
+
+rgf() {
+  command rg --smart-case --line-number --no-heading --color=always "$@" |
+    fzf --ansi --delimiter ':' --preview 'bat --color=always --highlight-line {2} {1}'
+}
+
+if command -v nh >/dev/null 2>&1; then
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    alias nos='nh darwin switch'
+    alias nosb='nh darwin build'
+    alias nosu='nh darwin switch --update'
+  else
+    alias nos='nh os switch'
+    alias nosb='nh os build'
+    alias nosu='nh os switch --update'
+  fi
+  alias noh='nh home switch'
+fi
+if command -v nom >/dev/null 2>&1; then
+  alias nix-build='nom build'
+fi
+
+if command -v procs >/dev/null 2>&1; then
+  alias ps='procs'
+fi
+if command -v curl >/dev/null 2>&1; then
+  alias curlv='curl -v'
+  alias curld='curl -O -L --progress-bar'
+fi
+curlj() {
+  command curl -s "$@" | jq
+}
+if command -v wget >/dev/null 2>&1; then
+  alias wget='wget --progress=bar:scroll'
+fi
+if command -v nmap >/dev/null 2>&1; then
+  alias nmapq='nmap -sS -sV -T4'
+  alias nmapf='nmap -sS -sV -sC -A -T4 -p-'
+fi
+if command -v xh >/dev/null 2>&1; then
+  alias http='xh'
+  alias https='xh --default-scheme=https'
+fi
+if command -v jq >/dev/null 2>&1; then
+  alias jq='jq --color-output'
+fi
+
+if command -v docker >/dev/null 2>&1; then
+  alias d='docker'
+  alias dc='docker compose'
+  alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
+fi
+if command -v podman >/dev/null 2>&1; then
+  alias p='podman'
+  alias pc='podman compose'
+fi
+if command -v kubectl >/dev/null 2>&1; then
+  alias k='kubectl'
+  alias kgp='kubectl get pods'
+  alias kgs='kubectl get svc'
+fi
+if command -v kubecolor >/dev/null 2>&1; then
+  alias kubectl='kubecolor'
+  export KUBECOLOR_FORCE_COLORS=true
+fi
+
+dotfilesCpuCount() {
+  if command -v nproc >/dev/null 2>&1; then
+    nproc
+  elif command -v sysctl >/dev/null 2>&1; then
+    sysctl -n hw.ncpu
+  else
+    printf '1\n'
+  fi
+}
+
+if command -v tar >/dev/null 2>&1; then
+  alias tar='tar --zstd'
+  alias compress='tar --zstd -cf'
+  alias extract='tar --zstd -xf'
+fi
+if command -v pigz >/dev/null 2>&1; then
+  alias pigz='pigz -p $(dotfilesCpuCount)'
+fi
+
+if command -v vivid >/dev/null 2>&1; then
+  vividTheme="$(vivid generate catppuccin-mocha 2>/dev/null || vivid generate dracula 2>/dev/null || true)"
+  if [[ -n ${vividTheme:-} ]]; then
+    export LS_COLORS="$vividTheme"
+  fi
+  unset vividTheme
+fi
+
+if [[ -n ${DOTFILES_KEYCHAIN_KEYS:-} ]] && command -v keychain >/dev/null 2>&1; then
+  # shellcheck disable=SC2086
+  eval "$(keychain --eval --agents ssh $DOTFILES_KEYCHAIN_KEYS)"
+fi

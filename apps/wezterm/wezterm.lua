@@ -1,26 +1,26 @@
 local wezterm = require 'wezterm'
-local act = wezterm.action
 
 local config = {}
 if wezterm.config_builder then
   config = wezterm.config_builder()
 end
 
-config.color_scheme = 'Tokyo Night'
+config.color_scheme = 'Catppuccin Mocha'
 
 config.font = wezterm.font_with_fallback {
+  'JetBrainsMono Nerd Font',
   'JetBrains Mono',
-  -- Add a preferred Japanese monospace font here if needed.
 }
-config.font_size = 13.5
+config.font_size = 14.0
 
 config.use_ime = true
+config.window_background_opacity = 0.92
 
 config.window_padding = {
   left = 8,
   right = 8,
-  top = 6,
-  bottom = 4,
+  top = 8,
+  bottom = 8,
 }
 
 config.use_fancy_tab_bar = false
@@ -34,35 +34,7 @@ config.inactive_pane_hsb = {
 
 config.scrollback_lines = 10000
 
--- Uncomment if you want a touch of transparency.
--- config.window_background_opacity = 0.96
-
 -- Safe macOS title bar integration.
 -- config.window_decorations = 'INTEGRATED_BUTTONS|RESIZE'
-
--- Disable ligatures if you prefer literal operator rendering.
--- config.harfbuzz_features = { 'calt=0', 'clig=0', 'liga=0' }
-
--- Tmux-like multiplexer bindings.
--- config.leader = { key = 'a', mods = 'CTRL', timeout_milliseconds = 1000 }
--- config.keys = {
---   { key = 'a', mods = 'LEADER|CTRL', action = act.SendKey { key = 'a', mods = 'CTRL' } },
---   { key = 's', mods = 'LEADER', action = act.SplitHorizontal { domain = 'CurrentPaneDomain' } },
---   { key = 'v', mods = 'LEADER', action = act.SplitVertical { domain = 'CurrentPaneDomain' } },
---   { key = 'h', mods = 'LEADER', action = act.ActivatePaneDirection 'Left' },
---   { key = 'j', mods = 'LEADER', action = act.ActivatePaneDirection 'Down' },
---   { key = 'k', mods = 'LEADER', action = act.ActivatePaneDirection 'Up' },
---   { key = 'l', mods = 'LEADER', action = act.ActivatePaneDirection 'Right' },
---   { key = 'H', mods = 'LEADER', action = act.AdjustPaneSize { 'Left', 5 } },
---   { key = 'J', mods = 'LEADER', action = act.AdjustPaneSize { 'Down', 5 } },
---   { key = 'K', mods = 'LEADER', action = act.AdjustPaneSize { 'Up', 5 } },
---   { key = 'L', mods = 'LEADER', action = act.AdjustPaneSize { 'Right', 5 } },
---   { key = 'c', mods = 'LEADER', action = act.SpawnCommandInNewTab {} },
---   { key = 'n', mods = 'LEADER', action = act.ActivateTabRelative(1) },
---   { key = 'p', mods = 'LEADER', action = act.ActivateTabRelative(-1) },
---   { key = 'o', mods = 'LEADER', action = act.PaneSelect },
---   { key = 'x', mods = 'LEADER', action = act.CloseCurrentPane { confirm = true } },
---   { key = 'P', mods = 'LEADER|SHIFT', action = act.ActivateCommandPalette },
--- }
 
 return config
