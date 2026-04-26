@@ -28,6 +28,11 @@
       flake = false;
     };
 
+    doom-meow = {
+      url = "github:meow-edit/doom-meow";
+      flake = false;
+    };
+
     denix = {
       url = "github:yunfachi/denix";
       inputs = {

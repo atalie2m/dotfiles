@@ -83,6 +83,16 @@ nix run .#dotfiles -- sync vscode --check --profile web
 nix run .#dotfiles -- sync vscode --apply --profile native
 ```
 
+## Doom Emacs
+
+`tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom user config を `~/.config/doom` に配置します。Doom 本体は `~/.config/emacs` の mutable checkout として扱います。
+
+```bash
+dotfiles-doom bootstrap
+dotfiles-doom sync
+dotfiles-doom doctor
+```
+
 ## runtime override
 
 - `HOME` は `nix run .#dotfiles -- sync shell ...` と `nix run .#dotfiles -- sync vscode ...` に必須です。また、repo default の user-scoped path が必要な command でも必須です。

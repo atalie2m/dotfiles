@@ -139,8 +139,8 @@ shell、VS Code、system app surface の mutable / immutable boundary は [`docs
 
 ## Mutable Editor Tooling
 
-- Emacs の app / config wiring と package install は Nix-first。repo-owned Elisp package は Nix で pin し、`use-package` 宣言は明示的に設定した場合のみ runtime に不足 package を install できる
-- Neovim の app / config wiring は `apps/neovim/` で declarative に管理し、plugin の install / update は repo-owned な `lazy-lock.json` を使って `lazy.nvim` が runtime で行う
+- Emacs の app wiring は Nix-first だが、Doom package state は mutable のまま扱う。repo は `~/.config/doom`、外部 `doom-meow` module、runtime helper を管理し、Doom 本体は `~/.config/emacs` に置く
+- Neovim の app / config wiring は `apps/neovim/` で declarative に管理する。config は LazyVim ベースで、plugin の install / update は repo-owned な `lazy-lock.json` を使って `lazy.nvim` が runtime で行う
 - VS Code profile 定義は declarative だが、runtime state は writable のまま。managed profile settings は fully repo-owned なので manual settings change は apply で上書きされ、user-added extension は repo ownership の外に残る
 - この repo は editor runtime を convenience boundary として扱う。config はここで pin するが、package / login / UI state は pin しない
 

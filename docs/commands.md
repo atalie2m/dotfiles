@@ -83,6 +83,16 @@ nix run .#dotfiles -- sync vscode --check --profile web
 nix run .#dotfiles -- sync vscode --apply --profile native
 ```
 
+## Doom Emacs
+
+`tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew and manages the Doom user config at `~/.config/doom`. Doom itself stays as a mutable checkout at `~/.config/emacs`.
+
+```bash
+dotfiles-doom bootstrap
+dotfiles-doom sync
+dotfiles-doom doctor
+```
+
 ## Runtime overrides
 
 - `HOME` is required for `nix run .#dotfiles -- sync shell ...` and `nix run .#dotfiles -- sync vscode ...`, and it is also required whenever a command needs repo-default user-scoped paths.

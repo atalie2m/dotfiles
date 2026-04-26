@@ -1,11 +1,11 @@
-{ delib, lib, dotlib, pkgs, repoPaths, ... }:
+{ delib, lib, dotlib, inputs, pkgs, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
   homebrewSpec = homebrewOwnership."editor.emacs";
 in
 
-# Emacs (GUI via Homebrew) + Meow configuration
+# Emacs (GUI via Homebrew) + Doom user configuration
 
 delib.module {
   name = "tools.editor.emacs";
@@ -20,41 +20,88 @@ delib.module {
   home.ifEnabled = { ... }:
     let
       emacsDir = repoPaths.apps + "/emacs";
+      doomDir = emacsDir + "/doom";
       iconPath = emacsDir + "/emacs-icon-1.0.icns";
       hasIcon = builtins.pathExists iconPath;
-      emacsPackages = with pkgs.emacsPackages; [
-        ace-window
-        avy
-        cape
-        consult
-        corfu
-        embark
-        magit
-        marginalia
-        meow
-        meow-tree-sitter
-        orderless
-        popper
-        tempel
-        treesit-auto
-        treemacs
-        use-package
-        vertico
-        vundo
-        which-key
+      doomBootstrap = pkgs.writeShellApplication {
+        name = "dotfiles-doom";
+        runtimeInputs = with pkgs; [
+          fd
+          git
+          ripgrep
+        ];
+        text = ''
+          command="''${1:-sync}"
+          emacsdir="''${EMACSDIR:-$HOME/.config/emacs}"
+          doomdir="''${DOOMDIR:-$HOME/.config/doom}"
+
+          if [ ! -e "$doomdir/init.el" ]; then
+            printf 'Doom config is missing at %s. Apply dotfiles first.\n' "$doomdir" >&2
+            exit 1
+          fi
+
+          case "$command" in
+            bootstrap|install)
+              if [ ! -x "$emacsdir/bin/doom" ]; then
+                if [ -e "$emacsdir" ]; then
+                  printf '%s exists but does not look like a Doom Emacs checkout.\n' "$emacsdir" >&2
+                  exit 1
+                fi
+                git clone --depth 1 https://github.com/doomemacs/doomemacs "$emacsdir"
+                "$emacsdir/bin/doom" install
+              else
+                "$emacsdir/bin/doom" sync
+              fi
+              ;;
+            sync)
+              if [ ! -x "$emacsdir/bin/doom" ]; then
+                printf 'Doom is not installed at %s. Run: dotfiles-doom bootstrap\n' "$emacsdir" >&2
+                exit 1
+              fi
+              "$emacsdir/bin/doom" sync
+              ;;
+            doctor)
+              if [ ! -x "$emacsdir/bin/doom" ]; then
+                printf 'Doom is not installed at %s. Run: dotfiles-doom bootstrap\n' "$emacsdir" >&2
+                exit 1
+              fi
+              "$emacsdir/bin/doom" doctor
+              ;;
+            *)
+              printf 'usage: dotfiles-doom [bootstrap|install|sync|doctor]\n' >&2
+              exit 64
+              ;;
+          esac
+        '';
+      };
+      emacsRuntimePackages = with pkgs; [
+        cmigemo
+        doomBootstrap
+        enchant
+        fd
+        git
+        ripgrep
+        sqlite
+        (aspellWithDicts (dicts: with dicts; [
+          en
+        ]))
       ];
       emacsFiles = {
-        ".emacs.d/early-init.el" = {
+        ".config/doom/init.el" = {
           force = true;
-          source = emacsDir + "/early-init.el";
+          source = doomDir + "/init.el";
         };
-        ".emacs.d/init.el" = {
+        ".config/doom/packages.el" = {
           force = true;
-          source = emacsDir + "/init.el";
+          source = doomDir + "/packages.el";
         };
-        ".emacs.d/lisp" = {
+        ".config/doom/config.el" = {
           force = true;
-          source = emacsDir + "/lisp";
+          source = doomDir + "/config.el";
+        };
+        ".config/doom/modules/editor/meow" = {
+          force = true;
+          source = inputs.doom-meow;
           recursive = true;
         };
       } // lib.optionalAttrs hasIcon {
@@ -69,7 +116,7 @@ delib.module {
       };
     in
     {
-      home.packages = emacsPackages;
+      home.packages = emacsRuntimePackages;
       home.file = emacsFiles;
     };
 }

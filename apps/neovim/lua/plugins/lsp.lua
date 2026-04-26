@@ -1,72 +1,114 @@
 return {
   {
     "mason-org/mason.nvim",
-    cmd = "Mason",
-    opts = {
-      ui = {
+    opts = function(_, opts)
+      local function add_package(package)
+        opts.ensure_installed = opts.ensure_installed or {}
+        if not vim.tbl_contains(opts.ensure_installed, package) then
+          table.insert(opts.ensure_installed, package)
+        end
+      end
+
+      opts.ui = vim.tbl_deep_extend("force", opts.ui or {}, {
         border = "rounded",
         icons = {
           package_installed = "*",
           package_pending = ">",
           package_uninstalled = "-",
         },
-      },
-    },
+      })
+
+      for _, package in ipairs({
+        "black",
+        "prettier",
+        "prettierd",
+        "shfmt",
+        "stylua",
+      }) do
+        add_package(package)
+      end
+    end,
   },
   {
     "neovim/nvim-lspconfig",
-    event = { "BufReadPre", "BufNewFile" },
-    dependencies = {
-      "mason-org/mason.nvim",
-    },
-    config = function()
-      local lsp = require("config.lsp")
+    opts = function(_, opts)
+      opts.inlay_hints = vim.tbl_deep_extend("force", opts.inlay_hints or {}, {
+        enabled = true,
+      })
+      opts.codelens = vim.tbl_deep_extend("force", opts.codelens or {}, {
+        enabled = true,
+      })
+      opts.diagnostics = vim.tbl_deep_extend("force", opts.diagnostics or {}, {
+        virtual_text = false,
+        virtual_lines = false,
+        underline = true,
+        update_in_insert = false,
+        severity_sort = true,
+      })
 
-      local servers = {
-        nixd = {},
-        lua_ls = {
-          settings = {
-            Lua = {
-              diagnostics = {
-                globals = { "vim" },
-              },
-              workspace = {
-                checkThirdParty = false,
-              },
-              completion = {
-                callSnippet = "Replace",
-              },
+      opts.servers = opts.servers or {}
+      opts.servers["*"] = opts.servers["*"] or {}
+      opts.servers["*"].keys = vim.list_extend(opts.servers["*"].keys or {}, {
+        { "K", vim.lsp.buf.hover, desc = "Hover" },
+        { "gd", vim.lsp.buf.definition, desc = "Goto Definition" },
+        { "gr", vim.lsp.buf.references, desc = "References", nowait = true },
+        { "gI", vim.lsp.buf.implementation, desc = "Goto Implementation" },
+        { "gy", vim.lsp.buf.type_definition, desc = "Goto Type Definition" },
+        { "<leader>ca", vim.lsp.buf.code_action, desc = "Code Action", mode = { "n", "x" }, has = "codeAction" },
+      })
+
+      opts.servers.nixd = vim.tbl_deep_extend("force", opts.servers.nixd or {}, {
+        mason = false,
+      })
+      opts.servers.lua_ls = vim.tbl_deep_extend("force", opts.servers.lua_ls or {}, {
+        settings = {
+          Lua = {
+            hint = {
+              enable = true,
+              paramName = "Disable",
+              arrayIndex = "Disable",
+            },
+            workspace = {
+              checkThirdParty = false,
+            },
+            completion = {
+              callSnippet = "Replace",
             },
           },
         },
-        ts_ls = {},
-        pyright = {},
-      }
-
-      for server, server_opts in pairs(servers) do
-        local opts = vim.tbl_deep_extend("force", {
-          capabilities = lsp.capabilities,
-          on_attach = lsp.on_attach,
-        }, server_opts)
-
-        if vim.lsp.config then
-          vim.lsp.config[server] = opts
-          vim.lsp.enable(server)
-        else
-          require("lspconfig")[server].setup(opts)
-        end
-      end
-
-      vim.diagnostic.config({
-        severity_sort = true,
-        virtual_text = {
-          source = "if_many",
-        },
-        float = {
-          border = "rounded",
-          source = "if_many",
+      })
+      opts.servers.vtsls = vim.tbl_deep_extend("force", opts.servers.vtsls or {}, {
+        settings = {
+          typescript = {
+            inlayHints = {
+              parameterNames = { enabled = "literals" },
+              variableTypes = { enabled = false },
+              propertyDeclarationTypes = { enabled = true },
+              functionLikeReturnTypes = { enabled = true },
+            },
+          },
         },
       })
+    end,
+  },
+  {
+    "mrcjkb/rustaceanvim",
+    optional = true,
+    opts = function(_, opts)
+      opts.server = opts.server or {}
+      opts.server.default_settings = opts.server.default_settings or {}
+      opts.server.default_settings["rust-analyzer"] = vim.tbl_deep_extend(
+        "force",
+        opts.server.default_settings["rust-analyzer"] or {},
+        {
+          cargo = {
+            allFeatures = true,
+          },
+          check = {
+            command = "clippy",
+          },
+        }
+      )
     end,
   },
 }
