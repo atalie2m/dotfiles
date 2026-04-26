@@ -10,6 +10,16 @@
 - Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `partial`
 - darwin target の例: `pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-base`, `minimal_mac-ultra`, `pro_mac-partial`
 - Packages: `dotfiles`, `dotfiles-cli`, `dotfiles-sync-vscode`
+- Templates: `web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`
+
+## Project templates
+
+```bash
+nix flake init -t github:atalie2m/dotfiles#web-dev
+nix flake init -t github:atalie2m/dotfiles#rust-dev
+nix flake init -t github:atalie2m/dotfiles#infra-iac
+nix flake init -t github:atalie2m/dotfiles#python-research
+```
 
 ## 運用 CLI
 

@@ -12,6 +12,17 @@ catalog-owned tools in that group.
 `tools.aiCodingAgent.claudeCode.enable` is catalog-backed through the
 Homebrew-native backend and installs the latest-first `claude-code@latest`
 cask during nix-darwin activation.
+Fast-moving macOS tools that are better owned by Homebrew, such as `git-xet`,
+Apple project CLIs, and optional terminal fonts, use the same ownership
+registry so `flake check` can still verify there is a single owner for each
+brew/cask item.
+
+The shell upgrade adds profile-oriented global groups for the Home Manager
+cockpit: `shellUx`, `filesNavigation`, `viewersPreview`, `searchText`,
+`gitPersonal`, `nixOperator`, `observability`, `network`,
+`httpApiPersonal`, `downloadArchive`, `tuiWorkspace`, `dataPersonal`,
+`containerK8sPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`,
+`modelHfPersonal`, `backupRecovery`, and `terminalVisual`.
 
 ## Toggle Rules
 
@@ -68,3 +79,8 @@ Darwin target contains the same `group.tool` key from multiple registries, when
 its final Homebrew config contains a brew/cask/MAS item claimed by multiple
 owners, when a Homebrew cask overlaps with `tools.system.brewNix`, or when an
 item is not claimed by the ownership registry.
+
+`flake check` also validates that Nix catalog entries selected for the current
+system resolve to packages available on that platform. Catalog entries may use
+an internal unique key plus `tool = "name"` when the same package appears in
+multiple profile groups.

@@ -21,6 +21,38 @@ let
       darwinTargetNames;
   toolOwnershipFailures = lib.concatMap (report: report.failureMessages) toolOwnershipReports;
   toolOwnershipFailureText = lib.concatStringsSep "\n" toolOwnershipFailures;
+  nixCatalog = import (repoPaths.catalog + "/tools/nixpkgs.nix");
+  catalogUnfreePackages = lib.unique (lib.concatMap (spec: spec.unfree or [ ]) (builtins.attrValues nixCatalog));
+  catalogPkgs = import inputs.nixpkgs {
+    system = pkgs.stdenv.hostPlatform.system;
+    config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) catalogUnfreePackages;
+  };
+  catalogSystemName =
+    if pkgs.stdenv.isDarwin then "darwin"
+    else if pkgs.stdenv.isLinux then "linux"
+    else "other";
+  catalogPackageFailures =
+    lib.concatMap
+      (catalogName:
+        let
+          spec = nixCatalog.${catalogName};
+          toolName = spec.tool or catalogName;
+          toolKey = "${spec.group}.${toolName}";
+          supportedSystems = spec.systems or [ "darwin" "linux" ];
+          isSupportedSystem = builtins.elem catalogSystemName supportedSystems;
+          package = dotlib.resolveCatalogPkg {
+            pkgs = catalogPkgs;
+            systemName = catalogSystemName;
+            inherit spec;
+          };
+        in
+        lib.optional (isSupportedSystem && (package == null || !(lib.meta.availableOn catalogPkgs.stdenv.hostPlatform package)))
+          (dotlib.nixCatalogFailureMessage {
+            inherit toolKey spec;
+            systemName = catalogSystemName;
+          }))
+      (builtins.attrNames nixCatalog);
+  catalogPackageFailureText = lib.concatStringsSep "\n" catalogPackageFailures;
   catalogValidationFailureText =
     dotlib.nixCatalogFailureMessage {
       toolKey = "core.fakeTool";
@@ -128,6 +160,16 @@ in
       builtins.seq _ (pkgs.runCommand "catalog-policy-check" { } ''
         touch "$out"
       '');
+
+    catalogPackages = pkgs.runCommand "catalog-package-check" { } ''
+      if [ ${toString (builtins.length catalogPackageFailures)} -ne 0 ]; then
+        cat >&2 <<'EOF_CATALOG_PACKAGES'
+      ${catalogPackageFailureText}
+      EOF_CATALOG_PACKAGES
+        exit 1
+      fi
+      touch "$out"
+    '';
   };
 
   devShells.default = mkPortableDevShell {

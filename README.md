@@ -2,17 +2,25 @@
 
 ## Flake templates
 
-This repository publishes a web development template that you can use via Nix flakes:
+This repository publishes project development templates that you can use via Nix flakes:
 
 ```bash
 nix flake init -t github:atalie2m/dotfiles#web-dev
+nix flake init -t github:atalie2m/dotfiles#rust-dev
+nix flake init -t github:atalie2m/dotfiles#infra-iac
 ```
 
-It provides:
+The templates share `flake-parts`, `treefmt-nix`, `git-hooks.nix`, `devenv`, `process-compose`, `direnv`/`nix-direnv`, `just`, common format/lint hooks, and security tooling. Project-specific examples include:
 
-- Dev shell with Node.js 22, pnpm, bun, AWS CLI v2, jq/yq, mkcert, just (`wrangler` is optional and commented by default)
-- Prettier formatting integrated via treefmt-nix and exposed as `apps.format`
-- `nix run .#dev` for development tasks and `nix flake check` hooks
+- `web-dev`: Node.js 22/corepack, pnpm, bun, deno, TypeScript, Workers/Netlify/Supabase tooling, redocly, project-pinned npm CLIs for Vite/Vitest/Storybook/Nx/OpenAPI/GraphQL/Drizzle/Vercel/Surge, AWS CLI v2, jq/yq, mkcert, and local service helpers.
+- `rust-dev`: `rust-overlay` stable toolchain, rust-analyzer, cargo QA/release tools, C build deps, sqlite/protobuf.
+- Additional templates: `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`.
+
+`web-dev`, `rust-dev`, and `go-dev` also include an `enabledProfiles` selector
+for optional layers such as `api-db`, `docs`, `release`, `container-oci`,
+`kubernetes`, `infra-iac`, `ai-coding`, `model-hf`, and `native-debug`.
+Standalone templates remain available for repos where those layers are the main
+purpose.
 
 # dotfiles
 
@@ -36,7 +44,7 @@ Shared modules, catalogs, and operational scripts now live outside the Denix hos
 See [`docs/architecture.md`](docs/architecture.md) for the current responsibility split.
 See [`docs/architecture-reset.md`](docs/architecture-reset.md) for the reset rationale, before/after changes, and design intent.
 
-Operational note: the supported root flake API is Darwin-first and exposes `darwinConfigurations` plus `templates.web-dev`.
+Operational note: the supported root flake API is Darwin-first and exposes `darwinConfigurations` plus project `templates`.
 
 - Hosts: `pro_mac` (default rice: `pro`), `ultra_mac` (default rice: `ultra`), `minimal_mac` (default rice: `base`).
 - Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `partial`.
@@ -150,7 +158,13 @@ Any modern terminal works with the current Zsh setup. Terminal.app profile sync 
 
 ## Zsh Stack
 
-The default Zsh prompt is Pure. `base` keeps that prompt-only setup, while `dev` / `pro` / `ultra` also enable:
+The default Zsh prompt is Pure. Zsh has a managed profile switch at `tools.shell.zsh.profile`:
+
+- `stable`: `fzf-tab`, `zsh-autosuggestions`, `fast-syntax-highlighting`, `zsh-vi-mode`, `zsh-autopair`, `zsh-completions`, `carapace`, and `nix-zsh-completions`.
+- `autocomplete`: uses `zsh-autocomplete` as the completion UI and disables `fzf-tab` as the Tab owner.
+- `debug`: loads the stable profile plus `zprof`, `bindkey`, and `zinit` timing/report output.
+
+`base` now carries the CLI-only S-tier cockpit, while `dev` / `pro` / `ultra` add the broader daily workstation profiles:
 
 - `fzf` keybindings: `CTRL-T` for file insert, `ALT-C` for directory jump
 - `fzf-tab` on `TAB`
@@ -158,6 +172,7 @@ The default Zsh prompt is Pure. `base` keeps that prompt-only setup, while `dev`
 - `zoxide` via `z` and `zi`
 - `direnv` + `nix-direnv`
 - `delta` for Git paging
+- profile groups such as `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, and `backupRecovery`
 
 ### Shell sync (writable entrypoints)
 

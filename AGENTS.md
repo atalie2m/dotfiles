@@ -6,7 +6,7 @@ This repository is a Darwin-first Nix flake for macOS system configuration. Keep
 
 ## Project Structure
 
-- `flake.nix` — flake inputs/outputs; exposes `darwinConfigurations` and `templates` (`web-dev`, `rust-dev`).
+- `flake.nix` — flake inputs/outputs; exposes `darwinConfigurations` and project `templates` (`web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`).
 - `nix/denix/darwin/{hosts,rices}/` — Darwin host/rice profiles.
 - `nix/denix/lib/` — Darwin host constructors and Denix helpers.
 - `nix/modules/` — reusable modules, split into `shared/` and `tools/`.
@@ -35,6 +35,7 @@ Local inputs live outside Git at `~/.config/dotfiles/`:
 - `nix run .#apply -- --host <host> --action build`
 - `nix flake init -t github:atalie2m/dotfiles#web-dev`
 - `nix flake init -t github:atalie2m/dotfiles#rust-dev`
+- `nix flake init -t github:atalie2m/dotfiles#infra-iac`
 
 ## Coding Style
 
@@ -51,6 +52,7 @@ Local inputs live outside Git at `~/.config/dotfiles/`:
 - Shell sync is implemented by the Rust `dotfiles` CLI (`sync shell`); `scripts/sync.sh` is only a thin shell wrapper.
 - VS Code sync is implemented by the dedicated `dotfiles-sync-vscode` binary and dispatched through `dotfiles sync vscode`.
 - Group toggles are taxonomy; rollout belongs in explicit capability bundles.
+- Stock global bundles must not enable project-pinned toolchains (`nodejs`, `go`, `terraform`, `opentofu`); keep those in project templates/devShells unless a host explicitly opts in.
 
 ## Testing Guidance
 

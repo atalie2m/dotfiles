@@ -13,8 +13,9 @@ let
       inherit pkgs systemName spec;
     };
 
-  mkToolModule = toolName: spec:
+  mkToolModule = catalogName: spec:
     let
+      toolName = spec.tool or catalogName;
       toolKey = "${spec.group}.${toolName}";
       supportedSystems = spec.systems or [ "darwin" "linux" ];
       package = resolvePkg spec;

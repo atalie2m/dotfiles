@@ -139,11 +139,71 @@
         templates = {
           web-dev = {
             path = ./templates/web-dev;
-            description = "Web development template: devShell with Node 22, pnpm, bun, optional wrangler, awscli2, jq/yq, mkcert, just; Prettier formatting via treefmt-nix; apps.dev/apps.format and checks";
+            description = "Web development template: Node 22/corepack, pnpm, bun, deno, TypeScript tooling, Workers/Netlify/Supabase helpers, treefmt-nix, git-hooks.nix, security checks";
           };
           rust-dev = {
             path = ./templates/rust-dev;
-            description = "Rust development template: stable toolchain (rust-overlay, rust-src), rust-analyzer, libclang/pkg-config, cargo-nextest/bacon/deny/llvm-cov/expand/sccache, cmake/ninja/protobuf/sqlite";
+            description = "Rust development template: rust-overlay stable toolchain, rust-analyzer, cargo QA/release tools, treefmt-nix, git-hooks.nix, security checks";
+          };
+          go-dev = {
+            path = ./templates/go-dev;
+            description = "Go service/CLI template with gopls, golangci-lint, gofumpt, govulncheck, gotestsum, goreleaser, ko, and common checks";
+          };
+          python-research = {
+            path = ./templates/python-research;
+            description = "Python, notebook, ML, and research template with uv, pixi, ruff, pyright, pytest, Jupyter, DVC/data tooling, and common checks";
+          };
+          data-pipeline = {
+            path = ./templates/data-pipeline;
+            description = "CSV/JSON/Parquet/SQL data pipeline template with duckdb, qsv, xan, miller, jq/yq, visidata, and common checks";
+          };
+          native-dev = {
+            path = ./templates/native-dev;
+            description = "C/C++/Zig native template with cmake, ninja, meson, clang/LLVM, sanitizing/debugging tools, and common checks";
+          };
+          embedded-dev = {
+            path = ./templates/embedded-dev;
+            description = "Embedded/MCU/FPGA template with ARM, flashing, serial, QEMU/Renode, Verilator/Yosys, and common checks";
+          };
+          apple-dev = {
+            path = ./templates/apple-dev;
+            description = "iOS/macOS/Swift template with tuist, xcodegen, swiftlint, swiftformat, fastlane, CocoaPods, and common checks";
+          };
+          infra-nixos = {
+            path = ./templates/infra-nixos;
+            description = "NixOS/Home infra template with colmena, deploy-rs, disko, nixos-anywhere, sops/age, cache tooling, and common checks";
+          };
+          infra-iac = {
+            path = ./templates/infra-iac;
+            description = "Terraform/OpenTofu/cloud IaC template with project-local Terraform unfree allow-list, terragrunt, tflint, checkov, infracost, and common checks";
+          };
+          kubernetes-dev = {
+            path = ./templates/kubernetes-dev;
+            description = "Kubernetes/Helm/cluster app template with kubectl, kustomize, helm, kind/k3d, tilt, skaffold, k9s, and supply-chain checks";
+          };
+          container-oci = {
+            path = ./templates/container-oci;
+            description = "Container image and OCI artifact template with docker, podman, buildah, skopeo, oras, crane, regctl, dive, and supply-chain checks";
+          };
+          model-hf = {
+            path = ./templates/model-hf;
+            description = "Hugging Face/model artifact template with git-lfs, huggingface_hub, rclone/aria2, DVC/data tooling, and secret scanning";
+          };
+          docs-dev = {
+            path = ./templates/docs-dev;
+            description = "Docs/static site/PDF template with pandoc, quarto, typst, mdbook, mermaid, graphviz, plantuml, d2, vale, and common checks";
+          };
+          api-db = {
+            path = ./templates/api-db;
+            description = "API and database template with hurl, bruno-cli, grpcurl, load tools, SQL clients, local services, migration CLIs, and common checks";
+          };
+          ai-coding = {
+            path = ./templates/ai-coding;
+            description = "Repo-pinned AI coding workflow template with aider, llm, Goose, uv, Node 22, pnpm, ripgrep, ast-grep, semgrep, and common checks";
+          };
+          release-dev = {
+            path = ./templates/release-dev;
+            description = "Release/changelog/signing template with git-cliff, goreleaser, cargo-dist/release, cosign, SLSA, OCI tools, and common checks";
           };
         };
         inherit darwinConfigurations;

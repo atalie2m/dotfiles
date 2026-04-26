@@ -30,7 +30,7 @@ reset 後:
 
 - supported operational root surface は Darwin-first
 - `darwinConfigurations` を常に export する
-- `templates.web-dev` は再利用可能な public artifact として残す
+- project `templates` は再利用可能な public artifact として残す
 - 未サポートの Home Manager / NixOS tree と Linux contributor output を削除した
 
 意図:

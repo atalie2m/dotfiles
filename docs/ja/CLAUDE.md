@@ -8,12 +8,12 @@
 
 - 正式なコマンド例と最新の host 名は `docs/commands.md` にあります。
 - 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
-- サポートされる operational root API は Darwin-first です。`darwinConfigurations` と `templates.web-dev` を公開します。
+- サポートされる operational root API は Darwin-first です。`darwinConfigurations` と project `templates` を公開します。
 - public 向け placeholder facts は `nix/local/` にあり、default secrets input は意図的に inert です。実機では両方とも `~/.config/dotfiles/` で override してください。
 
 ## 設定フロー
 
-1. `flake.nix` は supported operational root API を Darwin-first（`darwinConfigurations` と `templates.web-dev`）として保ちます。
+1. `flake.nix` は supported operational root API を Darwin-first（`darwinConfigurations` と project `templates`）として保ちます。
 2. Denix host は `inputs.local/facts.nix` と host 宣言から canonical host truth を構築し、`config.myconfig.hostContext` に入れます。
 3. module は raw facts ではなく `config.myconfig.hostContext.*` を使います。
 4. `sops-nix` は activation 時に `inputs.secrets/secrets.nix` で定義された secret を materialize します。
@@ -34,6 +34,7 @@
 - shell は薄い entrypoint か OS 末端の挙動に限定してください。
 - host truth は `myconfig.hostContext.*` の下に集中させてください。
 - public behavior が変わったら docs を正確に更新してください。
+- project-pinned toolchain（`nodejs`, `go`, `terraform`, `opentofu`）は stock global bundle に入れず、project template / devShell 側で version を固定します。
 
 ## 検証
 

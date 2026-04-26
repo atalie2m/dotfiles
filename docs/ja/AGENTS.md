@@ -6,7 +6,7 @@
 
 ## プロジェクト構成
 
-- `flake.nix` — flake の inputs/outputs。`darwinConfigurations` と `templates`（`web-dev`, `rust-dev`）を公開します。
+- `flake.nix` — flake の inputs/outputs。`darwinConfigurations` と project `templates`（`web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`）を公開します。
 - `nix/denix/darwin/{hosts,rices}/` — Darwin host/rice プロファイル。
 - `nix/denix/lib/` — Darwin host constructor と Denix helper。
 - `nix/modules/` — 再利用可能な module。`shared/` と `tools/` に分割されています。
@@ -35,6 +35,7 @@
 - `nix run .#apply -- --host <host> --action build`
 - `nix flake init -t github:atalie2m/dotfiles#web-dev`
 - `nix flake init -t github:atalie2m/dotfiles#rust-dev`
+- `nix flake init -t github:atalie2m/dotfiles#infra-iac`
 
 ## コーディングスタイル
 
@@ -51,6 +52,7 @@
 - shell sync は Rust の `dotfiles` CLI（`sync shell`）で実装されています。`scripts/sync.sh` は薄い shell wrapper のみです。
 - VS Code sync は専用の `dotfiles-sync-vscode` binary で実装され、`dotfiles sync vscode` から dispatch されます。
 - group toggle は taxonomy であり、rollout は明示的な capability bundle に属します。
+- Stock global bundle では project-pinned toolchain（`nodejs`, `go`, `terraform`, `opentofu`）を有効化しません。host が明示 opt-in しない限り、それらの version は project template / devShell 側に閉じます。
 
 ## テスト方針
 

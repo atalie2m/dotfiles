@@ -30,7 +30,7 @@ After the reset:
 
 - the supported operational root surface is Darwin-first
 - `darwinConfigurations` is always exported
-- `templates.web-dev` remains the reusable public artifact
+- project `templates` remain the reusable public artifacts
 - unsupported Home Manager/NixOS trees and Linux contributor outputs were removed
 
 Intent:

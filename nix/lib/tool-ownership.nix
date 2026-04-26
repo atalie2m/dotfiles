@@ -39,9 +39,10 @@ let
 
   nixClaimsFromCatalog = config:
     lib.concatMap
-      (toolName:
+      (catalogName:
         let
-          spec = nixCatalog.${toolName};
+          spec = nixCatalog.${catalogName};
+          toolName = spec.tool or catalogName;
           key = "${spec.group}.${toolName}";
         in
         if enabledAt [ "myconfig" "tools" spec.group toolName "enable" ] config
