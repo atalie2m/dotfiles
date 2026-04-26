@@ -352,7 +352,7 @@ fn classify_items(
 
     let mut items = Vec::new();
     for rel_path in rel_paths {
-        if rel_path == PathBuf::from("lazy-lock.json") {
+        if is_runtime_metadata(&rel_path) {
             continue;
         }
         let desired = managed.files.get(&rel_path);
@@ -572,7 +572,7 @@ fn collect_dir(
             })?
             .to_path_buf();
 
-        if rel_path == PathBuf::from("lazy-lock.json") {
+        if is_runtime_metadata(&rel_path) {
             continue;
         }
 
@@ -897,6 +897,10 @@ fn display_rel(path: &Path) -> String {
     }
 }
 
+fn is_runtime_metadata(rel_path: &Path) -> bool {
+    rel_path == Path::new("lazy-lock.json") || rel_path == Path::new("lazyvim.json")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1002,5 +1006,24 @@ mod tests {
 
         assert_eq!(result.runtime_only, 1);
         assert_eq!(result.exit_code(NeovimSyncMode::Check), 1);
+    }
+
+    #[test]
+    fn check_ignores_lazyvim_runtime_metadata() {
+        let temp = TempDir::new().unwrap();
+        let managed = temp.path().join("managed");
+        let runtime = temp.path().join("runtime");
+        let state = temp.path().join("state");
+        write(&managed.join("init.lua"), "same\n");
+        write(&runtime.join("init.lua"), "same\n");
+        write(&runtime.join("lazyvim.json"), "{}\n");
+        write(&managed.join("lazy-lock.json"), "{}\n");
+        write(&state.join("lazy-lock.json"), "{}\n");
+
+        let result = run(options(&managed, &runtime, &state, NeovimSyncMode::Check)).unwrap();
+
+        assert_eq!(result.checked, 2);
+        assert_eq!(result.runtime_only, 0);
+        assert_eq!(result.exit_code(NeovimSyncMode::Check), 0);
     }
 }

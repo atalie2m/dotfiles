@@ -56,7 +56,9 @@ Behavior:
 - `sync emacs --adopt` copies runtime Doom config edits back into `apps/emacs/doom/`
 - `--item init`, `--item packages`, or `--item config` restricts reconciliation to one file
 - `tools.editor.emacs.enable` owns the Emacs app, sync tooling, and external `doom-meow` module; Doom itself remains a mutable checkout
-- stock bundles do not run `sync emacs --apply` during activation; set `tools.editor.emacs.sync.enable = true` yourself if you want activation-time reconciliation
+- `tools.editor.emacs.enable` also owns legacy `~/.emacs.d` redirect shims so GUI Emacs loads Doom from `${EMACSDIR:-~/.config/emacs}`
+- `tools.editor.emacs.bootstrap.enable` runs `dotfiles-doom bootstrap` only when `${EMACSDIR:-~/.config/emacs}/bin/doom` is missing
+- stock `dev`-derived bundles enable activation-time Emacs sync and first-run Doom bootstrap
 
 ## Neovim config
 

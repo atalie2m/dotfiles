@@ -135,6 +135,8 @@
 
     tools.editor.enable = true;
     tools.editor.emacs.enable = true;
+    tools.editor.emacs.sync.enable = true;
+    tools.editor.emacs.bootstrap.enable = true;
     tools.editor.neovim.enable = true;
 
     tools.shell.atuin.enable = true;

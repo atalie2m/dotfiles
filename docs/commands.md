@@ -97,7 +97,9 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 ## Doom Emacs
 
-`tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew, installs the Doom/Meow sync tooling, and keeps `doom-meow` available under `~/.config/doom/modules/editor/meow`. Doom config files are writable runtime state reconciled by `sync emacs`; Doom itself stays as a mutable checkout at `~/.config/emacs`.
+`tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew, installs the Doom/Meow sync tooling, and keeps `doom-meow` available under `~/.config/doom/modules/editor/meow`. Doom config files are writable runtime state reconciled by `sync emacs`; Doom itself stays as a mutable checkout at `~/.config/emacs`. Home Manager also installs `~/.emacs.d/init.el` and `~/.emacs.d/early-init.el` redirect shims so GUI Emacs loads the Doom checkout even when a legacy `~/.emacs.d` directory exists.
+
+`tools.editor.emacs.bootstrap.enable = true` runs `dotfiles-doom bootstrap` during activation only when `${EMACSDIR:-~/.config/emacs}/bin/doom` is missing. The stock `dev` bundle enables both `tools.editor.emacs.sync.enable` and `tools.editor.emacs.bootstrap.enable`, so `pro` and `ultra` hosts bootstrap Doom automatically on the first apply.
 
 ```bash
 dotfiles-doom bootstrap
@@ -122,7 +124,7 @@ Notes:
 - `scripts/*.sh` are thin shell wrappers over the Rust CLI.
 - `sync neovim` compares `apps/neovim` against `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` and treats `${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` as the effective Lazy lock when it exists.
 - `dotfiles-sync-vscode` is packaged separately; `dotfiles` dispatches `sync vscode` to that binary.
-- Stock bundles do not run `sync emacs --apply` or `sync vscode --apply` during activation. Enable `tools.editor.emacs.sync.enable = true` or `tools.editor.vscode.sync.enable = true` yourself if you want that automation. Visual Studio Code.app itself is installed manually, and activation skips cleanly when `code` or the app bundle is absent. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).
+- Dev-derived stock bundles run `sync emacs --apply` and first-run Doom bootstrap during activation. Stock bundles still do not run `sync vscode --apply`; enable `tools.editor.vscode.sync.enable = true` yourself if you want that automation. Visual Studio Code.app itself is installed manually, and activation skips cleanly when `code` or the app bundle is absent. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).
 
 ## Checks and development
 

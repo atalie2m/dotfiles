@@ -97,7 +97,9 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 ## Doom Emacs
 
-`tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom/Meow sync tooling を導入し、`doom-meow` を `~/.config/doom/modules/editor/meow` に用意します。Doom config file は `sync emacs` が reconcile する writable runtime state です。Doom 本体は `~/.config/emacs` の mutable checkout として扱います。
+`tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom/Meow sync tooling を導入し、`doom-meow` を `~/.config/doom/modules/editor/meow` に用意します。Doom config file は `sync emacs` が reconcile する writable runtime state です。Doom 本体は `~/.config/emacs` の mutable checkout として扱います。Home Manager は `~/.emacs.d/init.el` と `~/.emacs.d/early-init.el` の redirect shim も置くため、legacy な `~/.emacs.d` directory が残っていても GUI Emacs は Doom checkout を読みます。
+
+`tools.editor.emacs.bootstrap.enable = true` は `${EMACSDIR:-~/.config/emacs}/bin/doom` が無い場合だけ、activation 中に `dotfiles-doom bootstrap` を実行します。stock `dev` bundle は `tools.editor.emacs.sync.enable` と `tools.editor.emacs.bootstrap.enable` の両方を有効にするため、`pro` / `ultra` host は初回 apply で Doom を自動 bootstrap します。
 
 ```bash
 dotfiles-doom bootstrap
@@ -122,7 +124,7 @@ dotfiles-doom doctor
 - `scripts/*.sh` は Rust CLI の薄い shell wrapper です。
 - `sync neovim` は `apps/neovim` と `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` を比較し、`${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` が存在する場合はそれを実効 Lazy lock として扱います。
 - `dotfiles-sync-vscode` は別 package として提供され、`dotfiles` が `sync vscode` をその binary に dispatch します。
-- stock bundle は activation 中に `sync emacs --apply` や `sync vscode --apply` を実行しません。自動化したい場合だけ `tools.editor.emacs.sync.enable = true` または `tools.editor.vscode.sync.enable = true` を自分で有効にしてください。Visual Studio Code.app 自体は手動インストール前提で、`code` または app bundle がなければ activation は安全に skip します。インストール対象の extension ID は `apps/vscode/`（`_default/extensions.txt` と profile ごとの `extensions.txt`）にあります。
+- dev 派生の stock bundle は activation 中に `sync emacs --apply` と初回 Doom bootstrap を実行します。stock bundle は引き続き `sync vscode --apply` は実行しません。必要な場合だけ `tools.editor.vscode.sync.enable = true` を自分で有効にしてください。Visual Studio Code.app 自体は手動インストール前提で、`code` または app bundle がなければ activation は安全に skip します。インストール対象の extension ID は `apps/vscode/`（`_default/extensions.txt` と profile ごとの `extensions.txt`）にあります。
 
 ## check と開発
 

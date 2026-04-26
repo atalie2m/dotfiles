@@ -139,7 +139,7 @@ See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs 
 
 ## Mutable Editor Tooling
 
-- Emacs app wiring is Nix-first, while Doom config files and package state stay mutable. `sync emacs` reconciles `apps/emacs/doom/{init,packages,config}.el` with writable files under `~/.config/doom`, and `--adopt` pulls local Doom edits back into the repo.
+- Emacs app wiring is Nix-first, while Doom config files and package state stay mutable. `sync emacs` reconciles `apps/emacs/doom/{init,packages,config}.el` with writable files under `~/.config/doom`, and `--adopt` pulls local Doom edits back into the repo. Legacy `~/.emacs.d` startup shims redirect GUI Emacs to the mutable Doom checkout at `${EMACSDIR:-~/.config/emacs}`. Dev-derived stock bundles run activation-time Emacs sync and first-run Doom bootstrap.
 - Neovim app/config wiring is declarative under `apps/neovim/`; the config is LazyVim-based, and `sync neovim` can detect drift or adopt runtime edits, including the effective state-local Lazy lock.
 - VS Code profile definitions are declarative, but runtime state stays writable; managed profile settings are fully repo-owned and manual settings changes are overwritten on apply, while user-added extensions remain outside repo ownership.
 - This repo treats those editor runtimes as a convenience boundary: config is pinned here, package/login/UI state is not.
