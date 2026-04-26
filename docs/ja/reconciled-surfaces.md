@@ -29,7 +29,6 @@ control plane は Rust で実装され、`scripts/sync.sh` は薄い shell wrapp
 - `sync shell --apply` は missing file、writable regular file、`/nix/store/...` symlink、readable non-store symlink を修復する
 - `sync shell --check` は `in-sync`、`needs-apply`、`missing`、`invalid` を返す
 - shell sync は local change を repo に逆流させない
-- repo 管理の `PATH` 変更に依存する native tool（例: `~/.local/bin` 配下の Claude Code）は、`apply` 後に新しい shell で利用可能になる
 
 ## VS Code native profile
 

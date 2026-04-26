@@ -74,6 +74,14 @@
     backend = "homebrewNative";
     casks = [ "codex" ];
   };
+  "aiCodingAgent.claudeCode" = {
+    group = "aiCodingAgent";
+    tool = "claudeCode";
+    optionPath = [ "myconfig" "tools" "aiCodingAgent" "claudeCode" "enable" ];
+    mode = "dedicated";
+    backend = "homebrewNative";
+    casks = [ "claude-code@latest" ];
+  };
   "aiCodingAgent.geminiCli" = {
     group = "aiCodingAgent";
     tool = "geminiCli";

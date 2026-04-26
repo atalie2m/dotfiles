@@ -1,7 +1,11 @@
-{ delib, lib, ... }:
+{ delib, dotlib, repoPaths, ... }:
 
-# Claude Code is intentionally managed outside Homebrew/Nix so the upstream
-# native installer can own updates. This toggle wires the expected PATH surface.
+let
+  homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
+  homebrewSpec = homebrewOwnership."aiCodingAgent.claudeCode";
+in
+
+# Claude Code, installed through the latest-first Homebrew cask.
 
 delib.module {
   name = "tools.aiCodingAgent.claudeCode";
@@ -10,9 +14,6 @@ delib.module {
     enable = boolOption false;
   };
 
-  home.ifEnabled = { myconfig, ... }: {
-    home.sessionPath = lib.mkAfter [
-      "${myconfig.hostContext.user.homeDirectory}/.local/bin"
-    ];
-  };
+  myconfig.ifEnabled = { myconfig, ... }:
+    dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 }

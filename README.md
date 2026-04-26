@@ -65,13 +65,9 @@ Application/tool sourcing priority is:
 3. Use `tools.system.brewNix` only when native Homebrew integration is the wrong fit and a pinned cask path is needed.
 4. Homebrew backend lists are internal implementation detail; `flake check` validates the unified ownership registry, duplicate item claims, cross-source overlaps, and unregistered items.
 
-`Claude Code` is intentionally an exception: this repo does not install it via Homebrew.
-Enablement under `tools.aiCodingAgent.claudeCode` prepares the native install path
-surface (`~/.local/bin`) and lets `nix run .#apply` remind you when the upstream
-native install is missing or shadowed by another launcher. Install/update steps
-should come from <https://code.claude.com/docs/en/quickstart>; after installing,
-run `nix run .#apply -- --host <host>`, then refresh with `exec zsh -l` so the
-managed PATH picks up `~/.local/bin`.
+`Claude Code` is managed as a latest-first Homebrew cask through the
+catalog-backed `tools.aiCodingAgent.claudeCode` toggle. Enabling it adds the
+`claude-code@latest` cask to the nix-darwin Homebrew activation.
 
 ## Repository-Scoped Toolchain Policy
 

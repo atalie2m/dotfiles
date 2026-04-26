@@ -4,7 +4,7 @@
 
 このリポジトリは `myconfig.tools` 配下の `*.enable` toggle を使って tool / group の enablement を管理します。Denix module は単純な規則に従います。`enable = true` なら、その tool は install / configure されます。external 管理の tool では、`enable = true` が upstream binary の install ではなく integration surface の設定を意味することがあります。`tools.dev.enable` のような group toggle は、その group に属する catalog-owned tool の bundle switch として機能します。
 
-現在の例外は `tools.aiCodingAgent.claudeCode.enable` です。これは Claude Code の native install path surface と `apply` advisory を準備するだけで、実際の Claude Code binary の install / update は Anthropic の native installer が担当します。最新の install 手順は <https://code.claude.com/docs/en/quickstart> を参照し、その後 `nix run .#apply -- --host <host>` を実行して `exec zsh -l` で shell を更新してください。
+`tools.aiCodingAgent.claudeCode.enable` は Homebrew-native backend の catalog-backed toggle です。nix-darwin activation 時に latest-first の `claude-code@latest` cask を install します。
 
 ## toggle ルール
 

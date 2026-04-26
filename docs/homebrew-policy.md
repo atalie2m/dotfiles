@@ -36,4 +36,4 @@ This document defines package-source boundaries for this dotfiles flake.
 
 1. Cloudflare `wrangler`: prefer Nix (`home-manager` or project `flake.nix`) as the default source.
 2. Keep Homebrew `wrangler` only when Nix packaging is unusable for your workflow.
-3. `Claude Code`: prefer Anthropic's upstream native installer; use <https://code.claude.com/docs/en/quickstart> for current install steps. Dotfiles should only wire `~/.local/bin` into the managed shell environment and surface reminders during `apply`.
+3. `Claude Code`: use the latest-first Homebrew cask (`claude-code@latest`) through `tools.aiCodingAgent.claudeCode`.

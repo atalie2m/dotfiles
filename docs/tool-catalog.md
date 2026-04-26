@@ -9,11 +9,9 @@ may configure the integration surface instead of installing the upstream binary.
 Group toggles such as `tools.dev.enable` act as bundle switches for the
 catalog-owned tools in that group.
 
-`tools.aiCodingAgent.claudeCode.enable` is the current exception: it prepares
-the native Claude Code PATH surface and `apply` advisories, while the actual
-Claude Code binary is installed and updated by Anthropic's native installer.
-Follow <https://code.claude.com/docs/en/quickstart> for current install steps,
-then run `nix run .#apply -- --host <host>` and refresh with `exec zsh -l`.
+`tools.aiCodingAgent.claudeCode.enable` is catalog-backed through the
+Homebrew-native backend and installs the latest-first `claude-code@latest`
+cask during nix-darwin activation.
 
 ## Toggle Rules
 

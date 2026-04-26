@@ -29,7 +29,6 @@ Behavior:
 - `sync shell --apply` repairs missing files, writable regular files, `/nix/store/...` symlinks, and readable non-store symlinks
 - `sync shell --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`
 - shell sync does not adopt local changes back into the repo
-- native tools that rely on repo-managed `PATH` changes (for example Claude Code under `~/.local/bin`) become available in new shells after `apply`
 
 ## VS Code native profiles
 

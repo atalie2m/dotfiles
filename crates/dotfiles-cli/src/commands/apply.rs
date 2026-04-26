@@ -1,11 +1,10 @@
-use crate::commands::{eval_target_bool, is_effective_root, ApplyAction, ApplyArgs};
+use crate::commands::{is_effective_root, ApplyAction, ApplyArgs};
 use dotfiles_core::support::{
-    exit_with_status, explain_darwin_targets_error, find_in_path, flake_ref_for_root, log,
-    nix_args_with_inputs, repo_root, require_host_argument, resolve_inputs,
-    resolve_pinned_darwin_rebuild_bin, resolve_target, run_command_status, sudo_preserve_env_vars,
+    exit_with_status, explain_darwin_targets_error, flake_ref_for_root, nix_args_with_inputs,
+    repo_root, require_host_argument, resolve_inputs, resolve_pinned_darwin_rebuild_bin,
+    resolve_target, run_command_status, sudo_preserve_env_vars,
 };
 use std::env;
-use std::path::PathBuf;
 use std::process::Command;
 
 pub(crate) fn command_apply(args: &ApplyArgs) -> Result<(), String> {
@@ -43,71 +42,8 @@ pub(crate) fn command_apply(args: &ApplyArgs) -> Result<(), String> {
 
     let status = run_command_status(&mut command)?;
     if status.success() {
-        emit_post_apply_advisories(&flake_ref, &inputs, &target, &host, rice.as_deref())?;
         Ok(())
     } else {
         exit_with_status(status)
-    }
-}
-
-fn emit_post_apply_advisories(
-    flake_ref: &str,
-    inputs: &dotfiles_core::support::InputRefs,
-    target: &str,
-    host: &str,
-    rice: Option<&str>,
-) -> Result<(), String> {
-    let claude_enabled = eval_target_bool(
-        flake_ref,
-        inputs,
-        target,
-        "myconfig.tools.aiCodingAgent.claudeCode.enable",
-    )?;
-    if claude_enabled != Some(true) {
-        return Ok(());
-    }
-
-    let home = env::var("HOME")
-        .map(PathBuf::from)
-        .map_err(|_| "HOME is not set".to_string())?;
-    let native_path = home.join(".local/bin/claude");
-    let apply_command = claude_native_apply_command(host, rice);
-    if native_path.is_file() {
-        return Ok(());
-    }
-
-    match find_in_path("claude") {
-        Some(found_path) => {
-            log("Claude Code is enabled for this target, but dotfiles does not install it.");
-            log(&format!(
-                "found a non-native Claude launcher at {}; prefer the upstream native install at {}",
-                found_path.display(),
-                native_path.display()
-            ));
-            log("if that launcher came from Homebrew, remove it before reinstalling natively");
-            log("see https://code.claude.com/docs/en/quickstart for the current native install flow");
-            log(&format!(
-                "after installing, run `{}`, then refresh your shell with `exec zsh -l` so the managed PATH picks up ~/.local/bin",
-                apply_command
-            ));
-        }
-        None => {
-            log("Claude Code is enabled for this target, but dotfiles does not install it.");
-            log("install Claude Code by following https://code.claude.com/docs/en/quickstart");
-            log(&format!(
-                "after installing, run `{}`, then refresh your shell with `exec zsh -l` so the managed PATH picks up {}",
-                apply_command,
-                native_path.parent().unwrap_or(&native_path).display()
-            ));
-        }
-    }
-
-    Ok(())
-}
-
-fn claude_native_apply_command(host: &str, rice: Option<&str>) -> String {
-    match rice {
-        Some(rice_name) => format!("nix run .#apply -- --host {} --rice {}", host, rice_name),
-        None => format!("nix run .#apply -- --host {}", host),
     }
 }

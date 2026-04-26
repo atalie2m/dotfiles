@@ -65,8 +65,9 @@ reset の理由、before/after、設計意図は [`docs/architecture-reset.md`](
 3. `tools.system.brewNix` は native Homebrew integration が不適切で、pin 済み cask path が必要なときだけ使う。
 4. Homebrew backend list は internal implementation detail。`flake check` が unified ownership registry、重複 claim、cross-source overlap、未登録 item を検証する。
 
-`Claude Code` は意図的な例外です。この repo は Homebrew でそれを install しません。
-`tools.aiCodingAgent.claudeCode` を有効にすると native install path surface（`~/.local/bin`）を準備し、upstream の native install が欠けている、あるいは他 launcher に shadow されている場合に `nix run .#apply` が reminder を出します。install / update 手順は <https://code.claude.com/docs/en/quickstart> を参照してください。install 後に `nix run .#apply -- --host <host>` を実行し、`exec zsh -l` で shell を更新すると、managed PATH が `~/.local/bin` を拾います。
+`Claude Code` は catalog-backed な `tools.aiCodingAgent.claudeCode` toggle
+から latest-first の Homebrew cask として管理します。有効にすると
+nix-darwin の Homebrew activation に `claude-code@latest` cask が追加されます。
 
 ## リポジトリ単位のツールチェイン方針
 
