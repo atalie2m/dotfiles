@@ -40,6 +40,9 @@
                     (expand-file-name "~/.local/state/nix/profile/bin")))
   (my/add-exec-path path))
 
+;; macOS/BSD ls does not support GNU ls --dired markers.
+(setq dired-use-ls-dired nil)
+
 (after! meow
   (dolist (mode '(magit-status-mode
                   magit-log-mode
@@ -173,11 +176,17 @@
         pulsar-delay 0.055))
 
 (map! :leader
-      (:prefix ("e" . "edit")
+      (:prefix ("," . "edit")
        "e" #'er/expand-region
        "d" #'crux-duplicate-current-line-or-region
        "o" #'crux-smart-open-line
-       "u" #'vundo))
+       "u" #'vundo
+       (:prefix ("a" . "ai")
+        "a" #'gptel
+        "s" #'gptel-send
+        "m" #'gptel-menu
+        "g" #'gptel-agent
+        "d" #'aidermacs-transient-menu)))
 
 (use-package! eat
   :commands (eat eat-project))
@@ -199,6 +208,8 @@
 
 (after! org-roam
   (setq org-roam-directory "~/org/roam/")
+  (make-directory org-directory t)
+  (make-directory org-roam-directory t)
   (org-roam-db-autosync-mode 1))
 
 (map! :leader
@@ -223,11 +234,3 @@
   :commands (aidermacs-run aidermacs-transient-menu)
   :config
   (setq aidermacs-backend 'comint))
-
-(map! :leader
-      (:prefix ("a" . "ai")
-       "a" #'gptel
-       "s" #'gptel-send
-       "m" #'gptel-menu
-       "g" #'gptel-agent
-       "d" #'aidermacs-transient-menu))

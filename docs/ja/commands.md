@@ -97,9 +97,9 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 ## Doom Emacs
 
-`tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom/Meow sync tooling を導入し、`doom-meow` を `~/.config/doom/modules/editor/meow` に用意します。Doom config file は `sync emacs` が reconcile する writable runtime state です。Doom 本体は `~/.config/emacs` の mutable checkout として扱います。Home Manager は `~/.emacs.d/init.el` と `~/.emacs.d/early-init.el` の redirect shim も置くため、legacy な `~/.emacs.d` directory が残っていても GUI Emacs は Doom checkout を読みます。
+`tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom/Meow sync tooling を導入し、`doom-meow` を `~/.config/doom/modules/editor/meow` に用意します。Doom config file は `sync emacs` が reconcile する writable runtime state です。Doom 本体は `${EMACSDIR:-~/.emacs.d}` の mutable checkout として扱うため、標準の GUI / daemon 起動でも追加引数なしで読み込まれます。
 
-`tools.editor.emacs.bootstrap.enable = true` は `${EMACSDIR:-~/.config/emacs}/bin/doom` が無い場合だけ、activation 中に `dotfiles-doom bootstrap` を実行します。stock `dev` bundle は `tools.editor.emacs.sync.enable` と `tools.editor.emacs.bootstrap.enable` の両方を有効にするため、`pro` / `ultra` host は初回 apply で Doom を自動 bootstrap します。
+`tools.editor.emacs.bootstrap.enable = true` は `${EMACSDIR:-~/.emacs.d}/bin/doom` が無い場合だけ、activation 中に `dotfiles-doom bootstrap` を実行します。その directory が存在するが Doom checkout ではない場合は、timestamp 付きの `.pre-doom.*` backup に移動してから Doom を clone します。stock `dev` bundle は `tools.editor.emacs.sync.enable` と `tools.editor.emacs.bootstrap.enable` の両方を有効にするため、`pro` / `ultra` host は初回 apply で Doom を自動 bootstrap します。
 
 ```bash
 dotfiles-doom bootstrap

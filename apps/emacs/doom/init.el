@@ -1,5 +1,8 @@
 ;;; init.el -*- lexical-binding: t; -*-
 
+(custom-set-faces
+ '(warning ((t (:foreground "#ECBE7B")))))
+
 (doom! :input
        japanese
 

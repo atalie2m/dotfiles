@@ -97,9 +97,9 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 ## Doom Emacs
 
-`tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew, installs the Doom/Meow sync tooling, and keeps `doom-meow` available under `~/.config/doom/modules/editor/meow`. Doom config files are writable runtime state reconciled by `sync emacs`; Doom itself stays as a mutable checkout at `~/.config/emacs`. Home Manager also installs `~/.emacs.d/init.el` and `~/.emacs.d/early-init.el` redirect shims so GUI Emacs loads the Doom checkout even when a legacy `~/.emacs.d` directory exists.
+`tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew, installs the Doom/Meow sync tooling, and keeps `doom-meow` available under `~/.config/doom/modules/editor/meow`. Doom config files are writable runtime state reconciled by `sync emacs`; Doom itself stays as a mutable checkout at `${EMACSDIR:-~/.emacs.d}` so standard GUI/daemon startup loads it without extra launch arguments.
 
-`tools.editor.emacs.bootstrap.enable = true` runs `dotfiles-doom bootstrap` during activation only when `${EMACSDIR:-~/.config/emacs}/bin/doom` is missing. The stock `dev` bundle enables both `tools.editor.emacs.sync.enable` and `tools.editor.emacs.bootstrap.enable`, so `pro` and `ultra` hosts bootstrap Doom automatically on the first apply.
+`tools.editor.emacs.bootstrap.enable = true` runs `dotfiles-doom bootstrap` during activation only when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing. If that directory exists but is not a Doom checkout, the bootstrapper moves it to a timestamped `.pre-doom.*` backup before cloning Doom. The stock `dev` bundle enables both `tools.editor.emacs.sync.enable` and `tools.editor.emacs.bootstrap.enable`, so `pro` and `ultra` hosts bootstrap Doom automatically on the first apply.
 
 ```bash
 dotfiles-doom bootstrap

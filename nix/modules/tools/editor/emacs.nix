@@ -12,14 +12,21 @@ let
   doomBootstrap = pkgs.writeShellApplication {
     name = "dotfiles-doom";
     runtimeInputs = with pkgs; [
+      coreutils
       fd
       git
       ripgrep
     ];
     text = ''
       command="''${1:-sync}"
-      emacsdir="''${EMACSDIR:-$HOME/.config/emacs}"
+      emacsdir="''${EMACSDIR:-$HOME/.emacs.d}"
       doomdir="''${DOOMDIR:-$HOME/.config/doom}"
+
+      for path in /opt/homebrew/bin /usr/local/bin /Applications/Emacs.app/Contents/MacOS/bin; do
+        if [ -d "$path" ]; then
+          export PATH="$path:$PATH"
+        fi
+      done
 
       ensure_doom_config() {
         if [ ! -e "$doomdir/init.el" ]; then
@@ -43,8 +50,9 @@ let
         bootstrap|install)
           if [ ! -x "$emacsdir/bin/doom" ]; then
             if [ -e "$emacsdir" ]; then
-              printf '%s exists but does not look like a Doom Emacs checkout.\n' "$emacsdir" >&2
-              exit 1
+              backup="$emacsdir.pre-doom.$(date +%Y%m%d%H%M%S)"
+              printf '%s exists but does not look like a Doom Emacs checkout. Moving it to %s.\n' "$emacsdir" "$backup" >&2
+              mv "$emacsdir" "$backup"
             fi
             git clone --depth 1 https://github.com/doomemacs/doomemacs "$emacsdir"
             "$emacsdir/bin/doom" install
@@ -126,42 +134,13 @@ delib.module {
         ]))
       ];
       emacsFiles = {
-        ".emacs.d/early-init.el" = {
-          force = true;
-          text = ''
-            ;;; early-init.el --- Redirect legacy ~/.emacs.d to Doom -*- lexical-binding: t; -*-
-
-            (let* ((doom-emacs-dir
-                    (file-name-as-directory
-                     (or (getenv "EMACSDIR")
-                         (expand-file-name "emacs" (or (getenv "XDG_CONFIG_HOME") "~/.config")))))
-                   (doom-early-init-file (expand-file-name "early-init.el" doom-emacs-dir)))
-              (setq user-emacs-directory doom-emacs-dir
-                    user-init-file (expand-file-name "init.el" doom-emacs-dir))
-              (when (file-exists-p doom-early-init-file)
-                (load doom-early-init-file nil t)))
-          '';
-        };
-        ".emacs.d/init.el" = {
-          force = true;
-          text = ''
-            ;;; init.el --- Redirect legacy ~/.emacs.d to Doom -*- lexical-binding: t; -*-
-
-            (let ((doom-emacs-dir
-                   (file-name-as-directory
-                    (or (getenv "EMACSDIR")
-                        (expand-file-name "emacs" (or (getenv "XDG_CONFIG_HOME") "~/.config"))))))
-              (setq user-emacs-directory doom-emacs-dir
-                    user-init-file (expand-file-name "init.el" doom-emacs-dir))
-              (if (file-exists-p user-init-file)
-                  (load user-init-file nil t)
-                (user-error "Doom Emacs is not installed at %s. Run: dotfiles-doom bootstrap" doom-emacs-dir)))
-          '';
-        };
         ".config/doom/modules/editor/meow" = {
           force = true;
           source = inputs.doom-meow;
           recursive = true;
+        };
+        ".config/doom/snippets/.keep" = {
+          text = "";
         };
       } // lib.optionalAttrs hasIcon {
         ".config/emacs-plus/build.yml" = {
@@ -202,7 +181,7 @@ delib.module {
       emacsDirExpr =
         if cfg.bootstrap.emacsDir != null
         then lib.escapeShellArg cfg.bootstrap.emacsDir
-        else "\"\${EMACSDIR:-$HOME/.config/emacs}\"";
+        else "\"\${EMACSDIR:-$HOME/.emacs.d}\"";
       applyArgs = [
         "${dotfilesCli}/bin/dotfiles"
         "sync"
