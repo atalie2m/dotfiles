@@ -26,8 +26,8 @@ cockpit: `shellUx`, `filesNavigation`, `viewersPreview`, `searchText`,
 
 The companion `tools.profileDefaults` module has no public toggle. It watches
 those explicit tool toggles and writes matching default user configs for shell
-UX, preview/search tools, Git/GitHub, observability TUIs, terminal apps,
-AeroSpace, and project-template `.envrc` files. Secret-bearing operations such
+UX, preview/search tools, Git/GitHub, Yazi, Zellij, K9s, observability TUIs,
+terminal apps, AeroSpace, and Television. Secret-bearing operations such
 as restic repositories, restic passwords, age recipients, and machine-specific
 SSH keys stay outside the repo and must come from local mutable state.
 

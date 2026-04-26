@@ -140,7 +140,7 @@ See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs 
 ## Mutable Editor Tooling
 
 - Emacs app wiring is Nix-first, while Doom config files and package state stay mutable. `sync emacs` reconciles `apps/emacs/doom/{init,packages,config}.el` with writable files under `~/.config/doom`, and `--adopt` pulls local Doom edits back into the repo. Doom itself lives at `${EMACSDIR:-~/.emacs.d}` so standard GUI/daemon startup loads it without extra launch arguments. Dev-derived stock bundles run activation-time Emacs sync and first-run Doom bootstrap.
-- Neovim app/config wiring is declarative under `apps/neovim/`; the config is LazyVim-based, and `sync neovim` can detect drift or adopt runtime edits, including the effective state-local Lazy lock.
+- Neovim app/config wiring is declarative under `apps/neovim/`; the config is LazyVim-based, and `sync neovim` can detect drift or adopt runtime edits, including the effective state-local Lazy lock. `tools.editor.goneovim.enable` installs the Goneovim GUI from its upstream Darwin release as a dev-bundle companion to Neovim, while keeping the `nvim` dependency Nix-owned.
 - VS Code profile definitions are declarative, but runtime state stays writable; managed profile settings are fully repo-owned and manual settings changes are overwritten on apply, while user-added extensions remain outside repo ownership.
 - This repo treats those editor runtimes as a convenience boundary: config is pinned here, package/login/UI state is not.
 
@@ -173,6 +173,11 @@ The default Zsh prompt is Pure. Zsh has a managed profile switch at `tools.shell
 - `direnv` + `nix-direnv`
 - `delta` for Git paging
 - profile groups such as `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, and `backupRecovery`
+
+`tools.profileDefaults` writes repo-owned defaults for `fzf`, `direnv`,
+`gh-dash`, `yazi`, `zellij`, `k9s`, `television`, terminal apps,
+observability tools, preview tools, and search tools when their catalog toggles
+are enabled.
 
 ### Shell sync (writable entrypoints)
 

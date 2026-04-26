@@ -37,3 +37,4 @@
 1. Cloudflare `wrangler`: default source は Nix（`home-manager` または project `flake.nix`）を推奨します。
 2. Homebrew `wrangler` は、workflow 上 Nix packaging が使えない場合に限って残してください。
 3. `Claude Code`: `tools.aiCodingAgent.claudeCode` 経由で latest-first の Homebrew cask（`claude-code@latest`）を使います。
+4. `Goneovim`: Homebrew cask は Homebrew `neovim` に依存し、Gatekeeper deprecation 後に disable 予定のため使わず、upstream Darwin release 由来の repo Nix package を使います。

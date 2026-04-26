@@ -1,11 +1,25 @@
 {
+  "debug.toolBarLocation": "docked",
+  "diffEditor.ignoreTrimWhitespace": false,
+  "diffEditor.wordWrap": "off",
+  "editor.cursorBlinking": "phase",
+  "editor.guides.bracketPairs": false,
+  "editor.guides.indentation": false,
+  "editor.inlayHints.enabled": "off",
+  "editor.wordWrap": "off",
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "files.autoSave": "onFocusChange",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "github.copilot.nextEditSuggestions.enabled": true,
   "nix.serverPath": "nixd",
   "nix.serverSettings": {
     "nixd": {
       "formatting": {
-        "command": [
-          "alejandra"
-        ]
+        "command": ["alejandra"]
       },
       "options": {
         "darwin": {

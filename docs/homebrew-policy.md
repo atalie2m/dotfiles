@@ -37,3 +37,4 @@ This document defines package-source boundaries for this dotfiles flake.
 1. Cloudflare `wrangler`: prefer Nix (`home-manager` or project `flake.nix`) as the default source.
 2. Keep Homebrew `wrangler` only when Nix packaging is unusable for your workflow.
 3. `Claude Code`: use the latest-first Homebrew cask (`claude-code@latest`) through `tools.aiCodingAgent.claudeCode`.
+4. `Goneovim`: use the repo Nix package from the upstream Darwin release instead of the Homebrew cask because the cask depends on Homebrew `neovim` and is scheduled for disablement after its Gatekeeper deprecation.

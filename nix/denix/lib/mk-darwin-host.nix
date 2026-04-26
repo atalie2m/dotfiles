@@ -50,6 +50,7 @@ delib.host {
       system.stateVersion = host.user.stateVersion.darwin;
       nixpkgs.hostPlatform = host.system;
       system.primaryUser = userName;
+      home-manager.backupFileExtension = "hm-backup";
 
       users.users.${userName} = {
         name = userName;

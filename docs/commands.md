@@ -107,6 +107,10 @@ dotfiles-doom sync
 dotfiles-doom doctor
 ```
 
+## Neovim and Goneovim
+
+`tools.editor.neovim.enable = true` installs Neovim and wires the repo-managed LazyVim config from `apps/neovim/`. `tools.editor.goneovim.enable = true` installs the Goneovim GUI from the upstream Darwin release; stock dev-derived bundles enable it alongside Neovim. This deliberately avoids the Homebrew cask because that cask depends on Homebrew `neovim`, is marked deprecated for macOS Gatekeeper validation, and is scheduled for disablement on 2026-09-01.
+
 ## Runtime overrides
 
 - `HOME` is required for `nix run .#dotfiles -- sync shell ...`, `nix run .#dotfiles -- sync emacs ...`, `nix run .#dotfiles -- sync neovim ...`, and `nix run .#dotfiles -- sync vscode ...`, and it is also required whenever a command needs repo-default user-scoped paths.

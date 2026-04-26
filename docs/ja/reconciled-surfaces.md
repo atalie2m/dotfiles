@@ -8,6 +8,7 @@
 - Doom Emacs config
 - Neovim config
 - VS Code native profile
+- Home Manager-owned XDG config file
 - Homebrew / macOS app ownership
 
 ## shell entrypoint
@@ -113,6 +114,21 @@ Rust engine は `dotfiles-sync-vscode` として別 package 化され、`nix run
 - repo が ownership を持たない user-added extension は保持される
 - `tools.editor.vscode.enable` は VS Code sync tooling と managed profile surface を所有する。Visual Studio Code.app 自体は手動インストール
 - stock bundle は activation 中に `sync vscode --apply` を実行しない。activation-time reconciliation が必要なら `tools.editor.vscode.sync.enable = true` を自分で設定する。VS Code 未インストール時も安全に skip する
+
+## Home Manager-owned XDG config file
+
+一部の CLI / TUI default は Rust `sync` surface ではなく、通常の Home
+Manager file として扱います。例は `~/.config/television/config.toml`,
+`~/.config/zellij/config.kdl`, `~/.config/k9s/*`, `programs.gh` が生成する
+gh config です。
+
+挙動:
+
+- 対応する `myconfig.tools.*` toggle が有効な場合、activation が repo-owned
+  config file を link する
+- 初回 activation で既存の unmanaged file が邪魔になる場合、nix-darwin は
+  managed link を作る前に同じ directory へ `.hm-backup` suffix 付きで退避する
+- managed link ができた後は、以後の activation で repo state に収束する
 
 ## Homebrew と macOS app ownership
 

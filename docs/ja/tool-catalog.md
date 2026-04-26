@@ -16,8 +16,8 @@ shell upgrade では Home Manager cockpit 向けの profile group として
 
 補助の `tools.profileDefaults` module には public toggle を置きません。明示的な
 tool toggle を見て、shell UX、preview/search tool、Git/GitHub、observability
-TUI、terminal app、AeroSpace、project template の `.envrc` に default user
-config を書きます。restic repository、restic password、age recipient、
+TUI、terminal app、AeroSpace に加えて、Yazi、Zellij、K9s、Television の
+default user config を書きます。restic repository、restic password、age recipient、
 machine-specific SSH key のような secret-bearing operation は repo に入れず、
 local mutable state から与えます。
 

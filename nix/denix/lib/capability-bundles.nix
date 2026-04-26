@@ -139,6 +139,7 @@
     tools.editor.emacs.sync.enable = true;
     tools.editor.emacs.bootstrap.enable = true;
     tools.editor.neovim.enable = true;
+    tools.editor.goneovim.enable = true;
 
     tools.shell.atuin.enable = true;
     tools.shell.direnv.enable = true;
