@@ -2,9 +2,11 @@
 
 # Runtime sync surface
 
-このリポジトリには 2 つの runtime sync surface と、activation で管理する 1 つの system-app boundary があります。
+このリポジトリには 4 つの runtime sync surface と、activation で管理する 1 つの system-app boundary があります。
 
 - shell entrypoint
+- Doom Emacs config
+- Neovim config
 - VS Code native profile
 - Homebrew / macOS app ownership
 
@@ -29,6 +31,57 @@ control plane は Rust で実装され、`scripts/sync.sh` は薄い shell wrapp
 - `sync shell --apply` は missing file、writable regular file、`/nix/store/...` symlink、readable non-store symlink を修復する
 - `sync shell --check` は `in-sync`、`needs-apply`、`missing`、`invalid` を返す
 - shell sync は local change を repo に逆流させない
+
+## Doom Emacs config
+
+`nix run .#dotfiles -- sync emacs` は public な writable Doom config manager です。
+control plane は `dotfiles-core` の Rust 実装で、`scripts/sync.sh` は薄い shell wrapper のみです。
+
+- Desired:
+  - `apps/emacs/doom/init.el`
+  - `apps/emacs/doom/packages.el`
+  - `apps/emacs/doom/config.el`
+- Actual:
+  - `${DOOMDIR:-~/.config/doom}/init.el`
+  - `${DOOMDIR:-~/.config/doom}/packages.el`
+  - `${DOOMDIR:-~/.config/doom}/config.el`
+- State: なし
+- Model: fully repo-owned な Doom config file を writable runtime file と比較する
+- Contract: `apply` では Doom config file が repo state に完全収束する
+
+挙動:
+
+- `sync emacs --check` は `in-sync`、`needs-apply`、`missing`、`invalid` を返す
+- `sync emacs --apply` は repo から writable runtime Doom config file を作成または上書きする
+- `sync emacs --adopt` は runtime Doom config edit を `apps/emacs/doom/` に取り込む
+- `--item init`、`--item packages`、`--item config` で対象 file を 1 つに絞れる
+- `tools.editor.emacs.enable` は Emacs app、sync tooling、外部 `doom-meow` module を所有する。Doom 本体は mutable checkout のまま
+- stock bundle は activation 中に `sync emacs --apply` を実行しない。activation-time reconciliation が必要なら `tools.editor.emacs.sync.enable = true` を自分で設定する
+
+## Neovim config
+
+`nix run .#dotfiles -- sync neovim` は public な Neovim config drift manager です。
+control plane は `dotfiles-core` の Rust 実装で、`nvim` sync surface alias も使えます。
+
+- Desired:
+  - `apps/neovim/**`
+  - `apps/neovim/lazy-lock.json`
+- Actual:
+  - `${XDG_CONFIG_HOME:-$HOME/.config}/nvim/**`
+  - `${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` が存在する場合はそれ、なければ `${XDG_CONFIG_HOME:-$HOME/.config}/nvim/lazy-lock.json`
+- State:
+  - `${XDG_STATE_HOME:-$HOME/.local/state}/nvim` 配下の Neovim / LazyVim runtime state
+- Model:
+  - repo-owned な Neovim config tree と runtime config tree を比較する
+  - repo config が Nix-managed で read-only になり得るため、state-local な `lazy-lock.json` を実効 Lazy lock として扱う
+
+挙動:
+
+- `sync neovim --check` は `in-sync`、`needs-apply`、`missing`、`runtime-only`、`invalid` を返す
+- `sync neovim --apply` は repo file を writable runtime config dir に materialize し、lock がまだない場合は実効 lock を state dir に書く
+- `sync neovim --adopt` は changed/runtime-only な runtime config file と実効 Lazy lock を `apps/neovim/` に取り込む
+- adopt は非破壊的です。repo-managed file が runtime に存在しない場合、それを repo から削除せず、その item を拒否します
+- runtime config dir が symlink の場合、`--apply` は lock 以外の rewrite を拒否します。linked tree には Home Manager activation を使うか、明示的に writable な `--runtime-dir` を渡してください
 
 ## VS Code native profile
 
@@ -75,7 +128,7 @@ Homebrew と macOS app の宣言は `sync` ではなく activation/build 中に 
   - repo が ownership と source policy を宣言する
   - activation が宣言済み install を保証する
   - runtime app / user data は mutable のまま
-  - `tools.system.karabiner` のような feature module は install policy を所有し、`tools.editor.vscode` は repo-managed profile state と sync tooling を所有する
+  - `tools.system.karabiner` のような feature module は install policy を所有し、`tools.editor.emacs` と `tools.editor.vscode` は repo-managed editor state と sync tooling を所有する
 
 ## 削除済み surface
 

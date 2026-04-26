@@ -7,7 +7,7 @@
 ## 基本事項
 
 - 正式なコマンド例と最新の host 名は `docs/commands.md` にあります。
-- 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
+- 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `DOOMDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
 - サポートされる operational root API は Darwin-first です。`darwinConfigurations` と project `templates` を公開します。
 - public 向け placeholder facts は `nix/local/` にあり、default secrets input は意図的に inert です。実機では両方とも `~/.config/dotfiles/` で override してください。
 
@@ -23,7 +23,7 @@
 - `nix/denix/darwin/`: host と rice の composition のみ。
 - `nix/modules/`: 再利用可能な shared/tool module。
 - `nix/catalog/`: ownership と backend metadata。
-- `crates/dotfiles-core`: 共有 Rust support と shell sync engine。
+- `crates/dotfiles-core`: 共有 Rust support と shell / Emacs sync engine。
 - `crates/dotfiles-cli`: 主な operational CLI。
 - `crates/dotfiles-sync-vscode`: 専用の VS Code engine。
 - `scripts/`: 薄い shell entrypoint と smoke test。

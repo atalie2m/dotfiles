@@ -13,7 +13,7 @@ reset の理由と before/after の要約は [`docs/architecture-reset.md`](../a
 - `nix/modules/shared`: raw facts schema、canonical host model wiring、system module、shared Nixpkgs policy
 - `nix/modules/tools`: capability ごとに grouped された user-facing tool module
 - `nix/catalog/tools`: Nixpkgs / Homebrew-backed tool の declarative な ownership data
-- `crates/dotfiles-core`: 共有 Rust support と shell sync 実装
+- `crates/dotfiles-core`: 共有 Rust support と shell / Emacs / Neovim sync 実装
 - `crates/dotfiles-cli`: operational CLI（`apply`, `update`, `doctor`, `bootstrap`, `export-clean`, `list-tools`, `matrix-tools`, `sync`）
 - `crates/dotfiles-sync-vscode`: 専用の VS Code native profile reconciliation engine
 - `scripts/`: 薄い shell entrypoint と smoke / integration test

@@ -12,7 +12,7 @@
 - `nix/modules/` — 再利用可能な module。`shared/` と `tools/` に分割されています。
 - `nix/catalog/` — tool module と ownership check で使う catalog data。
 - `nix/local/` — public evaluation 用の placeholder facts input。
-- `crates/dotfiles-core` — 共有 Rust support と shell sync 実装。
+- `crates/dotfiles-core` — 共有 Rust support と shell / Emacs sync 実装。
 - `crates/dotfiles-cli` — 運用 CLI。
 - `crates/dotfiles-sync-vscode` — VS Code native profile sync engine。
 - `scripts/` — 薄い shell entrypoint（`apply`, `update`, `doctor`, `bootstrap`, `sync`）と smoke test。
@@ -30,7 +30,7 @@
 ## ビルド・テスト・開発コマンド
 
 - 正式なコマンド例と最新の host 名は `docs/commands.md` を参照してください。
-- 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
+- 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `DOOMDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
 - `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles`
 - `nix run .#apply -- --host <host> --action build`
 - `nix flake init -t github:atalie2m/dotfiles#web-dev`
@@ -50,6 +50,7 @@
 - module は host truth を `myconfig.hostContext.*` から読むこと。
 - 承認済みの host-model/bootstrap 境界の外で、新しい直接 `config.host.*`、legacy facts option read、raw `inputs.local/facts.nix` read を追加しないこと。
 - shell sync は Rust の `dotfiles` CLI（`sync shell`）で実装されています。`scripts/sync.sh` は薄い shell wrapper のみです。
+- Emacs sync は Rust の `dotfiles` CLI（`sync emacs`）で writable Doom config file 向けに実装されています。
 - VS Code sync は専用の `dotfiles-sync-vscode` binary で実装され、`dotfiles sync vscode` から dispatch されます。
 - group toggle は taxonomy であり、rollout は明示的な capability bundle に属します。
 - Stock global bundle では project-pinned toolchain（`nodejs`, `go`, `terraform`, `opentofu`）を有効化しません。host が明示 opt-in しない限り、それらの version は project template / devShell 側に閉じます。

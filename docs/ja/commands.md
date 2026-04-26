@@ -75,6 +75,18 @@ nix run .#dotfiles -- sync shell --check
 nix run .#dotfiles -- sync shell --check --details --diff
 nix run .#dotfiles -- sync shell --apply
 
+# Doom Emacs config
+nix run .#dotfiles -- sync emacs --check
+nix run .#dotfiles -- sync emacs --check --details --diff
+nix run .#dotfiles -- sync emacs --apply
+nix run .#dotfiles -- sync emacs --adopt --item config
+
+# Neovim config と Lazy lock state
+nix run .#dotfiles -- sync neovim --check
+nix run .#dotfiles -- sync neovim --check --details --diff
+nix run .#dotfiles -- sync neovim --apply
+nix run .#dotfiles -- sync neovim --adopt
+
 # VS Code native profile
 nix run .#dotfiles -- sync vscode --check
 nix run .#dotfiles -- sync vscode --check --details --diff
@@ -85,7 +97,7 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 ## Doom Emacs
 
-`tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom user config を `~/.config/doom` に配置します。Doom 本体は `~/.config/emacs` の mutable checkout として扱います。
+`tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom/Meow sync tooling を導入し、`doom-meow` を `~/.config/doom/modules/editor/meow` に用意します。Doom config file は `sync emacs` が reconcile する writable runtime state です。Doom 本体は `~/.config/emacs` の mutable checkout として扱います。
 
 ```bash
 dotfiles-doom bootstrap
@@ -95,19 +107,22 @@ dotfiles-doom doctor
 
 ## runtime override
 
-- `HOME` は `nix run .#dotfiles -- sync shell ...` と `nix run .#dotfiles -- sync vscode ...` に必須です。また、repo default の user-scoped path が必要な command でも必須です。
+- `HOME` は `nix run .#dotfiles -- sync shell ...`、`nix run .#dotfiles -- sync emacs ...`、`nix run .#dotfiles -- sync neovim ...`、`nix run .#dotfiles -- sync vscode ...` に必須です。また、repo default の user-scoped path が必要な command でも必須です。
 - `DOTFILES_ROOT` は Rust CLI と shell wrapper の flake-root discovery を上書きします。
+- `DOOMDIR` は `sync emacs` が対象にする runtime Doom config directory を上書きします。未指定時は `~/.config/doom` です。
 - `FACTS_DIR` / `SECRETS_DIR` の default は `~/.config/dotfiles` で、`FACTS` / `SECRETS` の default は `path:$FACTS_DIR` / `path:$SECRETS_DIR` です。
 - `DARWIN_REBUILD_BIN` は `apply` が使う pin 済み `darwin-rebuild` path を上書きします。
 - `DOTFILES_SYNC_VSCODE_BIN` は `sync vscode` engine path を上書きします。
+- `XDG_CONFIG_HOME` と `XDG_STATE_HOME` は `sync neovim` の default runtime path に影響します。test では `--runtime-dir` と `--state-dir` で直接上書きできます。
 - `VSCODE_CODE_BIN` は `code` CLI path を上書きし、`VSCODE_DATA_HOME`、`VSCODE_EXTENSIONS_DIR`、`VSCODE_CODE_RETRIES` は VS Code runtime location と retry behavior を上書きします。
 - `SOPS_AGE_KEY_FILE` は bootstrap / doctor が使う age key location を上書きします。未指定時は `HOME` がある場合に `~/.config/sops/age/keys.txt` を default とします。
 
 注意:
 
 - `scripts/*.sh` は Rust CLI の薄い shell wrapper です。
+- `sync neovim` は `apps/neovim` と `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` を比較し、`${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` が存在する場合はそれを実効 Lazy lock として扱います。
 - `dotfiles-sync-vscode` は別 package として提供され、`dotfiles` が `sync vscode` をその binary に dispatch します。
-- stock bundle は activation 中に `sync vscode --apply` を実行しません。自動化したい場合だけ `tools.editor.vscode.sync.enable = true` を自分で有効にしてください。Visual Studio Code.app 自体は手動インストール前提で、`code` または app bundle がなければ activation は安全に skip します。インストール対象の extension ID は `apps/vscode/`（`_default/extensions.txt` と profile ごとの `extensions.txt`）にあります。
+- stock bundle は activation 中に `sync emacs --apply` や `sync vscode --apply` を実行しません。自動化したい場合だけ `tools.editor.emacs.sync.enable = true` または `tools.editor.vscode.sync.enable = true` を自分で有効にしてください。Visual Studio Code.app 自体は手動インストール前提で、`code` または app bundle がなければ activation は安全に skip します。インストール対象の extension ID は `apps/vscode/`（`_default/extensions.txt` と profile ごとの `extensions.txt`）にあります。
 
 ## check と開発
 

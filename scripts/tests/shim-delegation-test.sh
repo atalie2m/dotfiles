@@ -45,6 +45,8 @@ run_wrapper "$ROOT/scripts/bootstrap.sh" --host pro_mac --apply
 run_wrapper "$ROOT/scripts/export-clean.sh" --format dir --output "$TMP_ROOT/export"
 run_wrapper "$ROOT/scripts/matrix-tools.sh" --full --format json
 run_wrapper "$ROOT/scripts/sync.sh" shell --check
+run_wrapper "$ROOT/scripts/sync.sh" emacs --check
+run_wrapper "$ROOT/scripts/sync.sh" neovim --check
 run_wrapper "$ROOT/scripts/dotfiles.sh" sync vscode --check --profile native
 
 assert_logged "apply --host pro_mac --action build"
@@ -55,6 +57,8 @@ assert_logged "bootstrap --host pro_mac --apply"
 assert_logged "export-clean --format dir --output $TMP_ROOT/export"
 assert_logged "matrix-tools --full --format json"
 assert_logged "sync shell --check"
+assert_logged "sync emacs --check"
+assert_logged "sync neovim --check"
 assert_logged "sync vscode --check --profile native"
 
 echo "PASS: shim delegation"

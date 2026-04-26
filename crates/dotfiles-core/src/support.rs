@@ -12,9 +12,8 @@ pub use process::{
 };
 pub use targets_manifest::{
     evaluate_facts_schema, explain_darwin_targets_error, json_escape, list_darwin_targets,
-    list_updateable_root_flake_inputs, load_targets_manifest, nix_string,
-    render_bootstrap_facts, resolve_pinned_darwin_rebuild_bin, resolve_target,
-    HostTargetsManifest, TargetsManifest,
+    list_updateable_root_flake_inputs, load_targets_manifest, nix_string, render_bootstrap_facts,
+    resolve_pinned_darwin_rebuild_bin, resolve_target, HostTargetsManifest, TargetsManifest,
 };
 
 mod env_paths {
@@ -110,8 +109,7 @@ mod env_paths {
                 resolved.display()
             ));
         }
-        if !is_writable(&resolved.join("flake.nix")) || !is_writable(&resolved.join("flake.lock"))
-        {
+        if !is_writable(&resolved.join("flake.nix")) || !is_writable(&resolved.join("flake.lock")) {
             return Err(format!(
                 "update requires a writable flake checkout (current root: {})",
                 resolved.display()
@@ -195,7 +193,9 @@ mod inputs {
             let dir = facts_dir
                 .clone()
                 .or_else(|| default_inputs_dir.clone())
-                .ok_or_else(|| "HOME is not set and FACTS/FACTS_DIR were not provided".to_string())?;
+                .ok_or_else(|| {
+                    "HOME is not set and FACTS/FACTS_DIR were not provided".to_string()
+                })?;
             facts_dir = Some(dir.clone());
             format!("path:{}", dir.display())
         };
@@ -298,17 +298,18 @@ mod inputs {
 
     #[cfg(test)]
     mod tests {
-        use super::resolve_inputs_from;
         use super::super::targets_manifest::{
             resolve_target_from_manifest, HostTargetsManifest, TargetsManifest,
         };
+        use super::resolve_inputs_from;
         use std::collections::BTreeMap;
         use std::path::Path;
 
         #[test]
         fn resolve_inputs_defaults_to_home_config_dotfiles() {
             let home = Path::new("/tmp/home");
-            let resolved = resolve_inputs_from(Some(home), None, None, None, None).expect("resolve");
+            let resolved =
+                resolve_inputs_from(Some(home), None, None, None, None).expect("resolve");
             assert_eq!(resolved.facts_ref, "path:/tmp/home/.config/dotfiles");
             assert_eq!(resolved.secrets_ref, "path:/tmp/home/.config/dotfiles");
         }
@@ -344,7 +345,10 @@ mod inputs {
         #[test]
         fn resolve_inputs_reports_missing_home_when_defaults_are_needed() {
             let error = resolve_inputs_from(None, None, None, None, None).expect_err("missing");
-            assert_eq!(error, "HOME is not set and FACTS/FACTS_DIR were not provided");
+            assert_eq!(
+                error,
+                "HOME is not set and FACTS/FACTS_DIR were not provided"
+            );
         }
 
         #[test]

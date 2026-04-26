@@ -7,7 +7,7 @@ This file provides repository guidance for coding agents working in this repo.
 ## Core facts
 
 - Canonical command examples and current host names live in `docs/commands.md`.
-- Canonical runtime overrides also live in `docs/commands.md` (`HOME`, `DOTFILES_ROOT`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`).
+- Canonical runtime overrides also live in `docs/commands.md` (`HOME`, `DOTFILES_ROOT`, `DOOMDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`).
 - The supported operational root API is Darwin-first: `darwinConfigurations` plus project `templates`.
 - Placeholder public facts live in `nix/local/`; the default secrets input is intentionally inert, and real machines should override both inputs with `~/.config/dotfiles/`.
 
@@ -23,7 +23,7 @@ This file provides repository guidance for coding agents working in this repo.
 - `nix/denix/darwin/`: host and rice composition only.
 - `nix/modules/`: reusable shared and tool modules.
 - `nix/catalog/`: ownership and backend metadata.
-- `crates/dotfiles-core`: shared Rust support and shell sync engine.
+- `crates/dotfiles-core`: shared Rust support plus shell and Emacs sync engines.
 - `crates/dotfiles-cli`: main operational CLI.
 - `crates/dotfiles-sync-vscode`: dedicated VS Code engine.
 - `scripts/`: thin shell entrypoints and smoke tests.

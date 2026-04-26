@@ -1,5 +1,6 @@
 use crate::commands::sync::resolve_sync_vscode_bin;
 use crate::commands::{eval_target_bool, CheckRecord, DoctorArgs};
+use dotfiles_core::emacs_sync::{run as run_emacs_sync, EmacsSyncMode, EmacsSyncOptions};
 use dotfiles_core::shell_sync::{
     run as run_shell_sync, ShellGroup, ShellSyncMode, ShellSyncOptions,
 };
@@ -68,6 +69,11 @@ pub(crate) fn command_doctor(args: &DoctorArgs) -> Result<(), String> {
             ));
             checks.push(CheckRecord::new(
                 "vscode.sync",
+                "ok",
+                "skipped on non-Darwin host",
+            ));
+            checks.push(CheckRecord::new(
+                "emacs.sync",
                 "ok",
                 "skipped on non-Darwin host",
             ));
@@ -331,6 +337,11 @@ fn record_strict_sync_checks(
             "warn",
             "strict VS Code sync check skipped (pass --host to resolve target)",
         ));
+        checks.push(CheckRecord::new(
+            "emacs.sync",
+            "warn",
+            "strict Emacs sync check skipped (pass --host to resolve target)",
+        ));
         return Ok(());
     };
 
@@ -361,6 +372,18 @@ fn record_strict_sync_checks(
         &inputs,
         target,
         "myconfig.tools.editor.vscode.sync.enable",
+    )?;
+    let emacs_enabled = eval_target_bool(
+        &flake_ref,
+        &inputs,
+        target,
+        "myconfig.tools.editor.emacs.enable",
+    )?;
+    let emacs_sync = eval_target_bool(
+        &flake_ref,
+        &inputs,
+        target,
+        "myconfig.tools.editor.emacs.sync.enable",
     )?;
 
     if shell_enabled == Some(true) {
@@ -413,6 +436,45 @@ fn record_strict_sync_checks(
             "warn",
             format!(
                 "unable to resolve shell enablement for target {}; skipped",
+                target
+            ),
+        ));
+    }
+
+    if emacs_enabled == Some(true) && emacs_sync == Some(true) {
+        let result = run_emacs_sync(EmacsSyncOptions {
+            managed_dir: Some(root.join("apps/emacs/doom")),
+            doom_dir: None,
+            mode: EmacsSyncMode::Check,
+            details: false,
+            diff_output: false,
+            item_filter: None,
+        })?;
+        if result.exit_code(EmacsSyncMode::Check) == 0 {
+            checks.push(CheckRecord::new(
+                "emacs.sync",
+                "ok",
+                "Emacs sync check passed",
+            ));
+        } else {
+            checks.push(CheckRecord::new(
+                "emacs.sync",
+                "fail",
+                "Emacs sync check failed (inspect: nix run .#dotfiles -- sync emacs --check --details --diff)",
+            ));
+        }
+    } else if emacs_enabled == Some(false) || emacs_sync == Some(false) {
+        checks.push(CheckRecord::new(
+            "emacs.sync",
+            "ok",
+            format!("disabled in target {}; skipped", target),
+        ));
+    } else {
+        checks.push(CheckRecord::new(
+            "emacs.sync",
+            "warn",
+            format!(
+                "unable to resolve Emacs sync enablement for target {}; skipped",
                 target
             ),
         ));

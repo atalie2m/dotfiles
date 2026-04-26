@@ -81,17 +81,14 @@ pub(crate) fn read_enablement_ids_from_db(
 
     let mut ids = Vec::new();
     for (index, item) in items.iter().enumerate() {
-        let id = item
-            .get("id")
-            .and_then(Value::as_str)
-            .ok_or_else(|| {
-                format!(
-                    "enablement DB {} key '{}' contains an invalid entry at index {}",
-                    db_path.display(),
-                    key,
-                    index
-                )
-            })?;
+        let id = item.get("id").and_then(Value::as_str).ok_or_else(|| {
+            format!(
+                "enablement DB {} key '{}' contains an invalid entry at index {}",
+                db_path.display(),
+                key,
+                index
+            )
+        })?;
         ids.push(id.to_string());
     }
 
@@ -323,8 +320,8 @@ mod tests {
             )
             .expect("insert");
 
-        let error =
-            read_enablement_ids_from_db(&db_path, "extensionsIdentifiers/disabled").expect_err("err");
+        let error = read_enablement_ids_from_db(&db_path, "extensionsIdentifiers/disabled")
+            .expect_err("err");
         assert!(error.contains("contains invalid JSON"));
     }
 }

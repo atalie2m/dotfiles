@@ -341,7 +341,9 @@ mod tests {
 
         let eval = classify_profile(&context, &plan).expect("classify");
         assert_eq!(eval.status, ProfileStatus::Invalid);
-        assert!(eval.reason.contains("global extensions manifest is invalid"));
+        assert!(eval
+            .reason
+            .contains("global extensions manifest is invalid"));
     }
 
     #[test]

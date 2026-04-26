@@ -186,6 +186,18 @@ let
         touch "$out"
       '';
 
+      syncEmacsSmoke = pkgs.runCommand "sync-emacs-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gnugrep dotfilesPackage ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
+        bash scripts/tests/sync-emacs-smoke-test.sh
+        touch "$out"
+      '';
+
       matrixToolsSmoke = pkgs.runCommand "matrix-tools-smoke-test"
         {
           nativeBuildInputs = [ pkgs.bash dotfilesPackage ];
@@ -263,6 +275,18 @@ let
         export DOTFILES_ROOT="$src"
         export DOTFILES_SYNC_VSCODE_BIN="${syncVscodeRust}/bin/dotfiles-sync-vscode"
         bash scripts/tests/sync-vscode-smoke-test.sh
+        touch "$out"
+      '';
+
+      syncNeovimSmoke = pkgs.runCommand "sync-neovim-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gnugrep dotfilesPackage ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
+        bash scripts/tests/sync-neovim-smoke-test.sh
         touch "$out"
       '';
 

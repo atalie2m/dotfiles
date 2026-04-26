@@ -582,25 +582,27 @@ fn apply_target_with_recheck(
             "apply refused for '{}': {}",
             target.id, evaluation.reason
         ))),
-        TargetStatus::Missing | TargetStatus::NeedsApply => match apply_target(target, evaluation) {
-            Ok(()) => {
-                let post = classify_target(target)?;
-                if post.status == TargetStatus::InSync {
-                    Ok(ApplyStatus::Applied)
-                } else {
-                    Ok(ApplyStatus::Error(format!(
-                        "apply failed to converge '{}': status={} reason={}",
-                        target.id,
-                        post.status.as_str(),
-                        post.reason
-                    )))
+        TargetStatus::Missing | TargetStatus::NeedsApply => {
+            match apply_target(target, evaluation) {
+                Ok(()) => {
+                    let post = classify_target(target)?;
+                    if post.status == TargetStatus::InSync {
+                        Ok(ApplyStatus::Applied)
+                    } else {
+                        Ok(ApplyStatus::Error(format!(
+                            "apply failed to converge '{}': status={} reason={}",
+                            target.id,
+                            post.status.as_str(),
+                            post.reason
+                        )))
+                    }
                 }
+                Err(err) => Ok(ApplyStatus::Error(format!(
+                    "apply failed for '{}': {}",
+                    target.id, err
+                ))),
             }
-            Err(err) => Ok(ApplyStatus::Error(format!(
-                "apply failed for '{}': {}",
-                target.id, err
-            ))),
-        },
+        }
     }
 }
 

@@ -13,7 +13,7 @@ For the reset rationale and before/after summary, see [`docs/architecture-reset.
 - `nix/modules/shared`: raw facts schema, canonical host model wiring, system modules, and shared Nixpkgs policy
 - `nix/modules/tools`: user-facing tool modules grouped by capability
 - `nix/catalog/tools`: declarative tool ownership data for Nixpkgs and Homebrew-backed tools
-- `crates/dotfiles-core`: shared Rust support and shell sync implementation
+- `crates/dotfiles-core`: shared Rust support plus shell, Emacs, and Neovim sync implementations
 - `crates/dotfiles-cli`: operational CLI (`apply`, `update`, `doctor`, `bootstrap`, `export-clean`, `list-tools`, `matrix-tools`, `sync`)
 - `crates/dotfiles-sync-vscode`: dedicated VS Code native profile reconciliation engine
 - `scripts/`: thin shell entrypoints and smoke/integration tests

@@ -12,7 +12,7 @@ This repository is a Darwin-first Nix flake for macOS system configuration. Keep
 - `nix/modules/` — reusable modules, split into `shared/` and `tools/`.
 - `nix/catalog/` — catalog data used by tool modules and ownership checks.
 - `nix/local/` — placeholder public facts input for public evaluation.
-- `crates/dotfiles-core` — shared Rust support and shell sync implementation.
+- `crates/dotfiles-core` — shared Rust support plus shell and Emacs sync implementation.
 - `crates/dotfiles-cli` — operational CLI.
 - `crates/dotfiles-sync-vscode` — VS Code native profile sync engine.
 - `scripts/` — thin shell entrypoints (`apply`, `update`, `doctor`, `bootstrap`, `sync`) and smoke tests.
@@ -30,7 +30,7 @@ Local inputs live outside Git at `~/.config/dotfiles/`:
 ## Build, Test, and Development Commands
 
 - Canonical command examples and current host names live in `docs/commands.md`.
-- Canonical runtime overrides live in `docs/commands.md` (`HOME`, `DOTFILES_ROOT`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`).
+- Canonical runtime overrides live in `docs/commands.md` (`HOME`, `DOTFILES_ROOT`, `DOOMDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`).
 - `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles`
 - `nix run .#apply -- --host <host> --action build`
 - `nix flake init -t github:atalie2m/dotfiles#web-dev`
@@ -50,6 +50,7 @@ Local inputs live outside Git at `~/.config/dotfiles/`:
 - Modules must read host truth from `myconfig.hostContext.*`.
 - Do not add new direct `config.host.*`, legacy facts option reads, or raw `inputs.local/facts.nix` reads outside the approved host-model/bootstrap boundary.
 - Shell sync is implemented by the Rust `dotfiles` CLI (`sync shell`); `scripts/sync.sh` is only a thin shell wrapper.
+- Emacs sync is implemented by the Rust `dotfiles` CLI (`sync emacs`) for writable Doom config files.
 - VS Code sync is implemented by the dedicated `dotfiles-sync-vscode` binary and dispatched through `dotfiles sync vscode`.
 - Group toggles are taxonomy; rollout belongs in explicit capability bundles.
 - Stock global bundles must not enable project-pinned toolchains (`nodejs`, `go`, `terraform`, `opentofu`); keep those in project templates/devShells unless a host explicitly opts in.

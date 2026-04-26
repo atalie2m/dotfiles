@@ -75,6 +75,18 @@ nix run .#dotfiles -- sync shell --check
 nix run .#dotfiles -- sync shell --check --details --diff
 nix run .#dotfiles -- sync shell --apply
 
+# Doom Emacs config
+nix run .#dotfiles -- sync emacs --check
+nix run .#dotfiles -- sync emacs --check --details --diff
+nix run .#dotfiles -- sync emacs --apply
+nix run .#dotfiles -- sync emacs --adopt --item config
+
+# Neovim config and Lazy lock state
+nix run .#dotfiles -- sync neovim --check
+nix run .#dotfiles -- sync neovim --check --details --diff
+nix run .#dotfiles -- sync neovim --apply
+nix run .#dotfiles -- sync neovim --adopt
+
 # VS Code native profiles
 nix run .#dotfiles -- sync vscode --check
 nix run .#dotfiles -- sync vscode --check --details --diff
@@ -85,7 +97,7 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 ## Doom Emacs
 
-`tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew and manages the Doom user config at `~/.config/doom`. Doom itself stays as a mutable checkout at `~/.config/emacs`.
+`tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew, installs the Doom/Meow sync tooling, and keeps `doom-meow` available under `~/.config/doom/modules/editor/meow`. Doom config files are writable runtime state reconciled by `sync emacs`; Doom itself stays as a mutable checkout at `~/.config/emacs`.
 
 ```bash
 dotfiles-doom bootstrap
@@ -95,19 +107,22 @@ dotfiles-doom doctor
 
 ## Runtime overrides
 
-- `HOME` is required for `nix run .#dotfiles -- sync shell ...` and `nix run .#dotfiles -- sync vscode ...`, and it is also required whenever a command needs repo-default user-scoped paths.
+- `HOME` is required for `nix run .#dotfiles -- sync shell ...`, `nix run .#dotfiles -- sync emacs ...`, `nix run .#dotfiles -- sync neovim ...`, and `nix run .#dotfiles -- sync vscode ...`, and it is also required whenever a command needs repo-default user-scoped paths.
 - `DOTFILES_ROOT` overrides flake-root discovery for the Rust CLI and shell wrappers.
+- `DOOMDIR` overrides the runtime Doom config directory for `sync emacs`; otherwise it defaults to `~/.config/doom`.
 - `FACTS_DIR` / `SECRETS_DIR` default to `~/.config/dotfiles`; `FACTS` / `SECRETS` default to `path:$FACTS_DIR` / `path:$SECRETS_DIR`.
 - `DARWIN_REBUILD_BIN` overrides the pinned `darwin-rebuild` path used by `apply`.
 - `DOTFILES_SYNC_VSCODE_BIN` overrides the `sync vscode` engine path.
+- `XDG_CONFIG_HOME` and `XDG_STATE_HOME` affect the default Neovim runtime paths used by `sync neovim`; override them directly with `--runtime-dir` and `--state-dir` when testing.
 - `VSCODE_CODE_BIN` overrides the `code` CLI path; `VSCODE_DATA_HOME`, `VSCODE_EXTENSIONS_DIR`, and `VSCODE_CODE_RETRIES` override VS Code runtime locations and retry behavior.
 - `SOPS_AGE_KEY_FILE` overrides the bootstrap / doctor age-key location; otherwise those commands default to `~/.config/sops/age/keys.txt` when `HOME` is available.
 
 Notes:
 
 - `scripts/*.sh` are thin shell wrappers over the Rust CLI.
+- `sync neovim` compares `apps/neovim` against `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` and treats `${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` as the effective Lazy lock when it exists.
 - `dotfiles-sync-vscode` is packaged separately; `dotfiles` dispatches `sync vscode` to that binary.
-- Stock bundles do not run `sync vscode --apply` during activation. Enable `tools.editor.vscode.sync.enable = true` yourself if you want that automation. Visual Studio Code.app itself is installed manually, and activation skips cleanly when `code` or the app bundle is absent. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).
+- Stock bundles do not run `sync emacs --apply` or `sync vscode --apply` during activation. Enable `tools.editor.emacs.sync.enable = true` or `tools.editor.vscode.sync.enable = true` yourself if you want that automation. Visual Studio Code.app itself is installed manually, and activation skips cleanly when `code` or the app bundle is absent. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).
 
 ## Checks and development
 

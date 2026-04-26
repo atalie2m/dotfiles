@@ -127,7 +127,7 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - `apps/vscode/<name>/` for any other name maps to a native custom profile with that display name.
 - Supported inputs are `settings.json`, `extensions.txt`, and bootstrap-only `default-disabled-extensions.txt`.
 - `tools.editor.vscode.enable` installs `dotfiles-sync-vscode` into Home Manager; Visual Studio Code.app itself is expected to be installed manually.
-- `sync vscode` uses the Rust engine (`dotfiles-sync-vscode`).
+- `sync emacs`, `sync neovim`, and `sync shell` use Rust engines in `dotfiles-core`; `sync vscode` uses the dedicated Rust engine (`dotfiles-sync-vscode`).
 - **Stock `ultra` behavior:** stock Darwin bundles enable the VS Code module, but they do not run `sync vscode --apply` during Home Manager activation. Apply managed profiles explicitly with `nix run .#dotfiles -- sync vscode --apply` after installing VS Code.
 - **Extension bulk install:** repo-owned extension IDs live under `apps/vscode/` — chiefly `_default/extensions.txt` plus each profile's `extensions.txt` (for example `web/`, `native/`). That directory is the source of truth for what sync installs or uninstalls.
 - `sync vscode --apply` reconciles fully repo-owned managed profile settings plus those repo-owned extensions into writable VS Code profile state when you invoke the CLI.
@@ -135,12 +135,12 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - Drift management is mutable by design: managed profile settings are fully repo-owned, while repo-owned extensions converge without adopting user-added extensions.
 
 See `docs/vscode.md` for the runtime model and CLI.
-See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs immutable boundary details across shell, VS Code, and system app surfaces.
+See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs immutable boundary details across shell, editor, VS Code, and system app surfaces.
 
 ## Mutable Editor Tooling
 
-- Emacs app wiring is Nix-first, while Doom package state stays mutable. The repo manages `~/.config/doom`, the external `doom-meow` module, and runtime helpers; Doom itself lives in `~/.config/emacs`.
-- Neovim app/config wiring is declarative under `apps/neovim/`; the config is LazyVim-based, and plugin installation/update happens at runtime through `lazy.nvim` using the repo-owned `lazy-lock.json`.
+- Emacs app wiring is Nix-first, while Doom config files and package state stay mutable. `sync emacs` reconciles `apps/emacs/doom/{init,packages,config}.el` with writable files under `~/.config/doom`, and `--adopt` pulls local Doom edits back into the repo.
+- Neovim app/config wiring is declarative under `apps/neovim/`; the config is LazyVim-based, and `sync neovim` can detect drift or adopt runtime edits, including the effective state-local Lazy lock.
 - VS Code profile definitions are declarative, but runtime state stays writable; managed profile settings are fully repo-owned and manual settings changes are overwritten on apply, while user-added extensions remain outside repo ownership.
 - This repo treats those editor runtimes as a convenience boundary: config is pinned here, package/login/UI state is not.
 
@@ -242,6 +242,8 @@ Additional sync tests:
 ```bash
 scripts/tests/sync-cli-common-parse-test.sh
 scripts/tests/sync-shell-smoke-test.sh
+scripts/tests/sync-emacs-smoke-test.sh
+scripts/tests/sync-neovim-smoke-test.sh
 scripts/tests/sync-vscode-smoke-test.sh
 ```
 
@@ -504,7 +506,7 @@ Advanced overrides:
 
 - `FACTS` and `SECRETS` may point to other flake input references when needed.
 - `doctor` and `bootstrap` still require matching `FACTS_DIR` / `SECRETS_DIR` when those overrides are not `path:...`, because they read or write local files directly.
-- `HOME` is required for `sync shell`, `sync vscode`, and any command that needs default user-scoped paths.
+- `HOME` is required for `sync shell`, `sync emacs`, `sync neovim`, `sync vscode`, and any command that needs default user-scoped paths.
 
 Runtime override details live in [`docs/commands.md`](docs/commands.md#runtime-overrides).
 
@@ -538,7 +540,7 @@ Manual rebuild examples live in [`docs/commands.md`](docs/commands.md).
 - **`no darwinConfigurations found` / `unable to evaluate darwinConfigurations`** → Verify your overridden `facts.nix` and `secrets.nix`, then rerun `nix run .#doctor`.
 - **`target not found for host/rice`** → Run `nix run .#doctor -- --host <host> --rice <rice>` to see available targets.
 - **`FACTS_DIR is required ...` / `SECRETS_DIR is required ...`** → `doctor` and `bootstrap` need local file paths. If you override `FACTS` or `SECRETS` with a non-`path:` ref, also set the matching `*_DIR` variable.
-- **`HOME is not set`** → `sync shell`, `sync vscode`, and default user-scoped runtime paths require `HOME`. Export it, or provide the explicit overrides documented in [`docs/commands.md`](docs/commands.md#runtime-overrides).
+- **`HOME is not set`** → `sync shell`, `sync emacs`, `sync neovim`, `sync vscode`, and default user-scoped runtime paths require `HOME`. Export it, or provide the explicit overrides documented in [`docs/commands.md`](docs/commands.md#runtime-overrides).
 - **`darwin-rebuild: command not found`** → Use `nix run .#darwin-rebuild -- ...` for manual runs; `nix run .#apply` and `nix run .#update` already use the pinned wrapper automatically.
 - **`error: unrecognised flag '--flake'`** → Ensure you invoke `nix run <flake>#<pkg> -- <cmd>`. Everything after `--` is passed through to `darwin-rebuild`.
 - **Using `sudo`** → macOS resets `PATH` under `sudo`; `nix run .#apply` preserves `PATH` plus the dotfiles input override variables it needs, while manual runs should use the pinned wrapper via `nix run .#darwin-rebuild -- ...`.

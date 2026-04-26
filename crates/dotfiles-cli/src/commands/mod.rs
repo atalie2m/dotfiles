@@ -188,6 +188,9 @@ pub(crate) struct SyncArgs {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub(crate) enum SyncSurface {
+    Emacs,
+    #[value(alias = "nvim")]
+    Neovim,
     Shell,
     Vscode,
 }

@@ -19,7 +19,7 @@ The point was not to hide mutable state. The point was to make ownership, orches
 - `One product, one operational API`: the supported operational root surface is Darwin-first.
 - `Canonical host truth is shared`: modules consume `myconfig.hostContext.*`.
 - `Typed truth beats ad-hoc validation`: machine metadata and host-derived data are normalized once.
-- `Mutable boundaries stay explicit`: shell entrypoints, VS Code profiles, and Homebrew/app state are reconciled surfaces, not fake-declarative state.
+- `Mutable boundaries stay explicit`: shell entrypoints, Doom Emacs config, VS Code profiles, and Homebrew/app state are reconciled surfaces, not fake-declarative state.
 - `Shell is an adapter, not the control plane`: shell remains only as a thin entrypoint layer; orchestration lives in Rust.
 
 ## What changed
@@ -84,6 +84,8 @@ Intent:
 After the reset:
 
 - `sync shell` reconciles writable shell entrypoints in Rust
+- `sync emacs` reconciles writable Doom Emacs config files in Rust
+- `sync neovim` reconciles writable Neovim config drift and effective Lazy lock state in Rust
 - `scripts/sync.sh` is only a thin shell wrapper
 - `sync vscode` dispatches to the dedicated `dotfiles-sync-vscode` binary
 - Homebrew ownership remains declarative and validated, but runtime app state stays writable

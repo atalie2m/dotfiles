@@ -19,7 +19,7 @@
 - `One product, one operational API`: サポート対象の operational root surface は Darwin-first。
 - `Canonical host truth is shared`: module は `myconfig.hostContext.*` を使う。
 - `Typed truth beats ad-hoc validation`: machine metadata と host-derived data は一度だけ正規化する。
-- `Mutable boundaries stay explicit`: shell entrypoint、VS Code profile、Homebrew/app state は reconciled surface であり、見せかけの declarative state ではない。
+- `Mutable boundaries stay explicit`: shell entrypoint、Doom Emacs config、VS Code profile、Homebrew/app state は reconciled surface であり、見せかけの declarative state ではない。
 - `Shell is an adapter, not the control plane`: shell は薄い entrypoint layer に留め、orchestration は Rust に置く。
 
 ## 何が変わったか
@@ -84,6 +84,8 @@ reset 後:
 reset 後:
 
 - `sync shell` は writable shell entrypoint を Rust で reconcile する
+- `sync emacs` は writable Doom Emacs config file を Rust で reconcile する
+- `sync neovim` は writable Neovim config drift と実効 Lazy lock state を Rust で reconcile する
 - `scripts/sync.sh` は薄い shell wrapper のみ
 - `sync vscode` は専用の `dotfiles-sync-vscode` binary に dispatch する
 - Homebrew ownership は declarative かつ validated のままだが、runtime app state は writable のままにする
