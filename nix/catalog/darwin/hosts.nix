@@ -19,32 +19,22 @@ in
   inherit supportedProfiles;
 
   hosts = {
-    minimal_mac = {
-      name = "minimal_mac";
-      defaultProfile = "minimal";
-      buildTarget = "minimal_mac";
-      inherit supportedProfiles;
-      machineKey = "minimal_mac";
-      system = "aarch64-darwin";
-      extraMyconfig = { };
-    };
-
-    pro_mac = {
-      name = "pro_mac";
+    own_mac = {
+      name = "own_mac";
       defaultProfile = "pro";
-      buildTarget = "pro_mac";
+      buildTarget = "own_mac";
       inherit supportedProfiles;
-      machineKey = "pro_mac";
+      machineKey = "own_mac";
       system = "aarch64-darwin";
       extraMyconfig = powerUserOverrides;
     };
 
-    ultra_mac = {
-      name = "ultra_mac";
-      defaultProfile = "ultra";
-      buildTarget = "ultra_mac";
+    work_mac = {
+      name = "work_mac";
+      defaultProfile = "pro";
+      buildTarget = "work_mac";
       inherit supportedProfiles;
-      machineKey = "ultra_mac";
+      machineKey = "work_mac";
       system = "aarch64-darwin";
       extraMyconfig = powerUserOverrides;
     };

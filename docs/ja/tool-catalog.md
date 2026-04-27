@@ -31,14 +31,14 @@ local mutable state から与えます。
 ### text 出力
 
 ```bash
-nix run .#list-tools -- --host pro_mac
-nix run .#list-tools -- --host ultra_mac --profile lite
+nix run .#list-tools -- --host own_mac
+nix run .#list-tools -- --host work_mac --profile ultra
 ```
 
 ### JSON 出力
 
 ```bash
-nix run .#list-tools -- --host pro_mac --format json
+nix run .#list-tools -- --host work_mac --profile ultra --format json
 ```
 
 ### 出力範囲
@@ -68,6 +68,33 @@ nix run .#list-tools -- --host pro_mac --format json
 - `nix/scripts/list-tools.nix`
 
 toggle filtering logic は `list-tools.nix` にあるため、text 出力と JSON 出力は同じ filtered view から生成されます。
+
+## work host policy
+
+`work_mac` は別 profile taxonomy ではありません。stock の `minimal` / `lite` /
+`pro` / `ultra` のいずれかを選び、host positive override を merge した後、
+`nix/catalog/darwin/work-policy.nix` を forced-off policy data として適用します。
+policy helper は profile と host data から実際に現れた `tools` toggle を flatten
+するため、catalog module の group だけでなく、`core`, `shell`, `dev`, `editor`,
+`system`, `terminal`, `security`, `aiCodingAgent` のような個別 module の group も対象にします。
+
+`allowedGroups` は group 境界であり、完全な per-tool whitelist ではありません。
+現行 policy は、stock Darwin profile が project-pinned toolchain（`go`,
+`nodejs`, `terraform`, `opentofu`）を有効化しない前提で `dev` を許可します。
+将来それらを stock profile に戻すと、`work_mac` にも流れます。
+
+broad group を広げるときは明示的に review してください。
+
+- `system` は core macOS integration のため許可しますが、`latestApp`,
+  `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, `carthage` などの app/dev
+  extras は deny しています。
+- `terminalVisual` は deny しています。許可すると、選択 profile 側の
+  GUI/visual terminal extras が個別 deny なしに通ります。
+- `downloadArchive` と `passwordSecrets` は group として許可し、selected extras
+  を deny することで policy を読みやすくしています。
+
+`editor.emacs.sync.enable` のような deep toggle は `list-tools` 出力の対象外です。
+policy assertion では direct `nix eval` を使って確認します。
 
 `flake check` には final-config tool-ownership check が含まれます。Darwin target に同じ `group.tool` key が複数 registry から現れる場合、最終 Homebrew config に複数 owner が claim する brew / cask / MAS item が含まれる場合、Homebrew cask が `tools.system.brewNix` と重複する場合、または ownership registry に claim されていない item がある場合に fail します。
 

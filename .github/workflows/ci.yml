@@ -104,17 +104,12 @@ jobs:
               };
             };
             machines = {
-              pro_mac = {
+              own_mac = {
                 computerName = "CI Mac";
                 localHostName = "ci-mac";
                 hostName = "ci-mac.local";
               };
-              ultra_mac = {
-                computerName = "CI Mac";
-                localHostName = "ci-mac";
-                hostName = "ci-mac.local";
-              };
-              minimal_mac = {
+              work_mac = {
                 computerName = "CI Mac";
                 localHostName = "ci-mac";
                 hostName = "ci-mac.local";
@@ -134,6 +129,9 @@ jobs:
 
       - name: Run target manifest test
         run: bash scripts/tests/targets-manifest-test.sh
+
+      - name: Run work policy test
+        run: bash scripts/tests/work-policy-test.sh
 
       - name: Evaluate darwin configurations
         run: |

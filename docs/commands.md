@@ -6,9 +6,9 @@ Canonical command examples and current host names live here. Keep README and AI 
 
 ## Current hosts and packages
 
-- Hosts: `pro_mac` (default profile: `pro`), `ultra_mac` (default profile: `ultra`), `minimal_mac` (default profile: `minimal`)
+- Hosts: `own_mac` (default profile: `pro`), `work_mac` (default profile: `pro`)
 - Profiles: `minimal`, `lite`, `pro`, `ultra`
-- Example darwin targets: `pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-lite`, `minimal_mac-ultra`, `pro_mac-minimal`
+- Example darwin targets: `own_mac`, `own_mac-minimal`, `own_mac-lite`, `own_mac-ultra`, `work_mac`, `work_mac-minimal`, `work_mac-lite`, `work_mac-ultra`
 - Packages: `dotfiles`, `dotfiles-cli`, `dotfiles-sync-vscode`
 - Templates: `web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`
 
@@ -24,25 +24,25 @@ nix flake init -t github:atalie2m/dotfiles#python-research
 ## Operational CLI
 
 These commands are Darwin-only and resolve `darwinConfigurations`.
+`work_mac` applies its host policy after the selected profile and host overrides, so `--profile ultra` is still capped by the work boundary.
 
 ```bash
 # Apply default profile for each host
-nix run .#apply -- --host pro_mac
-nix run .#apply -- --host ultra_mac
-nix run .#apply -- --host minimal_mac
+nix run .#apply -- --host own_mac
+nix run .#apply -- --host work_mac
 
 # Build only
-nix run .#apply -- --host ultra_mac --action build
+nix run .#apply -- --host own_mac --action build
 
 # Switch profiles explicitly
-nix run .#apply -- --host pro_mac --profile ultra
-nix run .#apply -- --host ultra_mac --profile lite
-nix run .#apply -- --host minimal_mac --profile ultra
-nix run .#apply -- --host ultra_mac --profile minimal
+nix run .#apply -- --host own_mac --profile ultra
+nix run .#apply -- --host work_mac --profile lite
+nix run .#apply -- --host work_mac --profile ultra
+nix run .#apply -- --host own_mac --profile minimal
 
 # Inspect effective group/tool toggles
-nix run .#list-tools -- --host pro_mac
-nix run .#list-tools -- --host ultra_mac --profile lite --format json
+nix run .#list-tools -- --host own_mac
+nix run .#list-tools -- --host work_mac --profile ultra --format json
 
 # Inspect cross-target toggle matrix
 nix run .#matrix-tools
@@ -51,20 +51,20 @@ nix run .#matrix-tools -- --full --format json
 
 # Bootstrap local inputs
 nix run .#bootstrap
-nix run .#bootstrap -- --host pro_mac --apply
-nix run .#bootstrap -- --host pro_mac --yes
+nix run .#bootstrap -- --host own_mac --apply
+nix run .#bootstrap -- --host own_mac --yes
 
 # Health checks
 nix run .#doctor
-nix run .#doctor -- --host pro_mac
-nix run .#doctor -- --host pro_mac --strict
+nix run .#doctor -- --host own_mac
+nix run .#doctor -- --host work_mac --strict
 nix run .#doctor -- --json
 
 # Update flake inputs and run checks/builds
 UPDATE_SKIP_BUILD=1 nix run .#update
-nix run .#update -- --host pro_mac
-UPDATE_ALL=1 nix run .#update -- --host pro_mac
-UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host pro_mac
+nix run .#update -- --host own_mac
+UPDATE_ALL=1 nix run .#update -- --host own_mac
+UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host own_mac
 ```
 
 ## Runtime sync

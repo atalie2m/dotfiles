@@ -355,48 +355,48 @@ mod inputs {
         fn resolve_target_uses_build_target_for_default_host() {
             let manifest = TargetsManifest {
                 hosts: BTreeMap::from([(
-                    "pro_mac".to_string(),
+                    "own_mac".to_string(),
                     HostTargetsManifest {
                         default_profile: "pro".to_string(),
-                        build_target: "pro_mac".to_string(),
+                        build_target: "own_mac".to_string(),
                         supported_profiles: vec!["lite".to_string(), "pro".to_string()],
-                        machine_key: "pro_mac".to_string(),
+                        machine_key: "own_mac".to_string(),
                         system: "aarch64-darwin".to_string(),
                         targets_by_profile: BTreeMap::from([
-                            ("lite".to_string(), "pro_mac-lite".to_string()),
-                            ("pro".to_string(), "pro_mac".to_string()),
+                            ("lite".to_string(), "own_mac-lite".to_string()),
+                            ("pro".to_string(), "own_mac".to_string()),
                         ]),
                     },
                 )]),
             };
 
             let resolved =
-                resolve_target_from_manifest(&manifest, "pro_mac", None).expect("resolve");
-            assert_eq!(resolved, "pro_mac");
+                resolve_target_from_manifest(&manifest, "own_mac", None).expect("resolve");
+            assert_eq!(resolved, "own_mac");
         }
 
         #[test]
         fn resolve_target_uses_targets_by_profile_for_explicit_profile() {
             let manifest = TargetsManifest {
                 hosts: BTreeMap::from([(
-                    "ultra_mac".to_string(),
+                    "work_mac".to_string(),
                     HostTargetsManifest {
-                        default_profile: "ultra".to_string(),
-                        build_target: "ultra_mac".to_string(),
+                        default_profile: "pro".to_string(),
+                        build_target: "work_mac".to_string(),
                         supported_profiles: vec!["lite".to_string(), "ultra".to_string()],
-                        machine_key: "ultra_mac".to_string(),
+                        machine_key: "work_mac".to_string(),
                         system: "aarch64-darwin".to_string(),
                         targets_by_profile: BTreeMap::from([
-                            ("lite".to_string(), "ultra_mac-lite".to_string()),
-                            ("ultra".to_string(), "ultra_mac".to_string()),
+                            ("lite".to_string(), "work_mac-lite".to_string()),
+                            ("ultra".to_string(), "work_mac-ultra".to_string()),
                         ]),
                     },
                 )]),
             };
 
-            let resolved = resolve_target_from_manifest(&manifest, "ultra_mac", Some("lite"))
+            let resolved = resolve_target_from_manifest(&manifest, "work_mac", Some("lite"))
                 .expect("resolve");
-            assert_eq!(resolved, "ultra_mac-lite");
+            assert_eq!(resolved, "work_mac-lite");
         }
 
         #[test]
@@ -410,26 +410,26 @@ mod inputs {
 
             let manifest = TargetsManifest {
                 hosts: BTreeMap::from([(
-                    "minimal_mac".to_string(),
+                    "work_mac".to_string(),
                     HostTargetsManifest {
-                        default_profile: "minimal".to_string(),
-                        build_target: "minimal_mac".to_string(),
-                        supported_profiles: vec!["minimal".to_string()],
-                        machine_key: "minimal_mac".to_string(),
+                        default_profile: "pro".to_string(),
+                        build_target: "work_mac".to_string(),
+                        supported_profiles: vec!["pro".to_string()],
+                        machine_key: "work_mac".to_string(),
                         system: "aarch64-darwin".to_string(),
                         targets_by_profile: BTreeMap::from([(
-                            "minimal".to_string(),
-                            "minimal_mac".to_string(),
+                            "pro".to_string(),
+                            "work_mac".to_string(),
                         )]),
                     },
                 )]),
             };
             let missing_profile =
-                resolve_target_from_manifest(&manifest, "minimal_mac", Some("ultra"))
+                resolve_target_from_manifest(&manifest, "work_mac", Some("ultra"))
                     .expect_err("err");
             assert_eq!(
                 missing_profile,
-                "target not found for host 'minimal_mac' and profile 'ultra'"
+                "target not found for host 'work_mac' and profile 'ultra'"
             );
         }
     }

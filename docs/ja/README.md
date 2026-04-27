@@ -46,7 +46,7 @@ reset の理由、before/after、設計意図は [`docs/architecture-reset.md`](
 
 運用上の注意: サポートされる root flake API は Darwin-first で、`darwinConfigurations` と project `templates` を公開します。
 
-- Hosts: `pro_mac`（default profile: `pro`）、`ultra_mac`（default profile: `ultra`）、`minimal_mac`（default profile: `minimal`）
+- Hosts: `own_mac`（default profile: `pro`）、`work_mac`（default profile: `pro`）
 - Profiles: `minimal`, `lite`, `pro`, `ultra`
   - `minimal`: Nix settings と Git を中心にした最小構成
   - `lite`: shell、core CLI、navigation/search、Git、secrets basics、macOS integration を含む実用 baseline
@@ -56,9 +56,10 @@ reset の理由、before/after、設計意図は [`docs/architecture-reset.md`](
 正式な host 名と CLI 例は [`docs/commands.md`](commands.md) にあります。
 
 手動 attribute 例:
-`pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-lite`, `minimal_mac-ultra`, `pro_mac-minimal`
+`own_mac`, `own_mac-minimal`, `own_mac-lite`, `own_mac-ultra`, `work_mac`, `work_mac-minimal`, `work_mac-lite`, `work_mac-ultra`
 
 `--profile` を指定した場合、CLI は `host-profile` のみを解決し、`host` への暗黙 fallback は行いません。
+`work_mac` では、選択した profile に host policy の上限が後段で適用されます。たとえば `work_mac --profile ultra` は別 taxonomy の `works` profile ではなく、「`ultra` から work policy で削ったもの」です。
 
 ## アプリケーション source policy
 
@@ -79,9 +80,10 @@ nix-darwin の Homebrew activation に `claude-code@latest` cask が追加され
 
 1. `terraform`, `opentofu`, `nodejs`, `go` は、その repo 自身の `flake.nix` / devShell で pin する前提にする。
 2. stock Darwin profile は `go`, `nodejs`, `opentofu`, `terraform` を project template/devShell に残します。machine-wide version が repo 間に漏れないようにするためです。
-3. どうしても machine-global に必要なら `myconfig.tools.dev.<tool>.enable = true` を明示する。ただし stock profile には戻さない。
-4. Terraform は引き続き unfree。allow-list は helper wiring によって有効化 tool（例: `terraform`, `emacs`）から導出し、`allowAll` は無効のままにする。
-5. Terraform / OpenTofu repo では、その repo の flake で `nixpkgs.config.allowUnfreePredicate` を設定し、devShell に `pkgs.terraform` / `pkgs.opentofu` を含める。
+3. `work_mac` policy はこの前提で `dev` group を許可しています。project-pinned toolchain を stock profile に戻すと、それも `work_mac` に流れます。
+4. どうしても machine-global に必要なら `myconfig.tools.dev.<tool>.enable = true` を明示する。ただし stock profile には戻さない。
+5. Terraform は引き続き unfree。allow-list は helper wiring によって有効化 tool（例: `terraform`, `emacs`）から導出し、`allowAll` は無効のままにする。
+6. Terraform / OpenTofu repo では、その repo の flake で `nixpkgs.config.allowUnfreePredicate` を設定し、devShell に `pkgs.terraform` / `pkgs.opentofu` を含める。
 
 例（Terraform repo の `flake.nix`）:
 
@@ -112,8 +114,18 @@ nix-darwin の Homebrew activation に `claude-code@latest` cask が追加され
 手動評価（JSON）:
 
 ```bash
-nix eval --json .#darwinConfigurations.ultra_mac-lite.config.myconfig.tools
+nix eval --json .#darwinConfigurations.work_mac-ultra.config.myconfig.tools
 ```
+
+## work host policy
+
+`nix/catalog/darwin/work-policy.nix` は `work_mac` の許可境界です。
+helper は選択 profile と host positive override の後に適用され、許可されていない group/tool と editor sync/bootstrap toggle に `mkForce false` を出します。
+
+- personal / high-surface group として `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, `terminalVisual.*` を deny します。
+- `downloadArchive` と `passwordSecrets` は group としては許可し、`ffmpeg`, `ytDlp`, `aria2`, `p7zip`, `pigz`, `zstd`, `op`, `bw`, `rbw`, YubiKey age plugin, ssh-to-age などの extras を個別 deny します。
+- `system` は macOS integration のため許可しますが、`latestApp`, `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, `carthage` などの app/dev extras は deny します。group allow-list は group 境界であり、完全な tool-level whitelist ではありません。
+- 将来 `terminalVisual` を許可すると、選択 profile 側の GUI/visual terminal extras が個別 deny なしに通ります。
 
 ## VS Code profile
 
@@ -246,6 +258,7 @@ scripts/tests/sync-shell-smoke-test.sh
 scripts/tests/sync-emacs-smoke-test.sh
 scripts/tests/sync-neovim-smoke-test.sh
 scripts/tests/sync-vscode-smoke-test.sh
+scripts/tests/work-policy-test.sh
 ```
 
 ## ローカル facts + secrets（override input）
@@ -294,15 +307,15 @@ default layout:
   };
 
   machines = {
-    ultra_mac = {
+    own_mac = {
       computerName = "Your Mac";
       localHostName = "your-mac";
       hostName = "your-mac";
       keyboardType = "ansi";
     };
 
-    # Optional if you also use the pro_mac target:
-    # pro_mac = {
+    # Optional if you also use the work_mac target:
+    # work_mac = {
     #   computerName = "Your Mac";
     #   localHostName = "your-mac";
     #   hostName = "your-mac";
@@ -356,14 +369,14 @@ fi
 FACTS_DIR="$HOME/.config/dotfiles"
 SECRETS_DIR="$HOME/.config/dotfiles"
 
-nix run .#darwin-rebuild -- build --flake .#ultra_mac \
+nix run .#darwin-rebuild -- build --flake .#own_mac \
   --override-input local path:$FACTS_DIR \
   --override-input secrets path:$SECRETS_DIR
 ```
 
 `nix run .#darwin-rebuild -- ...` は、この repo の `flake.lock` で pin された nix-darwin wrapper を使います。
 
-**注意**: repo には `nix/local/` に placeholder public facts が入っており、default secrets input も意図的に inert なので、repo 内の secrets がなくても `darwinConfigurations` は評価できます。実機では引き続き両 input を `~/.config/dotfiles/` で override してください。
+**注意**: repo には `nix/local/` に placeholder public facts が入っており、default secrets input も意図的に inert なので、repo 内の secrets がなくても `darwinConfigurations` は評価できます。実機では引き続き両 input を `~/.config/dotfiles/` で override してください。既存の local facts は `machines.<key>` を `own_mac` / `work_mac` に移行してください。host catalog の `machineKey` も同じ名前です。
 
 ## Binary Cache（Cachix / Attic）
 
@@ -455,7 +468,7 @@ keyboard hardware の差分は host facts に残します。
 
 ```nix
 {
-  machines.ultra_mac.keyboardType = "ansi";
+  machines.own_mac.keyboardType = "ansi";
   # or "jis"
 }
 ```

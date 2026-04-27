@@ -24,6 +24,7 @@
       };
 
       programs.zsh.initContent = lib.mkOrder 930 ''
+        export PATH="${lib.makeBinPath [ pkgs.direnv ]}:$PATH"
         eval "$(${lib.getExe pkgs.direnv} hook zsh)"
       '';
     };

@@ -33,6 +33,16 @@ let
         inherit (hostSpec) name machineKey system;
       };
       profileMyconfig = catalog.profiles.${profileName};
+      hostExtraMyconfig = hostSpec.extraMyconfig or { };
+      hostPolicyMyconfig =
+        if hostName == "work_mac" then
+          catalog.policyLib.forcedOverridesFor
+            {
+              inherit profileMyconfig hostExtraMyconfig;
+              policy = catalog.workPolicy;
+            }
+        else
+          { };
       nixPackage = inputs.nixpkgs.legacyPackages.${host.system}.nix;
       userName = host.user.username;
       homeDir = host.user.homeDirectory;
@@ -64,7 +74,7 @@ let
             home = homeDir;
           };
 
-          myconfig = lib.recursiveUpdate
+          myconfig = lib.mkMerge [
             {
               hostContext = host;
               profile = {
@@ -72,7 +82,10 @@ let
                 available = catalog.profileNames;
               };
             }
-            (lib.recursiveUpdate profileMyconfig hostSpec.extraMyconfig);
+            profileMyconfig
+            hostExtraMyconfig
+            hostPolicyMyconfig
+          ];
         })
       ];
     };

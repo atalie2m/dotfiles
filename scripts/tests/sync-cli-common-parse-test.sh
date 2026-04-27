@@ -106,7 +106,7 @@ assert_missing_host() {
 printf 'test: running sync cli common parse test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
-assert_wrapper_subcommand "$APPLY_SCRIPT" "apply --host pro_mac --action build" --host pro_mac --action build
+assert_wrapper_subcommand "$APPLY_SCRIPT" "apply --host own_mac --action build" --host own_mac --action build
 assert_wrapper_subcommand "$DOTFILES_SCRIPT" "sync shell --check" sync shell --check
 
 if ! run_shell_sync --apply --item bash-rc >/dev/null; then
@@ -186,7 +186,7 @@ fi
 if (
   unset FACTS FACTS_DIR SECRETS SECRETS_DIR
   export SECRETS="github:example/secrets"
-  run_real bash "$BOOTSTRAP_SCRIPT" --host ultra_mac
+  run_real bash "$BOOTSTRAP_SCRIPT" --host work_mac
 ) >"$tmp_root/bootstrap.out" 2>"$tmp_root/bootstrap.err"; then
   echo "FAIL: bootstrap unexpectedly accepted SECRETS without SECRETS_DIR" >&2
   exit 1
@@ -235,7 +235,7 @@ EOF_EMPTY_SECRETS
 if (
   HOME="$empty_home" \
     PATH="$empty_nix_bin:$PATH" \
-    run_real bash "$APPLY_SCRIPT" --host ultra_mac
+    run_real bash "$APPLY_SCRIPT" --host work_mac
 ) >"$tmp_root/apply-empty.out" 2>"$tmp_root/apply-empty.err"; then
   echo "FAIL: apply unexpectedly accepted an empty darwinConfigurations set" >&2
   exit 1
@@ -293,7 +293,7 @@ EOF_FAILING_SECRETS
 if (
   HOME="$failing_home" \
     PATH="$failing_nix_bin:$PATH" \
-    run_real bash "$APPLY_SCRIPT" --host ultra_mac
+    run_real bash "$APPLY_SCRIPT" --host work_mac
 ) >"$tmp_root/apply-failing-eval.out" 2>"$tmp_root/apply-failing-eval.err"; then
   echo "FAIL: apply unexpectedly accepted a failing darwinConfigurations eval" >&2
   exit 1
@@ -366,7 +366,7 @@ EOF_SCHEMA
 
   # Optional machine metadata for tools.system.hostnames:
   # machines = {
-  #   ultra_mac = {
+  #   own_mac = {
   #     computerName = "Your Mac";
   #     localHostName = "your-mac";
   #     hostName = "your-mac";
@@ -388,14 +388,14 @@ if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigura
     fi
 
     cat <<'EOF_MANIFEST'
-{"hosts":{"pro_mac":{"defaultProfile":"pro","buildTarget":"pro_mac","supportedProfiles":["minimal","lite","pro","ultra"],"machineKey":"pro_mac","system":"aarch64-darwin","targetsByProfile":{"minimal":"pro_mac-minimal","lite":"pro_mac-lite","pro":"pro_mac","ultra":"pro_mac-ultra"}},"ultra_mac":{"defaultProfile":"ultra","buildTarget":"ultra_mac","supportedProfiles":["minimal","lite","pro","ultra"],"machineKey":"ultra_mac","system":"aarch64-darwin","targetsByProfile":{"minimal":"ultra_mac-minimal","lite":"ultra_mac-lite","pro":"ultra_mac-pro","ultra":"ultra_mac"}},"minimal_mac":{"defaultProfile":"minimal","buildTarget":"minimal_mac","supportedProfiles":["minimal","lite","pro","ultra"],"machineKey":"minimal_mac","system":"aarch64-darwin","targetsByProfile":{"minimal":"minimal_mac","lite":"minimal_mac-lite","pro":"minimal_mac-pro","ultra":"minimal_mac-ultra"}}}}
+{"hosts":{"own_mac":{"defaultProfile":"pro","buildTarget":"own_mac","supportedProfiles":["minimal","lite","pro","ultra"],"machineKey":"own_mac","system":"aarch64-darwin","targetsByProfile":{"minimal":"own_mac-minimal","lite":"own_mac-lite","pro":"own_mac","ultra":"own_mac-ultra"}},"work_mac":{"defaultProfile":"pro","buildTarget":"work_mac","supportedProfiles":["minimal","lite","pro","ultra"],"machineKey":"work_mac","system":"aarch64-darwin","targetsByProfile":{"minimal":"work_mac-minimal","lite":"work_mac-lite","pro":"work_mac","ultra":"work_mac-ultra"}}}}
 EOF_MANIFEST
     exit 0
   fi
 fi
 
 if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
-  printf 'pro_mac\nultra_mac\nminimal_mac\n'
+  printf 'own_mac\nwork_mac\n'
   exit 0
 fi
 

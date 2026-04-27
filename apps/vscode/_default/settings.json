@@ -23,7 +23,7 @@
       },
       "options": {
         "darwin": {
-          "expr": "(builtins.getFlake (toString ./.)).darwinConfigurations.pro_mac.options"
+          "expr": "(builtins.getFlake (toString ./.)).darwinConfigurations.own_mac.options"
         }
       }
     }

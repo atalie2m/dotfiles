@@ -6,9 +6,9 @@
 
 ## 現在の host と package
 
-- Hosts: `pro_mac`（default profile: `pro`）、`ultra_mac`（default profile: `ultra`）、`minimal_mac`（default profile: `minimal`）
+- Hosts: `own_mac`（default profile: `pro`）、`work_mac`（default profile: `pro`）
 - Profiles: `minimal`, `lite`, `pro`, `ultra`
-- darwin target の例: `pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-lite`, `minimal_mac-ultra`, `pro_mac-minimal`
+- darwin target の例: `own_mac`, `own_mac-minimal`, `own_mac-lite`, `own_mac-ultra`, `work_mac`, `work_mac-minimal`, `work_mac-lite`, `work_mac-ultra`
 - Packages: `dotfiles`, `dotfiles-cli`, `dotfiles-sync-vscode`
 - Templates: `web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`
 
@@ -24,25 +24,25 @@ nix flake init -t github:atalie2m/dotfiles#python-research
 ## 運用 CLI
 
 これらのコマンドは Darwin 専用で、`darwinConfigurations` を解決します。
+`work_mac` は選択 profile と host override の後に host policy を適用するため、`--profile ultra` も work 境界で上限がかかります。
 
 ```bash
 # 各 host の default profile を適用
-nix run .#apply -- --host pro_mac
-nix run .#apply -- --host ultra_mac
-nix run .#apply -- --host minimal_mac
+nix run .#apply -- --host own_mac
+nix run .#apply -- --host work_mac
 
 # build のみ実行
-nix run .#apply -- --host ultra_mac --action build
+nix run .#apply -- --host own_mac --action build
 
 # profile を明示指定して切り替え
-nix run .#apply -- --host pro_mac --profile ultra
-nix run .#apply -- --host ultra_mac --profile lite
-nix run .#apply -- --host minimal_mac --profile ultra
-nix run .#apply -- --host ultra_mac --profile minimal
+nix run .#apply -- --host own_mac --profile ultra
+nix run .#apply -- --host work_mac --profile lite
+nix run .#apply -- --host work_mac --profile ultra
+nix run .#apply -- --host own_mac --profile minimal
 
 # 実効 group/tool toggle を確認
-nix run .#list-tools -- --host pro_mac
-nix run .#list-tools -- --host ultra_mac --profile lite --format json
+nix run .#list-tools -- --host own_mac
+nix run .#list-tools -- --host work_mac --profile ultra --format json
 
 # target 間の toggle matrix を確認
 nix run .#matrix-tools
@@ -51,20 +51,20 @@ nix run .#matrix-tools -- --full --format json
 
 # local input を bootstrap
 nix run .#bootstrap
-nix run .#bootstrap -- --host pro_mac --apply
-nix run .#bootstrap -- --host pro_mac --yes
+nix run .#bootstrap -- --host own_mac --apply
+nix run .#bootstrap -- --host own_mac --yes
 
 # health check
 nix run .#doctor
-nix run .#doctor -- --host pro_mac
-nix run .#doctor -- --host pro_mac --strict
+nix run .#doctor -- --host own_mac
+nix run .#doctor -- --host work_mac --strict
 nix run .#doctor -- --json
 
 # flake input を更新し、check/build を実行
 UPDATE_SKIP_BUILD=1 nix run .#update
-nix run .#update -- --host pro_mac
-UPDATE_ALL=1 nix run .#update -- --host pro_mac
-UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host pro_mac
+nix run .#update -- --host own_mac
+UPDATE_ALL=1 nix run .#update -- --host own_mac
+UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host own_mac
 ```
 
 ## runtime sync

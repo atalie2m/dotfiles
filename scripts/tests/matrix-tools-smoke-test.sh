@@ -27,17 +27,17 @@ log_file="${FAKE_NIX_LOG_FILE:?}"
 printf '%s\n' "$*" >>"$log_file"
 
 if [[ "$*" == *"--apply x: builtins.concatStringsSep"* ]]; then
-  printf 'pro_mac\nultra_mac\nminimal_mac\n'
+  printf 'own_mac\nwork_mac\n'
   exit 0
 fi
 
 if [[ "$*" == *"matrix-tools.nix"*".text targets"* && "$*" == *"full = false"* ]]; then
-  printf 'target\tcore.enable\tdev.enable\npro_mac\ttrue\ttrue\nultra_mac\ttrue\ttrue\nminimal_mac\ttrue\tfalse\n'
+  printf 'target\tcore.enable\tdev.enable\nown_mac\ttrue\ttrue\nwork_mac\ttrue\ttrue\n'
   exit 0
 fi
 
 if [[ "$*" == *"matrix-tools.nix"*".json targets"* && "$*" == *"full = true"* ]]; then
-  printf '{"mode":"full","columns":["core.enable","dev.enable","dev.git.enable"],"rows":[{"target":"pro_mac","values":{"core.enable":true,"dev.enable":true,"dev.git.enable":true}}]}'
+  printf '{"mode":"full","columns":["core.enable","dev.enable","dev.git.enable"],"rows":[{"target":"own_mac","values":{"core.enable":true,"dev.enable":true,"dev.git.enable":true}}]}'
   exit 0
 fi
 
@@ -67,7 +67,7 @@ if ! grep -Fq $'target\tcore.enable\tdev.enable' "$text_out"; then
   exit 1
 fi
 
-if ! grep -Fq $'minimal_mac\ttrue\tfalse' "$text_out"; then
+if ! grep -Fq $'work_mac\ttrue\ttrue' "$text_out"; then
   echo "FAIL: default matrix output row mismatch" >&2
   cat "$text_out" >&2 || true
   exit 1

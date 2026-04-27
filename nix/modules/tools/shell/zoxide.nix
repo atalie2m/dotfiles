@@ -23,6 +23,7 @@
       };
 
       programs.zsh.initContent = lib.mkOrder 1080 ''
+        export PATH="${lib.makeBinPath [ pkgs.zoxide ]}:$PATH"
         eval "$(${lib.getExe pkgs.zoxide} init zsh)"
       '';
     };

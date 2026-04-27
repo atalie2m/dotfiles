@@ -37,11 +37,11 @@ assert_logged() {
   fi
 }
 
-run_wrapper "$ROOT/scripts/apply.sh" --host pro_mac --action build
-run_wrapper "$ROOT/scripts/update.sh" --host pro_mac
-run_wrapper "$ROOT/scripts/list-tools.sh" --host pro_mac --format json
+run_wrapper "$ROOT/scripts/apply.sh" --host own_mac --action build
+run_wrapper "$ROOT/scripts/update.sh" --host own_mac
+run_wrapper "$ROOT/scripts/list-tools.sh" --host own_mac --format json
 run_wrapper "$ROOT/scripts/doctor.sh" --json
-run_wrapper "$ROOT/scripts/bootstrap.sh" --host pro_mac --apply
+run_wrapper "$ROOT/scripts/bootstrap.sh" --host own_mac --apply
 run_wrapper "$ROOT/scripts/export-clean.sh" --format dir --output "$TMP_ROOT/export"
 run_wrapper "$ROOT/scripts/matrix-tools.sh" --full --format json
 run_wrapper "$ROOT/scripts/sync.sh" shell --check
@@ -49,11 +49,11 @@ run_wrapper "$ROOT/scripts/sync.sh" emacs --check
 run_wrapper "$ROOT/scripts/sync.sh" neovim --check
 run_wrapper "$ROOT/scripts/dotfiles.sh" sync vscode --check --profile native
 
-assert_logged "apply --host pro_mac --action build"
-assert_logged "update --host pro_mac"
-assert_logged "list-tools --host pro_mac --format json"
+assert_logged "apply --host own_mac --action build"
+assert_logged "update --host own_mac"
+assert_logged "list-tools --host own_mac --format json"
 assert_logged "doctor --json"
-assert_logged "bootstrap --host pro_mac --apply"
+assert_logged "bootstrap --host own_mac --apply"
 assert_logged "export-clean --format dir --output $TMP_ROOT/export"
 assert_logged "matrix-tools --full --format json"
 assert_logged "sync shell --check"

@@ -37,7 +37,7 @@ require_contains "Run target manifest test"
 require_not_contains "homeConfigurations"
 require_not_contains "nixosConfigurations"
 require_not_contains "a2m_nixos"
-require_not_contains "ultra_mac-minimum"
+require_not_contains "own_mac-minimum"
 require_not_contains 'platform = "$PLATFORM"'
 require_not_contains "planner: linux"
 require_not_contains 'if [[ $target != *-* ]]; then'

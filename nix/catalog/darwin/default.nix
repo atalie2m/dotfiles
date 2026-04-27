@@ -3,6 +3,8 @@
 let
   hostCatalog = import ./hosts.nix;
   profiles = import ./bundles.nix { inherit lib; };
+  policyLib = import ./policy-lib.nix { inherit lib; };
+  workPolicy = import ./work-policy.nix;
 
   targetNameFor = hostName: profileName:
     let
@@ -11,6 +13,6 @@ let
     if profileName == host.defaultProfile then host.buildTarget else "${hostName}-${profileName}";
 in
 hostCatalog // {
-  inherit profiles targetNameFor;
+  inherit policyLib profiles targetNameFor workPolicy;
   profileNames = hostCatalog.supportedProfiles;
 }

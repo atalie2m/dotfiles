@@ -41,14 +41,14 @@ SSH keys stay outside the repo and must come from local mutable state.
 ### Text Output
 
 ```bash
-nix run .#list-tools -- --host pro_mac
-nix run .#list-tools -- --host ultra_mac --profile lite
+nix run .#list-tools -- --host own_mac
+nix run .#list-tools -- --host work_mac --profile ultra
 ```
 
 ### JSON Output
 
 ```bash
-nix run .#list-tools -- --host pro_mac --format json
+nix run .#list-tools -- --host work_mac --profile ultra --format json
 ```
 
 ### Output Scope
@@ -80,6 +80,34 @@ Deeper toggles such as `system.brewNix.autoDock.enable` or
 
 The toggle filtering logic lives in `list-tools.nix`, so both text and JSON
 outputs are produced from the same filtered view.
+
+## Work Host Policy
+
+`work_mac` is not a separate profile taxonomy. It selects one of the stock
+`minimal` / `lite` / `pro` / `ultra` profiles, merges host positive overrides,
+then applies `nix/catalog/darwin/work-policy.nix` as forced-off policy data.
+The policy helper flattens the actual `tools` toggles produced by profile plus
+host data, so it covers groups defined by catalog modules as well as individual
+modules such as `core`, `shell`, `dev`, `editor`, `system`, `terminal`,
+`security`, and `aiCodingAgent`.
+
+`allowedGroups` is a group boundary. It is not a complete per-tool whitelist.
+The current policy allows `dev` because stock Darwin profiles do not enable
+project-pinned toolchains (`go`, `nodejs`, `terraform`, `opentofu`). If those
+return to stock profiles later, they will also flow into `work_mac`.
+
+Broad groups need explicit review before widening:
+
+- `system` is allowed for core macOS integration, but app/dev extras such as
+  `latestApp`, `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, and `carthage`
+  are denied.
+- `terminalVisual` is denied; allowing it would pass GUI/visual terminal extras
+  from selected profiles unless each tool is denied.
+- `downloadArchive` and `passwordSecrets` are allowed with selected extras
+  denied, so their policy remains readable and intentional.
+
+Deep toggles such as `editor.emacs.sync.enable` are intentionally outside the
+`list-tools` output; use direct `nix eval` checks for those policy assertions.
 
 `flake check` includes a final-config tool-ownership check. It fails when a
 Darwin target contains the same `group.tool` key from multiple registries, when

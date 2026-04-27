@@ -45,6 +45,7 @@
 
       programs.zsh.initContent = lib.mkOrder 1090 ''
         if [[ $options[zle] = on ]]; then
+          export PATH="${lib.makeBinPath [ pkgs.atuin ]}:$PATH"
           eval "$(${lib.getExe pkgs.atuin} init zsh${atuinInitArgs})"
         fi
       '';

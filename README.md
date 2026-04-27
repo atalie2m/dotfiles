@@ -46,7 +46,7 @@ See [`docs/architecture-reset.md`](docs/architecture-reset.md) for the reset rat
 
 Operational note: the supported root flake API is Darwin-first and exposes `darwinConfigurations` plus project `templates`.
 
-- Hosts: `pro_mac` (default profile: `pro`), `ultra_mac` (default profile: `ultra`), `minimal_mac` (default profile: `minimal`).
+- Hosts: `own_mac` (default profile: `pro`), `work_mac` (default profile: `pro`).
 - Profiles: `minimal`, `lite`, `pro`, `ultra`.
   - `minimal`: absolute essentials, currently Nix settings plus Git.
   - `lite`: practical daily baseline with shells, core CLI tools, navigation/search, Git, secrets basics, and macOS integrations.
@@ -56,9 +56,10 @@ Operational note: the supported root flake API is Darwin-first and exposes `darw
 Canonical host names and CLI examples live in [`docs/commands.md`](docs/commands.md).
 
 Manual attribute examples:
-`pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-lite`, `minimal_mac-ultra`, `pro_mac-minimal`.
+`own_mac`, `own_mac-minimal`, `own_mac-lite`, `own_mac-ultra`, `work_mac`, `work_mac-minimal`, `work_mac-lite`, `work_mac-ultra`.
 
 When `--profile` is provided, the CLI resolves only `host-profile` (no implicit fallback to `host`).
+For `work_mac`, the selected profile is capped by the work policy after profile and host overrides merge. For example, `work_mac --profile ultra` means "ultra with the work policy forced off," not a separate `works` profile.
 
 ## Application Source Policy
 
@@ -79,9 +80,10 @@ catalog-backed `tools.aiCodingAgent.claudeCode` toggle. Enabling it adds the
 
 1. `terraform`, `opentofu`, `nodejs`, and `go` should be pinned per repository via that repo's own `flake.nix` / devShell.
 2. Stock Darwin profiles leave `go`, `nodejs`, `opentofu`, and `terraform` to project templates/devShells so one machine-wide version does not leak across repos.
-3. If a machine really needs one globally, enable it explicitly with `myconfig.tools.dev.<tool>.enable = true`; do not add it back to the stock profiles.
-4. Terraform remains unfree. The allow-list is derived from enabled tools (for example `terraform`, `emacs`) via helper wiring, and `allowAll` remains disabled.
-5. For Terraform/OpenTofu repos, set `nixpkgs.config.allowUnfreePredicate` in that repo's flake and include `pkgs.terraform` / `pkgs.opentofu` in the devShell.
+3. The `work_mac` policy allows the `dev` group on that premise; adding project-pinned toolchains back to stock profiles would also flow into `work_mac`.
+4. If a machine really needs one globally, enable it explicitly with `myconfig.tools.dev.<tool>.enable = true`; do not add it back to the stock profiles.
+5. Terraform remains unfree. The allow-list is derived from enabled tools (for example `terraform`, `emacs`) via helper wiring, and `allowAll` remains disabled.
+6. For Terraform/OpenTofu repos, set `nixpkgs.config.allowUnfreePredicate` in that repo's flake and include `pkgs.terraform` / `pkgs.opentofu` in the devShell.
 
 Example (`flake.nix` for a Terraform repo):
 
@@ -112,8 +114,18 @@ Use `list-tools` for single host/profile inspection and `matrix-tools` for cross
 Manual evaluation (JSON):
 
 ```bash
-nix eval --json .#darwinConfigurations.ultra_mac-lite.config.myconfig.tools
+nix eval --json .#darwinConfigurations.work_mac-ultra.config.myconfig.tools
 ```
+
+## Work Host Policy
+
+`nix/catalog/darwin/work-policy.nix` is the allow boundary for `work_mac`.
+The helper applies after selected profile data and host positive overrides, and emits `mkForce false` overrides for disallowed groups/tools and editor sync/bootstrap toggles.
+
+- Denied personal or high-surface groups include `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, and `terminalVisual.*`.
+- `downloadArchive` and `passwordSecrets` are allowed groups with specific extras denied (`ffmpeg`, `ytDlp`, `aria2`, `p7zip`, `pigz`, `zstd`, `op`, `bw`, `rbw`, YubiKey age plugin, and ssh-to-age).
+- `system` is allowed so core macOS integration can still run, but app/dev extras such as `latestApp`, `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, and `carthage` are denied. Treat group allow-lists as group boundaries, not a complete tool-level whitelist.
+- If `terminalVisual` is allowed in the future, GUI/visual terminal extras from selected profiles will pass through unless explicitly denied.
 
 ## VS Code Profiles
 
@@ -248,6 +260,7 @@ scripts/tests/sync-shell-smoke-test.sh
 scripts/tests/sync-emacs-smoke-test.sh
 scripts/tests/sync-neovim-smoke-test.sh
 scripts/tests/sync-vscode-smoke-test.sh
+scripts/tests/work-policy-test.sh
 ```
 
 ## Local Facts + Secrets (Override Inputs)
@@ -296,15 +309,15 @@ Example `facts.nix`:
   };
 
   machines = {
-    ultra_mac = {
+    own_mac = {
       computerName = "Your Mac";
       localHostName = "your-mac";
       hostName = "your-mac";
       keyboardType = "ansi";
     };
 
-    # Optional if you also use the pro_mac target:
-    # pro_mac = {
+    # Optional if you also use the work_mac target:
+    # work_mac = {
     #   computerName = "Your Mac";
     #   localHostName = "your-mac";
     #   hostName = "your-mac";
@@ -358,14 +371,14 @@ All `nix run .#apply|.#update|.#doctor|.#bootstrap|.#list-tools|.#matrix-tools` 
 FACTS_DIR="$HOME/.config/dotfiles"
 SECRETS_DIR="$HOME/.config/dotfiles"
 
-nix run .#darwin-rebuild -- build --flake .#ultra_mac \
+nix run .#darwin-rebuild -- build --flake .#own_mac \
   --override-input local path:$FACTS_DIR \
   --override-input secrets path:$SECRETS_DIR
 ```
 
 `nix run .#darwin-rebuild -- ...` uses the nix-darwin wrapper pinned by this repo's `flake.lock`.
 
-**Note**: The repo ships placeholder public facts under `nix/local/`, and the default secrets input is intentionally inert so `darwinConfigurations` still evaluates without in-repo secrets. Real machines should still override both inputs with `~/.config/dotfiles/`.
+**Note**: The repo ships placeholder public facts under `nix/local/`, and the default secrets input is intentionally inert so `darwinConfigurations` still evaluates without in-repo secrets. Real machines should still override both inputs with `~/.config/dotfiles/`. Existing local facts should migrate `machines.<key>` to `own_mac` / `work_mac`; the host catalog `machineKey` values use the same names.
 
 ## Binary Cache (Cachix / Attic)
 
@@ -461,7 +474,7 @@ Keyboard hardware differences stay in host facts:
 
 ```nix
 {
-  machines.ultra_mac.keyboardType = "ansi";
+  machines.own_mac.keyboardType = "ansi";
   # or "jis"
 }
 ```

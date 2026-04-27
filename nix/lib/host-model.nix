@@ -282,7 +282,7 @@ let
         (rawFactsChecks rawFacts)
     );
 
-  renderBootstrapFacts = { username, exampleHost ? "ultra_mac" }:
+  renderBootstrapFacts = { username, exampleHost ? "own_mac" }:
     ''
       {
         user = {
