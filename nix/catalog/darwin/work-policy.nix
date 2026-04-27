@@ -32,7 +32,6 @@
     "terminalVisual.*"
 
     "downloadArchive.ffmpeg"
-    "downloadArchive.aria2"
     "downloadArchive.p7zip"
     "downloadArchive.pigz"
     "downloadArchive.zstd"

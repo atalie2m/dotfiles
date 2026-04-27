@@ -47,15 +47,19 @@ The control plane is implemented in Rust in `dotfiles-core`; `scripts/sync.sh` i
   - `${DOOMDIR:-~/.config/doom}/packages.el`
   - `${DOOMDIR:-~/.config/doom}/config.el`
 - State: none
-- Model: compare fully repo-owned Doom config files against writable runtime files
-- Contract: Doom config files converge fully to repo state on apply
+- Model: compare fully repo-owned Doom config files against writable runtime files, then verify Doom runtime readiness unless `--config-only` is explicit
+- Contract: Doom config files converge fully to repo state on apply, and plain check/apply fails when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing
 
 Behavior:
 
 - `sync emacs --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`
-- `sync emacs --apply` creates or rewrites the writable runtime Doom config files from the repo
+- `sync emacs --check` and plain `sync emacs --apply` also report Doom runtime status as `doom=ready` or `doom=missing`
+- `sync emacs --apply` creates or rewrites the writable runtime Doom config files from the repo, then fails if Doom runtime is missing
+- `sync emacs --apply --bootstrap` writes config first, then backs up a non-Doom `${EMACSDIR:-~/.emacs.d}` to `.pre-doom.YYYYmmddHHMMSS`, shallow-clones Doom, and runs `doom install`; existing Doom checkouts run `doom sync`
 - `sync emacs --adopt` copies runtime Doom config edits back into `apps/emacs/doom/`
 - `--item init`, `--item packages`, or `--item config` restricts reconciliation to one file
+- `--config-only` opts out of Doom runtime readiness for config-only tests and maintenance
+- `--emacs-dir` overrides `${EMACSDIR:-~/.emacs.d}` for one command
 - `tools.editor.emacs.enable` owns the Emacs app, sync tooling, and external `doom-meow` module; Doom itself remains a mutable checkout
 - Doom is installed at `${EMACSDIR:-~/.emacs.d}` so standard GUI/daemon startup uses it directly
 - `tools.editor.emacs.bootstrap.enable` runs `dotfiles-doom bootstrap` only when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing
@@ -147,7 +151,7 @@ The model is declarative ownership with writable runtime data left to upstream t
 - Model:
   - repo declares ownership and source policy
   - activation ensures declared installs; runtime app/user data remains mutable
-  - dedicated feature modules such as `tools.system.karabiner` own install policy, while `tools.editor.emacs` and `tools.editor.vscode` own repo-managed editor state plus sync tooling
+  - dedicated feature modules such as `tools.system.karabiner` own settings policy, while `tools.editor.emacs` and `tools.editor.vscode` own repo-managed editor state plus sync tooling
 
 ## Removed surfaces
 

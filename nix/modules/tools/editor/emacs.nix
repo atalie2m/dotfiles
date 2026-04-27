@@ -34,49 +34,24 @@ let
           export PATH="$xcode_as_dir:$PATH"
         fi
       fi
-
-      ensure_doom_config() {
-        if [ ! -e "$doomdir/init.el" ]; then
-          ${dotfilesCli}/bin/dotfiles sync emacs --apply --managed-dir "${doomConfigDir}" --doom-dir "$doomdir"
-        fi
-      }
-
-      if [ ! -e "$doomdir/init.el" ]; then
-        case "$command" in
-          bootstrap|install)
-            ensure_doom_config
-            ;;
-          *)
-            printf 'Doom config is missing at %s. Run: dotfiles sync emacs --apply\n' "$doomdir" >&2
-            exit 1
-            ;;
-        esac
+      if [ -z "''${EMACS:-}" ]; then
+        export EMACS="/Applications/Emacs.app/Contents/MacOS/Emacs"
       fi
 
       case "$command" in
         bootstrap|install)
-          if [ ! -x "$emacsdir/bin/doom" ]; then
-            if [ -e "$emacsdir" ]; then
-              backup="$emacsdir.pre-doom.$(date +%Y%m%d%H%M%S)"
-              printf '%s exists but does not look like a Doom Emacs checkout. Moving it to %s.\n' "$emacsdir" "$backup" >&2
-              mv "$emacsdir" "$backup"
-            fi
-            git clone --depth 1 https://github.com/doomemacs/doomemacs "$emacsdir"
-            "$emacsdir/bin/doom" install
-          else
-            "$emacsdir/bin/doom" sync
-          fi
+          ${dotfilesCli}/bin/dotfiles sync emacs --apply --bootstrap --managed-dir "${doomConfigDir}" --doom-dir "$doomdir" --emacs-dir "$emacsdir"
           ;;
         sync)
           if [ ! -x "$emacsdir/bin/doom" ]; then
-            printf 'Doom is not installed at %s. Run: dotfiles-doom bootstrap\n' "$emacsdir" >&2
+            printf 'Doom is not installed at %s. Run: nix run .#dotfiles -- sync emacs --apply --bootstrap\n' "$emacsdir" >&2
             exit 1
           fi
           "$emacsdir/bin/doom" sync
           ;;
         doctor)
           if [ ! -x "$emacsdir/bin/doom" ]; then
-            printf 'Doom is not installed at %s. Run: dotfiles-doom bootstrap\n' "$emacsdir" >&2
+            printf 'Doom is not installed at %s. Run: nix run .#dotfiles -- sync emacs --apply --bootstrap\n' "$emacsdir" >&2
             exit 1
           fi
           "$emacsdir/bin/doom" doctor
@@ -207,8 +182,8 @@ in
           fi
           doom_dir=${doomDirExpr}
           emacs_dir=${emacsDirExpr}
-          ${lib.optionalString cfg.sync.enable ''
-            ${lib.escapeShellArgs syncArgs} --doom-dir "$doom_dir"
+          ${lib.optionalString (cfg.sync.enable && !cfg.bootstrap.enable) ''
+            ${lib.escapeShellArgs syncArgs} --doom-dir "$doom_dir" --emacs-dir "$emacs_dir"
           ''}
           ${lib.optionalString cfg.bootstrap.enable ''
             export EMACSDIR="$emacs_dir"

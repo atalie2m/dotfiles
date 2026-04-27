@@ -143,7 +143,6 @@
     git-xet
     python3Packages.huggingface-hub
     rclone
-    aria2
     dvc
     datalad
     git-annex

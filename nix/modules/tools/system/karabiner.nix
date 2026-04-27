@@ -1,9 +1,4 @@
-{ dotmod, config, lib, dotlib, pkgs, repoPaths, ... }:
-
-let
-  homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
-  homebrewSpec = homebrewOwnership."system.karabiner";
-in
+{ dotmod, config, lib, pkgs, repoPaths, ... }:
 
 (dotmod.mkModule { inherit config; }) {
   path = "tools.system.karabiner";
@@ -11,9 +6,6 @@ in
   options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
-
-  myconfigOnEnable = { myconfig, ... }:
-    dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 
   darwinOnEnable = { myconfig, ... }:
     let
@@ -87,7 +79,7 @@ in
           };
         in
         {
-          # Install everything (symlink karabiner.json and complex_modifications).
+          # Link Karabiner settings without installing the application.
           xdg.configFile."karabiner/karabiner.json" = {
             source = karabinerJson;
             force = true;

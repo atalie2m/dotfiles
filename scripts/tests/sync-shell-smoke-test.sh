@@ -182,15 +182,27 @@ if ! grep -Fq "apply failed for 'zsh-zdotdir': failed to create $home_dir/.nix" 
   exit 1
 fi
 
-mkdir -p "$home_dir/.nix-profile/etc/profile.d"
+mkdir -p "$home_dir/.nix-profile/bin" "$home_dir/.nix-profile/etc/profile.d"
+cat >"$home_dir/.nix-profile/bin/fallback-profile-tool" <<'EOF_FALLBACK_PROFILE_TOOL'
+#!/usr/bin/env bash
+printf 'fallback profile tool\n'
+EOF_FALLBACK_PROFILE_TOOL
+chmod +x "$home_dir/.nix-profile/bin/fallback-profile-tool"
+
 cat >"$home_dir/.nix-profile/etc/profile.d/hm-session-vars.sh" <<'EOF_HM_SESSION_VARS'
 # test fixture
 export PATH="$HOME/.local/bin${PATH:+:}$PATH"
 EOF_HM_SESSION_VARS
 
 common_path_output="$tmp_root/common.path"
-if ! HOME="$home_dir" bash -lc "source \"$ROOT/apps/shell/common.sh\" && command -v bash >/dev/null && printf '%s\n' \"\$PATH\"" >"$common_path_output"; then
+if ! HOME="$home_dir" bash -lc "source \"$ROOT/apps/shell/common.sh\" && command -v fallback-profile-tool && printf 'PATH=%s\n' \"\$PATH\"" >"$common_path_output"; then
   echo "FAIL: sourcing common.sh failed" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "$home_dir/.nix-profile/bin/fallback-profile-tool" "$common_path_output"; then
+  echo "FAIL: common.sh did not expose fallback profile bins" >&2
+  cat "$common_path_output" >&2 || true
   exit 1
 fi
 

@@ -174,6 +174,16 @@ let
         touch "$out"
       '';
 
+      shellCommonProfile = pkgs.runCommand "shell-common-profile-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gawk pkgs.gnugrep pkgs.zsh ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/shell-common-profile-test.sh
+        touch "$out"
+      '';
+
       syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
         {
           nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep dotfilesPackage ];

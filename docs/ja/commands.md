@@ -79,6 +79,8 @@ nix run .#dotfiles -- sync shell --apply
 nix run .#dotfiles -- sync emacs --check
 nix run .#dotfiles -- sync emacs --check --details --diff
 nix run .#dotfiles -- sync emacs --apply
+nix run .#dotfiles -- sync emacs --apply --bootstrap
+nix run .#dotfiles -- sync emacs --check --config-only
 nix run .#dotfiles -- sync emacs --adopt --item config
 
 # Neovim config と Lazy lock state
@@ -97,9 +99,11 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 ## Doom Emacs
 
-`tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom/Meow sync tooling を導入し、`doom-meow` を `~/.config/doom/modules/editor/meow` に用意します。Doom config file は `sync emacs` が reconcile する writable runtime state です。Doom 本体は `${EMACSDIR:-~/.emacs.d}` の mutable checkout として扱うため、標準の GUI / daemon 起動でも追加引数なしで読み込まれます。
+`tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom/Meow sync tooling を導入し、`doom-meow` を `~/.config/doom/modules/editor/meow` に用意します。Doom config file は `sync emacs` が reconcile する writable runtime state です。通常の `sync emacs --check` と `sync emacs --apply` は `${EMACSDIR:-~/.emacs.d}/bin/doom` が executable かも検査します。3 つの config file だけを扱う test / maintenance では、明示的に `--config-only` を使います。
 
-`tools.editor.emacs.bootstrap.enable = true` は `${EMACSDIR:-~/.emacs.d}/bin/doom` が無い場合だけ、activation 中に `dotfiles-doom bootstrap` を実行します。その directory が存在するが Doom checkout ではない場合は、timestamp 付きの `.pre-doom.*` backup に移動してから Doom を clone します。`ultra` profile は `tools.editor.emacs.sync.enable` と `tools.editor.emacs.bootstrap.enable` の両方を有効にし、`pro` は Emacs を install するだけで setup は行いません。
+`sync emacs --apply --bootstrap` は最初に repo 管理版の `~/.config/doom/{init,packages,config}.el` を書き、`${EMACSDIR:-~/.emacs.d}/bin/doom` が無ければ Doom を install し、既にあれば `doom sync` を実行します。`${EMACSDIR:-~/.emacs.d}` が存在するが Doom checkout ではない場合は、timestamp 付きの `.pre-doom.*` backup に移動してから Doom を clone します。
+
+`tools.editor.emacs.bootstrap.enable = true` は activation-time の `dotfiles-doom bootstrap` 経路を維持し、同じ CLI 挙動を使います。`ultra` profile は `tools.editor.emacs.sync.enable` と `tools.editor.emacs.bootstrap.enable` の両方を有効にし、`pro` は Emacs を install するだけで setup は行いません。
 
 ```bash
 dotfiles-doom bootstrap
@@ -115,7 +119,9 @@ dotfiles-doom doctor
 
 - `HOME` は `nix run .#dotfiles -- sync shell ...`、`nix run .#dotfiles -- sync emacs ...`、`nix run .#dotfiles -- sync neovim ...`、`nix run .#dotfiles -- sync vscode ...` に必須です。また、repo default の user-scoped path が必要な command でも必須です。
 - `DOTFILES_ROOT` は Rust CLI と shell wrapper の flake-root discovery を上書きします。
-- `DOOMDIR` は `sync emacs` が対象にする runtime Doom config directory を上書きします。未指定時は `~/.config/doom` です。
+- `DOTFILES_PROFILE_DIRS` は colon 区切りの profile directory を shell profile discovery に先頭追加し、`/etc/profiles/per-user/$USER` と `$HOME/.nix-profile` より優先します。
+- `DOOMDIR` は `sync emacs` が対象にする runtime Doom config directory を上書きします。未指定時は `~/.config/doom` です。1 command だけ変える場合は `--doom-dir` を使います。
+- `EMACSDIR` は `sync emacs` が対象にする Doom checkout directory を上書きします。未指定時は `~/.emacs.d` です。1 command だけ変える場合は `--emacs-dir` を使います。
 - `FACTS_DIR` / `SECRETS_DIR` の default は `~/.config/dotfiles` で、`FACTS` / `SECRETS` の default は `path:$FACTS_DIR` / `path:$SECRETS_DIR` です。
 - `DARWIN_REBUILD_BIN` は `apply` が使う pin 済み `darwin-rebuild` path を上書きします。
 - `DOTFILES_SYNC_VSCODE_BIN` は `sync vscode` engine path を上書きします。

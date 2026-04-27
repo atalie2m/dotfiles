@@ -53,7 +53,6 @@
             git-lfs
             git-xet
             rclone
-            aria2
             dvc
             datalad
             git-annex

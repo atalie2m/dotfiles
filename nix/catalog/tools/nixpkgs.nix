@@ -187,7 +187,6 @@
   downloadArchiveZstd = { group = "downloadArchive"; tool = "zstd"; pkg = "zstd"; };
   downloadArchiveUnzip = { group = "downloadArchive"; tool = "unzip"; pkg = "unzip"; };
   downloadArchiveP7zip = { group = "downloadArchive"; tool = "p7zip"; pkg = "p7zip"; };
-  downloadArchiveAria2 = { group = "downloadArchive"; tool = "aria2"; pkg = "aria2"; };
   downloadArchiveFfmpeg = { group = "downloadArchive"; tool = "ffmpeg"; pkg = "ffmpeg"; };
   downloadArchiveRclone = { group = "downloadArchive"; tool = "rclone"; pkg = "rclone"; };
   downloadArchiveRsync = { group = "downloadArchive"; tool = "rsync"; pkg = "rsync"; };
@@ -271,7 +270,6 @@
   modelHfPersonalGitLfs = { group = "modelHfPersonal"; tool = "gitLfs"; pkg = "git-lfs"; };
   modelHfPersonalHuggingfaceHub = { group = "modelHfPersonal"; tool = "huggingfaceHub"; pkg = [ "python3Packages" "huggingface-hub" ]; };
   modelHfPersonalRclone = { group = "modelHfPersonal"; tool = "rclone"; pkg = "rclone"; };
-  modelHfPersonalAria2 = { group = "modelHfPersonal"; tool = "aria2"; pkg = "aria2"; };
   modelHfPersonalCroc = { group = "modelHfPersonal"; tool = "croc"; pkg = "croc"; };
 
   # Backup and terminal visuals

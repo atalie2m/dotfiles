@@ -252,7 +252,6 @@ let
     tools.downloadArchive.zstd.enable = true;
     tools.downloadArchive.unzip.enable = true;
     tools.downloadArchive.p7zip.enable = true;
-    tools.downloadArchive.aria2.enable = true;
     tools.downloadArchive.ffmpeg.enable = true;
     tools.downloadArchive.rclone.enable = true;
     tools.downloadArchive.rsync.enable = true;
@@ -332,7 +331,6 @@ let
     tools.modelHfPersonal.gitXet.enable = true;
     tools.modelHfPersonal.huggingfaceHub.enable = true;
     tools.modelHfPersonal.rclone.enable = true;
-    tools.modelHfPersonal.aria2.enable = true;
     tools.modelHfPersonal.croc.enable = true;
 
     tools.backupRecovery.enable = true;

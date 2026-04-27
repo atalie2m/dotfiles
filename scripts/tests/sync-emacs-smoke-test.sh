@@ -34,6 +34,7 @@ trap cleanup EXIT
 home_dir="$tmp_root/home"
 managed_dir="$tmp_root/managed"
 doom_dir="$home_dir/.config/doom"
+emacs_dir="$home_dir/.emacs.d"
 mkdir -p "$home_dir" "$managed_dir"
 
 cat >"$managed_dir/init.el" <<'EOF_INIT'
@@ -56,7 +57,11 @@ cat >"$managed_dir/config.el" <<'EOF_CONFIG'
 EOF_CONFIG
 
 run_emacs_sync() {
-  HOME="$home_dir" bash "$SYNC_SCRIPT" emacs "$@" --managed-dir "$managed_dir" --doom-dir "$doom_dir"
+  HOME="$home_dir" bash "$SYNC_SCRIPT" emacs "$@" --config-only --managed-dir "$managed_dir" --doom-dir "$doom_dir" --emacs-dir "$emacs_dir"
+}
+
+run_emacs_sync_runtime() {
+  HOME="$home_dir" bash "$SYNC_SCRIPT" emacs "$@" --managed-dir "$managed_dir" --doom-dir "$doom_dir" --emacs-dir "$emacs_dir"
 }
 
 run_emacs_sync_from_copy() {
@@ -67,7 +72,7 @@ run_emacs_sync_from_copy() {
     chmod -R u+w "$copied_root"
   fi
 
-  HOME="$home_dir" bash "$copied_root/sync.sh" emacs "$@" --managed-dir "$managed_dir" --doom-dir "$doom_dir"
+  HOME="$home_dir" bash "$copied_root/sync.sh" emacs "$@" --config-only --managed-dir "$managed_dir" --doom-dir "$doom_dir" --emacs-dir "$emacs_dir"
 }
 
 printf 'test: running Emacs sync smoke test\n'
@@ -89,6 +94,35 @@ for file in init.el packages.el config.el; do
     exit 1
   fi
 done
+
+if run_emacs_sync_runtime --check >"$tmp_root/doom-missing.out" 2>"$tmp_root/doom-missing.err"; then
+  echo "FAIL: runtime check unexpectedly passed without Doom checkout" >&2
+  exit 1
+fi
+
+if ! grep -Fq "doom=missing" "$tmp_root/doom-missing.err"; then
+  echo "FAIL: runtime check did not report missing Doom checkout" >&2
+  cat "$tmp_root/doom-missing.err" >&2 || true
+  exit 1
+fi
+
+if ! grep -Fq -- "--bootstrap" "$tmp_root/doom-missing.err"; then
+  echo "FAIL: runtime missing guidance did not mention --bootstrap" >&2
+  cat "$tmp_root/doom-missing.err" >&2 || true
+  exit 1
+fi
+
+mkdir -p "$emacs_dir/bin"
+cat >"$emacs_dir/bin/doom" <<'EOF_DOOM'
+#!/usr/bin/env bash
+exit 0
+EOF_DOOM
+chmod +x "$emacs_dir/bin/doom"
+
+if ! run_emacs_sync_runtime --check >/dev/null; then
+  echo "FAIL: runtime check failed with fake Doom executable" >&2
+  exit 1
+fi
 
 if ! run_emacs_sync --check >/dev/null; then
   echo "FAIL: check after initial apply failed" >&2

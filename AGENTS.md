@@ -30,7 +30,7 @@ Local inputs live outside Git at `~/.config/dotfiles/`:
 ## Build, Test, and Development Commands
 
 - Canonical command examples and current host names live in `docs/commands.md`.
-- Canonical runtime overrides live in `docs/commands.md` (`HOME`, `DOTFILES_ROOT`, `DOOMDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`).
+- Canonical runtime overrides live in `docs/commands.md` (`HOME`, `DOTFILES_ROOT`, `DOTFILES_PROFILE_DIRS`, `DOOMDIR`, `EMACSDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`).
 - `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles`
 - `nix run .#apply -- --host <host> --action build`
 - `nix flake init -t github:atalie2m/dotfiles#web-dev`

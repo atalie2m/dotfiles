@@ -174,12 +174,4 @@
     taps = [ "d12frosted/emacs-plus" ];
     casks = [ "emacs-plus-app" ];
   };
-  "system.karabiner" = {
-    group = "system";
-    tool = "karabiner";
-    optionPath = [ "myconfig" "tools" "system" "karabiner" "enable" ];
-    mode = "dedicated";
-    backend = "homebrewNative";
-    casks = [ "karabiner-elements" ];
-  };
 }

@@ -123,7 +123,7 @@ nix eval --json .#darwinConfigurations.work_mac-ultra.config.myconfig.tools
 The helper applies after selected profile data and host positive overrides, and emits `mkForce false` overrides for disallowed groups/tools and editor sync/bootstrap toggles.
 
 - Denied personal or high-surface groups include `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, and `terminalVisual.*`.
-- `downloadArchive` and `passwordSecrets` are allowed groups with specific extras denied (`ffmpeg`, `aria2`, `p7zip`, `pigz`, `zstd`, `op`, YubiKey age plugin, and ssh-to-age).
+- `downloadArchive` and `passwordSecrets` are allowed groups with specific extras denied (`ffmpeg`, `p7zip`, `pigz`, `zstd`, `op`, YubiKey age plugin, and ssh-to-age).
 - `system` is allowed so core macOS integration can still run, but app/dev extras such as `latestApp`, `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, and `carthage` are denied. Treat group allow-lists as group boundaries, not a complete tool-level whitelist.
 - If `terminalVisual` is allowed in the future, GUI/visual terminal extras from selected profiles will pass through unless explicitly denied.
 
@@ -149,7 +149,7 @@ See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs 
 
 ## Mutable Editor Tooling
 
-- Emacs app wiring is Nix-first, while Doom config files and package state stay mutable. `sync emacs` reconciles `apps/emacs/doom/{init,packages,config}.el` with writable files under `~/.config/doom`, and `--adopt` pulls local Doom edits back into the repo. Doom itself lives at `${EMACSDIR:-~/.emacs.d}` so standard GUI/daemon startup loads it without extra launch arguments. The `ultra` profile runs activation-time Emacs sync and first-run Doom bootstrap; `pro` installs Emacs without setup.
+- Emacs app wiring is Nix-first, while Doom config files and package state stay mutable. `sync emacs` reconciles `apps/emacs/doom/{init,packages,config}.el` with writable files under `~/.config/doom`, and plain check/apply also verify that `${EMACSDIR:-~/.emacs.d}/bin/doom` is executable. Use `--config-only` only when intentionally skipping Doom runtime readiness, and `sync emacs --apply --bootstrap` to install or sync Doom after writing repo-managed config. The `ultra` profile runs activation-time Emacs sync and first-run Doom bootstrap; `pro` installs Emacs without setup.
 - Neovim installation is separate from config setup. `tools.editor.neovim.enable` installs Neovim, while `tools.editor.neovim.sync.enable` wires the repo-managed LazyVim config from `apps/neovim/`. The `ultra` profile enables that setup; `pro` only installs the editor.
 - VS Code profile definitions are declarative, but runtime state stays writable; managed profile settings are fully repo-owned and manual settings changes are overwritten on apply, while user-added extensions remain outside repo ownership.
 - This repo treats those editor runtimes as a convenience boundary: config is pinned here, package/login/UI state is not.
@@ -461,14 +461,13 @@ This repository includes comprehensive keyboard layouts and input method configu
 
 ### Declarative Setup
 
-If `tools.system.karabiner.enable = true`, dotfiles manages Karabiner-Elements as one feature.
+If `tools.system.karabiner.enable = true`, dotfiles manages Karabiner-Elements settings as one feature. It does not install Karabiner-Elements; install the app outside this repository if needed.
 
 The configuration is managed in `nix/modules/tools/system/karabiner.nix` and will automatically:
 
-1. Install `karabiner-elements` through Homebrew
-2. Create the necessary directories
-3. Generate symbolic links for the managed rule files and `karabiner.json`
-4. Keep the links updated when you rebuild your configuration
+1. Create the necessary directories
+2. Generate symbolic links for the managed rule files and `karabiner.json`
+3. Keep the links updated when you rebuild your configuration
 
 Keyboard hardware differences stay in host facts:
 
@@ -485,8 +484,6 @@ Keyboard hardware differences stay in host facts:
 - The linked complex-modification set comes from the explicit `ruleFiles` list in the module
 - The generated `karabiner.json` uses `machines.<host>.keyboardType` when set and falls back to `ansi`
 - Changes take effect after running `nix run .#darwin-rebuild -- switch --flake .#<PROFILE_NAME>`
-
-If you choose not to enable the Karabiner module, manual management is outside this repo's supported runtime model.
 
 ### Credits
 

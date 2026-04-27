@@ -445,10 +445,13 @@ fn record_strict_sync_checks(
         let result = run_emacs_sync(EmacsSyncOptions {
             managed_dir: Some(root.join("apps/emacs/doom")),
             doom_dir: None,
+            emacs_dir: None,
             mode: EmacsSyncMode::Check,
             details: false,
             diff_output: false,
             item_filter: None,
+            config_only: false,
+            bootstrap: false,
         })?;
         if result.exit_code(EmacsSyncMode::Check) == 0 {
             checks.push(CheckRecord::new(

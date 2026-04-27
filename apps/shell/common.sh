@@ -20,7 +20,64 @@ dedupePath() {
   export PATH="$dedupedPath"
 }
 
-hmSessionVars="$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+dotfilesProfileDirs() {
+  local profileDir
+  local profileDirs="${DOTFILES_PROFILE_DIRS:-}"
+  local profileUser="${USER:-${LOGNAME:-}}"
+
+  while [[ $profileDirs == *:* ]]; do
+    profileDir="${profileDirs%%:*}"
+    if [[ -n $profileDir ]]; then
+      printf '%s\n' "$profileDir"
+    fi
+    profileDirs="${profileDirs#*:}"
+  done
+  if [[ -n $profileDirs ]]; then
+    printf '%s\n' "$profileDirs"
+  fi
+
+  if [[ -n $profileUser ]]; then
+    printf '%s\n' "/etc/profiles/per-user/$profileUser"
+  fi
+  printf '%s\n' "$HOME/.nix-profile"
+}
+
+dotfilesAddProfileBins() {
+  local binDir
+  local pathPrefix=""
+  local profileDir
+
+  while IFS= read -r profileDir; do
+    binDir="$profileDir/bin"
+    if [[ -d $binDir ]]; then
+      pathPrefix="${pathPrefix:+$pathPrefix:}$binDir"
+    fi
+  done < <(dotfilesProfileDirs)
+
+  if [[ -n $pathPrefix ]]; then
+    export PATH="$pathPrefix${PATH:+:}$PATH"
+  fi
+}
+
+dotfilesFirstProfileFile() {
+  local profileDir
+  local profileFile
+  local relativePath="$1"
+
+  while IFS= read -r profileDir; do
+    profileFile="$profileDir/$relativePath"
+    if [[ -f $profileFile ]]; then
+      printf '%s\n' "$profileFile"
+      return 0
+    fi
+  done < <(dotfilesProfileDirs)
+
+  return 1
+}
+
+dotfilesAddProfileBins
+
+hmSessionVars="$(dotfilesFirstProfileFile "etc/profile.d/hm-session-vars.sh" || true)"
 if [[ -f $hmSessionVars ]]; then
   # Home Manager writes sessionPath/sessionVariables here; source it so
   # interactive shells pick up managed PATH entries like ~/.local/bin.
@@ -93,9 +150,10 @@ if [[ -f "$HOME/.ripgreprc" ]]; then
   export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"
 fi
 
-if [[ -f "$HOME/.nix-profile/etc/profile.d/command-not-found.sh" ]]; then
-  # shellcheck disable=SC1091
-  source "$HOME/.nix-profile/etc/profile.d/command-not-found.sh"
+commandNotFound="$(dotfilesFirstProfileFile "etc/profile.d/command-not-found.sh" || true)"
+if [[ -f $commandNotFound ]]; then
+  # shellcheck disable=SC1090
+  source "$commandNotFound"
 fi
 
 export LESS='-R --mouse --wheel-lines=3'

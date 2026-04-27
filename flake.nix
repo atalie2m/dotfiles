@@ -183,7 +183,7 @@
           };
           model-hf = {
             path = ./templates/model-hf;
-            description = "Hugging Face/model artifact template with git-lfs, huggingface_hub, rclone/aria2, DVC/data tooling, and secret scanning";
+            description = "Hugging Face/model artifact template with git-lfs, huggingface_hub, rclone, DVC/data tooling, and secret scanning";
           };
           docs-dev = {
             path = ./templates/docs-dev;
