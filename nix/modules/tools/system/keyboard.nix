@@ -1,11 +1,11 @@
-{ delib, lib, ... }:
+{ dotmod, config, lib, ... }:
 
 # macOS keyboard/input preferences separated from GUI styling.
 
-delib.module {
-  name = "tools.system.keyboard";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.system.keyboard";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
 
     keyRepeat = {
@@ -21,7 +21,7 @@ delib.module {
     };
   };
 
-  darwin.ifEnabled = { cfg, ... }: {
+  darwinOnEnable = { cfg, ... }: {
     system.defaults.NSGlobalDomain =
       lib.optionalAttrs cfg.keyRepeat.enable
         {

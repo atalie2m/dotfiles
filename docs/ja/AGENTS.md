@@ -2,13 +2,13 @@
 
 # リポジトリガイドライン
 
-このリポジトリは、macOS システム構成のための Darwin-first な Nix flake です。変更は、現在の bounded context である Darwin hosts/rices、型付きの host truth、明示的な mutable surface、Rust control plane に沿わせてください。
+このリポジトリは、macOS システム構成のための Darwin-first な Nix flake です。変更は、現在の bounded context である Darwin hosts/profiles、型付きの host truth、明示的な mutable surface、Rust control plane に沿わせてください。
 
 ## プロジェクト構成
 
 - `flake.nix` — flake の inputs/outputs。`darwinConfigurations` と project `templates`（`web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`）を公開します。
-- `nix/denix/darwin/{hosts,rices}/` — Darwin host/rice プロファイル。
-- `nix/denix/lib/` — Darwin host constructor と Denix helper。
+- `nix/catalog/darwin/` — Darwin host/profile プロファイル。
+- `nix/lib/module-helpers.nix` — repo-local module helper。
 - `nix/modules/` — 再利用可能な module。`shared/` と `tools/` に分割されています。
 - `nix/catalog/` — tool module と ownership check で使う catalog data。
 - `nix/local/` — public evaluation 用の placeholder facts input。

@@ -28,13 +28,13 @@ purpose.
 
 - Nix(Lix or Determinate's vanilla)
 
-## Profiles (Denix hosts/rices)
+## Darwin profiles
 
-This flake uses [Denix](https://github.com/yunfachi/denix) with Darwin-only host/rice trees:
+This flake uses a self-contained Darwin catalog for host/profile target management:
 
-- `nix/denix/darwin/{hosts,rices}`
+- `nix/catalog/darwin/{hosts.nix,bundles.nix,default.nix}`
 
-Shared modules, catalogs, and operational scripts now live outside the Denix host trees:
+Shared modules, tool catalogs, and operational scripts live alongside that catalog:
 
 - `nix/modules/{shared,tools}`
 - `nix/catalog/tools/{nixpkgs.nix,homebrew-ownership.nix}`
@@ -46,21 +46,19 @@ See [`docs/architecture-reset.md`](docs/architecture-reset.md) for the reset rat
 
 Operational note: the supported root flake API is Darwin-first and exposes `darwinConfigurations` plus project `templates`.
 
-- Hosts: `pro_mac` (default rice: `pro`), `ultra_mac` (default rice: `ultra`), `minimal_mac` (default rice: `base`).
-- Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `partial`.
-  - `base`: shared essentials (`system.nix`, core CLI, shell, Git, GPG/SOPS).
-  - `darwin`: macOS base integrations (Homebrew + hostnames/fonts).
-  - `dev`: editor/terminal/workstation stack.
-  - `pro`: composition of `base + darwin + dev` without VS Code.
-  - `ultra`: complete profile (`base + darwin + dev`).
-  - `partial`: composition of `base + darwin + dev` with targeted overrides (only `codex` enabled among AI coding agents, VS Code disabled).
+- Hosts: `pro_mac` (default profile: `pro`), `ultra_mac` (default profile: `ultra`), `minimal_mac` (default profile: `minimal`).
+- Profiles: `minimal`, `lite`, `pro`, `ultra`.
+  - `minimal`: absolute essentials, currently Nix settings plus Git.
+  - `lite`: practical daily baseline with shells, core CLI tools, navigation/search, Git, secrets basics, and macOS integrations.
+  - `pro`: full global tool catalog and editor installation, with editor setup/sync disabled.
+  - `ultra`: `pro` plus VS Code, Neovim, and Emacs setup/sync.
 
 Canonical host names and CLI examples live in [`docs/commands.md`](docs/commands.md).
 
-Manual attribute examples (still valid):
-`pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-base`, `minimal_mac-ultra`, `pro_mac-partial`.
+Manual attribute examples:
+`pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-lite`, `minimal_mac-ultra`, `pro_mac-minimal`.
 
-When `--rice` is provided, the CLI resolves only `host-rice` (no implicit fallback to `host`).
+When `--profile` is provided, the CLI resolves only `host-profile` (no implicit fallback to `host`).
 
 ## Application Source Policy
 
@@ -80,8 +78,8 @@ catalog-backed `tools.aiCodingAgent.claudeCode` toggle. Enabling it adds the
 ## Repository-Scoped Toolchain Policy
 
 1. `terraform`, `opentofu`, `nodejs`, and `go` should be pinned per repository via that repo's own `flake.nix` / devShell.
-2. Stock Darwin bundles (`dev`, `pro`, `ultra`, `partial`) leave those four tools disabled globally so one machine-wide version does not leak across repos.
-3. If a machine really needs one globally, enable it explicitly with `myconfig.tools.dev.<tool>.enable = true`; do not add it back to the stock bundles.
+2. Stock Darwin profiles leave `go`, `nodejs`, `opentofu`, and `terraform` to project templates/devShells so one machine-wide version does not leak across repos.
+3. If a machine really needs one globally, enable it explicitly with `myconfig.tools.dev.<tool>.enable = true`; do not add it back to the stock profiles.
 4. Terraform remains unfree. The allow-list is derived from enabled tools (for example `terraform`, `emacs`) via helper wiring, and `allowAll` remains disabled.
 5. For Terraform/OpenTofu repos, set `nixpkgs.config.allowUnfreePredicate` in that repo's flake and include `pkgs.terraform` / `pkgs.opentofu` in the devShell.
 
@@ -109,26 +107,26 @@ Example (`flake.nix` for a Terraform repo):
 ## Tool Catalog (myconfig.tools)
 
 Group toggles such as `tools.dev.enable` are bundle switches, not just namespaces. Enabling a group fans out to the catalog-owned tool toggles under that group.
-Use `list-tools` for single host/rice inspection and `matrix-tools` for cross-target matrices. `matrix-tools` shows group-level toggles by default and can expand to deeper toggles with `--full`; see [`docs/tool-catalog.md`](docs/tool-catalog.md) for catalog scope and [`docs/commands.md`](docs/commands.md) for CLI examples.
+Use `list-tools` for single host/profile inspection and `matrix-tools` for cross-target matrices. `matrix-tools` shows group-level toggles by default and can expand to deeper toggles with `--full`; see [`docs/tool-catalog.md`](docs/tool-catalog.md) for catalog scope and [`docs/commands.md`](docs/commands.md) for CLI examples.
 
 Manual evaluation (JSON):
 
 ```bash
-nix eval --json .#darwinConfigurations.ultra_mac-base.config.myconfig.tools
+nix eval --json .#darwinConfigurations.ultra_mac-lite.config.myconfig.tools
 ```
 
 ## VS Code Profiles
 
-This repo targets a single manually installed VS Code app with native VS Code profiles.
+This repo targets a single VS Code app with native VS Code profiles.
 The declarative source stays under `apps/vscode/<name>/`, and runtime materialization happens through `sync vscode`.
 
 - `apps/vscode/_default/` is the shared layer applied to every managed profile.
 - `apps/vscode/native/` is managed as a native profile (`Native`).
 - `apps/vscode/<name>/` for any other name maps to a native custom profile with that display name.
 - Supported inputs are `settings.json`, `extensions.txt`, and bootstrap-only `default-disabled-extensions.txt`.
-- `tools.editor.vscode.enable` installs `dotfiles-sync-vscode` into Home Manager; Visual Studio Code.app itself is expected to be installed manually.
+- `tools.editor.vscode.enable` installs Visual Studio Code.app through Homebrew and installs `dotfiles-sync-vscode` into Home Manager.
 - `sync emacs`, `sync neovim`, and `sync shell` use Rust engines in `dotfiles-core`; `sync vscode` uses the dedicated Rust engine (`dotfiles-sync-vscode`).
-- **Stock `ultra` behavior:** stock Darwin bundles enable the VS Code module, but they do not run `sync vscode --apply` during Home Manager activation. Apply managed profiles explicitly with `nix run .#dotfiles -- sync vscode --apply` after installing VS Code.
+- **Stock `ultra` behavior:** the `ultra` profile enables activation-time VS Code profile sync. The `pro` profile installs the editor surface but leaves setup/sync disabled.
 - **Extension bulk install:** repo-owned extension IDs live under `apps/vscode/` — chiefly `_default/extensions.txt` plus each profile's `extensions.txt` (for example `web/`, `native/`). That directory is the source of truth for what sync installs or uninstalls.
 - `sync vscode --apply` reconciles fully repo-owned managed profile settings plus those repo-owned extensions into writable VS Code profile state when you invoke the CLI.
 - `default-disabled-extensions.txt` is seeded once into the profile's extension enablement state; users can later enable those extensions in the VS Code UI and sync will not force them back off.
@@ -139,8 +137,8 @@ See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs 
 
 ## Mutable Editor Tooling
 
-- Emacs app wiring is Nix-first, while Doom config files and package state stay mutable. `sync emacs` reconciles `apps/emacs/doom/{init,packages,config}.el` with writable files under `~/.config/doom`, and `--adopt` pulls local Doom edits back into the repo. Doom itself lives at `${EMACSDIR:-~/.emacs.d}` so standard GUI/daemon startup loads it without extra launch arguments. Dev-derived stock bundles run activation-time Emacs sync and first-run Doom bootstrap.
-- Neovim app/config wiring is declarative under `apps/neovim/`; the config is LazyVim-based, and `sync neovim` can detect drift or adopt runtime edits, including the effective state-local Lazy lock. `tools.editor.goneovim.enable` installs the Goneovim GUI from its upstream Darwin release as a dev-bundle companion to Neovim, while keeping the `nvim` dependency Nix-owned.
+- Emacs app wiring is Nix-first, while Doom config files and package state stay mutable. `sync emacs` reconciles `apps/emacs/doom/{init,packages,config}.el` with writable files under `~/.config/doom`, and `--adopt` pulls local Doom edits back into the repo. Doom itself lives at `${EMACSDIR:-~/.emacs.d}` so standard GUI/daemon startup loads it without extra launch arguments. The `ultra` profile runs activation-time Emacs sync and first-run Doom bootstrap; `pro` installs Emacs without setup.
+- Neovim installation is separate from config setup. `tools.editor.neovim.enable` installs Neovim, while `tools.editor.neovim.sync.enable` wires the repo-managed LazyVim config from `apps/neovim/`. The `ultra` profile enables that setup; `pro` only installs the editor.
 - VS Code profile definitions are declarative, but runtime state stays writable; managed profile settings are fully repo-owned and manual settings changes are overwritten on apply, while user-added extensions remain outside repo ownership.
 - This repo treats those editor runtimes as a convenience boundary: config is pinned here, package/login/UI state is not.
 
@@ -164,7 +162,7 @@ The default Zsh prompt is Pure. Zsh has a managed profile switch at `tools.shell
 - `autocomplete`: uses `zsh-autocomplete` as the completion UI and disables `fzf-tab` as the Tab owner.
 - `debug`: loads the stable profile plus `zprof`, `bindkey`, and `zinit` timing/report output.
 
-`base` now carries the CLI-only S-tier cockpit, while `dev` / `pro` / `ultra` add the broader daily workstation profiles:
+`lite`, `pro`, and `ultra` carry the daily shell stack; `minimal` keeps only the absolute essentials:
 
 - `fzf` keybindings: `CTRL-T` for file insert, `ALT-C` for directory jump
 - `fzf-tab` on `TAB`
@@ -395,7 +393,7 @@ CI cache pushes are wired for Cachix. Set these in the GitHub repo:
 - `CACHIX_CACHE_NAME` (repository variable)
 - `CACHIX_AUTH_TOKEN` (repository secret, write-enabled)
 
-Once set, the macOS CI job evaluates every `darwinConfigurations` target and builds each host's default target plus one deterministic non-default rice target before pushing results to the cache.
+Once set, the macOS CI job evaluates every `darwinConfigurations` target and builds each host's default target plus one deterministic non-default profile target before pushing results to the cache.
 
 ## Flake Config Trust (`accept-flake-config`)
 
@@ -406,7 +404,7 @@ Tradeoff:
 - Pros: smoother day-to-day usage for this dotfiles flake (fewer manual flags).
 - Cons: evaluating unknown third-party flakes can apply their `nixConfig` (for example cache/substituter settings).
 
-If you want stricter behavior, disable it in your host/rice config:
+If you want stricter behavior, disable it in your host/profile config:
 
 ```nix
 {
@@ -543,7 +541,7 @@ Manual rebuild examples live in [`docs/commands.md`](docs/commands.md).
 ## Troubleshooting
 
 - **`no darwinConfigurations found` / `unable to evaluate darwinConfigurations`** → Verify your overridden `facts.nix` and `secrets.nix`, then rerun `nix run .#doctor`.
-- **`target not found for host/rice`** → Run `nix run .#doctor -- --host <host> --rice <rice>` to see available targets.
+- **`target not found for host/profile`** → Run `nix run .#doctor -- --host <host> --profile <profile>` to see available targets.
 - **`FACTS_DIR is required ...` / `SECRETS_DIR is required ...`** → `doctor` and `bootstrap` need local file paths. If you override `FACTS` or `SECRETS` with a non-`path:` ref, also set the matching `*_DIR` variable.
 - **`HOME is not set`** → `sync shell`, `sync emacs`, `sync neovim`, `sync vscode`, and default user-scoped runtime paths require `HOME`. Export it, or provide the explicit overrides documented in [`docs/commands.md`](docs/commands.md#runtime-overrides).
 - **`darwin-rebuild: command not found`** → Use `nix run .#darwin-rebuild -- ...` for manual runs; `nix run .#apply` and `nix run .#update` already use the pinned wrapper automatically.

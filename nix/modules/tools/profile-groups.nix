@@ -1,4 +1,4 @@
-{ delib, lib, ... }:
+{ dotmod, config, lib, ... }:
 
 let
   groups = [
@@ -24,10 +24,10 @@ let
   ];
 
   mkGroupModule = group:
-    delib.module {
-      name = "tools.${group}";
+    (dotmod.mkModule { inherit config; }) {
+      path = "tools.${group}";
 
-      options = with delib; moduleOptions {
+      options = with dotmod; moduleOptions {
         enable = boolOption false;
       };
     };

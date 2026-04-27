@@ -149,8 +149,8 @@ jobs:
                 targets:
                   let
                     manifest = (import ./nix/scripts/targets-manifest.nix {}).json targets;
-                    riceTargets = builtins.concatLists (map (host: builtins.attrValues host.targetsByRice) (builtins.attrValues manifest.hosts));
-                    targetSet = builtins.listToAttrs (map (target: { name = target; value = true; }) riceTargets);
+                    profileTargets = builtins.concatLists (map (host: builtins.attrValues host.targetsByProfile) (builtins.attrValues manifest.hosts));
+                    targetSet = builtins.listToAttrs (map (target: { name = target; value = true; }) profileTargets);
                   in
                   builtins.concatStringsSep "\n" (builtins.sort builtins.lessThan (builtins.attrNames targetSet))
               ' \
@@ -171,7 +171,7 @@ jobs:
               >/dev/null
           done
 
-      - name: Build default and extra rice targets
+      - name: Build default and extra profile targets
         run: |
           set -euo pipefail
           build_targets=()
@@ -189,14 +189,14 @@ jobs:
                         map
                           (host:
                             let
-                              extraRice = if host.defaultRice == "base" then "ultra" else "base";
+                              extraProfile = if host.defaultProfile == "minimal" then "ultra" else "minimal";
                             in
                             [
                               host.buildTarget
                             ]
                             ++ (
-                              if builtins.hasAttr extraRice host.targetsByRice then
-                                [ host.targetsByRice.${extraRice} ]
+                              if builtins.hasAttr extraProfile host.targetsByProfile then
+                                [ host.targetsByProfile.${extraProfile} ]
                               else
                                 [ ]
                             ))

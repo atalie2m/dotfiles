@@ -1,11 +1,11 @@
-{ delib, ... }:
+{ dotmod, config, ... }:
 
 # GPG and GPG agent configuration
 
-delib.module {
-  name = "tools.security.gpg";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.security.gpg";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
 
     agent = {
@@ -17,7 +17,7 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { cfg, ... }: {
+  homeOnEnable = { cfg, ... }: {
     programs.gpg.enable = true;
 
     services.gpg-agent = {
@@ -30,7 +30,7 @@ delib.module {
 
   };
 
-  darwin.ifEnabled = { ... }: {
+  darwinOnEnable = { ... }: {
     home-manager.sharedModules = [
       ({ pkgs, ... }: {
         services.gpg-agent.pinentry.package = pkgs.pinentry_mac;

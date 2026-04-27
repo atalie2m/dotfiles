@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, dotlib, pkgs, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
@@ -7,17 +7,17 @@ in
 
 # Rio terminal configuration
 
-delib.module {
-  name = "tools.terminal.rio";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.terminal.rio";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  myconfig.ifEnabled = { myconfig, ... }:
+  myconfigOnEnable = { myconfig, ... }:
     dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 
-  home.ifEnabled = { myconfig, ... }:
+  homeOnEnable = { myconfig, ... }:
     let
       tmuxEnabled = (((myconfig.tools or { }).terminal or { }).tmux or { }).enable or false;
       navigationMode = if tmuxEnabled then "Plain" else "Bookmark";

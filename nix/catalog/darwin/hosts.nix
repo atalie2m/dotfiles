@@ -1,9 +1,7 @@
 let
-  supportedRices = [
-    "base"
-    "darwin"
-    "dev"
-    "partial"
+  supportedProfiles = [
+    "minimal"
+    "lite"
     "pro"
     "ultra"
   ];
@@ -18,14 +16,14 @@ let
   };
 in
 {
-  inherit supportedRices;
+  inherit supportedProfiles;
 
   hosts = {
     minimal_mac = {
       name = "minimal_mac";
-      defaultRice = "base";
+      defaultProfile = "minimal";
       buildTarget = "minimal_mac";
-      inherit supportedRices;
+      inherit supportedProfiles;
       machineKey = "minimal_mac";
       system = "aarch64-darwin";
       extraMyconfig = { };
@@ -33,9 +31,9 @@ in
 
     pro_mac = {
       name = "pro_mac";
-      defaultRice = "pro";
+      defaultProfile = "pro";
       buildTarget = "pro_mac";
-      inherit supportedRices;
+      inherit supportedProfiles;
       machineKey = "pro_mac";
       system = "aarch64-darwin";
       extraMyconfig = powerUserOverrides;
@@ -43,9 +41,9 @@ in
 
     ultra_mac = {
       name = "ultra_mac";
-      defaultRice = "ultra";
+      defaultProfile = "ultra";
       buildTarget = "ultra_mac";
-      inherit supportedRices;
+      inherit supportedProfiles;
       machineKey = "ultra_mac";
       system = "aarch64-darwin";
       extraMyconfig = powerUserOverrides;

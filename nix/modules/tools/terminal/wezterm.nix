@@ -1,4 +1,4 @@
-{ delib, dotlib, pkgs, repoPaths, ... }:
+{ dotmod, config, dotlib, pkgs, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
@@ -7,17 +7,17 @@ in
 
 # WezTerm terminal configuration
 
-delib.module {
-  name = "tools.terminal.wezterm";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.terminal.wezterm";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  myconfig.ifEnabled = { myconfig, ... }:
+  myconfigOnEnable = { myconfig, ... }:
     dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 
-  home.ifEnabled = { ... }:
+  homeOnEnable = { ... }:
     {
       xdg.configFile."wezterm/wezterm.lua" = {
         force = true;

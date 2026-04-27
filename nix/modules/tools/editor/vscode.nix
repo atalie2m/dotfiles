@@ -1,39 +1,40 @@
-{ delib, lib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, dotlib, pkgs, repoPaths, ... }:
 
 # VS Code sync tooling plus native profile reconciliation.
 
 let
+  homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
+  homebrewSpec = homebrewOwnership."editor.vscode";
   dotfilesCli = pkgs.callPackage ../../../pkgs/dotfiles-cli { };
   syncVscodeBin = pkgs.callPackage ../../../pkgs/dotfiles-sync-vscode { };
   types = lib.types;
 in
-delib.module {
-  name = "tools.editor.vscode";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.editor.vscode";
 
-  options = with delib; args:
-    (moduleOptions
-      {
-        enable = boolOption false;
-        sync = {
-          enable = boolOption false;
-          managedDir = lib.mkOption {
-            type = types.nullOr types.path;
-            default = null;
-          };
-          stateDir = lib.mkOption {
-            type = types.nullOr types.str;
-            default = null;
-          };
-        };
-      }
-      args)
-  ;
+  options = with dotmod; moduleOptions {
+    enable = boolOption false;
+    sync = {
+      enable = boolOption false;
+      managedDir = lib.mkOption {
+        type = types.nullOr types.path;
+        default = null;
+      };
+      stateDir = lib.mkOption {
+        type = types.nullOr types.str;
+        default = null;
+      };
+    };
+  };
 
-  home.ifEnabled = { ... }: {
+  homeOnEnable = { ... }: {
     home.packages = [ syncVscodeBin ];
   };
 
-  darwin.ifEnabled = { cfg, ... }:
+  myconfigOnEnable = { myconfig, ... }:
+    dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
+
+  darwinOnEnable = { cfg, ... }:
     let
       runtimePath = lib.makeBinPath [
         pkgs.bash

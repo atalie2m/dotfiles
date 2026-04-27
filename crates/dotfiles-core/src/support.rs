@@ -357,13 +357,13 @@ mod inputs {
                 hosts: BTreeMap::from([(
                     "pro_mac".to_string(),
                     HostTargetsManifest {
-                        default_rice: "pro".to_string(),
+                        default_profile: "pro".to_string(),
                         build_target: "pro_mac".to_string(),
-                        supported_rices: vec!["base".to_string(), "pro".to_string()],
+                        supported_profiles: vec!["lite".to_string(), "pro".to_string()],
                         machine_key: "pro_mac".to_string(),
                         system: "aarch64-darwin".to_string(),
-                        targets_by_rice: BTreeMap::from([
-                            ("base".to_string(), "pro_mac-base".to_string()),
+                        targets_by_profile: BTreeMap::from([
+                            ("lite".to_string(), "pro_mac-lite".to_string()),
                             ("pro".to_string(), "pro_mac".to_string()),
                         ]),
                     },
@@ -376,31 +376,31 @@ mod inputs {
         }
 
         #[test]
-        fn resolve_target_uses_targets_by_rice_for_explicit_rice() {
+        fn resolve_target_uses_targets_by_profile_for_explicit_profile() {
             let manifest = TargetsManifest {
                 hosts: BTreeMap::from([(
                     "ultra_mac".to_string(),
                     HostTargetsManifest {
-                        default_rice: "ultra".to_string(),
+                        default_profile: "ultra".to_string(),
                         build_target: "ultra_mac".to_string(),
-                        supported_rices: vec!["base".to_string(), "ultra".to_string()],
+                        supported_profiles: vec!["lite".to_string(), "ultra".to_string()],
                         machine_key: "ultra_mac".to_string(),
                         system: "aarch64-darwin".to_string(),
-                        targets_by_rice: BTreeMap::from([
-                            ("base".to_string(), "ultra_mac-base".to_string()),
+                        targets_by_profile: BTreeMap::from([
+                            ("lite".to_string(), "ultra_mac-lite".to_string()),
                             ("ultra".to_string(), "ultra_mac".to_string()),
                         ]),
                     },
                 )]),
             };
 
-            let resolved = resolve_target_from_manifest(&manifest, "ultra_mac", Some("base"))
+            let resolved = resolve_target_from_manifest(&manifest, "ultra_mac", Some("lite"))
                 .expect("resolve");
-            assert_eq!(resolved, "ultra_mac-base");
+            assert_eq!(resolved, "ultra_mac-lite");
         }
 
         #[test]
-        fn resolve_target_reports_missing_host_or_rice() {
+        fn resolve_target_reports_missing_host_or_profile() {
             let empty_manifest = TargetsManifest {
                 hosts: BTreeMap::new(),
             };
@@ -412,24 +412,24 @@ mod inputs {
                 hosts: BTreeMap::from([(
                     "minimal_mac".to_string(),
                     HostTargetsManifest {
-                        default_rice: "base".to_string(),
+                        default_profile: "minimal".to_string(),
                         build_target: "minimal_mac".to_string(),
-                        supported_rices: vec!["base".to_string()],
+                        supported_profiles: vec!["minimal".to_string()],
                         machine_key: "minimal_mac".to_string(),
                         system: "aarch64-darwin".to_string(),
-                        targets_by_rice: BTreeMap::from([(
-                            "base".to_string(),
+                        targets_by_profile: BTreeMap::from([(
+                            "minimal".to_string(),
                             "minimal_mac".to_string(),
                         )]),
                     },
                 )]),
             };
-            let missing_rice =
+            let missing_profile =
                 resolve_target_from_manifest(&manifest, "minimal_mac", Some("ultra"))
                     .expect_err("err");
             assert_eq!(
-                missing_rice,
-                "target not found for host 'minimal_mac' and rice 'ultra'"
+                missing_profile,
+                "target not found for host 'minimal_mac' and profile 'ultra'"
             );
         }
     }
@@ -526,6 +526,7 @@ mod process {
             "SECRETS_DIR",
             "DARWIN_REBUILD_BIN",
             "DOTFILES_ROOT",
+            "PROFILE",
         ] {
             if env::var_os(name).is_some() {
                 vars.push(name.to_string());
@@ -601,17 +602,17 @@ mod targets_manifest {
 
     #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
     pub struct HostTargetsManifest {
-        #[serde(rename = "defaultRice")]
-        pub default_rice: String,
+        #[serde(rename = "defaultProfile")]
+        pub default_profile: String,
         #[serde(rename = "buildTarget")]
         pub build_target: String,
-        #[serde(rename = "supportedRices")]
-        pub supported_rices: Vec<String>,
+        #[serde(rename = "supportedProfiles")]
+        pub supported_profiles: Vec<String>,
         #[serde(rename = "machineKey")]
         pub machine_key: String,
         pub system: String,
-        #[serde(rename = "targetsByRice")]
-        pub targets_by_rice: BTreeMap<String, String>,
+        #[serde(rename = "targetsByProfile")]
+        pub targets_by_profile: BTreeMap<String, String>,
     }
 
     pub fn list_darwin_targets(root: &Path, inputs: &InputRefs) -> Result<Vec<String>, String> {
@@ -678,14 +679,14 @@ mod targets_manifest {
         root: &Path,
         inputs: &InputRefs,
         host: &str,
-        rice: Option<&str>,
+        profile: Option<&str>,
     ) -> Result<String, String> {
         if host.is_empty() {
             return Err("host is required".to_string());
         }
 
         let manifest = load_targets_manifest(root, inputs)?;
-        resolve_target_from_manifest(&manifest, host, rice)
+        resolve_target_from_manifest(&manifest, host, profile)
     }
 
     pub fn explain_darwin_targets_error(inputs: &InputRefs, message: &str) -> String {
@@ -840,23 +841,24 @@ mod targets_manifest {
     pub(crate) fn resolve_target_from_manifest(
         manifest: &TargetsManifest,
         host: &str,
-        rice: Option<&str>,
+        profile: Option<&str>,
     ) -> Result<String, String> {
         let missing_message = || {
             format!(
                 "target not found for host '{}'{}",
                 host,
-                rice.map(|value| format!(" and rice '{}'", value))
+                profile
+                    .map(|value| format!(" and profile '{}'", value))
                     .unwrap_or_default()
             )
         };
 
         let host_manifest = manifest.hosts.get(host).ok_or_else(missing_message)?;
 
-        match rice {
-            Some(rice_name) => host_manifest
-                .targets_by_rice
-                .get(rice_name)
+        match profile {
+            Some(profile_name) => host_manifest
+                .targets_by_profile
+                .get(profile_name)
                 .cloned()
                 .ok_or_else(missing_message),
             None => Ok(host_manifest.build_target.clone()),

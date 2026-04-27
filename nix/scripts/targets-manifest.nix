@@ -1,7 +1,7 @@
 {}:
 
 let
-  catalog = import ../denix/darwin/host-catalog.nix;
+  catalog = import ../catalog/darwin/hosts.nix;
   hostSpecs = catalog.hosts;
 
   targetHostName =
@@ -11,12 +11,12 @@ let
     else
       throw "target '${targetName}' is missing config.myconfig.hostContext.name";
 
-  targetRiceName =
+  targetProfileName =
     targetName: cfg:
-    if cfg ? myconfig && cfg.myconfig ? rice && cfg.myconfig.rice ? name then
-      cfg.myconfig.rice.name
+    if cfg ? myconfig && cfg.myconfig ? profile && cfg.myconfig.profile ? name then
+      cfg.myconfig.profile.name
     else
-      throw "target '${targetName}' is missing config.myconfig.rice.name";
+      throw "target '${targetName}' is missing config.myconfig.profile.name";
 
   targetEntries =
     targets:
@@ -29,22 +29,22 @@ let
         {
           name = targetName;
           host = targetHostName targetName cfg;
-          rice = targetRiceName targetName cfg;
+          profile = targetProfileName targetName cfg;
         }
       )
       (builtins.attrNames targets);
 
   uniqueTargetFor =
-    entries: hostName: riceName:
+    entries: hostName: profileName:
     let
-      matches = builtins.filter (entry: entry.host == hostName && entry.rice == riceName) entries;
-      explicitTarget = "${hostName}-${riceName}";
+      matches = builtins.filter (entry: entry.host == hostName && entry.profile == profileName) entries;
+      explicitTarget = "${hostName}-${profileName}";
       explicitMatches = builtins.filter (entry: entry.name == explicitTarget) matches;
     in
     if builtins.length explicitMatches == 1 then
       explicitTarget
     else if builtins.length matches != 1 then
-      throw "expected exactly one target for host '${hostName}' and rice '${riceName}'"
+      throw "expected exactly one target for host '${hostName}' and profile '${profileName}'"
     else
       (builtins.head matches).name;
 
@@ -61,8 +61,8 @@ let
         _ =
           if match.host != hostName then
             throw "buildTarget '${hostSpec.buildTarget}' resolved to host '${match.host}', expected '${hostName}'"
-          else if match.rice != hostSpec.defaultRice then
-            throw "buildTarget '${hostSpec.buildTarget}' resolved to rice '${match.rice}', expected default rice '${hostSpec.defaultRice}'"
+          else if match.profile != hostSpec.defaultProfile then
+            throw "buildTarget '${hostSpec.buildTarget}' resolved to profile '${match.profile}', expected default profile '${hostSpec.defaultProfile}'"
           else
             null;
       in
@@ -93,7 +93,7 @@ let
                     name = targetName;
                     value = true;
                   })
-                  (builtins.attrValues hostManifest.targetsByRice))
+                  (builtins.attrValues hostManifest.targetsByProfile))
               )
               (builtins.attrNames hosts)
           )
@@ -109,35 +109,35 @@ let
         (
           hostName: hostSpec:
             let
-              targetsByRice = builtins.listToAttrs (
+              targetsByProfile = builtins.listToAttrs (
                 map
-                  (riceName: {
-                    name = riceName;
-                    value = uniqueTargetFor entries hostName riceName;
+                  (profileName: {
+                    name = profileName;
+                    value = uniqueTargetFor entries hostName profileName;
                   })
-                  hostSpec.supportedRices
+                  hostSpec.supportedProfiles
               );
               buildTarget = validateBuildTarget entries hostName hostSpec;
-              _defaultRiceTargetCheck =
+              _defaultProfileTargetCheck =
                 let
                   defaultTarget =
-                    if builtins.hasAttr hostSpec.defaultRice targetsByRice then
-                      targetsByRice.${hostSpec.defaultRice}
+                    if builtins.hasAttr hostSpec.defaultProfile targetsByProfile then
+                      targetsByProfile.${hostSpec.defaultProfile}
                     else
-                      throw "host '${hostName}' defaultRice '${hostSpec.defaultRice}' is missing from targetsByRice";
+                      throw "host '${hostName}' defaultProfile '${hostSpec.defaultProfile}' is missing from targetsByProfile";
                 in
                 if defaultTarget != buildTarget then
-                  throw "host '${hostName}' default rice target '${defaultTarget}' must equal buildTarget '${buildTarget}'"
+                  throw "host '${hostName}' default profile target '${defaultTarget}' must equal buildTarget '${buildTarget}'"
                 else
                   null;
             in
-            builtins.seq _defaultRiceTargetCheck {
-              defaultRice = hostSpec.defaultRice;
+            builtins.seq _defaultProfileTargetCheck {
+              defaultProfile = hostSpec.defaultProfile;
               inherit buildTarget;
-              supportedRices = hostSpec.supportedRices;
+              supportedProfiles = hostSpec.supportedProfiles;
               machineKey = hostSpec.machineKey;
               system = hostSpec.system;
-              inherit targetsByRice;
+              inherit targetsByProfile;
             }
         )
         hostSpecs;

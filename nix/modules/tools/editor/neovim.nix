@@ -1,15 +1,16 @@
-{ delib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, pkgs, repoPaths, ... }:
 
 # Neovim (plugin-managed config via lazy.nvim)
 
-delib.module {
-  name = "tools.editor.neovim";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.editor.neovim";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
+    sync.enable = boolOption false;
   };
 
-  home.ifEnabled = { ... }:
+  homeOnEnable = { cfg, ... }:
     let
       neovimConfigDir = repoPaths.apps + "/neovim";
     in
@@ -20,7 +21,7 @@ delib.module {
         pkgs.ripgrep
       ];
 
-      xdg.configFile."nvim" = {
+      xdg.configFile."nvim" = lib.mkIf cfg.sync.enable {
         force = true;
         source = neovimConfigDir;
         recursive = true;

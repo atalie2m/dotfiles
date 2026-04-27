@@ -1,21 +1,21 @@
-{ delib, lib, dotlib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, dotlib, pkgs, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
   homebrewSpec = homebrewOwnership."system.karabiner";
 in
 
-delib.module {
-  name = "tools.system.karabiner";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.system.karabiner";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  myconfig.ifEnabled = { myconfig, ... }:
+  myconfigOnEnable = { myconfig, ... }:
     dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 
-  darwin.ifEnabled = { myconfig, ... }:
+  darwinOnEnable = { myconfig, ... }:
     let
       ruleDir = repoPaths.keyboards + "/karabiner/complex_modifications";
       keyboardType =

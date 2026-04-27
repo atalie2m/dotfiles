@@ -33,15 +33,6 @@
       flake = false;
     };
 
-    denix = {
-      url = "github:yunfachi/denix";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        nix-darwin.follows = "nix-darwin";
-        home-manager.follows = "home-manager";
-      };
-    };
-
     brew-api = {
       url = "github:BatteredBunny/brew-api";
       flake = false;
@@ -88,7 +79,7 @@
     extra-experimental-features = [ "nix-command" "flakes" ];
   };
 
-  outputs = inputs @ { denix, flake-parts, ... }:
+  outputs = inputs @ { flake-parts, ... }:
     let
       nixLib = inputs.nixpkgs.lib;
       dotlib = import ./nix/lib { lib = nixLib; };
@@ -116,7 +107,7 @@
       };
 
       configurations = import ./nix/flake/configurations.nix {
-        inherit inputs denix dotlib repoPaths;
+        inherit inputs dotlib repoPaths;
       };
 
       darwinConfigurations = configurations.darwinConfigurations;

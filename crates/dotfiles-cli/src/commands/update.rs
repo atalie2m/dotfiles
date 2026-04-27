@@ -13,11 +13,11 @@ pub(crate) fn command_update(args: &UpdateArgs) -> Result<(), String> {
         .host_value()
         .map(ToOwned::to_owned)
         .or_else(|| env::var("HOST").ok());
-    let rice = args
+    let profile = args
         .target
-        .rice_value()
+        .profile_value()
         .map(ToOwned::to_owned)
-        .or_else(|| env::var("RICE").ok());
+        .or_else(|| env::var("PROFILE").ok());
     let run_build = env::var("UPDATE_SKIP_BUILD").unwrap_or_default() != "1";
     if run_build {
         require_host_argument(host.as_deref(), "update")?;
@@ -83,7 +83,7 @@ pub(crate) fn command_update(args: &UpdateArgs) -> Result<(), String> {
         super::apply::command_apply(&ApplyArgs {
             target: TargetSelector {
                 host,
-                rice,
+                profile,
                 host_positional: None,
             },
             action: ApplyAction::Build,

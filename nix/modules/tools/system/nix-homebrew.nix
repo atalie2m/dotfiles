@@ -1,20 +1,20 @@
-{ delib, inputs, ... }:
+{ dotmod, config, inputs, ... }:
 
 # nix-homebrew: install Homebrew declaratively for nix-darwin
 
-delib.module {
-  name = "tools.system.nixHomebrew";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.system.nixHomebrew";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
     autoMigrate = boolOption false;
   };
 
-  darwin.always = { ... }: {
+  darwinAlways = { ... }: {
     imports = [ inputs.nix-homebrew.darwinModules.nix-homebrew ];
   };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }:
+  darwinOnEnable = { cfg, myconfig, ... }:
     let
       userName = myconfig.hostContext.user.username;
       enableRosetta = myconfig.hostContext.system == "aarch64-darwin";

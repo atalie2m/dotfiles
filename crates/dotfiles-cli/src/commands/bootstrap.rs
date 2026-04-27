@@ -21,11 +21,11 @@ pub(crate) fn command_bootstrap(args: &BootstrapArgs) -> Result<(), String> {
         .host_value()
         .map(ToOwned::to_owned)
         .or_else(|| env::var("HOST").ok());
-    let rice = args
+    let profile = args
         .target
-        .rice_value()
+        .profile_value()
         .map(ToOwned::to_owned)
-        .or_else(|| env::var("RICE").ok());
+        .or_else(|| env::var("PROFILE").ok());
     if apply_after {
         require_host_argument(host.as_deref(), "bootstrap")?;
     }
@@ -96,7 +96,7 @@ pub(crate) fn command_bootstrap(args: &BootstrapArgs) -> Result<(), String> {
         super::doctor::command_doctor(&DoctorArgs {
             target: TargetSelector {
                 host: host.clone(),
-                rice: rice.clone(),
+                profile: profile.clone(),
                 host_positional: None,
             },
             strict: args.strict,
@@ -123,7 +123,7 @@ pub(crate) fn command_bootstrap(args: &BootstrapArgs) -> Result<(), String> {
             super::apply::command_apply(&ApplyArgs {
                 target: TargetSelector {
                     host,
-                    rice,
+                    profile,
                     host_positional: None,
                 },
                 action: ApplyAction::Switch,

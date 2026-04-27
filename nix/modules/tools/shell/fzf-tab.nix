@@ -1,15 +1,15 @@
-{ delib, lib, pkgs, ... }:
+{ dotmod, config, lib, pkgs, ... }:
 
 # fzf-tab completion selector
 
-delib.module {
-  name = "tools.shell.fzfTab";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell.fzfTab";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  home.ifEnabled = { myconfig, ... }:
+  homeOnEnable = { myconfig, ... }:
     let
       zshEnabled = (((myconfig.tools or { }).shell or { }).zsh or { }).enable or false;
       zshProfile = (((myconfig.tools or { }).shell or { }).zsh or { }).profile or "stable";

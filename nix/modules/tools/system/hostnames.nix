@@ -1,15 +1,15 @@
-{ delib, lib, ... }:
+{ dotmod, config, lib, ... }:
 
 # Manage macOS host naming from the canonical host model.
 
-delib.module {
-  name = "tools.system.hostnames";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.system.hostnames";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  darwin.ifEnabled = { myconfig, ... }:
+  darwinOnEnable = { myconfig, ... }:
     let
       m = myconfig.hostContext.machine or { };
     in

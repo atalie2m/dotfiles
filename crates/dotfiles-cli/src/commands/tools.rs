@@ -12,14 +12,14 @@ pub(crate) fn command_list_tools(args: &ListToolsArgs) -> Result<(), String> {
         args.target.host_value().or(host_env.as_deref()),
         "list-tools",
     )?;
-    let rice = args
+    let profile = args
         .target
-        .rice_value()
+        .profile_value()
         .map(ToOwned::to_owned)
-        .or_else(|| env::var("RICE").ok());
+        .or_else(|| env::var("PROFILE").ok());
     let root = repo_root()?;
     let inputs = resolve_inputs()?;
-    let target = resolve_target(&root, &inputs, &host, rice.as_deref())
+    let target = resolve_target(&root, &inputs, &host, profile.as_deref())
         .map_err(|err| explain_darwin_targets_error(&inputs, &err))?;
     let attr = format!(
         "{}#darwinConfigurations.{}.config",

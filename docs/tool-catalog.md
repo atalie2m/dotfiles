@@ -3,7 +3,7 @@
 # Tool Catalog & Toggles
 
 This repository manages tool/group enablement under `myconfig.tools` using
-`*.enable` toggles. Denix modules follow a simple rule: when `enable = true`,
+`*.enable` toggles. Repo modules follow a simple rule: when `enable = true`,
 the tool is installed/configured. For externally managed tools, `enable = true`
 may configure the integration surface instead of installing the upstream binary.
 Group toggles such as `tools.dev.enable` act as bundle switches for the
@@ -42,7 +42,7 @@ SSH keys stay outside the repo and must come from local mutable state.
 
 ```bash
 nix run .#list-tools -- --host pro_mac
-nix run .#list-tools -- --host ultra_mac --rice base
+nix run .#list-tools -- --host ultra_mac --profile lite
 ```
 
 ### JSON Output
@@ -64,7 +64,7 @@ Deeper toggles such as `system.brewNix.autoDock.enable` or
 ### Environment Variables (Optional)
 
 - `HOST` (default: none; required unless passed positionally)
-- `RICE` (default: empty)
+- `PROFILE` (default: empty)
 - `FORMAT` (`text` or `json`, default: `text`)
 - `FACTS_DIR`, `SECRETS_DIR`
 - `FACTS`, `SECRETS` (advanced overrides; default to `path:$FACTS_DIR` / `path:$SECRETS_DIR`)

@@ -1,12 +1,12 @@
-{ delib, ... }:
+{ dotmod, config, ... }:
 
 # Native Homebrew integration for macOS applications and tools.
 # Preferred for fast-moving apps/tools that should stay up to date.
 
-delib.module {
-  name = "tools.system.homebrewNative";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.system.homebrewNative";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
 
     # Homebrew formulae (CLI tools, latest-first)
@@ -26,7 +26,7 @@ delib.module {
     enableAutoUpdate = boolOption true;
   };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }: {
+  darwinOnEnable = { cfg, myconfig, ... }: {
     # Standard nix-darwin homebrew configuration
     homebrew = {
       enable = true;

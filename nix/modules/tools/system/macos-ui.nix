@@ -1,11 +1,11 @@
-{ delib, lib, ... }:
+{ dotmod, config, lib, ... }:
 
 # macOS GUI preferences for Dock, trackpad, Finder, and window management.
 
-delib.module {
-  name = "tools.system.macosUi";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.system.macosUi";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
 
     dock = {
@@ -56,7 +56,7 @@ delib.module {
     };
   };
 
-  darwin.ifEnabled = { cfg, ... }:
+  darwinOnEnable = { cfg, ... }:
     let
       threeFingerDragEnabled = if cfg.trackpad.threeFingerDrag then 1 else 0;
       searchScope = if cfg.finder.searchCurrentFolderByDefault then "SCcf" else "MC";

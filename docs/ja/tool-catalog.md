@@ -2,7 +2,7 @@
 
 # Tool Catalog と Toggle
 
-このリポジトリは `myconfig.tools` 配下の `*.enable` toggle を使って tool / group の enablement を管理します。Denix module は単純な規則に従います。`enable = true` なら、その tool は install / configure されます。external 管理の tool では、`enable = true` が upstream binary の install ではなく integration surface の設定を意味することがあります。`tools.dev.enable` のような group toggle は、その group に属する catalog-owned tool の bundle switch として機能します。
+このリポジトリは `myconfig.tools` 配下の `*.enable` toggle を使って tool / group の enablement を管理します。repo module は単純な規則に従います。`enable = true` なら、その tool は install / configure されます。external 管理の tool では、`enable = true` が upstream binary の install ではなく integration surface の設定を意味することがあります。`tools.dev.enable` のような group toggle は、その group に属する catalog-owned tool の bundle switch として機能します。
 
 `tools.aiCodingAgent.claudeCode.enable` は Homebrew-native backend の catalog-backed toggle です。nix-darwin activation 時に latest-first の `claude-code@latest` cask を install します。
 `git-xet`、Apple project CLI、optional terminal font のように Homebrew 管理が適した macOS tool も同じ ownership registry に載せ、`flake check` が brew / cask item ごとの owner 一意性を検証できるようにしています。
@@ -32,7 +32,7 @@ local mutable state から与えます。
 
 ```bash
 nix run .#list-tools -- --host pro_mac
-nix run .#list-tools -- --host ultra_mac --rice base
+nix run .#list-tools -- --host ultra_mac --profile lite
 ```
 
 ### JSON 出力
@@ -53,7 +53,7 @@ nix run .#list-tools -- --host pro_mac --format json
 ### 環境変数（任意）
 
 - `HOST`（default: なし。位置引数で渡さない場合は必須）
-- `RICE`（default: 空）
+- `PROFILE`（default: 空）
 - `FORMAT`（`text` または `json`。default: `text`）
 - `FACTS_DIR`, `SECRETS_DIR`
 - `FACTS`, `SECRETS`（高度な override。default は `path:$FACTS_DIR` / `path:$SECRETS_DIR`）

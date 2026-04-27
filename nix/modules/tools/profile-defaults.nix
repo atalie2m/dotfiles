@@ -1,4 +1,4 @@
-{ delib, lib, pkgs, ... }:
+{ dotmod, config, lib, pkgs, ... }:
 
 let
   catppuccinBat = pkgs.fetchFromGitHub {
@@ -45,10 +45,10 @@ let
   anyToolEnabled = tools: specs:
     lib.any (spec: toolEnabled tools (builtins.elemAt spec 0) (builtins.elemAt spec 1)) specs;
 in
-delib.module {
-  name = "tools.profileDefaults";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.profileDefaults";
 
-  home.always = { myconfig, ... }:
+  homeAlways = { myconfig, ... }:
     let
       tools = myconfig.tools or { };
 

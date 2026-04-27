@@ -23,9 +23,7 @@ fi
 
 matches="$(
   rg -n 'import \(inputs\.local \+ "/facts\.nix"\)|inputs\.local \+ "/facts\.nix"|rawFacts = import' nix scripts crates --glob '!scripts/tests/**' |
-    grep -v '^nix/flake/configurations.nix:' |
-    grep -v '^nix/denix/lib/mk-darwin-host.nix:' ||
-    true
+    grep -v '^nix/flake/configurations.nix:' || true
 )"
 
 if [[ -n $matches ]]; then

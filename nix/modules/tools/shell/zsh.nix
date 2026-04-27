@@ -1,11 +1,11 @@
-{ delib, lib, dotlib, pkgs, ... }:
+{ dotmod, config, lib, dotlib, pkgs, ... }:
 
 # Zsh configuration
 
-delib.module {
-  name = "tools.shell.zsh";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell.zsh";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
     enableAutosuggestions = boolOption true;
     enableSyntaxHighlighting = boolOption true;
@@ -14,10 +14,10 @@ delib.module {
     historySize = intOption 10000;
   };
 
-  myconfig.ifEnabled = { ... }:
+  myconfigOnEnable = { ... }:
     dotlib.requireUnfree [ "zsh-abbr" ];
 
-  home.ifEnabled = { cfg, myconfig, ... }:
+  homeOnEnable = { cfg, myconfig, ... }:
     let
       homeDir = myconfig.hostContext.user.homeDirectory;
       validProfiles = [ "stable" "autocomplete" "debug" ];
@@ -134,7 +134,7 @@ delib.module {
       };
     };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }: {
+  darwinOnEnable = { cfg, myconfig, ... }: {
     programs.zsh.enable = lib.mkForce (
       (((myconfig.tools or { }).shell or { }).manageSystemShells or false) && cfg.enable
     );

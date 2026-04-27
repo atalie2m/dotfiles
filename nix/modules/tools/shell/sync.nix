@@ -1,16 +1,16 @@
-{ delib, lib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, pkgs, repoPaths, ... }:
 
 # Shell reconciliation via Home Manager activation.
 
-delib.module {
-  name = "tools.shell.sync";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell.sync";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
     managedDir = strOption "${repoPaths.surfaces}/shell/desired";
   };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }:
+  darwinOnEnable = { cfg, myconfig, ... }:
     let
       dotfilesCli = pkgs.callPackage ../../../pkgs/dotfiles-cli { };
       shellCfg = ((myconfig.tools or { }).shell or { });

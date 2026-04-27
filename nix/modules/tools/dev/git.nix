@@ -1,11 +1,11 @@
-{ delib, lib, ... }:
+{ dotmod, config, lib, ... }:
 
 # Git configuration with identity derived from the canonical host model
 
-delib.module {
-  name = "tools.dev.git";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.dev.git";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
     defaultBranch = strOption "main";
     editorCmd = strOption "vim";
@@ -30,7 +30,7 @@ delib.module {
     };
   };
 
-  home.ifEnabled = { cfg, myconfig, ... }:
+  homeOnEnable = { cfg, myconfig, ... }:
     let
       fullName = myconfig.hostContext.user.fullName;
       email = myconfig.hostContext.user.email;

@@ -1,11 +1,11 @@
-{ delib, ... }:
+{ dotmod, config, ... }:
 
 # Security tool group
 
-delib.module {
-  name = "tools.security";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.security";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 }

@@ -1,59 +1,100 @@
-{ inputs, denix, dotlib, repoPaths }:
+{ inputs, dotlib, repoPaths }:
 
 let
-  hostCatalog = import ../../nix/denix/darwin/host-catalog.nix;
+  lib = inputs.nixpkgs.lib;
+  dotmod = import ../lib/module-helpers.nix { inherit lib; };
+  catalog = import ../catalog/darwin { inherit lib; };
+  rawFacts = import (inputs.local + "/facts.nix");
+  normalizedFacts = dotlib.normalizeRawFacts rawFacts;
+  username = normalizedFacts.user.username;
 
-  mkConfigurations = { moduleSystem, paths }:
+  mkHomeManagerModule = host: { ... }: {
+    imports = [ inputs.sops-nix.homeManagerModules.sops ];
+
+    nix.package = lib.mkDefault inputs.nixpkgs.legacyPackages.${host.system}.nix;
+
+    home = {
+      inherit (host.user) username homeDirectory;
+      stateVersion = host.user.stateVersion.home;
+    };
+
+    targets.darwin = {
+      copyApps.enable = false;
+      linkApps.enable = true;
+    };
+  };
+
+  mkTarget =
+    hostName: profileName:
     let
-      facts = import (inputs.local + "/facts.nix");
-      username = (dotlib.normalizeRawFacts facts).user.username;
+      hostSpec = catalog.hosts.${hostName};
+      host = dotlib.buildHostModel {
+        inherit rawFacts;
+        inherit (hostSpec) name machineKey system;
+      };
+      profileMyconfig = catalog.profiles.${profileName};
+      nixPackage = inputs.nixpkgs.legacyPackages.${host.system}.nix;
+      userName = host.user.username;
+      homeDir = host.user.homeDirectory;
     in
+    inputs.nix-darwin.lib.darwinSystem {
+      system = host.system;
+      specialArgs = {
+        inherit inputs dotlib dotmod repoPaths catalog;
+      };
+      modules = [
+        inputs.sops-nix.darwinModules.sops
+        inputs.home-manager.darwinModules.home-manager
+        ../modules
+        ({ ... }: {
+          nix.package = lib.mkDefault nixPackage;
+          nixpkgs.hostPlatform = host.system;
+          system.stateVersion = host.user.stateVersion.darwin;
+          system.primaryUser = userName;
+          home-manager.backupFileExtension = "hm-backup";
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.extraSpecialArgs = {
+            inherit inputs dotlib repoPaths;
+          };
+          home-manager.users.${userName} = mkHomeManagerModule host;
+
+          users.users.${userName} = {
+            name = userName;
+            home = homeDir;
+          };
+
+          myconfig = lib.recursiveUpdate
+            {
+              hostContext = host;
+              profile = {
+                name = profileName;
+                available = catalog.profileNames;
+              };
+            }
+            (lib.recursiveUpdate profileMyconfig hostSpec.extraMyconfig);
+        })
+      ];
+    };
+
+  mkHostTargets = hostName:
+    builtins.listToAttrs (
+      map
+        (profileName: {
+          name = catalog.targetNameFor hostName profileName;
+          value = mkTarget hostName profileName;
+        })
+        catalog.hosts.${hostName}.supportedProfiles
+    );
+
+  darwinConfigurations =
     if username == null then
       throw "facts.user.username is required (set in ~/.config/dotfiles/facts.nix or override inputs.local)"
     else
-      denix.lib.configurations {
-        inherit moduleSystem;
-        homeManagerUser = username;
-        inherit paths;
-        extensions = with denix.lib.extensions; [
-          args
-          (base.withConfig { args.enable = true; })
-        ];
-        specialArgs = { inherit inputs dotlib repoPaths hostCatalog; };
-      };
-
-  configurationPaths = {
-    darwin = [
-      ../../nix/modules
-      ../../nix/denix/darwin/hosts
-      ../../nix/denix/darwin/rices
-    ];
-  };
-
-  mkLatestConfigurations = moduleSystem:
-    mkConfigurations {
-      inherit moduleSystem;
-      paths = configurationPaths.${moduleSystem}
-        or (throw "unsupported moduleSystem '${moduleSystem}'");
-    };
-
-  pruneDefaultRiceAliases = configurations:
-    let
-      aliasesToRemove =
-        builtins.filter
-          (targetName: targetName != null && builtins.hasAttr targetName configurations)
-          (map
-            (hostName:
-              let
-                hostSpec = hostCatalog.hosts.${hostName};
-                alias = "${hostName}-${hostSpec.defaultRice}";
-              in
-              if alias == hostSpec.buildTarget then null else alias)
-            (builtins.attrNames hostCatalog.hosts));
-    in
-    builtins.removeAttrs configurations aliasesToRemove;
-
-  darwinConfigurations = pruneDefaultRiceAliases (mkLatestConfigurations "darwin");
+      lib.foldl'
+        (acc: hostName: acc // mkHostTargets hostName)
+        { }
+        (builtins.attrNames catalog.hosts);
 in
 {
   inherit darwinConfigurations;

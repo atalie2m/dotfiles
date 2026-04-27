@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, inputs, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, dotlib, inputs, pkgs, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
@@ -22,11 +22,18 @@ let
       emacsdir="''${EMACSDIR:-$HOME/.emacs.d}"
       doomdir="''${DOOMDIR:-$HOME/.config/doom}"
 
-      for path in /opt/homebrew/bin /usr/local/bin /Applications/Emacs.app/Contents/MacOS/bin; do
+      for path in /usr/bin /bin /opt/homebrew/bin /usr/local/bin /Applications/Emacs.app/Contents/MacOS/bin; do
         if [ -d "$path" ]; then
           export PATH="$path:$PATH"
         fi
       done
+      if command -v xcrun >/dev/null 2>&1; then
+        xcode_as="$(xcrun -find as 2>/dev/null || true)"
+        if [ -n "$xcode_as" ]; then
+          xcode_as_dir="$(dirname "$xcode_as")"
+          export PATH="$xcode_as_dir:$PATH"
+        fi
+      fi
 
       ensure_doom_config() {
         if [ ! -e "$doomdir/init.el" ]; then
@@ -85,39 +92,35 @@ in
 
 # Emacs (GUI via Homebrew) + Doom user configuration
 
-delib.module {
-  name = "tools.editor.emacs";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.editor.emacs";
 
-  options = with delib; args:
-    (moduleOptions
-      {
-        enable = boolOption false;
-        sync = {
-          enable = boolOption false;
-          managedDir = lib.mkOption {
-            type = types.nullOr types.path;
-            default = null;
-          };
-          doomDir = lib.mkOption {
-            type = types.nullOr types.str;
-            default = null;
-          };
-        };
-        bootstrap = {
-          enable = boolOption false;
-          emacsDir = lib.mkOption {
-            type = types.nullOr types.str;
-            default = null;
-          };
-        };
-      }
-      args)
-  ;
+  options = with dotmod; moduleOptions {
+    enable = boolOption false;
+    sync = {
+      enable = boolOption false;
+      managedDir = lib.mkOption {
+        type = types.nullOr types.path;
+        default = null;
+      };
+      doomDir = lib.mkOption {
+        type = types.nullOr types.str;
+        default = null;
+      };
+    };
+    bootstrap = {
+      enable = boolOption false;
+      emacsDir = lib.mkOption {
+        type = types.nullOr types.str;
+        default = null;
+      };
+    };
+  };
 
-  myconfig.ifEnabled = { myconfig, ... }:
+  myconfigOnEnable = { myconfig, ... }:
     dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 
-  home.ifEnabled = { ... }:
+  homeOnEnable = { ... }:
     let
       emacsRuntimePackages = with pkgs; [
         cmigemo
@@ -158,7 +161,7 @@ delib.module {
       home.file = emacsFiles;
     };
 
-  darwin.ifEnabled = { cfg, ... }:
+  darwinOnEnable = { cfg, ... }:
     let
       runtimePath = lib.makeBinPath [
         pkgs.bash
@@ -194,7 +197,14 @@ delib.module {
     {
       home-manager.sharedModules = lib.optional (cfg.sync.enable || cfg.bootstrap.enable) ({ ... }: {
         home.activation.syncEmacsDoom = lib.mkOrder 890 ''
-          export PATH="${runtimePath}:$PATH"
+          export PATH="/usr/bin:/bin:${runtimePath}:$PATH"
+          if command -v xcrun >/dev/null 2>&1; then
+            xcode_as="$(xcrun -find as 2>/dev/null || true)"
+            if [ -n "$xcode_as" ]; then
+              xcode_as_dir="$(dirname "$xcode_as")"
+              export PATH="$xcode_as_dir:$PATH"
+            fi
+          fi
           doom_dir=${doomDirExpr}
           emacs_dir=${emacsDirExpr}
           ${lib.optionalString cfg.sync.enable ''

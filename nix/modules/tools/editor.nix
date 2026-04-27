@@ -1,4 +1,4 @@
-{ delib, lib, pkgs, ... }:
+{ dotmod, config, lib, pkgs, ... }:
 
 # Editor tool group
 
@@ -66,17 +66,17 @@ let
     };
 in
 
-delib.module {
-  name = "tools.editor";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.editor";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
     goneovim = {
       enable = boolOption false;
     };
   };
 
-  home.always = { myconfig, ... }:
+  homeAlways = { myconfig, ... }:
     let
       goneovimEnabled = myconfig.tools.editor.goneovim.enable or false;
     in

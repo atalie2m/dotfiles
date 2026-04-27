@@ -1,21 +1,21 @@
-{ delib, lib, dotlib, repoPaths, ... }:
+{ dotmod, config, lib, dotlib, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
   brewCatalog = lib.filterAttrs (_: spec: spec.mode == "catalog") homebrewOwnership;
 
   mkBrewToolModule = _: spec:
-    delib.module {
-      name = "tools.${spec.group}.${spec.tool}";
+    (dotmod.mkModule { inherit config; }) {
+      path = "tools.${spec.group}.${spec.tool}";
 
-      options = with delib; moduleOptions {
+      options = with dotmod; moduleOptions {
         enable = boolOption false;
       };
 
-      myconfig.ifEnabled = { myconfig, ... }:
+      myconfigOnEnable = { myconfig, ... }:
         dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec spec);
 
-      darwin.ifEnabled = { ... }: {
+      darwinOnEnable = { ... }: {
         assertions = lib.optional (!dotlib.hasHomebrewInstallPayload spec) {
           assertion = false;
           message = dotlib.homebrewCatalogFailureMessage {

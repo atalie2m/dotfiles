@@ -1,15 +1,15 @@
-{ delib, lib, pkgs, ... }:
+{ dotmod, config, lib, pkgs, ... }:
 
 # Pure prompt configuration
 
-delib.module {
-  name = "tools.shell.pure";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell.pure";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  home.ifEnabled = { myconfig, ... }:
+  homeOnEnable = { myconfig, ... }:
     let
       zshEnabled = (((myconfig.tools or { }).shell or { }).zsh or { }).enable or false;
     in

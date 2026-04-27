@@ -2,11 +2,10 @@
 
 # VS Code Profiles
 
-This repository targets one manually installed VS Code app and reconciles native VS Code profiles into writable runtime state.
+This repository targets one VS Code app and reconciles native VS Code profiles into writable runtime state.
 It no longer uses isolated per-instance runtime directories.
 
-When `tools.editor.vscode.enable = true`, dotfiles installs the `dotfiles-sync-vscode` engine into Home Manager.
-It does not install Visual Studio Code.app for you.
+When `tools.editor.vscode.enable = true`, dotfiles installs Visual Studio Code.app through Homebrew and installs the `dotfiles-sync-vscode` engine into Home Manager.
 If activation-time sync is enabled but VS Code is not installed yet, dotfiles logs a skip instead of failing.
 If you keep the module disabled but still want to run sync manually, either install VS Code normally or provide `VSCODE_CODE_BIN` yourself.
 `sync vscode` also requires `HOME`; other supported runtime overrides are summarized in [`docs/commands.md`](commands.md#runtime-overrides).
@@ -26,9 +25,9 @@ Profiles live under `apps/vscode/<name>/`:
 
 Note: VS Code's built-in `Default` profile is intentionally unmanaged. It is left as-is by `sync vscode`, so existing extensions/settings there are preserved.
 
-## Stock Darwin rices and VS Code
+## Stock Darwin profiles and VS Code
 
-Only the **`ultra`** rice turns on the VS Code module (`tools.editor.vscode.enable`) in the stock bundles. The other stock rices (`base`, `darwin`, `dev`, `pro`, `partial`) do not. Stock bundles do not reconcile VS Code profiles during activation; apply them explicitly with `nix run .#dotfiles -- sync vscode --apply` on a machine where VS Code is already present. If you want activation-time sync in your own config, set `tools.editor.vscode.sync.enable = true`.
+The **`pro`** and **`ultra`** profiles install the VS Code surface. `pro` leaves profile setup disabled; `ultra` enables `tools.editor.vscode.sync.enable` so managed profiles are reconciled during activation.
 
 ### Bulk extension install: source of truth
 
@@ -124,9 +123,9 @@ Flags:
 - `--managed-dir <path>`
 - `--state-dir <path>`
 
-`sync vscode --apply` can also run during Home Manager activation when both
+`sync vscode --apply` can run during Home Manager activation when both
 `tools.editor.vscode.enable = true` and `tools.editor.vscode.sync.enable = true`.
-The stock capability bundles keep `tools.editor.vscode.sync.enable = false`; set it explicitly in your own config only if you want automatic activation-time reconciliation.
+The stock `ultra` profile enables that automatic reconciliation; `pro` keeps it disabled.
 If `code` or Visual Studio Code.app cannot be found, activation prints a skip message and continues.
 
 ## Manual switching

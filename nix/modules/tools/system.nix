@@ -1,11 +1,11 @@
-{ delib, ... }:
+{ dotmod, config, ... }:
 
 # System integration tool group
 
-delib.module {
-  name = "tools.system";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.system";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 }

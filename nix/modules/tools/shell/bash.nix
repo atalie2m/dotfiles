@@ -1,17 +1,17 @@
-{ delib, lib, ... }:
+{ dotmod, config, lib, ... }:
 
 # Bash configuration
 
-delib.module {
-  name = "tools.shell.bash";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell.bash";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
     enableCompletion = boolOption true;
     historySize = intOption 10000;
   };
 
-  home.ifEnabled = { cfg, ... }: {
+  homeOnEnable = { cfg, ... }: {
     programs.bash = {
       enable = true;
       inherit (cfg) enableCompletion;
@@ -32,7 +32,7 @@ delib.module {
     home.file.".bashrc".target = lib.mkForce ".nix/hm-bash/.bashrc";
   };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }: {
+  darwinOnEnable = { cfg, myconfig, ... }: {
     programs.bash.enable = lib.mkForce (
       (((myconfig.tools or { }).shell or { }).manageSystemShells or false) && cfg.enable
     );

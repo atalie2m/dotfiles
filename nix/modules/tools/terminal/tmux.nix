@@ -1,17 +1,17 @@
-{ delib, ... }:
+{ dotmod, config, ... }:
 
 # Tmux configuration
 
-delib.module {
-  name = "tools.terminal.tmux";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.terminal.tmux";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
     utf8Locale = strOption "en_US.UTF-8";
     extraConfig = strOption "";
   };
 
-  home.ifEnabled = { cfg, ... }: {
+  homeOnEnable = { cfg, ... }: {
     programs.tmux = {
       enable = true;
       extraConfig = ''

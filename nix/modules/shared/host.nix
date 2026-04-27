@@ -1,4 +1,4 @@
-{ delib, lib, ... }:
+{ lib, ... }:
 
 let
   types = lib.types;
@@ -75,10 +75,8 @@ let
     };
   };
 in
-delib.module {
-  name = "hostContext";
-
-  options.hostContext = {
+{
+  options.myconfig.hostContext = {
     name = lib.mkOption {
       type = types.str;
       readOnly = true;

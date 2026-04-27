@@ -2,13 +2,13 @@
 
 # Repository Guidelines
 
-This repository is a Darwin-first Nix flake for macOS system configuration. Keep changes aligned with the current bounded contexts: Darwin hosts/rices, typed host truth, explicit mutable surfaces, and a Rust control plane.
+This repository is a Darwin-first Nix flake for macOS system configuration. Keep changes aligned with the current bounded contexts: Darwin hosts/profiles, typed host truth, explicit mutable surfaces, and a Rust control plane.
 
 ## Project Structure
 
 - `flake.nix` — flake inputs/outputs; exposes `darwinConfigurations` and project `templates` (`web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`).
-- `nix/denix/darwin/{hosts,rices}/` — Darwin host/rice profiles.
-- `nix/denix/lib/` — Darwin host constructors and Denix helpers.
+- `nix/catalog/darwin/` — Darwin host/profile catalog.
+- `nix/lib/module-helpers.nix` — repo-local module helper for `myconfig` feature toggles.
 - `nix/modules/` — reusable modules, split into `shared/` and `tools/`.
 - `nix/catalog/` — catalog data used by tool modules and ownership checks.
 - `nix/local/` — placeholder public facts input for public evaluation.

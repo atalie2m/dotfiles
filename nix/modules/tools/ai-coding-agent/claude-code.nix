@@ -1,4 +1,4 @@
-{ delib, dotlib, repoPaths, ... }:
+{ dotmod, config, dotlib, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
@@ -7,13 +7,13 @@ in
 
 # Claude Code, installed through the latest-first Homebrew cask.
 
-delib.module {
-  name = "tools.aiCodingAgent.claudeCode";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.aiCodingAgent.claudeCode";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  myconfig.ifEnabled = { myconfig, ... }:
+  myconfigOnEnable = { myconfig, ... }:
     dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 }

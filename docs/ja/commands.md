@@ -6,9 +6,9 @@
 
 ## 現在の host と package
 
-- Hosts: `pro_mac`（default rice: `pro`）、`ultra_mac`（default rice: `ultra`）、`minimal_mac`（default rice: `base`）
-- Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `partial`
-- darwin target の例: `pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-base`, `minimal_mac-ultra`, `pro_mac-partial`
+- Hosts: `pro_mac`（default profile: `pro`）、`ultra_mac`（default profile: `ultra`）、`minimal_mac`（default profile: `minimal`）
+- Profiles: `minimal`, `lite`, `pro`, `ultra`
+- darwin target の例: `pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-lite`, `minimal_mac-ultra`, `pro_mac-minimal`
 - Packages: `dotfiles`, `dotfiles-cli`, `dotfiles-sync-vscode`
 - Templates: `web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`
 
@@ -26,7 +26,7 @@ nix flake init -t github:atalie2m/dotfiles#python-research
 これらのコマンドは Darwin 専用で、`darwinConfigurations` を解決します。
 
 ```bash
-# 各 host の default rice を適用
+# 各 host の default profile を適用
 nix run .#apply -- --host pro_mac
 nix run .#apply -- --host ultra_mac
 nix run .#apply -- --host minimal_mac
@@ -34,15 +34,15 @@ nix run .#apply -- --host minimal_mac
 # build のみ実行
 nix run .#apply -- --host ultra_mac --action build
 
-# rice を明示指定して切り替え
-nix run .#apply -- --host pro_mac --rice ultra
-nix run .#apply -- --host ultra_mac --rice base
-nix run .#apply -- --host minimal_mac --rice ultra
-nix run .#apply -- --host ultra_mac --rice partial
+# profile を明示指定して切り替え
+nix run .#apply -- --host pro_mac --profile ultra
+nix run .#apply -- --host ultra_mac --profile lite
+nix run .#apply -- --host minimal_mac --profile ultra
+nix run .#apply -- --host ultra_mac --profile minimal
 
 # 実効 group/tool toggle を確認
 nix run .#list-tools -- --host pro_mac
-nix run .#list-tools -- --host ultra_mac --rice base --format json
+nix run .#list-tools -- --host ultra_mac --profile lite --format json
 
 # target 間の toggle matrix を確認
 nix run .#matrix-tools
@@ -99,7 +99,7 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 `tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom/Meow sync tooling を導入し、`doom-meow` を `~/.config/doom/modules/editor/meow` に用意します。Doom config file は `sync emacs` が reconcile する writable runtime state です。Doom 本体は `${EMACSDIR:-~/.emacs.d}` の mutable checkout として扱うため、標準の GUI / daemon 起動でも追加引数なしで読み込まれます。
 
-`tools.editor.emacs.bootstrap.enable = true` は `${EMACSDIR:-~/.emacs.d}/bin/doom` が無い場合だけ、activation 中に `dotfiles-doom bootstrap` を実行します。その directory が存在するが Doom checkout ではない場合は、timestamp 付きの `.pre-doom.*` backup に移動してから Doom を clone します。stock `dev` bundle は `tools.editor.emacs.sync.enable` と `tools.editor.emacs.bootstrap.enable` の両方を有効にするため、`pro` / `ultra` host は初回 apply で Doom を自動 bootstrap します。
+`tools.editor.emacs.bootstrap.enable = true` は `${EMACSDIR:-~/.emacs.d}/bin/doom` が無い場合だけ、activation 中に `dotfiles-doom bootstrap` を実行します。その directory が存在するが Doom checkout ではない場合は、timestamp 付きの `.pre-doom.*` backup に移動してから Doom を clone します。`ultra` profile は `tools.editor.emacs.sync.enable` と `tools.editor.emacs.bootstrap.enable` の両方を有効にし、`pro` は Emacs を install するだけで setup は行いません。
 
 ```bash
 dotfiles-doom bootstrap
@@ -109,7 +109,7 @@ dotfiles-doom doctor
 
 ## Neovim と Goneovim
 
-`tools.editor.neovim.enable = true` は Neovim を install し、`apps/neovim/` の repo-managed LazyVim config を wire します。`tools.editor.goneovim.enable = true` は upstream Darwin release から Goneovim GUI を install します。stock の dev 派生 bundle では Neovim と一緒に有効化します。Homebrew cask は Homebrew `neovim` に依存し、macOS Gatekeeper validation の理由で deprecated、かつ 2026-09-01 に disabled 予定のため、意図的に使いません。
+`tools.editor.neovim.enable = true` は Neovim を install します。`tools.editor.neovim.sync.enable = true` は `apps/neovim/` の repo-managed LazyVim config を wire し、`ultra` はこの setup を有効化し、`pro` は無効のままにします。`tools.editor.goneovim.enable = true` は upstream Darwin release から Goneovim GUI を install します。Homebrew cask は Homebrew `neovim` に依存し、macOS Gatekeeper validation の理由で deprecated、かつ 2026-09-01 に disabled 予定のため、意図的に使いません。
 
 ## runtime override
 
@@ -128,7 +128,7 @@ dotfiles-doom doctor
 - `scripts/*.sh` は Rust CLI の薄い shell wrapper です。
 - `sync neovim` は `apps/neovim` と `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` を比較し、`${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` が存在する場合はそれを実効 Lazy lock として扱います。
 - `dotfiles-sync-vscode` は別 package として提供され、`dotfiles` が `sync vscode` をその binary に dispatch します。
-- dev 派生の stock bundle は activation 中に `sync emacs --apply` と初回 Doom bootstrap を実行します。stock bundle は引き続き `sync vscode --apply` は実行しません。必要な場合だけ `tools.editor.vscode.sync.enable = true` を自分で有効にしてください。Visual Studio Code.app 自体は手動インストール前提で、`code` または app bundle がなければ activation は安全に skip します。インストール対象の extension ID は `apps/vscode/`（`_default/extensions.txt` と profile ごとの `extensions.txt`）にあります。
+- `ultra` profile は activation 中に `sync emacs --apply`、初回 Doom bootstrap、Neovim setup、`sync vscode --apply` を実行します。`pro` profile は editor app と tooling を install しますが、setup/sync は実行しません。Visual Studio Code.app がまだ無ければ activation は安全に skip します。インストール対象の extension ID は `apps/vscode/`（`_default/extensions.txt` と profile ごとの `extensions.txt`）にあります。
 
 ## check と開発
 

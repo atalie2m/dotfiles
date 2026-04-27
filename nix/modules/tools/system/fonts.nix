@@ -1,17 +1,17 @@
-{ delib, pkgs, ... }:
+{ dotmod, config, pkgs, ... }:
 
-delib.module {
-  name = "tools.system.fonts";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.system.fonts";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  home.ifEnabled = { cfg, ... }: {
+  homeOnEnable = { cfg, ... }: {
     fonts.fontconfig.enable = true;
   };
 
-  darwin.ifEnabled = { cfg, ... }: {
+  darwinOnEnable = { cfg, ... }: {
     fonts.packages = with pkgs; [
       nerd-fonts.jetbrains-mono
       nerd-fonts._0xproto

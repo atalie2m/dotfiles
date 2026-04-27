@@ -60,7 +60,7 @@ pub(crate) struct TargetSelector {
     #[arg(long)]
     pub(crate) host: Option<String>,
     #[arg(long)]
-    pub(crate) rice: Option<String>,
+    pub(crate) profile: Option<String>,
     #[arg(value_name = "host", hide = true)]
     pub(crate) host_positional: Option<String>,
 }
@@ -70,8 +70,8 @@ impl TargetSelector {
         self.host.as_deref().or(self.host_positional.as_deref())
     }
 
-    pub(crate) fn rice_value(&self) -> Option<&str> {
-        self.rice.as_deref()
+    pub(crate) fn profile_value(&self) -> Option<&str> {
+        self.profile.as_deref()
     }
 }
 

@@ -59,7 +59,7 @@ Behavior:
 - `tools.editor.emacs.enable` owns the Emacs app, sync tooling, and external `doom-meow` module; Doom itself remains a mutable checkout
 - Doom is installed at `${EMACSDIR:-~/.emacs.d}` so standard GUI/daemon startup uses it directly
 - `tools.editor.emacs.bootstrap.enable` runs `dotfiles-doom bootstrap` only when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing
-- stock `dev`-derived bundles enable activation-time Emacs sync and first-run Doom bootstrap
+- `ultra` enables activation-time Emacs sync and first-run Doom bootstrap; `pro` installs Emacs without setup
 
 ## Neovim config
 
@@ -112,8 +112,8 @@ Behavior:
 - `sync vscode --apply` creates missing profiles, updates the profile registry, rewrites managed settings files, and reconciles repo-owned extensions
 - settings removed from `apps/vscode/` disappear on the next apply because the managed file is fully repo-owned
 - user-added extensions not owned by the repo are preserved
-- `tools.editor.vscode.enable` owns the VS Code sync tooling and managed profile surface; Visual Studio Code.app itself is installed manually
-- stock bundles do not run `sync vscode --apply` during activation; set `tools.editor.vscode.sync.enable = true` yourself if you want activation-time reconciliation, which still skips cleanly if VS Code is not installed yet
+- `tools.editor.vscode.enable` installs Visual Studio Code.app through Homebrew and owns the VS Code sync tooling and managed profile surface
+- `ultra` runs `sync vscode --apply` during activation; `pro` installs the editor surface with setup sync disabled, and activation still skips cleanly if VS Code is not installed yet
 
 ## Home Manager-owned XDG config files
 

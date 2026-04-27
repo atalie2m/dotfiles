@@ -1,5 +1,7 @@
-{
-  base = {
+{ lib }:
+
+let
+  practicalBaseline = {
     system.nix.enable = true;
     tools.system.keyboard.enable = true;
     tools.core.enable = true;
@@ -101,7 +103,7 @@
     tools.security.sops.enable = true;
   };
 
-  darwin = {
+  macosIntegration = {
     tools.system.enable = true;
     tools.system.brewNix.enable = false;
     tools.system.brewNix.appLinks.enable = false;
@@ -121,7 +123,7 @@
     tools.system.macosUi.finder.writeDSStoreOnUSBVolumes = false;
   };
 
-  dev = {
+  fullToolset = {
     tools.aiCodingAgent.enable = true;
 
     tools.dev.enable = true;
@@ -136,8 +138,6 @@
 
     tools.editor.enable = true;
     tools.editor.emacs.enable = true;
-    tools.editor.emacs.sync.enable = true;
-    tools.editor.emacs.bootstrap.enable = true;
     tools.editor.neovim.enable = true;
     tools.editor.goneovim.enable = true;
 
@@ -369,33 +369,55 @@
     tools.terminal.rio.enable = true;
   };
 
-  partialOverride = {
-    tools.aiCodingAgent.claudeCode.enable = false;
-    tools.aiCodingAgent.codex.enable = true;
-    tools.aiCodingAgent.geminiCli.enable = false;
-    tools.aiCodingAgent.githubCopilotCli.enable = false;
-    tools.aiCodingAgent.opencode.enable = false;
-    tools.editor.vscode.enable = false;
-    tools.editor.vscode.sync.enable = false;
-  };
-
-  ultraOverride = {
+  aiCodingFull = {
     tools.aiCodingAgent.claudeCode.enable = true;
     tools.aiCodingAgent.codex.enable = true;
     tools.aiCodingAgent.geminiCli.enable = true;
     tools.aiCodingAgent.githubCopilotCli.enable = true;
     tools.aiCodingAgent.opencode.enable = true;
+  };
+
+  editorInstall = {
+    tools.editor.enable = true;
+    tools.editor.emacs.enable = true;
+    tools.editor.emacs.sync.enable = false;
+    tools.editor.emacs.bootstrap.enable = false;
+    tools.editor.neovim.enable = true;
+    tools.editor.neovim.sync.enable = false;
     tools.editor.vscode.enable = true;
     tools.editor.vscode.sync.enable = false;
   };
 
-  proOverride = {
-    tools.aiCodingAgent.claudeCode.enable = true;
-    tools.aiCodingAgent.codex.enable = true;
-    tools.aiCodingAgent.geminiCli.enable = true;
-    tools.aiCodingAgent.githubCopilotCli.enable = true;
-    tools.aiCodingAgent.opencode.enable = true;
-    tools.editor.vscode.enable = false;
-    tools.editor.vscode.sync.enable = false;
+  editorSync = {
+    tools.editor.emacs.sync.enable = true;
+    tools.editor.emacs.bootstrap.enable = true;
+    tools.editor.neovim.sync.enable = true;
+    tools.editor.vscode.sync.enable = true;
   };
+
+  merge = builtins.foldl' lib.recursiveUpdate { };
+in
+rec {
+  minimal = {
+    system.nix.enable = true;
+    tools.dev.git.enable = true;
+  };
+
+  lite = merge [
+    minimal
+    practicalBaseline
+    macosIntegration
+  ];
+
+  pro = merge [
+    lite
+    fullToolset
+    aiCodingFull
+    editorInstall
+  ];
+
+  ultra = merge [
+    pro
+    editorSync
+  ];
 }

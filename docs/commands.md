@@ -6,9 +6,9 @@ Canonical command examples and current host names live here. Keep README and AI 
 
 ## Current hosts and packages
 
-- Hosts: `pro_mac` (default rice: `pro`), `ultra_mac` (default rice: `ultra`), `minimal_mac` (default rice: `base`)
-- Rices: `base`, `darwin`, `dev`, `pro`, `ultra`, `partial`
-- Example darwin targets: `pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-base`, `minimal_mac-ultra`, `pro_mac-partial`
+- Hosts: `pro_mac` (default profile: `pro`), `ultra_mac` (default profile: `ultra`), `minimal_mac` (default profile: `minimal`)
+- Profiles: `minimal`, `lite`, `pro`, `ultra`
+- Example darwin targets: `pro_mac`, `ultra_mac`, `minimal_mac`, `ultra_mac-lite`, `minimal_mac-ultra`, `pro_mac-minimal`
 - Packages: `dotfiles`, `dotfiles-cli`, `dotfiles-sync-vscode`
 - Templates: `web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`
 
@@ -26,7 +26,7 @@ nix flake init -t github:atalie2m/dotfiles#python-research
 These commands are Darwin-only and resolve `darwinConfigurations`.
 
 ```bash
-# Apply default rice for each host
+# Apply default profile for each host
 nix run .#apply -- --host pro_mac
 nix run .#apply -- --host ultra_mac
 nix run .#apply -- --host minimal_mac
@@ -34,15 +34,15 @@ nix run .#apply -- --host minimal_mac
 # Build only
 nix run .#apply -- --host ultra_mac --action build
 
-# Switch rices explicitly
-nix run .#apply -- --host pro_mac --rice ultra
-nix run .#apply -- --host ultra_mac --rice base
-nix run .#apply -- --host minimal_mac --rice ultra
-nix run .#apply -- --host ultra_mac --rice partial
+# Switch profiles explicitly
+nix run .#apply -- --host pro_mac --profile ultra
+nix run .#apply -- --host ultra_mac --profile lite
+nix run .#apply -- --host minimal_mac --profile ultra
+nix run .#apply -- --host ultra_mac --profile minimal
 
 # Inspect effective group/tool toggles
 nix run .#list-tools -- --host pro_mac
-nix run .#list-tools -- --host ultra_mac --rice base --format json
+nix run .#list-tools -- --host ultra_mac --profile lite --format json
 
 # Inspect cross-target toggle matrix
 nix run .#matrix-tools
@@ -99,7 +99,7 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 `tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew, installs the Doom/Meow sync tooling, and keeps `doom-meow` available under `~/.config/doom/modules/editor/meow`. Doom config files are writable runtime state reconciled by `sync emacs`; Doom itself stays as a mutable checkout at `${EMACSDIR:-~/.emacs.d}` so standard GUI/daemon startup loads it without extra launch arguments.
 
-`tools.editor.emacs.bootstrap.enable = true` runs `dotfiles-doom bootstrap` during activation only when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing. If that directory exists but is not a Doom checkout, the bootstrapper moves it to a timestamped `.pre-doom.*` backup before cloning Doom. The stock `dev` bundle enables both `tools.editor.emacs.sync.enable` and `tools.editor.emacs.bootstrap.enable`, so `pro` and `ultra` hosts bootstrap Doom automatically on the first apply.
+`tools.editor.emacs.bootstrap.enable = true` runs `dotfiles-doom bootstrap` during activation only when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing. If that directory exists but is not a Doom checkout, the bootstrapper moves it to a timestamped `.pre-doom.*` backup before cloning Doom. The `ultra` profile enables both `tools.editor.emacs.sync.enable` and `tools.editor.emacs.bootstrap.enable`; `pro` installs Emacs without setup.
 
 ```bash
 dotfiles-doom bootstrap
@@ -109,7 +109,7 @@ dotfiles-doom doctor
 
 ## Neovim and Goneovim
 
-`tools.editor.neovim.enable = true` installs Neovim and wires the repo-managed LazyVim config from `apps/neovim/`. `tools.editor.goneovim.enable = true` installs the Goneovim GUI from the upstream Darwin release; stock dev-derived bundles enable it alongside Neovim. This deliberately avoids the Homebrew cask because that cask depends on Homebrew `neovim`, is marked deprecated for macOS Gatekeeper validation, and is scheduled for disablement on 2026-09-01.
+`tools.editor.neovim.enable = true` installs Neovim. `tools.editor.neovim.sync.enable = true` wires the repo-managed LazyVim config from `apps/neovim/`; `ultra` enables that setup and `pro` leaves it disabled. `tools.editor.goneovim.enable = true` installs the Goneovim GUI from the upstream Darwin release. This deliberately avoids the Homebrew cask because that cask depends on Homebrew `neovim`, is marked deprecated for macOS Gatekeeper validation, and is scheduled for disablement on 2026-09-01.
 
 ## Runtime overrides
 
@@ -128,7 +128,7 @@ Notes:
 - `scripts/*.sh` are thin shell wrappers over the Rust CLI.
 - `sync neovim` compares `apps/neovim` against `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` and treats `${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` as the effective Lazy lock when it exists.
 - `dotfiles-sync-vscode` is packaged separately; `dotfiles` dispatches `sync vscode` to that binary.
-- Dev-derived stock bundles run `sync emacs --apply` and first-run Doom bootstrap during activation. Stock bundles still do not run `sync vscode --apply`; enable `tools.editor.vscode.sync.enable = true` yourself if you want that automation. Visual Studio Code.app itself is installed manually, and activation skips cleanly when `code` or the app bundle is absent. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).
+- `ultra` runs VS Code, Neovim, and Emacs setup/sync during activation. `pro` installs editor surfaces but leaves setup/sync disabled. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).
 
 ## Checks and development
 

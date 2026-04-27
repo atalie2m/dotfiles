@@ -1,18 +1,18 @@
-{ delib, lib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, pkgs, repoPaths, ... }:
 
 # Shell tool group
 
-delib.module {
-  name = "tools.shell";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
     manageSystemShells = boolOption false;
     defaultShell = strOption "zsh";
     extraAliases = attrsOption { };
   };
 
-  home.ifEnabled = { cfg, ... }:
+  homeOnEnable = { cfg, ... }:
     let
       commonShellPath = repoPaths.apps + "/shell/common.sh";
     in
@@ -46,7 +46,7 @@ delib.module {
       };
     };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }:
+  darwinOnEnable = { cfg, myconfig, ... }:
     let
       userName = myconfig.hostContext.user.username;
       shellPackages = {

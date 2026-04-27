@@ -108,7 +108,7 @@ require_contains_anywhere 'nix run .#dotfiles -- sync emacs'
 require_contains_anywhere 'nix run .#dotfiles -- sync neovim'
 require_contains_anywhere 'nix run .#dotfiles -- sync vscode'
 require_contains_anywhere 'dotfiles-sync-vscode'
-require_contains_anywhere 'activation skips cleanly'
+require_contains_anywhere 'activation still skips cleanly'
 require_contains_file docs/commands.md '## Runtime overrides'
 require_contains_file docs/commands.md '`DOOMDIR` overrides the runtime Doom config directory for `sync emacs`'
 require_contains_file docs/commands.md '`DOTFILES_SYNC_VSCODE_BIN` overrides the `sync vscode` engine path.'
@@ -145,18 +145,18 @@ if command -v nix >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
       --apply 'targets: (import ./nix/scripts/targets-manifest.nix {}).json targets'
   )"
 
-  while IFS=$'\t' read -r host default_rice; do
-    require_contains_file docs/commands.md "\`${host}\` (default rice: \`${default_rice}\`)"
+  while IFS=$'\t' read -r host default_profile; do
+    require_contains_file docs/commands.md "\`${host}\` (default profile: \`${default_profile}\`)"
   done < <(
     printf '%s' "$manifest_json" |
-      jq -r '.hosts | to_entries[] | "\(.key)\t\(.value.defaultRice)"'
+      jq -r '.hosts | to_entries[] | "\(.key)\t\(.value.defaultProfile)"'
   )
 
-  while IFS= read -r rice; do
-    require_contains_file docs/commands.md "\`${rice}\`"
+  while IFS= read -r profile; do
+    require_contains_file docs/commands.md "\`${profile}\`"
   done < <(
     printf '%s' "$manifest_json" |
-      jq -r '[.hosts | to_entries[] | .value.supportedRices[]] | unique[]'
+      jq -r '[.hosts | to_entries[] | .value.supportedProfiles[]] | unique[]'
   )
 fi
 

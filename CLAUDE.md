@@ -14,13 +14,13 @@ This file provides repository guidance for coding agents working in this repo.
 ## Configuration flow
 
 1. `flake.nix` keeps the supported operational root API Darwin-first (`darwinConfigurations` plus project `templates`).
-2. Denix hosts build canonical host truth into `config.myconfig.hostContext` from `inputs.local/facts.nix` plus the host declaration.
+2. The Darwin catalog builds canonical host truth into `config.myconfig.hostContext` from `inputs.local/facts.nix` plus the host declaration.
 3. Modules consume `config.myconfig.hostContext.*`, not raw facts.
 4. `sops-nix` materializes secrets defined in `inputs.secrets/secrets.nix` at activation time.
 
 ## Architecture overview
 
-- `nix/denix/darwin/`: host and rice composition only.
+- `nix/catalog/darwin/`: host/profile catalog and stock profile bundles.
 - `nix/modules/`: reusable shared and tool modules.
 - `nix/catalog/`: ownership and backend metadata.
 - `crates/dotfiles-core`: shared Rust support plus shell and Emacs sync engines.

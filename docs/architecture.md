@@ -8,9 +8,9 @@ For the reset rationale and before/after summary, see [`docs/architecture-reset.
 
 ## Layout
 
-- `nix/denix/darwin`: Darwin host and rice declarations only
-- `nix/denix/lib`: Darwin host constructors and Denix-specific helpers
-- `nix/modules/shared`: raw facts schema, canonical host model wiring, system modules, and shared Nixpkgs policy
+- `nix/catalog/darwin`: Darwin host/profile catalog and stock profile bundles
+- `nix/lib`: host model, module helpers, and shared policy helpers
+- `nix/modules/shared`: canonical host model wiring, system modules, and shared Nixpkgs policy
 - `nix/modules/tools`: user-facing tool modules grouped by capability
 - `nix/catalog/tools`: declarative tool ownership data for Nixpkgs and Homebrew-backed tools
 - `crates/dotfiles-core`: shared Rust support plus shell, Emacs, and Neovim sync implementations
@@ -31,6 +31,6 @@ For the reset rationale and before/after summary, see [`docs/architecture-reset.
 ## Practical implications
 
 - the supported operational root flake API is Darwin-first
-- if you add a reusable feature, put it in `nix/modules/` and keep `nix/denix/darwin` focused on composition
+- if you add a reusable feature, put it in `nix/modules/` and keep `nix/catalog/darwin` focused on host/profile composition
 - if you add catalog-owned tools, update the relevant registry/catalog data under `nix/catalog/tools/`
 - if you add operational CLI behavior, implement it in the Rust workspace first and keep shell thin

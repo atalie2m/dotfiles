@@ -1,4 +1,4 @@
-{ delib, pkgs, lib, inputs, ... }:
+{ dotmod, config, pkgs, lib, inputs, ... }:
 
 let
   localSecretsFile = inputs.secrets + "/secrets.nix";
@@ -35,14 +35,14 @@ let
       )
       secretFiles;
 in
-delib.module {
-  name = "tools.security.sops";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.security.sops";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  home.ifEnabled = { myconfig, ... }:
+  homeOnEnable = { myconfig, ... }:
     let
       homeDir = getHomeDir myconfig;
       secrets = mkSecrets { inherit homeDir; };
@@ -56,7 +56,7 @@ delib.module {
       };
     };
 
-  darwin.ifEnabled = { myconfig, ... }:
+  darwinOnEnable = { myconfig, ... }:
     let
       homeDir = getHomeDir myconfig;
       userName = myconfig.hostContext.user.username;

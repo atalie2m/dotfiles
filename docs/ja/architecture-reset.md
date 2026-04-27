@@ -106,18 +106,18 @@ reset 後:
 意図:
 
 - 分類と rollout policy を分離する
-- host behavior の変化を rice composition 上で明示する
+- host behavior の変化を profile composition 上で明示する
 
 ## 重要な repository fact
 
 - canonical host model は `myconfig.hostContext.*` にある
-- `pro` は本当に VS Code module を無効化する
-- `partial` は VS Code module と activation sync を無効化し、AI coding agent のうち `codex` だけを有効にする
+- `pro` は editor app と tooling を install するが、VS Code / Neovim / Emacs の setup sync は実行しない
+- `ultra` は `pro` に加えて VS Code / Neovim / Emacs の setup sync を有効化する
 - `tools.system.brewNix` は `tools.system.macAppUtil` を自動有効化しない
 
 ## 変わっていないこと
 
-- Denix は引き続き composition layer である
+- repo-owned Darwin catalog が composition layer である
 - 既存の Darwin host 名は維持されている
 - mutable surface は設計上 mutable のままである
 - Homebrew ownership registry は引き続き policy center である

@@ -106,18 +106,18 @@ After the reset:
 Intent:
 
 - separate classification from rollout policy
-- make host behavior changes explicit in rice composition
+- make host behavior changes explicit in profile composition
 
 ## Important repository facts
 
 - the canonical host model lives at `myconfig.hostContext.*`
 - `pro` now truly disables the VS Code module
-- `partial` disables the VS Code module and activation sync, and only `codex` remains enabled among AI coding agents
+- `pro` installs editor surfaces without setup/sync, while `ultra` adds VS Code, Neovim, and Emacs setup/sync
 - `tools.system.brewNix` no longer auto-enables `tools.system.macAppUtil`
 
 ## What did not change
 
-- Denix remains the composition layer
+- the repo-owned Darwin catalog is the composition layer
 - existing Darwin host names remain intact
 - mutable surfaces remain mutable by design
 - the Homebrew ownership registry remains the policy center

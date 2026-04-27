@@ -8,8 +8,8 @@ reset の理由と before/after の要約は [`docs/architecture-reset.md`](../a
 
 ## レイアウト
 
-- `nix/denix/darwin`: Darwin host と rice の宣言のみ
-- `nix/denix/lib`: Darwin host constructor と Denix 固有 helper
+- `nix/catalog/darwin`: Darwin host と profile catalog の宣言
+- `nix/lib`: repo-local module helper と shared Nix helper
 - `nix/modules/shared`: raw facts schema、canonical host model wiring、system module、shared Nixpkgs policy
 - `nix/modules/tools`: capability ごとに grouped された user-facing tool module
 - `nix/catalog/tools`: Nixpkgs / Homebrew-backed tool の declarative な ownership data
@@ -31,6 +31,6 @@ reset の理由と before/after の要約は [`docs/architecture-reset.md`](../a
 ## 実務上の含意
 
 - サポートされる operational root flake API は Darwin-first
-- 再利用可能な feature を追加するなら `nix/modules/` に置き、`nix/denix/darwin` は composition に集中させる
+- 再利用可能な feature を追加するなら `nix/modules/` に置き、`nix/catalog/darwin` は host/profile composition に集中させる
 - catalog 管理の tool を追加するなら、`nix/catalog/tools/` の対応する registry / catalog data を更新する
 - operational CLI behavior を追加するなら、まず Rust workspace に実装し、shell は薄いままに保つ

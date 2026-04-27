@@ -197,7 +197,7 @@ in
     list-tools = mkDotfilesApp {
       name = "list-tools";
       subcommand = "list-tools";
-      description = "List effective myconfig.tools values for a host/rice.";
+      description = "List effective myconfig.tools values for a host/profile.";
     };
     matrix-tools = mkDotfilesApp {
       name = "matrix-tools";

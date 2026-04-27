@@ -1,11 +1,11 @@
-{ delib, ... }:
+{ dotmod, config, ... }:
 
 # Terminal tool group
 
-delib.module {
-  name = "tools.terminal";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.terminal";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 }
