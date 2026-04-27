@@ -123,7 +123,7 @@ nix eval --json .#darwinConfigurations.work_mac-ultra.config.myconfig.tools
 helper は選択 profile と host positive override の後に適用され、許可されていない group/tool と editor sync/bootstrap toggle に `mkForce false` を出します。
 
 - personal / high-surface group として `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, `terminalVisual.*` を deny します。
-- `downloadArchive` と `passwordSecrets` は group としては許可し、`ffmpeg`, `ytDlp`, `aria2`, `p7zip`, `pigz`, `zstd`, `op`, `bw`, `rbw`, YubiKey age plugin, ssh-to-age などの extras を個別 deny します。
+- `downloadArchive` と `passwordSecrets` は group としては許可し、`ffmpeg`, `aria2`, `p7zip`, `pigz`, `zstd`, `op`, YubiKey age plugin, ssh-to-age などの extras を個別 deny します。
 - `system` は macOS integration のため許可しますが、`latestApp`, `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, `carthage` などの app/dev extras は deny します。group allow-list は group 境界であり、完全な tool-level whitelist ではありません。
 - 将来 `terminalVisual` を許可すると、選択 profile 側の GUI/visual terminal extras が個別 deny なしに通ります。
 

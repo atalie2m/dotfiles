@@ -123,7 +123,7 @@ nix eval --json .#darwinConfigurations.work_mac-ultra.config.myconfig.tools
 The helper applies after selected profile data and host positive overrides, and emits `mkForce false` overrides for disallowed groups/tools and editor sync/bootstrap toggles.
 
 - Denied personal or high-surface groups include `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, and `terminalVisual.*`.
-- `downloadArchive` and `passwordSecrets` are allowed groups with specific extras denied (`ffmpeg`, `ytDlp`, `aria2`, `p7zip`, `pigz`, `zstd`, `op`, `bw`, `rbw`, YubiKey age plugin, and ssh-to-age).
+- `downloadArchive` and `passwordSecrets` are allowed groups with specific extras denied (`ffmpeg`, `aria2`, `p7zip`, `pigz`, `zstd`, `op`, YubiKey age plugin, and ssh-to-age).
 - `system` is allowed so core macOS integration can still run, but app/dev extras such as `latestApp`, `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, and `carthage` are denied. Treat group allow-lists as group boundaries, not a complete tool-level whitelist.
 - If `terminalVisual` is allowed in the future, GUI/visual terminal extras from selected profiles will pass through unless explicitly denied.
 

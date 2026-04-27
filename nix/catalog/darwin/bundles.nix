@@ -92,7 +92,6 @@ let
     tools.network.xh.enable = true;
 
     tools.passwordSecrets.enable = true;
-    tools.passwordSecrets.bw.enable = true;
     tools.passwordSecrets.op.enable = true;
 
     tools.dev.git.enable = true;
@@ -254,7 +253,6 @@ let
     tools.downloadArchive.unzip.enable = true;
     tools.downloadArchive.p7zip.enable = true;
     tools.downloadArchive.aria2.enable = true;
-    tools.downloadArchive.ytDlp.enable = true;
     tools.downloadArchive.ffmpeg.enable = true;
     tools.downloadArchive.rclone.enable = true;
     tools.downloadArchive.rsync.enable = true;
@@ -314,7 +312,6 @@ let
     tools.securityPersonal.trufflehog.enable = true;
     tools.securityPersonal.noseyparker.enable = true;
 
-    tools.passwordSecrets.rbw.enable = true;
     tools.passwordSecrets.sops.enable = true;
     tools.passwordSecrets.age.enable = true;
     tools.passwordSecrets.agePluginYubikey.enable = true;

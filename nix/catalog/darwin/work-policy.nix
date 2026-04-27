@@ -32,15 +32,12 @@
     "terminalVisual.*"
 
     "downloadArchive.ffmpeg"
-    "downloadArchive.ytDlp"
     "downloadArchive.aria2"
     "downloadArchive.p7zip"
     "downloadArchive.pigz"
     "downloadArchive.zstd"
 
     "passwordSecrets.op"
-    "passwordSecrets.bw"
-    "passwordSecrets.rbw"
     "passwordSecrets.agePluginYubikey"
     "passwordSecrets.sshToAge"
 

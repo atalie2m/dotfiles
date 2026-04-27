@@ -188,7 +188,6 @@
   downloadArchiveUnzip = { group = "downloadArchive"; tool = "unzip"; pkg = "unzip"; };
   downloadArchiveP7zip = { group = "downloadArchive"; tool = "p7zip"; pkg = "p7zip"; };
   downloadArchiveAria2 = { group = "downloadArchive"; tool = "aria2"; pkg = "aria2"; };
-  downloadArchiveYtDlp = { group = "downloadArchive"; tool = "ytDlp"; pkg = "yt-dlp"; };
   downloadArchiveFfmpeg = { group = "downloadArchive"; tool = "ffmpeg"; pkg = "ffmpeg"; };
   downloadArchiveRclone = { group = "downloadArchive"; tool = "rclone"; pkg = "rclone"; };
   downloadArchiveRsync = { group = "downloadArchive"; tool = "rsync"; pkg = "rsync"; };
@@ -248,14 +247,12 @@
   securityPersonalTrufflehog = { group = "securityPersonal"; tool = "trufflehog"; pkg = "trufflehog"; };
   securityPersonalNoseyparker = { group = "securityPersonal"; tool = "noseyparker"; pkg = "noseyparker"; };
 
-  passwordSecretsBw = { group = "passwordSecrets"; tool = "bw"; pkg = "bitwarden-cli"; };
   passwordSecretsOp = {
     group = "passwordSecrets";
     tool = "op";
     pkg = "_1password-cli";
     unfree = [ "1password-cli" ];
   };
-  passwordSecretsRbw = { group = "passwordSecrets"; tool = "rbw"; pkg = "rbw"; };
   passwordSecretsSops = { group = "passwordSecrets"; tool = "sops"; pkg = "sops"; };
   passwordSecretsAge = { group = "passwordSecrets"; tool = "age"; pkg = "age"; };
   passwordSecretsAgePluginYubikey = { group = "passwordSecrets"; tool = "agePluginYubikey"; pkg = "age-plugin-yubikey"; };
