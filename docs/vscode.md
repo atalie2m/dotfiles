@@ -5,7 +5,8 @@
 This repository targets one VS Code app and reconciles native VS Code profiles into writable runtime state.
 It no longer uses isolated per-instance runtime directories.
 
-When `tools.editor.vscode.enable = true`, dotfiles installs Visual Studio Code.app through Homebrew and installs the `dotfiles-sync-vscode` engine into Home Manager.
+When `tools.editor.vscode.enable = true`, dotfiles installs the `dotfiles-sync-vscode` engine into Home Manager.
+It does not install Visual Studio Code.app; install the app manually or provide `VSCODE_CODE_BIN`.
 If activation-time sync is enabled but VS Code is not installed yet, dotfiles logs a skip instead of failing.
 If you keep the module disabled but still want to run sync manually, either install VS Code normally or provide `VSCODE_CODE_BIN` yourself.
 `sync vscode` also requires `HOME`; other supported runtime overrides are summarized in [`docs/commands.md`](commands.md#runtime-overrides).
@@ -27,7 +28,7 @@ Note: VS Code's built-in `Default` profile is intentionally unmanaged. It is lef
 
 ## Stock Darwin profiles and VS Code
 
-The **`pro`** and **`ultra`** profiles install the VS Code surface. `pro` leaves profile setup disabled; `ultra` enables `tools.editor.vscode.sync.enable` so managed profiles are reconciled during activation.
+The **`pro`** and **`ultra`** profiles install the VS Code sync surface, but Visual Studio Code.app itself is manual. `pro` leaves profile setup disabled; `ultra` enables `tools.editor.vscode.sync.enable` so managed profiles are reconciled during activation.
 
 ### Bulk extension install: source of truth
 

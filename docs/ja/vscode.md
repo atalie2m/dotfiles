@@ -5,7 +5,8 @@
 このリポジトリは、1 つの VS Code app を対象にし、native VS Code profile を writable な runtime state に reconcile します。
 isolated per-instance runtime directory はもう使いません。
 
-`tools.editor.vscode.enable = true` のとき、dotfiles は Visual Studio Code.app を Homebrew で install し、`dotfiles-sync-vscode` engine も Home Manager に install します。
+`tools.editor.vscode.enable = true` のとき、dotfiles は `dotfiles-sync-vscode` engine を Home Manager に install します。
+Visual Studio Code.app 自体は install しません。手動で install するか、`VSCODE_CODE_BIN` を指定してください。
 activation-time sync が有効でも VS Code がまだ install されていなければ、dotfiles は fail せず skip を記録します。
 module を無効にしたまま手動で sync したい場合は、通常どおり VS Code を install するか、`VSCODE_CODE_BIN` を自分で指定してください。
 `sync vscode` には `HOME` も必要です。その他の supported runtime override は [`docs/commands.md`](commands.md#runtime-overrides) にまとまっています。
@@ -27,7 +28,7 @@ profile は `apps/vscode/<name>/` に置きます。
 
 ## stock Darwin profile と VS Code
 
-stock profile のうち VS Code app と sync engine を install するのは **`pro`** と **`ultra`** です。`pro` は setup sync を実行しません。`ultra` は activation 中に VS Code profile を reconcile します。VS Code がすでにある machine で手動適用したい場合は `nix run .#dotfiles -- sync vscode --apply` を明示的に実行してください。自分の設定で activation-time sync を使いたい場合は `tools.editor.vscode.sync.enable = true` を設定します。
+stock profile のうち VS Code sync surface を install するのは **`pro`** と **`ultra`** です。Visual Studio Code.app 自体は手動 install 前提です。`pro` は setup sync を実行しません。`ultra` は activation 中に VS Code profile を reconcile します。VS Code がすでにある machine で手動適用したい場合は `nix run .#dotfiles -- sync vscode --apply` を明示的に実行してください。自分の設定で activation-time sync を使いたい場合は `tools.editor.vscode.sync.enable = true` を設定します。
 
 ### extension 一括 install: source of truth
 

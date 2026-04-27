@@ -112,8 +112,8 @@ Behavior:
 - `sync vscode --apply` creates missing profiles, updates the profile registry, rewrites managed settings files, and reconciles repo-owned extensions
 - settings removed from `apps/vscode/` disappear on the next apply because the managed file is fully repo-owned
 - user-added extensions not owned by the repo are preserved
-- `tools.editor.vscode.enable` installs Visual Studio Code.app through Homebrew and owns the VS Code sync tooling and managed profile surface
-- `ultra` runs `sync vscode --apply` during activation; `pro` installs the editor surface with setup sync disabled, and activation still skips cleanly if VS Code is not installed yet
+- `tools.editor.vscode.enable` owns the VS Code sync tooling and managed profile surface; Visual Studio Code.app itself is installed manually
+- `ultra` runs `sync vscode --apply` during activation; `pro` installs the sync surface with setup sync disabled, and activation still skips cleanly if VS Code is not installed yet
 
 ## Home Manager-owned XDG config files
 

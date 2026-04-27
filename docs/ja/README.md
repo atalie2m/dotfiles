@@ -124,9 +124,9 @@ declarative source は `apps/vscode/<name>/` に置き、runtime への material
 - `apps/vscode/native/` は native profile（`Native`）として管理
 - `apps/vscode/<name>/` は、それ以外の任意名に対して display name を持つ native custom profile に対応
 - サポート対象の input は `settings.json`、`extensions.txt`、bootstrap-only な `default-disabled-extensions.txt`
-- `tools.editor.vscode.enable` は Visual Studio Code.app を Homebrew で install し、`dotfiles-sync-vscode` も Home Manager に install する
+- `tools.editor.vscode.enable` は `dotfiles-sync-vscode` を Home Manager に install する。Visual Studio Code.app は手動で install する
 - `sync emacs`、`sync neovim`、`sync shell` は `dotfiles-core` の Rust engine を使い、`sync vscode` は専用 Rust engine（`dotfiles-sync-vscode`）を使う
-- **stock `ultra` の挙動:** `ultra` profile は activation-time VS Code profile sync を有効化する。`pro` profile は editor surface を install するが、setup/sync は無効のままにする
+- **stock `ultra` の挙動:** `ultra` profile は activation-time VS Code profile sync を有効化する。`pro` profile は sync surface を install するが、setup/sync は無効のままにする
 - **extension 一括 install:** repo-owned extension ID は `apps/vscode/`、主に `_default/extensions.txt` と各 profile の `extensions.txt`（例: `web/`, `native/`）にある。何を install / uninstall するかの source of truth はこの directory
 - `sync vscode --apply` は、fully repo-owned な managed profile settings と、それらの repo-owned extension を writable な VS Code profile state に reconcile する
 - `default-disabled-extensions.txt` は profile の extension enablement state に一度だけ seed される。その後 user が VS Code UI で有効化しても、sync は再び無効化しない

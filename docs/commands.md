@@ -128,7 +128,7 @@ Notes:
 - `scripts/*.sh` are thin shell wrappers over the Rust CLI.
 - `sync neovim` compares `apps/neovim` against `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` and treats `${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` as the effective Lazy lock when it exists.
 - `dotfiles-sync-vscode` is packaged separately; `dotfiles` dispatches `sync vscode` to that binary.
-- `ultra` runs VS Code, Neovim, and Emacs setup/sync during activation. `pro` installs editor surfaces but leaves setup/sync disabled. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).
+- `ultra` runs VS Code, Neovim, and Emacs setup/sync during activation. `pro` installs editor tooling but leaves setup/sync disabled. Visual Studio Code.app itself is installed manually. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).
 
 ## Checks and development
 

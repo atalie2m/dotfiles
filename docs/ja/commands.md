@@ -128,7 +128,7 @@ dotfiles-doom doctor
 - `scripts/*.sh` は Rust CLI の薄い shell wrapper です。
 - `sync neovim` は `apps/neovim` と `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` を比較し、`${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` が存在する場合はそれを実効 Lazy lock として扱います。
 - `dotfiles-sync-vscode` は別 package として提供され、`dotfiles` が `sync vscode` をその binary に dispatch します。
-- `ultra` profile は activation 中に `sync emacs --apply`、初回 Doom bootstrap、Neovim setup、`sync vscode --apply` を実行します。`pro` profile は editor app と tooling を install しますが、setup/sync は実行しません。Visual Studio Code.app がまだ無ければ activation は安全に skip します。インストール対象の extension ID は `apps/vscode/`（`_default/extensions.txt` と profile ごとの `extensions.txt`）にあります。
+- `ultra` profile は activation 中に `sync emacs --apply`、初回 Doom bootstrap、Neovim setup、`sync vscode --apply` を実行します。`pro` profile は editor tooling を install しますが、setup/sync は実行しません。Visual Studio Code.app 自体は手動 install 前提で、まだ無ければ activation は安全に skip します。インストール対象の extension ID は `apps/vscode/`（`_default/extensions.txt` と profile ごとの `extensions.txt`）にあります。
 
 ## check と開発
 

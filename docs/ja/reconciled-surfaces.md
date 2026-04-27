@@ -112,8 +112,8 @@ Rust engine は `dotfiles-sync-vscode` として別 package 化され、`nix run
 - `sync vscode --apply` は missing profile を作成し、profile registry を更新し、managed settings file を書き換え、repo-owned extension を reconcile する
 - `apps/vscode/` から削除した settings は managed file が fully repo-owned なため、次の apply で消える
 - repo が ownership を持たない user-added extension は保持される
-- `tools.editor.vscode.enable` は Visual Studio Code.app を Homebrew で install し、VS Code sync tooling と managed profile surface を所有する
-- `ultra` は activation 中に `sync vscode --apply` を実行する。`pro` は editor surface を install するが setup sync は無効のままにし、VS Code 未インストール時も activation は安全に skip する
+- `tools.editor.vscode.enable` は VS Code sync tooling と managed profile surface を所有する。Visual Studio Code.app 自体は手動で install する
+- `ultra` は activation 中に `sync vscode --apply` を実行する。`pro` は sync surface を install するが setup sync は無効のままにし、VS Code 未インストール時も activation は安全に skip する
 
 ## Home Manager-owned XDG config file
 

@@ -124,9 +124,9 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - `apps/vscode/native/` is managed as a native profile (`Native`).
 - `apps/vscode/<name>/` for any other name maps to a native custom profile with that display name.
 - Supported inputs are `settings.json`, `extensions.txt`, and bootstrap-only `default-disabled-extensions.txt`.
-- `tools.editor.vscode.enable` installs Visual Studio Code.app through Homebrew and installs `dotfiles-sync-vscode` into Home Manager.
+- `tools.editor.vscode.enable` installs `dotfiles-sync-vscode` into Home Manager. Visual Studio Code.app is installed manually.
 - `sync emacs`, `sync neovim`, and `sync shell` use Rust engines in `dotfiles-core`; `sync vscode` uses the dedicated Rust engine (`dotfiles-sync-vscode`).
-- **Stock `ultra` behavior:** the `ultra` profile enables activation-time VS Code profile sync. The `pro` profile installs the editor surface but leaves setup/sync disabled.
+- **Stock `ultra` behavior:** the `ultra` profile enables activation-time VS Code profile sync. The `pro` profile installs the sync surface but leaves setup/sync disabled.
 - **Extension bulk install:** repo-owned extension IDs live under `apps/vscode/` — chiefly `_default/extensions.txt` plus each profile's `extensions.txt` (for example `web/`, `native/`). That directory is the source of truth for what sync installs or uninstalls.
 - `sync vscode --apply` reconciles fully repo-owned managed profile settings plus those repo-owned extensions into writable VS Code profile state when you invoke the CLI.
 - `default-disabled-extensions.txt` is seeded once into the profile's extension enablement state; users can later enable those extensions in the VS Code UI and sync will not force them back off.

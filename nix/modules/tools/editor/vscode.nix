@@ -1,10 +1,8 @@
-{ dotmod, config, lib, dotlib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, pkgs, repoPaths, ... }:
 
 # VS Code sync tooling plus native profile reconciliation.
 
 let
-  homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
-  homebrewSpec = homebrewOwnership."editor.vscode";
   dotfilesCli = pkgs.callPackage ../../../pkgs/dotfiles-cli { };
   syncVscodeBin = pkgs.callPackage ../../../pkgs/dotfiles-sync-vscode { };
   types = lib.types;
@@ -30,9 +28,6 @@ in
   homeOnEnable = { ... }: {
     home.packages = [ syncVscodeBin ];
   };
-
-  myconfigOnEnable = { myconfig, ... }:
-    dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 
   darwinOnEnable = { cfg, ... }:
     let

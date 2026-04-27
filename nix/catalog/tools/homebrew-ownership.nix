@@ -174,14 +174,6 @@
     taps = [ "d12frosted/emacs-plus" ];
     casks = [ "emacs-plus-app" ];
   };
-  "editor.vscode" = {
-    group = "editor";
-    tool = "vscode";
-    optionPath = [ "myconfig" "tools" "editor" "vscode" "enable" ];
-    mode = "dedicated";
-    backend = "homebrewNative";
-    casks = [ "visual-studio-code" ];
-  };
   "system.karabiner" = {
     group = "system";
     tool = "karabiner";
