@@ -22,7 +22,7 @@
     taps = listOfOption str [ ];
 
     # Cleanup settings
-    enableCleanup = boolOption true;
+    enableCleanup = boolOption false;
     enableAutoUpdate = boolOption true;
   };
 
