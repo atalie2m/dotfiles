@@ -287,6 +287,7 @@ default layout:
 - `~/.config/dotfiles/facts.nix` を作成
 - 必須: `user.username`
 - 推奨（Git identity 用）: `user.fullName`, `user.email`
+- Git 署名用の任意 field: `user.signingKey`（OpenPGP key ID または fingerprint。secret ではない）。設定すると Git module は OpenPGP signing を有効化し、`gpg.program` を Nix 管理の GnuPG binary に固定します。
 - 任意 override: `user.homeDirectory`（通常は自動導出）および、真に必要な場合の `machines.<host>.homeDirectory`（host 単位 override）
 - 任意の host input metadata: `machines.<host>.keyboardType = "ansi" | "jis"`（入力デバイス差分のある Karabiner 挙動向け）
 - platform は raw facts input ではなくなった。host 宣言が `system` を持ち、module は `myconfig.hostContext` から `os` / `arch` を導出する
@@ -301,6 +302,7 @@ default layout:
     # Recommended (used by Git module)
     fullName = "Your Name";
     email = "you@example.com";
+    # signingKey = "OPENPGP_KEY_ID_OR_FINGERPRINT";
 
     # Optional overrides
     # homeDirectory = "/path/to/home/yourname";

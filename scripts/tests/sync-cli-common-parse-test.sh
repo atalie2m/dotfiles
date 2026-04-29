@@ -355,6 +355,7 @@ EOF_SCHEMA
     # Optional for Git identity:
     # fullName = "Your Name";
     # email = "you@example.com";
+    # signingKey = "OPENPGP_KEY_ID_OR_FINGERPRINT";
 
     # Optional overrides:
     # homeDirectory = "/Users/tester";

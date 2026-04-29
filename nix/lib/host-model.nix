@@ -94,6 +94,7 @@ let
             null;
         fullName = optionalNonEmptyString (user.fullName or null);
         email = optionalNonEmptyString (user.email or null);
+        signingKey = optionalNonEmptyString (user.signingKey or null);
         homeDirectory = optionalAbsolutePath (user.homeDirectory or null);
         configDirectory =
           if user ? configDirectory && builtins.isString user.configDirectory && user.configDirectory != "" then
@@ -216,6 +217,11 @@ let
         (if !hasUser || !(user ? email) then "facts.user.email not set (optional)"
         else if builtins.isString user.email then "facts.user.email set"
         else "facts.user.email must be a string"))
+      (mk "facts.signingKey"
+        (if optionalString (if hasUser && user ? signingKey then user.signingKey else null) then "ok" else "fail")
+        (if !hasUser || !(user ? signingKey) then "facts.user.signingKey not set (optional)"
+        else if builtins.isString user.signingKey then "facts.user.signingKey set"
+        else "facts.user.signingKey must be a string"))
       (mk "facts.homeDirectory"
         (if optionalString homeDirectory then "ok" else "fail")
         (if homeDirectory == null then "facts.user.homeDirectory not set (auto-derived)"
@@ -291,6 +297,7 @@ let
           # Optional for Git identity:
           # fullName = "Your Name";
           # email = "you@example.com";
+          # signingKey = "OPENPGP_KEY_ID_OR_FINGERPRINT";
 
           # Optional overrides:
           # homeDirectory = "/Users/${username}";

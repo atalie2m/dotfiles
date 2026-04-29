@@ -1,4 +1,4 @@
-{ dotmod, config, lib, ... }:
+{ dotmod, config, lib, pkgs, ... }:
 
 # Git configuration with identity derived from the canonical host model
 
@@ -10,6 +10,10 @@
     defaultBranch = strOption "main";
     editorCmd = strOption "vim";
     enableSigning = boolOption false;
+    signingKey = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+    };
     extraConfig = attrsOption { };
     lfs = {
       enable = boolOption false;
@@ -30,10 +34,29 @@
     };
   };
 
+  myconfigOnEnable = { cfg, myconfig, ... }:
+    let
+      signingKey =
+        if cfg.signingKey != null then
+          cfg.signingKey
+        else
+          myconfig.hostContext.user.signingKey;
+      signingEnabled = cfg.enableSigning || signingKey != null;
+    in
+    lib.mkIf signingEnabled {
+      tools.security.gpg.enable = lib.mkDefault true;
+    };
+
   homeOnEnable = { cfg, myconfig, ... }:
     let
       fullName = myconfig.hostContext.user.fullName;
       email = myconfig.hostContext.user.email;
+      signingKey =
+        if cfg.signingKey != null then
+          cfg.signingKey
+        else
+          myconfig.hostContext.user.signingKey;
+      signingEnabled = cfg.enableSigning || signingKey != null;
       tools = myconfig.tools or { };
       toolEnabled = group: tool:
         let
@@ -92,9 +115,15 @@
               (lib.mkIf (email != null) { email = email; })
             ];
           })
-          (lib.mkIf cfg.enableSigning {
+          (lib.mkIf signingEnabled {
             commit.gpgsign = true;
-            gpg.format = "openpgp";
+            gpg = {
+              format = "openpgp";
+              program = "${pkgs.gnupg}/bin/gpg";
+            };
+            user = lib.mkIf (signingKey != null) {
+              signingKey = signingKey;
+            };
           })
           cfg.extraConfig
         ];

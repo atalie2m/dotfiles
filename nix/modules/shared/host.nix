@@ -60,6 +60,10 @@ let
         type = types.nullOr types.str;
         readOnly = true;
       };
+      signingKey = lib.mkOption {
+        type = types.nullOr types.str;
+        readOnly = true;
+      };
       homeDirectory = lib.mkOption {
         type = types.str;
         readOnly = true;

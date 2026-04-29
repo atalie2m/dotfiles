@@ -288,6 +288,7 @@ Default layout:
 - Create `~/.config/dotfiles/facts.nix`
 - Required: `user.username`
 - Recommended (for Git identity): `user.fullName`, `user.email`
+- Optional for Git signing: `user.signingKey` (OpenPGP key ID or fingerprint; not a secret). When set, the Git module enables OpenPGP signing and pins `gpg.program` to the Nix-managed GnuPG binary.
 - Optional overrides: `user.homeDirectory` (auto-derived) and `machines.<host>.homeDirectory` (per-host override when you truly need it).
 - Optional host input metadata: `machines.<host>.keyboardType = "ansi" | "jis"` for input-device-specific Karabiner behavior.
 - Platform is no longer a raw facts input. Host declarations own `system`, and modules derive `os`/`arch` from `myconfig.hostContext`.
@@ -302,6 +303,7 @@ Example `facts.nix`:
     # Recommended (used by Git module)
     fullName = "Your Name";
     email = "you@example.com";
+    # signingKey = "OPENPGP_KEY_ID_OR_FINGERPRINT";
 
     # Optional overrides
     # homeDirectory = "/path/to/home/yourname";
