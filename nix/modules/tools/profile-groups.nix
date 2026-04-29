@@ -10,6 +10,7 @@ let
     "nixOperator"
     "observability"
     "network"
+    "xorg"
     "httpApiPersonal"
     "downloadArchive"
     "tuiWorkspace"

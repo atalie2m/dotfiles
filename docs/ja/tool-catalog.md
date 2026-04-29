@@ -9,7 +9,7 @@
 
 shell upgrade では Home Manager cockpit 向けの profile group として
 `shellUx`, `filesNavigation`, `viewersPreview`, `searchText`, `gitPersonal`,
-`nixOperator`, `observability`, `network`, `httpApiPersonal`,
+`nixOperator`, `observability`, `network`, `xorg`, `httpApiPersonal`,
 `downloadArchive`, `tuiWorkspace`, `dataPersonal`, `containerK8sPersonal`,
 `securityPersonal`, `passwordSecrets`, `aiLlm`, `modelHfPersonal`,
 `backupRecovery`, `terminalVisual` を追加しています。
@@ -62,6 +62,7 @@ nix run .#list-tools -- --host work_mac --profile ultra --format json
 
 - Nixpkgs install catalog: `nix/modules/tools/catalog.nix`
 - Nixpkgs install catalog data: `nix/catalog/tools/nixpkgs.nix`
+- Repo-local package overlay: `nix/pkgs/overlay.nix`
 - Homebrew install catalog: `nix/modules/tools/brew-catalog.nix`
 - Homebrew ownership registry: `nix/catalog/tools/homebrew-ownership.nix`
 - `nix run .#list-tools -- ...`

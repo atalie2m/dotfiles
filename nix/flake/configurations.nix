@@ -4,6 +4,7 @@ let
   lib = inputs.nixpkgs.lib;
   dotmod = import ../lib/module-helpers.nix { inherit lib; };
   catalog = import ../catalog/darwin { inherit lib; };
+  localPackagesOverlay = import ../pkgs/overlay.nix;
   rawFacts = import (inputs.local + "/facts.nix");
   normalizedFacts = dotlib.normalizeRawFacts rawFacts;
   username = normalizedFacts.user.username;
@@ -59,6 +60,7 @@ let
         ({ ... }: {
           nix.package = lib.mkDefault nixPackage;
           nixpkgs.hostPlatform = host.system;
+          nixpkgs.overlays = [ localPackagesOverlay ];
           system.stateVersion = host.user.stateVersion.darwin;
           system.primaryUser = userName;
           home-manager.backupFileExtension = "hm-backup";

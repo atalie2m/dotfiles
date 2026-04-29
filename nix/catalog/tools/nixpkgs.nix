@@ -22,20 +22,27 @@
 
   # Development
   ansible = { group = "dev"; pkg = "ansible"; };
+  actionlint = { group = "dev"; pkg = "actionlint"; };
   awscli2 = { group = "dev"; pkg = "awscli2"; };
   gh = { group = "dev"; pkg = "gh"; };
   go = { group = "dev"; pkg = "go"; };
   gitAbsorb = { group = "dev"; pkg = "git-absorb"; };
   gnugrep = { group = "dev"; pkg = "gnugrep"; };
   gnused = { group = "dev"; pkg = "gnused"; };
+  lychee = { group = "dev"; pkg = "lychee"; };
   mercurial = { group = "dev"; pkg = "mercurial"; };
   nodejs = { group = "dev"; pkg = "nodejs"; };
   opentofu = { group = "dev"; pkg = "opentofu"; };
+  shellcheck = { group = "dev"; pkg = "shellcheck"; };
+  shfmt = { group = "dev"; pkg = "shfmt"; };
+  taplo = { group = "dev"; pkg = "taplo"; };
   terraform = {
     group = "dev";
     pkg = "terraform";
     unfree = [ "terraform" ];
   };
+  typos = { group = "dev"; pkg = "typos"; };
+  yamllint = { group = "dev"; pkg = "yamllint"; };
 
   # Global shell UX
   shellUxFzf = { group = "shellUx"; tool = "fzf"; pkg = "fzf"; };
@@ -54,6 +61,7 @@
   shellUxGping = { group = "shellUx"; tool = "gping"; pkg = "gping"; };
   shellUxHyperfine = { group = "shellUx"; tool = "hyperfine"; pkg = "hyperfine"; };
   shellUxChezmoi = { group = "shellUx"; tool = "chezmoi"; pkg = "chezmoi"; };
+  shellUxMprocs = { group = "shellUx"; tool = "mprocs"; pkg = "mprocs"; };
   shellUxTopgrade = { group = "shellUx"; tool = "topgrade"; pkg = "topgrade"; };
 
   # Files and navigation
@@ -63,6 +71,8 @@
   filesNavigationYazi = { group = "filesNavigation"; tool = "yazi"; pkg = "yazi"; };
   filesNavigationBroot = { group = "filesNavigation"; tool = "broot"; pkg = "broot"; };
   filesNavigationSuperfile = { group = "filesNavigation"; tool = "superfile"; pkg = "superfile"; };
+  filesNavigationKondo = { group = "filesNavigation"; tool = "kondo"; pkg = "kondo"; };
+  filesNavigationRoots = { group = "filesNavigation"; tool = "roots"; pkg = "roots"; };
   filesNavigationNcdu = { group = "filesNavigation"; tool = "ncdu"; pkg = "ncdu"; };
   filesNavigationDust = { group = "filesNavigation"; tool = "dust"; pkg = "dust"; };
   filesNavigationDuf = { group = "filesNavigation"; tool = "duf"; pkg = "duf"; };
@@ -91,7 +101,9 @@
   searchTextRipgrepAll = { group = "searchText"; tool = "ripgrepAll"; pkg = "ripgrep-all"; };
   searchTextFd = { group = "searchText"; tool = "fd"; pkg = "fd"; };
   searchTextFzf = { group = "searchText"; tool = "fzf"; pkg = "fzf"; };
+  searchTextAstGrep = { group = "searchText"; tool = "astGrep"; pkg = "ast-grep"; };
   searchTextGrex = { group = "searchText"; tool = "grex"; pkg = "grex"; };
+  searchTextSad = { group = "searchText"; tool = "sad"; pkg = "sad"; };
   searchTextSd = { group = "searchText"; tool = "sd"; pkg = "sd"; };
   searchTextDifftastic = { group = "searchText"; tool = "difftastic"; pkg = "difftastic"; };
   searchTextDiffSoFancy = { group = "searchText"; tool = "diffSoFancy"; pkg = "diff-so-fancy"; };
@@ -103,6 +115,9 @@
   gitPersonalGitui = { group = "gitPersonal"; tool = "gitui"; pkg = "gitui"; };
   gitPersonalGh = { group = "gitPersonal"; tool = "gh"; pkg = "gh"; };
   gitPersonalGhDash = { group = "gitPersonal"; tool = "ghDash"; pkg = "gh-dash"; };
+  gitPersonalGhq = { group = "gitPersonal"; tool = "ghq"; pkg = "ghq"; };
+  gitPersonalGitSizer = { group = "gitPersonal"; tool = "gitSizer"; pkg = "git-sizer"; };
+  gitPersonalGitTown = { group = "gitPersonal"; tool = "gitTown"; pkg = "git-town"; };
   gitPersonalGitAbsorb = { group = "gitPersonal"; tool = "gitAbsorb"; pkg = "git-absorb"; };
   gitPersonalJujutsu = { group = "gitPersonal"; tool = "jujutsu"; pkg = "jujutsu"; };
   gitPersonalSapling = { group = "gitPersonal"; tool = "sapling"; pkg = "sapling"; };
@@ -122,6 +137,9 @@
   nixOperatorNixInspect = { group = "nixOperator"; tool = "nixInspect"; pkg = "nix-inspect"; };
   nixOperatorNixTree = { group = "nixOperator"; tool = "nixTree"; pkg = "nix-tree"; };
   nixOperatorNvd = { group = "nixOperator"; tool = "nvd"; pkg = "nvd"; };
+  nixOperatorDeadnix = { group = "nixOperator"; tool = "deadnix"; pkg = "deadnix"; };
+  nixOperatorStatix = { group = "nixOperator"; tool = "statix"; pkg = "statix"; };
+  nixOperatorNixDiff = { group = "nixOperator"; tool = "nixDiff"; pkg = "nix-diff"; };
   nixOperatorDirenv = { group = "nixOperator"; tool = "direnv"; pkg = "direnv"; };
   nixOperatorNixDirenv = { group = "nixOperator"; tool = "nixDirenv"; pkg = "nix-direnv"; };
   nixOperatorNixYourShell = { group = "nixOperator"; tool = "nixYourShell"; pkg = "nix-your-shell"; };
@@ -171,6 +189,27 @@
   networkWebsocat = { group = "network"; tool = "websocat"; pkg = "websocat"; };
   networkGrpcurl = { group = "network"; tool = "grpcurl"; pkg = "grpcurl"; };
 
+  # X.Org compatibility utilities
+  xorgLuit = { group = "xorg"; tool = "luit"; pkg = [ "xorg" "luit" ]; };
+  xorgXauth = { group = "xorg"; tool = "xauth"; pkg = [ "xorg" "xauth" ]; };
+  xorgXhost = { group = "xorg"; tool = "xhost"; pkg = [ "xorg" "xhost" ]; };
+  xorgXprop = { group = "xorg"; tool = "xprop"; pkg = [ "xorg" "xprop" ]; };
+  xorgXrdb = { group = "xorg"; tool = "xrdb"; pkg = [ "xorg" "xrdb" ]; };
+  xorgXset = { group = "xorg"; tool = "xset"; pkg = [ "xorg" "xset" ]; };
+  xorgXsetroot = { group = "xorg"; tool = "xsetroot"; pkg = [ "xorg" "xsetroot" ]; };
+  xorgXmodmap = { group = "xorg"; tool = "xmodmap"; pkg = [ "xorg" "xmodmap" ]; };
+  xorgXrandr = { group = "xorg"; tool = "xrandr"; pkg = [ "xorg" "xrandr" ]; };
+  xorgXdpyinfo = { group = "xorg"; tool = "xdpyinfo"; pkg = [ "xorg" "xdpyinfo" ]; };
+  xorgXwininfo = { group = "xorg"; tool = "xwininfo"; pkg = [ "xorg" "xwininfo" ]; };
+  xorgXev = { group = "xorg"; tool = "xev"; pkg = [ "xorg" "xev" ]; };
+  xorgXkill = { group = "xorg"; tool = "xkill"; pkg = [ "xorg" "xkill" ]; };
+  xorgXmessage = { group = "xorg"; tool = "xmessage"; pkg = [ "xorg" "xmessage" ]; };
+  xorgXlsatoms = { group = "xorg"; tool = "xlsatoms"; pkg = [ "xorg" "xlsatoms" ]; };
+  xorgXlsclients = { group = "xorg"; tool = "xlsclients"; pkg = [ "xorg" "xlsclients" ]; };
+  xorgXlsfonts = { group = "xorg"; tool = "xlsfonts"; pkg = [ "xorg" "xlsfonts" ]; };
+  xorgXrefresh = { group = "xorg"; tool = "xrefresh"; pkg = [ "xorg" "xrefresh" ]; };
+  xorgXdriinfo = { group = "xorg"; tool = "xdriinfo"; pkg = [ "xorg" "xdriinfo" ]; systems = [ "linux" ]; };
+
   httpApiPersonalXh = { group = "httpApiPersonal"; tool = "xh"; pkg = "xh"; };
   httpApiPersonalCurl = { group = "httpApiPersonal"; tool = "curl"; pkg = "curl"; };
   httpApiPersonalHttpie = { group = "httpApiPersonal"; tool = "httpie"; pkg = "httpie"; };
@@ -209,6 +248,7 @@
   dataPersonalJq = { group = "dataPersonal"; tool = "jq"; pkg = "jq"; };
   dataPersonalYq = { group = "dataPersonal"; tool = "yq"; pkg = "yq"; };
   dataPersonalFx = { group = "dataPersonal"; tool = "fx"; pkg = "fx"; };
+  dataPersonalJless = { group = "dataPersonal"; tool = "jless"; pkg = "jless"; };
   dataPersonalJc = { group = "dataPersonal"; tool = "jc"; pkg = "jc"; };
   dataPersonalMiller = { group = "dataPersonal"; tool = "miller"; pkg = "miller"; };
   dataPersonalVisidata = { group = "dataPersonal"; tool = "visidata"; pkg = "visidata"; };

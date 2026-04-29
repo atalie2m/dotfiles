@@ -22,10 +22,12 @@ let
   toolOwnershipFailures = lib.concatMap (report: report.failureMessages) toolOwnershipReports;
   toolOwnershipFailureText = lib.concatStringsSep "\n" toolOwnershipFailures;
   nixCatalog = import (repoPaths.catalog + "/tools/nixpkgs.nix");
+  localPackagesOverlay = import ../pkgs/overlay.nix;
   catalogUnfreePackages = lib.unique (lib.concatMap (spec: spec.unfree or [ ]) (builtins.attrValues nixCatalog));
   catalogPkgs = import inputs.nixpkgs {
     system = pkgs.stdenv.hostPlatform.system;
     config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) catalogUnfreePackages;
+    overlays = [ localPackagesOverlay ];
   };
   catalogSystemName =
     if pkgs.stdenv.isDarwin then "darwin"
@@ -85,6 +87,30 @@ let
     };
     homebrew.casks = [ "keyclu" ];
   };
+  homeManagerGlobalPkgsFailures =
+    lib.concatMap
+      (targetName:
+        let
+          cfg = darwinConfigurations.${targetName}.config;
+          usesGlobalPkgs = cfg.home-manager.useGlobalPkgs or false;
+          users = cfg.home-manager.users or { };
+        in
+        lib.concatMap
+          (userName:
+            let
+              userCfg = users.${userName};
+              nixpkgsConfig = userCfg.nixpkgs.config or null;
+              nixpkgsOverlays = userCfg.nixpkgs.overlays or null;
+              nixpkgsConfigKeys =
+                if nixpkgsConfig == null then [ ] else builtins.attrNames nixpkgsConfig;
+              nixpkgsOverlayCount =
+                if nixpkgsOverlays == null then 0 else builtins.length nixpkgsOverlays;
+            in
+            lib.optional (usesGlobalPkgs && (nixpkgsConfigKeys != [ ] || nixpkgsOverlayCount != 0))
+              "${targetName}:${userName} sets Home Manager nixpkgs options while home-manager.useGlobalPkgs is true")
+          (builtins.attrNames users))
+      darwinTargetNames;
+  homeManagerGlobalPkgsFailureText = lib.concatStringsSep "\n" homeManagerGlobalPkgsFailures;
 
   mkDotfilesApp = { name, subcommand ? null, description }:
     let
@@ -170,6 +196,16 @@ in
       fi
       touch "$out"
     '';
+
+    homeManagerGlobalPkgs = pkgs.runCommand "home-manager-global-pkgs-check" { } ''
+      if [ ${toString (builtins.length homeManagerGlobalPkgsFailures)} -ne 0 ]; then
+        cat >&2 <<'EOF_HOME_MANAGER_GLOBAL_PKGS'
+      ${homeManagerGlobalPkgsFailureText}
+      EOF_HOME_MANAGER_GLOBAL_PKGS
+        exit 1
+      fi
+      touch "$out"
+    '';
   };
 
   devShells.default = mkPortableDevShell {
@@ -182,6 +218,7 @@ in
     dotfiles = dotfilesPackage;
     dotfiles-cli = dotfilesCli;
     dotfiles-sync-vscode = syncVscodeRust;
+    roots = pkgs.callPackage ../pkgs/roots { };
   };
 
   apps = {

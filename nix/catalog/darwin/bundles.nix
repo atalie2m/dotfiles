@@ -25,6 +25,14 @@ let
     tools.core.yq.enable = true;
     tools.core.zip.enable = true;
 
+    tools.dev.actionlint.enable = true;
+    tools.dev.lychee.enable = true;
+    tools.dev.shellcheck.enable = true;
+    tools.dev.shfmt.enable = true;
+    tools.dev.taplo.enable = true;
+    tools.dev.typos.enable = true;
+    tools.dev.yamllint.enable = true;
+
     tools.shell.enable = true;
     tools.shell.zsh.enable = true;
     tools.shell.zsh.profile = "stable";
@@ -43,6 +51,7 @@ let
     tools.shellUx.watchexec.enable = true;
     tools.shellUx.hyperfine.enable = true;
     tools.shellUx.chezmoi.enable = true;
+    tools.shellUx.mprocs.enable = true;
     tools.shellUx.topgrade.enable = true;
 
     tools.filesNavigation.enable = true;
@@ -50,6 +59,8 @@ let
     tools.filesNavigation.fd.enable = true;
     tools.filesNavigation.zoxide.enable = true;
     tools.filesNavigation.yazi.enable = true;
+    tools.filesNavigation.kondo.enable = true;
+    tools.filesNavigation.roots.enable = true;
     tools.filesNavigation.dust.enable = true;
     tools.filesNavigation.duf.enable = true;
 
@@ -61,12 +72,17 @@ let
     tools.searchText.ripgrep.enable = true;
     tools.searchText.fd.enable = true;
     tools.searchText.fzf.enable = true;
+    tools.searchText.astGrep.enable = true;
+    tools.searchText.sad.enable = true;
 
     tools.gitPersonal.enable = true;
     tools.gitPersonal.delta.enable = true;
     tools.gitPersonal.lazygit.enable = true;
     tools.gitPersonal.gh.enable = true;
     tools.gitPersonal.ghDash.enable = true;
+    tools.gitPersonal.ghq.enable = true;
+    tools.gitPersonal.gitSizer.enable = true;
+    tools.gitPersonal.gitTown.enable = true;
     tools.gitPersonal.jujutsu.enable = true;
 
     tools.nixOperator.enable = true;
@@ -74,6 +90,9 @@ let
     tools.nixOperator.nom.enable = true;
     tools.nixOperator.nixIndex.enable = true;
     tools.nixOperator.nixSearchTv.enable = true;
+    tools.nixOperator.deadnix.enable = true;
+    tools.nixOperator.statix.enable = true;
+    tools.nixOperator.nixDiff.enable = true;
     tools.nixOperator.direnv.enable = true;
     tools.nixOperator.nixDirenv.enable = true;
     tools.nixOperator.nixYourShell.enable = true;
@@ -90,6 +109,26 @@ let
     tools.network.trippy.enable = true;
     tools.network.doggo.enable = true;
     tools.network.xh.enable = true;
+
+    tools.xorg.enable = true;
+    tools.xorg.luit.enable = true;
+    tools.xorg.xauth.enable = true;
+    tools.xorg.xhost.enable = true;
+    tools.xorg.xprop.enable = true;
+    tools.xorg.xrdb.enable = true;
+    tools.xorg.xset.enable = true;
+    tools.xorg.xsetroot.enable = true;
+    tools.xorg.xmodmap.enable = true;
+    tools.xorg.xrandr.enable = true;
+    tools.xorg.xdpyinfo.enable = true;
+    tools.xorg.xwininfo.enable = true;
+    tools.xorg.xev.enable = true;
+    tools.xorg.xkill.enable = true;
+    tools.xorg.xmessage.enable = true;
+    tools.xorg.xlsatoms.enable = true;
+    tools.xorg.xlsclients.enable = true;
+    tools.xorg.xlsfonts.enable = true;
+    tools.xorg.xrefresh.enable = true;
 
     tools.passwordSecrets.enable = true;
     tools.passwordSecrets.op.enable = true;
@@ -274,6 +313,7 @@ let
     tools.dataPersonal.jq.enable = true;
     tools.dataPersonal.yq.enable = true;
     tools.dataPersonal.fx.enable = true;
+    tools.dataPersonal.jless.enable = true;
     tools.dataPersonal.jc.enable = true;
     tools.dataPersonal.miller.enable = true;
     tools.dataPersonal.visidata.enable = true;

@@ -182,12 +182,16 @@ The default Zsh prompt is Pure. Zsh has a managed profile switch at `tools.shell
 - `zoxide` via `z` and `zi`
 - `direnv` + `nix-direnv`
 - `delta` for Git paging
-- profile groups such as `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, and `backupRecovery`
+- profile groups such as `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `xorg`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, and `backupRecovery`
 
 `tools.profileDefaults` writes repo-owned defaults for `fzf`, `direnv`,
 `gh-dash`, `yazi`, `zellij`, `k9s`, `television`, terminal apps,
 observability tools, preview tools, and search tools when their catalog toggles
 are enabled.
+The stock catalog also installs workflow helpers such as `ghq`, `roots`,
+`ast-grep`, `sad`, `git-sizer`, `git-town`, `kondo`, `typos`, `taplo`, `actionlint`,
+`shellcheck`, `shfmt`, `yamllint`, `deadnix`, `statix`, `nix-diff`, `lychee`,
+`jless`, `mprocs`, and X.Org utilities such as `luit`, `xauth`, and `xprop`.
 
 ### Shell sync (writable entrypoints)
 

@@ -9,6 +9,7 @@
     "gitPersonal"
     "nixOperator"
     "network"
+    "xorg"
     "httpApiPersonal"
     "downloadArchive"
     "tuiWorkspace"

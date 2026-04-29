@@ -19,7 +19,7 @@ brew/cask item.
 
 The shell upgrade adds profile-oriented global groups for the Home Manager
 cockpit: `shellUx`, `filesNavigation`, `viewersPreview`, `searchText`,
-`gitPersonal`, `nixOperator`, `observability`, `network`,
+`gitPersonal`, `nixOperator`, `observability`, `network`, `xorg`,
 `httpApiPersonal`, `downloadArchive`, `tuiWorkspace`, `dataPersonal`,
 `containerK8sPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`,
 `modelHfPersonal`, `backupRecovery`, and `terminalVisual`.
@@ -73,6 +73,7 @@ Deeper toggles such as `system.brewNix.autoDock.enable` or
 
 - Nixpkgs install catalog: `nix/modules/tools/catalog.nix`
 - Nixpkgs install catalog data: `nix/catalog/tools/nixpkgs.nix`
+- Repo-local package overlay: `nix/pkgs/overlay.nix`
 - Homebrew install catalog: `nix/modules/tools/brew-catalog.nix`
 - Homebrew ownership registry: `nix/catalog/tools/homebrew-ownership.nix`
 - `nix run .#list-tools -- ...`

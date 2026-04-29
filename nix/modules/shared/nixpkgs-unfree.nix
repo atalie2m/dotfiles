@@ -1,6 +1,6 @@
 { dotmod, config, lib, ... }:
 
-# Allow select unfree packages on both Home Manager and Darwin
+# Allow select unfree packages on the Darwin package set shared with Home Manager.
 
 let
   mkAllowUnfreePredicate = cfg:
@@ -16,10 +16,6 @@ in
     enable = boolOption false;
     allowAll = boolOption false;
     packages = listOfOption str [ ];
-  };
-
-  homeOnEnable = { cfg, ... }: {
-    nixpkgs.config.allowUnfreePredicate = mkAllowUnfreePredicate cfg;
   };
 
   darwinOnEnable = { cfg, ... }: {

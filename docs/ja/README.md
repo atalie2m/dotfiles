@@ -182,11 +182,16 @@ default の Zsh prompt は Pure です。Zsh は `tools.shell.zsh.profile` で m
 - `zoxide` を `z` と `zi` で利用
 - `direnv` + `nix-direnv`
 - Git pager として `delta`
-- `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, `backupRecovery` などの profile group
+- `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `xorg`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, `backupRecovery` などの profile group
 
 `tools.profileDefaults` は、catalog toggle が有効な場合に `fzf`, `direnv`,
 `gh-dash`, `yazi`, `zellij`, `k9s`, `television`, terminal app,
 observability tool, preview tool, search tool の repo-owned default を書きます。
+stock catalog は `ghq`, `roots`, `ast-grep`, `sad`, `git-sizer`, `git-town`,
+`kondo`, `typos`, `taplo`, `actionlint`, `shellcheck`, `shfmt`, `yamllint`,
+`deadnix`, `statix`, `nix-diff`, `lychee`, `jless`, `mprocs` のような
+workflow helper と、`luit`, `xauth`, `xprop` などの X.Org utility も
+install します。
 
 ### shell sync（writable entrypoint）
 
