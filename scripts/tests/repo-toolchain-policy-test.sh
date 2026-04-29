@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BUNDLES_FILE="$ROOT/nix/catalog/darwin/bundles.nix"
+HOMEBREW_OWNERSHIP_FILE="$ROOT/nix/catalog/tools/homebrew-ownership.nix"
 README_FILE="$ROOT/README.md"
 README_JA_FILE="$ROOT/docs/ja/README.md"
 
@@ -34,6 +35,7 @@ require_contains() {
 }
 
 require_file "$BUNDLES_FILE"
+require_file "$HOMEBREW_OWNERSHIP_FILE"
 require_file "$README_FILE"
 require_file "$README_JA_FILE"
 
@@ -48,6 +50,7 @@ require_not_contains "$BUNDLES_FILE" "tools.passwordSecrets.rbw.enable = true;"
 require_not_contains "$ROOT/nix/catalog/tools/nixpkgs.nix" 'pkg = "yt-dlp";'
 require_not_contains "$ROOT/nix/catalog/tools/nixpkgs.nix" 'pkg = "bitwarden-cli";'
 require_not_contains "$ROOT/nix/catalog/tools/nixpkgs.nix" 'pkg = "rbw";'
+require_contains "$HOMEBREW_OWNERSHIP_FILE" "requiresFullXcode = true;"
 
 require_contains "$README_FILE" 'Stock Darwin profiles leave `go`, `nodejs`, `opentofu`, and `terraform` to project templates/devShells'
 require_contains "$README_JA_FILE" 'stock Darwin profile は `go`, `nodejs`, `opentofu`, `terraform` を project template/devShell に残します'

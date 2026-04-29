@@ -1,8 +1,10 @@
 {
   user = {
     username = "public";
-    fullName = "Public Example";
-    email = "public@example.invalid";
+    git = {
+      fullName = "Public Example";
+      email = "public@example.invalid";
+    };
     stateVersion = {
       home = "25.11";
       darwin = 6;

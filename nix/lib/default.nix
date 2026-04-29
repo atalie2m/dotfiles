@@ -89,6 +89,20 @@ rec {
       masApps = spec.masApps or { };
     };
 
+  hostHasFullXcode = myconfig:
+    let
+      value = (((myconfig.hostContext or { }).machine or { }).extra or { }).fullXcode or false;
+    in
+    builtins.isBool value && value;
+
+  homebrewSpecRequiresUnavailableHostCapability = { myconfig, spec }:
+    (spec.requiresFullXcode or false) && !(hostHasFullXcode myconfig);
+
+  requireHomebrewSpecForHost = { myconfig, spec }:
+    lib.mkIf
+      (!homebrewSpecRequiresUnavailableHostCapability { inherit myconfig spec; })
+      (requireHomebrewSpec spec);
+
   requireUnfree = packages:
     lib.mkMerge [
       {

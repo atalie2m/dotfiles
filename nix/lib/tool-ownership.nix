@@ -4,6 +4,15 @@ let
   enabledAt = optionPath: config:
     lib.attrByPath optionPath false config;
 
+  hostHasFullXcode = config:
+    let
+      value = lib.attrByPath [ "myconfig" "hostContext" "machine" "extra" "fullXcode" ] false config;
+    in
+    builtins.isBool value && value;
+
+  homebrewSpecAvailableForHost = config: spec:
+    !(spec.requiresFullXcode or false) || hostHasFullXcode config;
+
   homebrewClaimsFor =
     { key
     , claimSource
@@ -56,7 +65,7 @@ let
         let
           spec = homebrewOwnership.${key};
         in
-        if enabledAt spec.optionPath config
+        if enabledAt spec.optionPath config && homebrewSpecAvailableForHost config spec
         then
           homebrewClaimsFor
             {

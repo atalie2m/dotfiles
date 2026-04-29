@@ -40,7 +40,7 @@
         if cfg.signingKey != null then
           cfg.signingKey
         else
-          myconfig.hostContext.user.signingKey;
+          myconfig.hostContext.user.git.signingKey;
       signingEnabled = cfg.enableSigning || signingKey != null;
     in
     lib.mkIf signingEnabled {
@@ -49,13 +49,13 @@
 
   homeOnEnable = { cfg, myconfig, ... }:
     let
-      fullName = myconfig.hostContext.user.fullName;
-      email = myconfig.hostContext.user.email;
+      fullName = myconfig.hostContext.user.git.fullName;
+      email = myconfig.hostContext.user.git.email;
       signingKey =
         if cfg.signingKey != null then
           cfg.signingKey
         else
-          myconfig.hostContext.user.signingKey;
+          myconfig.hostContext.user.git.signingKey;
       signingEnabled = cfg.enableSigning || signingKey != null;
       tools = myconfig.tools or { };
       toolEnabled = group: tool:

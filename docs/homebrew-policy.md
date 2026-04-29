@@ -38,3 +38,4 @@ This document defines package-source boundaries for this dotfiles flake.
 2. Keep Homebrew `wrangler` only when Nix packaging is unusable for your workflow.
 3. `Claude Code`: use the latest-first Homebrew cask (`claude-code@latest`) through `tools.aiCodingAgent.claudeCode`.
 4. `Goneovim`: use the repo Nix package from the upstream Darwin release instead of the Homebrew cask because the cask depends on Homebrew `neovim` and is scheduled for disablement after its Gatekeeper deprecation.
+5. `Sourcery`: the stock profile may enable the tool toggle, but the Homebrew formula is emitted only when runtime facts report a full Xcode.app build environment.

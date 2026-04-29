@@ -46,6 +46,7 @@
     optionPath = [ "myconfig" "tools" "system" "sourcery" "enable" ];
     mode = "catalog";
     backend = "homebrewNative";
+    requiresFullXcode = true;
     brews = [ "sourcery" ];
   };
   "system.periphery" = {

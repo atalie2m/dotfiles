@@ -5,7 +5,14 @@ let
   dotmod = import ../lib/module-helpers.nix { inherit lib; };
   catalog = import ../catalog/darwin { inherit lib; };
   localPackagesOverlay = import ../pkgs/overlay.nix;
-  rawFacts = import (inputs.local + "/facts.nix");
+  baseRawFacts = import (inputs.local + "/facts.nix");
+  runtimeFactsPath = inputs.local + "/runtime.nix";
+  runtimeFacts =
+    if builtins.pathExists runtimeFactsPath then
+      import runtimeFactsPath
+    else
+      { };
+  rawFacts = lib.recursiveUpdate baseRawFacts runtimeFacts;
   normalizedFacts = dotlib.normalizeRawFacts rawFacts;
   username = normalizedFacts.user.username;
 

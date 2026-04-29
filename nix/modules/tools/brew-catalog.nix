@@ -13,15 +13,18 @@ let
       };
 
       myconfigOnEnable = { myconfig, ... }:
-        dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec spec);
+        dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpecForHost { inherit myconfig spec; });
 
-      darwinOnEnable = { ... }: {
+      darwinOnEnable = { myconfig, ... }: {
         assertions = lib.optional (!dotlib.hasHomebrewInstallPayload spec) {
           assertion = false;
           message = dotlib.homebrewCatalogFailureMessage {
             toolKey = "${spec.group}.${spec.tool}";
           };
         };
+        warnings = lib.optional
+          (dotlib.homebrewSpecRequiresUnavailableHostCapability { inherit myconfig spec; })
+          "${spec.group}.${spec.tool} is enabled but skipped because full Xcode.app is not available.";
       };
     };
 in

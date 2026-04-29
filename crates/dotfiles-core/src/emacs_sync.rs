@@ -804,6 +804,9 @@ fn execute_doom_bootstrap_step(step: &DoomBootstrapStep) -> Result<(), String> {
             log(&format!("running {} {}", doom_bin.display(), arg));
             let mut command = Command::new(doom_bin);
             command.arg(arg);
+            if *arg == "install" {
+                command.arg("--no-env");
+            }
             configure_doom_command(&mut command);
             run_doom_command(&mut command, &format!("doom {}", arg))
         }

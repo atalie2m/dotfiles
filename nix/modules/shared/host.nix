@@ -46,12 +46,8 @@ let
       };
     };
   };
-  userType = types.submodule {
+  gitType = types.submodule {
     options = {
-      username = lib.mkOption {
-        type = types.str;
-        readOnly = true;
-      };
       fullName = lib.mkOption {
         type = types.nullOr types.str;
         readOnly = true;
@@ -62,6 +58,18 @@ let
       };
       signingKey = lib.mkOption {
         type = types.nullOr types.str;
+        readOnly = true;
+      };
+    };
+  };
+  userType = types.submodule {
+    options = {
+      username = lib.mkOption {
+        type = types.str;
+        readOnly = true;
+      };
+      git = lib.mkOption {
+        type = gitType;
         readOnly = true;
       };
       homeDirectory = lib.mkOption {

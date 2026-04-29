@@ -79,6 +79,7 @@ let
     let
       facts = if builtins.isAttrs rawFacts then rawFacts else { };
       user = if facts ? user && builtins.isAttrs facts.user then facts.user else { };
+      git = if user ? git && builtins.isAttrs user.git then user.git else { };
       binaryCaches =
         if facts ? binaryCaches && builtins.isAttrs facts.binaryCaches then
           facts.binaryCaches
@@ -92,9 +93,11 @@ let
             user.username
           else
             null;
-        fullName = optionalNonEmptyString (user.fullName or null);
-        email = optionalNonEmptyString (user.email or null);
-        signingKey = optionalNonEmptyString (user.signingKey or null);
+        git = {
+          fullName = optionalNonEmptyString (git.fullName or (user.fullName or null));
+          email = optionalNonEmptyString (git.email or (user.email or null));
+          signingKey = optionalNonEmptyString (git.signingKey or (user.signingKey or null));
+        };
         homeDirectory = optionalAbsolutePath (user.homeDirectory or null);
         configDirectory =
           if user ? configDirectory && builtins.isString user.configDirectory && user.configDirectory != "" then
@@ -170,7 +173,12 @@ let
       hasRoot = facts != null;
       user = if hasRoot && facts ? user && builtins.isAttrs facts.user then facts.user else null;
       hasUser = user != null;
+      git = if hasUser && user ? git then user.git else null;
+      hasGit = builtins.isAttrs git;
       username = if hasUser && user ? username then user.username else null;
+      gitFullName = if hasGit && git ? fullName then git.fullName else null;
+      gitEmail = if hasGit && git ? email then git.email else null;
+      gitSigningKey = if hasGit && git ? signingKey then git.signingKey else null;
       homeDirectory = if hasUser && user ? homeDirectory then user.homeDirectory else null;
       machines = if hasRoot && facts ? machines then facts.machines else null;
       binaryCaches = if hasRoot && facts ? binaryCaches then facts.binaryCaches else null;
@@ -196,6 +204,12 @@ let
       optionalString = value: value == null || builtins.isString value;
       optionalAttrs = value: value == null || builtins.isAttrs value;
       optionalListOfStrings = value: value == null || (builtins.isList value && builtins.all builtins.isString value);
+      legacyGitFact = oldPath: newPath: value:
+        mk oldPath
+          (if value == null then "ok" else if builtins.isString value then "warn" else "fail")
+          (if value == null then "${oldPath} not set"
+          else if builtins.isString value then "${oldPath} is deprecated; move it to ${newPath}"
+          else "${oldPath} must be a string");
     in
     [
       (mk "facts.schema.root"
@@ -207,21 +221,29 @@ let
       (mk "facts.username"
         (if builtins.isString username && username != "" then "ok" else "fail")
         (if builtins.isString username && username != "" then username else "facts.user.username must be a non-empty string"))
-      (mk "facts.fullName"
-        (if optionalString (if hasUser && user ? fullName then user.fullName else null) then "ok" else "fail")
-        (if !hasUser || !(user ? fullName) then "facts.user.fullName not set (optional)"
-        else if builtins.isString user.fullName then "facts.user.fullName set"
-        else "facts.user.fullName must be a string"))
-      (mk "facts.email"
-        (if optionalString (if hasUser && user ? email then user.email else null) then "ok" else "fail")
-        (if !hasUser || !(user ? email) then "facts.user.email not set (optional)"
-        else if builtins.isString user.email then "facts.user.email set"
-        else "facts.user.email must be a string"))
-      (mk "facts.signingKey"
-        (if optionalString (if hasUser && user ? signingKey then user.signingKey else null) then "ok" else "fail")
-        (if !hasUser || !(user ? signingKey) then "facts.user.signingKey not set (optional)"
-        else if builtins.isString user.signingKey then "facts.user.signingKey set"
-        else "facts.user.signingKey must be a string"))
+      (mk "facts.user.git"
+        (if optionalAttrs git then "ok" else "fail")
+        (if git == null then "facts.user.git not set (optional)"
+        else if builtins.isAttrs git then "facts.user.git is an attrset"
+        else "facts.user.git must be an attrset"))
+      (mk "facts.user.git.fullName"
+        (if optionalString gitFullName then "ok" else "fail")
+        (if gitFullName == null then "facts.user.git.fullName not set (optional)"
+        else if builtins.isString gitFullName then "facts.user.git.fullName set"
+        else "facts.user.git.fullName must be a string"))
+      (mk "facts.user.git.email"
+        (if optionalString gitEmail then "ok" else "fail")
+        (if gitEmail == null then "facts.user.git.email not set (optional)"
+        else if builtins.isString gitEmail then "facts.user.git.email set"
+        else "facts.user.git.email must be a string"))
+      (mk "facts.user.git.signingKey"
+        (if optionalString gitSigningKey then "ok" else "fail")
+        (if gitSigningKey == null then "facts.user.git.signingKey not set (optional)"
+        else if builtins.isString gitSigningKey then "facts.user.git.signingKey set"
+        else "facts.user.git.signingKey must be a string"))
+      (legacyGitFact "facts.user.fullName" "facts.user.git.fullName" (if hasUser && user ? fullName then user.fullName else null))
+      (legacyGitFact "facts.user.email" "facts.user.git.email" (if hasUser && user ? email then user.email else null))
+      (legacyGitFact "facts.user.signingKey" "facts.user.git.signingKey" (if hasUser && user ? signingKey then user.signingKey else null))
       (mk "facts.homeDirectory"
         (if optionalString homeDirectory then "ok" else "fail")
         (if homeDirectory == null then "facts.user.homeDirectory not set (auto-derived)"
@@ -294,10 +316,12 @@ let
         user = {
           username = ${builtins.toJSON username};
 
-          # Optional for Git identity:
-          # fullName = "Your Name";
-          # email = "you@example.com";
-          # signingKey = "OPENPGP_KEY_ID_OR_FINGERPRINT";
+          # Optional Git identity and signing:
+          git = {
+            # fullName = "Your Name";
+            # email = "you@example.com";
+            # signingKey = "OPENPGP_KEY_ID_OR_FINGERPRINT";
+          };
 
           # Optional overrides:
           # homeDirectory = "/Users/${username}";

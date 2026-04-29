@@ -70,6 +70,11 @@ UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host own_mac
 ## Runtime sync
 
 ```bash
+# Apply Doom Emacs bootstrap/sync and Neovim config sync together
+nix run .#sync
+nix run .#sync -- --check
+nix run .#sync -- --check --details --diff
+
 # Shell entrypoints
 nix run .#dotfiles -- sync shell --check
 nix run .#dotfiles -- sync shell --check --details --diff
@@ -114,6 +119,8 @@ dotfiles-doom doctor
 ## Neovim and Goneovim
 
 `tools.editor.neovim.enable = true` installs Neovim. `tools.editor.neovim.sync.enable = true` wires the repo-managed LazyVim config from `apps/neovim/`; `ultra` enables that setup and `pro` leaves it disabled. `tools.editor.goneovim.enable = true` installs the Goneovim GUI from the upstream Darwin release. This deliberately avoids the Homebrew cask because that cask depends on Homebrew `neovim`, is marked deprecated for macOS Gatekeeper validation, and is scheduled for disablement on 2026-09-01.
+
+`nix run .#sync` is a convenience app for the personal editor setup. With no arguments it runs `sync emacs --apply --bootstrap` and then `sync neovim --apply`. Extra arguments are forwarded to both editor sync engines, so shared inspection flags such as `--check`, `--details`, and `--diff` work on both.
 
 ## Runtime overrides
 

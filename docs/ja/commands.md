@@ -70,6 +70,11 @@ UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host own_mac
 ## runtime sync
 
 ```bash
+# Doom Emacs bootstrap/sync と Neovim config sync をまとめて適用
+nix run .#sync
+nix run .#sync -- --check
+nix run .#sync -- --check --details --diff
+
 # shell entrypoint
 nix run .#dotfiles -- sync shell --check
 nix run .#dotfiles -- sync shell --check --details --diff
@@ -114,6 +119,8 @@ dotfiles-doom doctor
 ## Neovim と Goneovim
 
 `tools.editor.neovim.enable = true` は Neovim を install します。`tools.editor.neovim.sync.enable = true` は `apps/neovim/` の repo-managed LazyVim config を wire し、`ultra` はこの setup を有効化し、`pro` は無効のままにします。`tools.editor.goneovim.enable = true` は upstream Darwin release から Goneovim GUI を install します。Homebrew cask は Homebrew `neovim` に依存し、macOS Gatekeeper validation の理由で deprecated、かつ 2026-09-01 に disabled 予定のため、意図的に使いません。
+
+`nix run .#sync` は個人用 editor setup の convenience app です。引数なしでは `sync emacs --apply --bootstrap` を実行し、その後 `sync neovim --apply` を実行します。追加引数は両方の editor sync engine に渡すため、`--check`、`--details`、`--diff` のような共通の inspection flag は両方に効きます。
 
 ## runtime override
 

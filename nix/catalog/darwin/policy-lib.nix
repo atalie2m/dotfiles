@@ -12,7 +12,7 @@ let
     lib.hasSuffix ".enable" path;
 
   isTrueEnable = entry:
-    entry.value == true;
+    entry.value;
 
   pathGroup = path:
     builtins.head (splitPath path);

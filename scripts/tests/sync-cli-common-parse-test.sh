@@ -352,10 +352,12 @@ EOF_SCHEMA
   user = {
     username = "tester";
 
-    # Optional for Git identity:
-    # fullName = "Your Name";
-    # email = "you@example.com";
-    # signingKey = "OPENPGP_KEY_ID_OR_FINGERPRINT";
+    # Optional Git identity and signing:
+    git = {
+      # fullName = "Your Name";
+      # email = "you@example.com";
+      # signingKey = "OPENPGP_KEY_ID_OR_FINGERPRINT";
+    };
 
     # Optional overrides:
     # homeDirectory = "/Users/tester";
