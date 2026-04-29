@@ -59,6 +59,7 @@ CLI entrypoint は Rust engine（`dotfiles-sync-vscode`）にのみ dispatch し
   - `_default/settings.json` と `<profile>/settings.json` の再帰 merge
 - Effective extensions:
   - `_default/extensions.txt` と `<profile>/extensions.txt` を合成し、extension ID 単位で unique にする
+  - VS Code built-in extension は listed にしない。app bundle 側の version に追従する
 - Runtime ownership:
   - effective managed profile settings file は repo が所有する
   - effective extension ID は repo が所有する

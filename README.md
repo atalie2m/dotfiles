@@ -140,6 +140,7 @@ The declarative source stays under `apps/vscode/<name>/`, and runtime materializ
 - `sync emacs`, `sync neovim`, and `sync shell` use Rust engines in `dotfiles-core`; `sync vscode` uses the dedicated Rust engine (`dotfiles-sync-vscode`).
 - **Stock `ultra` behavior:** the `ultra` profile enables activation-time VS Code profile sync. The `pro` profile installs the sync surface but leaves setup/sync disabled.
 - **Extension bulk install:** repo-owned extension IDs live under `apps/vscode/` — chiefly `_default/extensions.txt` plus each profile's `extensions.txt` (for example `web/`, `native/`). That directory is the source of truth for what sync installs or uninstalls.
+- VS Code built-in extensions are intentionally omitted from `extensions.txt`; they track the app bundle version and should not be installed from Marketplace during sync.
 - `sync vscode --apply` reconciles fully repo-owned managed profile settings plus those repo-owned extensions into writable VS Code profile state when you invoke the CLI.
 - `default-disabled-extensions.txt` is seeded once into the profile's extension enablement state; users can later enable those extensions in the VS Code UI and sync will not force them back off.
 - Drift management is mutable by design: managed profile settings are fully repo-owned, while repo-owned extensions converge without adopting user-added extensions.
@@ -150,9 +151,9 @@ See [`docs/reconciled-surfaces.md`](docs/reconciled-surfaces.md) for mutable vs 
 ## Mutable Editor Tooling
 
 - Emacs app wiring is Nix-first, while Doom config files and package state stay mutable. `sync emacs` reconciles `apps/emacs/doom/{init,packages,config}.el` with writable files under `~/.config/doom`, and plain check/apply also verify that `${EMACSDIR:-~/.emacs.d}/bin/doom` is executable. Use `--config-only` only when intentionally skipping Doom runtime readiness, and `sync emacs --apply --bootstrap` to install or sync Doom after writing repo-managed config. The `ultra` profile runs activation-time Emacs sync and first-run Doom bootstrap; `pro` installs Emacs without setup.
-- Neovim installation is separate from config setup. `tools.editor.neovim.enable` installs Neovim, while `tools.editor.neovim.sync.enable` wires the repo-managed LazyVim config from `apps/neovim/`. The `ultra` profile enables that setup; `pro` only installs the editor.
+- Neovim installation is separate from config setup. `tools.editor.neovim.enable` installs Neovim, while `tools.editor.neovim.sync.enable` wires the repo-managed LazyVim config from `apps/neovim/` and installs the external runtime helpers that config expects. The `ultra` profile enables that setup; `pro` only installs the editor.
 - VS Code profile definitions are declarative, but runtime state stays writable; managed profile settings are fully repo-owned and manual settings changes are overwritten on apply, while user-added extensions remain outside repo ownership.
-- This repo treats those editor runtimes as a convenience boundary: config is pinned here, package/login/UI state is not.
+- This repo treats those editor runtimes as a convenience boundary: config and declared runtime helpers are pinned here, while plugin/login/UI state is not.
 
 ## Terminal Compatibility
 

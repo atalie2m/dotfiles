@@ -35,10 +35,30 @@
     (add-to-list 'exec-path path)
     (setenv "PATH" (concat path ":" (or (getenv "PATH") "")))))
 
+(defun my/add-treesit-extra-load-path (path)
+  "Add PATH to `treesit-extra-load-path' when it exists."
+  (when (and (boundp 'treesit-extra-load-path)
+             (file-directory-p path))
+    (add-to-list 'treesit-extra-load-path path)))
+
 (dolist (path (list "/run/current-system/sw/bin"
+                    (format "/etc/profiles/per-user/%s/bin" (user-login-name))
                     (expand-file-name "~/.nix-profile/bin")
                     (expand-file-name "~/.local/state/nix/profile/bin")))
   (my/add-exec-path path))
+
+(dolist (path (list "/run/current-system/sw/lib/emacs-tree-sitter-grammars"
+                    (format "/etc/profiles/per-user/%s/lib/emacs-tree-sitter-grammars" (user-login-name))
+                    (expand-file-name "~/.nix-profile/lib/emacs-tree-sitter-grammars")
+                    (expand-file-name "~/.local/state/nix/profile/lib/emacs-tree-sitter-grammars")))
+  (my/add-treesit-extra-load-path path))
+
+(dolist (bin-path exec-path)
+  (when (and (stringp bin-path)
+             (file-name-absolute-p bin-path))
+    (my/add-treesit-extra-load-path
+     (expand-file-name "lib/emacs-tree-sitter-grammars"
+                       (file-name-directory (directory-file-name bin-path))))))
 
 ;; macOS/BSD ls does not support GNU ls --dired markers.
 (setq dired-use-ls-dired nil)
@@ -97,7 +117,39 @@
 (after! eglot
   (setq eglot-autoshutdown t
         eglot-events-buffer-size 0
-        eglot-send-changes-idle-time 0.3))
+        eglot-send-changes-idle-time 0.3)
+  (dolist (server '((((python-mode :language-id "python")
+                      (python-ts-mode :language-id "python"))
+                     . ("pyright-langserver" "--stdio"))
+                    (((rust-mode :language-id "rust")
+                      (rust-ts-mode :language-id "rust"))
+                     . ("rust-analyzer"))
+                    (((js-mode :language-id "javascript")
+                      (js-ts-mode :language-id "javascript")
+                      (typescript-mode :language-id "typescript")
+                      (typescript-ts-mode :language-id "typescript")
+                      (tsx-ts-mode :language-id "typescriptreact"))
+                     . ("typescript-language-server" "--stdio"))
+                    (((web-mode :language-id "html")
+                      (html-mode :language-id "html")
+                      (html-ts-mode :language-id "html"))
+                     . ("vscode-html-language-server" "--stdio"))
+                    (((css-mode :language-id "css")
+                      (css-ts-mode :language-id "css"))
+                     . ("vscode-css-language-server" "--stdio"))
+                    (((json-mode :language-id "json")
+                      (json-ts-mode :language-id "json")
+                      (jsonc-mode :language-id "jsonc"))
+                     . ("vscode-json-language-server" "--stdio"))
+                    (((yaml-mode :language-id "yaml")
+                      (yaml-ts-mode :language-id "yaml"))
+                     . ("yaml-language-server" "--stdio"))
+                    (((nix-mode :language-id "nix"))
+                     . ("nil"))
+                    (((sh-mode :language-id "sh")
+                      (bash-ts-mode :language-id "bash"))
+                     . ("bash-language-server" "start"))))
+    (add-to-list 'eglot-server-programs server)))
 
 (after! flymake
   (setq flymake-no-changes-timeout 0.5

@@ -59,6 +59,7 @@ The CLI entrypoint dispatches to the Rust engine (`dotfiles-sync-vscode`) only.
   - `_default/settings.json` recursively merged with `<profile>/settings.json`
 - Effective extensions:
   - `_default/extensions.txt` plus `<profile>/extensions.txt`, unique by extension ID
+  - VS Code built-in extensions are not listed; they follow the app bundle version
 - Runtime ownership:
   - The repo owns the effective managed profile settings file
   - The repo owns the effective extension IDs

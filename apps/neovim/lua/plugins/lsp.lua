@@ -47,6 +47,24 @@ return {
       })
 
       opts.servers = opts.servers or {}
+      local function use_system_lsp(server)
+        opts.servers[server] = vim.tbl_deep_extend("force", opts.servers[server] or {}, {
+          mason = false,
+        })
+      end
+
+      for _, server in ipairs({
+        "jsonls",
+        "lua_ls",
+        "marksman",
+        "pyright",
+        "ruff",
+        "vtsls",
+        "yamlls",
+      }) do
+        use_system_lsp(server)
+      end
+
       opts.servers["*"] = opts.servers["*"] or {}
       opts.servers["*"].keys = vim.list_extend(opts.servers["*"].keys or {}, {
         { "K", vim.lsp.buf.hover, desc = "Hover" },

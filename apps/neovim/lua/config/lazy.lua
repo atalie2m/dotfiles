@@ -83,6 +83,9 @@ require("lazy").setup({
   install = {
     colorscheme = { "catppuccin", "habamax" },
   },
+  rocks = {
+    enabled = false,
+  },
   performance = {
     rtp = {
       disabled_plugins = {

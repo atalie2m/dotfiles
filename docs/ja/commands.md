@@ -118,7 +118,7 @@ dotfiles-doom doctor
 
 ## Neovim と Goneovim
 
-`tools.editor.neovim.enable = true` は Neovim を install します。`tools.editor.neovim.sync.enable = true` は `apps/neovim/` の repo-managed LazyVim config を wire し、`ultra` はこの setup を有効化し、`pro` は無効のままにします。`tools.editor.goneovim.enable = true` は upstream Darwin release から Goneovim GUI を install します。Homebrew cask は Homebrew `neovim` に依存し、macOS Gatekeeper validation の理由で deprecated、かつ 2026-09-01 に disabled 予定のため、意図的に使いません。
+`tools.editor.neovim.enable = true` は Neovim を install します。`tools.editor.neovim.sync.enable = true` は `apps/neovim/` の repo-managed LazyVim config を wire し、その config が期待する file picker、LazyGit、Tree-sitter CLI、設定済み language server と formatter、document/image preview converter などの外部 runtime helper も install します。`ultra` はこの setup を有効化し、`pro` は無効のままにします。`tools.editor.goneovim.enable = true` は upstream Darwin release から Goneovim GUI を install します。Homebrew cask は Homebrew `neovim` に依存し、macOS Gatekeeper validation の理由で deprecated、かつ 2026-09-01 に disabled 予定のため、意図的に使いません。
 
 `nix run .#sync` は個人用 editor setup の convenience app です。引数なしでは `sync emacs --apply --bootstrap` を実行し、その後 `sync neovim --apply` を実行します。追加引数は両方の editor sync engine に渡すため、`--check`、`--details`、`--diff` のような共通の inspection flag は両方に効きます。
 

@@ -9,6 +9,32 @@ let
   doomConfigDir = emacsDir + "/doom";
   iconPath = emacsDir + "/emacs-icon-1.0.icns";
   hasIcon = builtins.pathExists iconPath;
+  treeSitterGrammars = with pkgs.tree-sitter-grammars; {
+    bash = tree-sitter-bash;
+    css = tree-sitter-css;
+    html = tree-sitter-html;
+    javascript = tree-sitter-javascript;
+    json = tree-sitter-json;
+    nix = tree-sitter-nix;
+    python = tree-sitter-python;
+    rust = tree-sitter-rust;
+    tsx = tree-sitter-tsx;
+    typescript = tree-sitter-typescript;
+    yaml = tree-sitter-yaml;
+  };
+  emacsTreeSitterGrammars =
+    let
+      linkCommands = lib.concatStringsSep "\n" (lib.mapAttrsToList
+        (language: grammar: ''
+          ln -s ${grammar}/parser "$grammar_dir/libtree-sitter-${language}.dylib"
+        '')
+        treeSitterGrammars);
+    in
+    pkgs.runCommand "emacs-tree-sitter-grammars" { } ''
+      grammar_dir="$out/lib/emacs-tree-sitter-grammars"
+      mkdir -p "$grammar_dir"
+      ${linkCommands}
+    '';
   refreshEmacsPlusNativeCompEnv = pkgs.writeShellApplication {
     name = "dotfiles-refresh-emacs-plus-native-comp-env";
     runtimeInputs = with pkgs; [
@@ -105,15 +131,47 @@ in
   homeOnEnable = { ... }:
     let
       emacsRuntimePackages = with pkgs; [
+        bash-language-server
+        black
+        cargo
         cmigemo
+        coreutils-prefixed
         diffutils
+        direnv
         dotfilesCli
         doomBootstrap
+        emacsTreeSitterGrammars
         enchant
+        eslint
         fd
+        fontconfig
         git
+        graphviz
+        isort
+        jsbeautifier
+        multimarkdown
+        nil
+        nixd
+        nixfmt
+        pandoc
+        pipenv
+        prettier
+        pyright
+        python3Packages.pyflakes
+        python3Packages.pytest
         ripgrep
+        ruff
+        rust-analyzer
+        rustc
+        rustfmt
+        shfmt
+        shellcheck
         sqlite
+        stylelint
+        typescript
+        typescript-language-server
+        vscode-langservers-extracted
+        yaml-language-server
         (aspellWithDicts (dicts: with dicts; [
           en
         ]))

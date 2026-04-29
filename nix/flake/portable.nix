@@ -6,7 +6,7 @@ let
     settings = {
       global.excludes = [ ".direnv/**" "result/**" "flake.lock" ];
       formatter.prettier-json = {
-        command = "${pkgs.nodePackages.prettier}/bin/prettier";
+        command = "${pkgs.prettier}/bin/prettier";
         includes = [ "*.json" "**/*.json" ];
         options = [ "--write" ];
       };

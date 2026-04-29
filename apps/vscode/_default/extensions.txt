@@ -30,8 +30,6 @@ bbenoist.nix
 jnoortheen.nix-ide
 anthropic.claude-code
 codeium.codeium
-github.copilot
-github.copilot-chat
 openai.chatgpt
 saoudrizwan.claude-dev
 parallelsdesktop.parallels-desktop

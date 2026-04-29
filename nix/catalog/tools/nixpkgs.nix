@@ -190,25 +190,25 @@
   networkGrpcurl = { group = "network"; tool = "grpcurl"; pkg = "grpcurl"; };
 
   # X.Org compatibility utilities
-  xorgLuit = { group = "xorg"; tool = "luit"; pkg = [ "xorg" "luit" ]; };
-  xorgXauth = { group = "xorg"; tool = "xauth"; pkg = [ "xorg" "xauth" ]; };
-  xorgXhost = { group = "xorg"; tool = "xhost"; pkg = [ "xorg" "xhost" ]; };
-  xorgXprop = { group = "xorg"; tool = "xprop"; pkg = [ "xorg" "xprop" ]; };
-  xorgXrdb = { group = "xorg"; tool = "xrdb"; pkg = [ "xorg" "xrdb" ]; };
-  xorgXset = { group = "xorg"; tool = "xset"; pkg = [ "xorg" "xset" ]; };
-  xorgXsetroot = { group = "xorg"; tool = "xsetroot"; pkg = [ "xorg" "xsetroot" ]; };
-  xorgXmodmap = { group = "xorg"; tool = "xmodmap"; pkg = [ "xorg" "xmodmap" ]; };
-  xorgXrandr = { group = "xorg"; tool = "xrandr"; pkg = [ "xorg" "xrandr" ]; };
-  xorgXdpyinfo = { group = "xorg"; tool = "xdpyinfo"; pkg = [ "xorg" "xdpyinfo" ]; };
-  xorgXwininfo = { group = "xorg"; tool = "xwininfo"; pkg = [ "xorg" "xwininfo" ]; };
-  xorgXev = { group = "xorg"; tool = "xev"; pkg = [ "xorg" "xev" ]; };
-  xorgXkill = { group = "xorg"; tool = "xkill"; pkg = [ "xorg" "xkill" ]; };
-  xorgXmessage = { group = "xorg"; tool = "xmessage"; pkg = [ "xorg" "xmessage" ]; };
-  xorgXlsatoms = { group = "xorg"; tool = "xlsatoms"; pkg = [ "xorg" "xlsatoms" ]; };
-  xorgXlsclients = { group = "xorg"; tool = "xlsclients"; pkg = [ "xorg" "xlsclients" ]; };
-  xorgXlsfonts = { group = "xorg"; tool = "xlsfonts"; pkg = [ "xorg" "xlsfonts" ]; };
-  xorgXrefresh = { group = "xorg"; tool = "xrefresh"; pkg = [ "xorg" "xrefresh" ]; };
-  xorgXdriinfo = { group = "xorg"; tool = "xdriinfo"; pkg = [ "xorg" "xdriinfo" ]; systems = [ "linux" ]; };
+  xorgLuit = { group = "xorg"; tool = "luit"; pkg = "luit"; };
+  xorgXauth = { group = "xorg"; tool = "xauth"; pkg = "xauth"; };
+  xorgXhost = { group = "xorg"; tool = "xhost"; pkg = "xhost"; };
+  xorgXprop = { group = "xorg"; tool = "xprop"; pkg = "xprop"; };
+  xorgXrdb = { group = "xorg"; tool = "xrdb"; pkg = "xrdb"; };
+  xorgXset = { group = "xorg"; tool = "xset"; pkg = "xset"; };
+  xorgXsetroot = { group = "xorg"; tool = "xsetroot"; pkg = "xsetroot"; };
+  xorgXmodmap = { group = "xorg"; tool = "xmodmap"; pkg = "xmodmap"; };
+  xorgXrandr = { group = "xorg"; tool = "xrandr"; pkg = "xrandr"; };
+  xorgXdpyinfo = { group = "xorg"; tool = "xdpyinfo"; pkg = "xdpyinfo"; };
+  xorgXwininfo = { group = "xorg"; tool = "xwininfo"; pkg = "xwininfo"; };
+  xorgXev = { group = "xorg"; tool = "xev"; pkg = "xev"; };
+  xorgXkill = { group = "xorg"; tool = "xkill"; pkg = "xkill"; };
+  xorgXmessage = { group = "xorg"; tool = "xmessage"; pkg = "xmessage"; };
+  xorgXlsatoms = { group = "xorg"; tool = "xlsatoms"; pkg = "xlsatoms"; };
+  xorgXlsclients = { group = "xorg"; tool = "xlsclients"; pkg = "xlsclients"; };
+  xorgXlsfonts = { group = "xorg"; tool = "xlsfonts"; pkg = "xlsfonts"; };
+  xorgXrefresh = { group = "xorg"; tool = "xrefresh"; pkg = "xrefresh"; };
+  xorgXdriinfo = { group = "xorg"; tool = "xdriinfo"; pkg = "xdriinfo"; systems = [ "linux" ]; };
 
   httpApiPersonalXh = { group = "httpApiPersonal"; tool = "xh"; pkg = "xh"; };
   httpApiPersonalCurl = { group = "httpApiPersonal"; tool = "curl"; pkg = "curl"; };

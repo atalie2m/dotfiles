@@ -14,6 +14,7 @@
   darwinOnEnable = { cfg, ... }: {
     fonts.packages = with pkgs; [
       nerd-fonts.jetbrains-mono
+      nerd-fonts.symbols-only
       nerd-fonts._0xproto
       roboto
       roboto-mono

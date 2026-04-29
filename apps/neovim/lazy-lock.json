@@ -5,7 +5,7 @@
   },
   "SchemaStore.nvim": {
     "branch": "main",
-    "commit": "20d4e9970798123e6197acb1c85c4b1e897efd29"
+    "commit": "b282b8520eb48dc5cc570ca9dd9ccf782e23178b"
   },
   "avante.nvim": {
     "branch": "main",
@@ -121,7 +121,7 @@
   },
   "nvim-treesitter": {
     "branch": "main",
-    "commit": "7caec274fd19c12b55902a5b795100d21531391f"
+    "commit": "4916d6592ede8c07973490d9322f187e07dfefac"
   },
   "nvim-treesitter-textobjects": {
     "branch": "main",

@@ -15,6 +15,4 @@ ms-toolsai.vscode-jupyter-slideshow
 charliermarsh.ruff
 
 # AI assistants (optional but useful in DS workflows)
-github.copilot
-github.copilot-chat
 openai.chatgpt

@@ -61,7 +61,7 @@
        :lang
        emacs-lisp
        markdown
-       (org +roam2)
+       (org +roam)
        (python +lsp +tree-sitter)
        (rust +lsp +tree-sitter)
        (javascript +lsp +tree-sitter)

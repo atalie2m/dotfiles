@@ -11,6 +11,8 @@ vim.g.lazyvim_prettier_needs_config = false
 
 local opt = vim.opt
 
+opt.runtimepath:append(vim.fn.stdpath("data") .. "/site/")
+
 opt.number = true
 opt.relativenumber = true
 opt.mouse = "a"
