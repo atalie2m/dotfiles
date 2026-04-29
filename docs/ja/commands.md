@@ -106,7 +106,7 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 `tools.editor.emacs.enable = true` は GUI Emacs app を Homebrew で入れ、Doom/Meow sync tooling を導入し、`doom-meow` を `~/.config/doom/modules/editor/meow` に用意します。Doom config file は `sync emacs` が reconcile する writable runtime state です。通常の `sync emacs --check` と `sync emacs --apply` は `${EMACSDIR:-~/.emacs.d}/bin/doom` が executable かも検査します。3 つの config file だけを扱う test / maintenance では、明示的に `--config-only` を使います。
 
-`sync emacs --apply --bootstrap` は最初に repo 管理版の `~/.config/doom/{init,packages,config}.el` を書き、`${EMACSDIR:-~/.emacs.d}/bin/doom` が無ければ Doom を install し、既にあれば `doom sync` を実行します。`${EMACSDIR:-~/.emacs.d}` が存在するが Doom checkout ではない場合は、timestamp 付きの `.pre-doom.*` backup に移動してから Doom を clone します。
+`sync emacs --apply --bootstrap` は最初に repo 管理版の `~/.config/doom/{init,packages,config}.el` を書き、`${EMACSDIR:-~/.emacs.d}/bin/doom` が無ければ非対話で Doom を install し、既にあれば `doom sync` を実行します。`${EMACSDIR:-~/.emacs.d}` が存在するが Doom checkout ではない場合は、timestamp 付きの `.pre-doom.*` backup に移動してから Doom を clone します。
 
 `tools.editor.emacs.bootstrap.enable = true` は activation-time の `dotfiles-doom bootstrap` 経路を維持し、同じ CLI 挙動を使います。`ultra` profile は `tools.editor.emacs.sync.enable` と `tools.editor.emacs.bootstrap.enable` の両方を有効にし、`pro` は Emacs を install するだけで setup は行いません。
 

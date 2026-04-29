@@ -103,6 +103,7 @@ for pair in "${DOC_LINK_PAIRS[@]}"; do
 done
 
 require_contains_anywhere 'darwinConfigurations'
+require_contains_anywhere 'nix run .#sync'
 require_contains_anywhere 'nix run .#dotfiles -- sync shell'
 require_contains_anywhere 'nix run .#dotfiles -- sync emacs'
 require_contains_anywhere 'nix run .#dotfiles -- sync emacs --apply --bootstrap'

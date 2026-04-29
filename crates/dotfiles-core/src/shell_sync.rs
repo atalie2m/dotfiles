@@ -262,7 +262,7 @@ pub fn run(mut options: ShellSyncOptions) -> Result<ShellSyncResult, String> {
         result.selected_count += 1;
         result.checked += 1;
 
-        let mut evaluation = classify_target(&target)?;
+        let evaluation = classify_target(&target)?;
         match evaluation.status {
             TargetStatus::InSync => result.in_sync += 1,
             TargetStatus::NeedsApply => result.needs_apply += 1,

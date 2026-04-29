@@ -117,6 +117,7 @@
         inherit (portable)
           mkDotfilesCliPackage
           mkDotfilesPackage
+          mkEditorSyncAppProgram
           mkSyncVscodeRustPackage
           mkPortableChecks
           mkPortableDevShell

@@ -106,7 +106,7 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 `tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew, installs the Doom/Meow sync tooling, and keeps `doom-meow` available under `~/.config/doom/modules/editor/meow`. Doom config files are writable runtime state reconciled by `sync emacs`; plain `sync emacs --check` and `sync emacs --apply` also verify that `${EMACSDIR:-~/.emacs.d}/bin/doom` is executable. Use `--config-only` only for tests or maintenance that intentionally reconciles the three config files without checking Doom runtime readiness.
 
-`sync emacs --apply --bootstrap` first writes `~/.config/doom/{init,packages,config}.el` from the repo, then installs Doom when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing or runs `doom sync` when it is already present. If `${EMACSDIR:-~/.emacs.d}` exists but is not a Doom checkout, the bootstrapper moves it to a timestamped `.pre-doom.*` backup before cloning Doom.
+`sync emacs --apply --bootstrap` first writes `~/.config/doom/{init,packages,config}.el` from the repo, then installs Doom non-interactively when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing or runs `doom sync` when it is already present. If `${EMACSDIR:-~/.emacs.d}` exists but is not a Doom checkout, the bootstrapper moves it to a timestamped `.pre-doom.*` backup before cloning Doom.
 
 `tools.editor.emacs.bootstrap.enable = true` keeps the activation-time `dotfiles-doom bootstrap` path, backed by the same CLI behavior. The `ultra` profile enables both `tools.editor.emacs.sync.enable` and `tools.editor.emacs.bootstrap.enable`; `pro` installs Emacs without setup.
 

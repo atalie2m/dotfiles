@@ -395,7 +395,7 @@ fn classify_pair(
     let desired_bytes = desired.as_ref().map(|file| file.bytes.clone());
     let actual_bytes = actual.as_ref().map(|file| file.bytes.clone());
     let (status, reason) = match (&desired_bytes, &actual_bytes) {
-        (Some(left), Some(right)) if left == right => (
+        (Some(left), Some(right)) if item_content_matches(kind, left, right) => (
             ItemStatus::InSync,
             "runtime file matches managed".to_string(),
         ),
@@ -435,6 +435,20 @@ fn classify_pair(
         actual_path,
         desired: desired_bytes,
         actual: actual_bytes,
+    }
+}
+
+fn item_content_matches(kind: ItemKind, managed: &[u8], actual: &[u8]) -> bool {
+    if managed == actual {
+        return true;
+    }
+    match kind {
+        ItemKind::Config => false,
+        ItemKind::LazyLock => {
+            let managed_json = serde_json::from_slice::<serde_json::Value>(managed);
+            let actual_json = serde_json::from_slice::<serde_json::Value>(actual);
+            matches!((managed_json, actual_json), (Ok(left), Ok(right)) if left == right)
+        }
     }
 }
 
@@ -945,6 +959,30 @@ mod tests {
         assert_eq!(result.in_sync, 1);
         assert_eq!(result.needs_apply, 1);
         assert_eq!(result.exit_code(NeovimSyncMode::Check), 1);
+    }
+
+    #[test]
+    fn check_accepts_equivalent_formatted_lazy_lock() {
+        let temp = TempDir::new().unwrap();
+        let managed = temp.path().join("managed");
+        let runtime = temp.path().join("runtime");
+        let state = temp.path().join("state");
+        write(&managed.join("init.lua"), "same\n");
+        write(&runtime.join("init.lua"), "same\n");
+        write(
+            &managed.join("lazy-lock.json"),
+            "{\n  \"plugin\": {\n    \"branch\": \"main\",\n    \"commit\": \"abc\"\n  }\n}\n",
+        );
+        write(
+            &state.join("lazy-lock.json"),
+            "{\"plugin\":{\"commit\":\"abc\",\"branch\":\"main\"}}\n",
+        );
+
+        let result = run(options(&managed, &runtime, &state, NeovimSyncMode::Check)).unwrap();
+
+        assert_eq!(result.checked, 2);
+        assert_eq!(result.in_sync, 2);
+        assert_eq!(result.exit_code(NeovimSyncMode::Check), 0);
     }
 
     #[test]

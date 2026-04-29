@@ -9,6 +9,13 @@ let
   doomConfigDir = emacsDir + "/doom";
   iconPath = emacsDir + "/emacs-icon-1.0.icns";
   hasIcon = builtins.pathExists iconPath;
+  refreshEmacsPlusNativeCompEnv = pkgs.writeShellApplication {
+    name = "dotfiles-refresh-emacs-plus-native-comp-env";
+    runtimeInputs = with pkgs; [
+      coreutils
+    ];
+    text = builtins.readFile ./refresh-emacs-plus-native-comp-env.sh;
+  };
   doomBootstrap = pkgs.writeShellApplication {
     name = "dotfiles-doom";
     runtimeInputs = with pkgs; [
@@ -170,7 +177,13 @@ in
       ];
     in
     {
-      home-manager.sharedModules = lib.optional (cfg.sync.enable || cfg.bootstrap.enable) ({ ... }: {
+      home-manager.sharedModules = [
+        ({ ... }: {
+          home.activation.refreshEmacsPlusNativeCompEnv = lib.mkOrder 880 ''
+            ${refreshEmacsPlusNativeCompEnv}/bin/dotfiles-refresh-emacs-plus-native-comp-env
+          '';
+        })
+      ] ++ lib.optional (cfg.sync.enable || cfg.bootstrap.enable) ({ ... }: {
         home.activation.syncEmacsDoom = lib.mkOrder 890 ''
           export PATH="/usr/bin:/bin:${runtimePath}:$PATH"
           if command -v xcrun >/dev/null 2>&1; then

@@ -5,6 +5,7 @@
 , darwinConfigurations
 , mkDotfilesCliPackage
 , mkDotfilesPackage
+, mkEditorSyncAppProgram
 , mkSyncVscodeRustPackage
 , mkPortableChecks
 , mkPortableDevShell
@@ -140,53 +141,21 @@ let
       meta.description = description;
     };
 
-  mkEditorSyncApp = {
-    type = "app";
-    program = "${pkgs.writeShellScript "dotfiles-sync" ''
-      set -uo pipefail
-
-      if [[ -z "''${DOTFILES_ROOT:-}" ]]; then
-        pwd_root="$(pwd)"
-        if [[ -f "$pwd_root/flake.nix" && -d "$pwd_root/scripts" ]]; then
-          export DOTFILES_ROOT="$pwd_root"
-        fi
-      fi
-      if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
-        candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
-        if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/scripts" ]]; then
-          export DOTFILES_ROOT="$candidate_root"
-        fi
-      fi
-      export DOTFILES_ROOT="''${DOTFILES_ROOT:-${dotfilesRoot}}"
-
-      if [[ "$#" -eq 0 ]]; then
-        status=0
-        "${dotfilesPackage}/bin/dotfiles" sync emacs --apply --bootstrap || status=$?
-        "${dotfilesPackage}/bin/dotfiles" sync neovim --apply || {
-          command_status=$?
-          if [[ "$status" -eq 0 ]]; then status=$command_status; fi
-        }
-        exit "$status"
-      fi
-
-      status=0
-      "${dotfilesPackage}/bin/dotfiles" sync emacs "$@" || status=$?
-      "${dotfilesPackage}/bin/dotfiles" sync neovim "$@" || {
-        command_status=$?
-        if [[ "$status" -eq 0 ]]; then status=$command_status; fi
-      }
-      exit "$status"
-    ''}";
-    meta.description = "Sync Doom Emacs and Neovim runtime configuration.";
-  };
-
   dotfilesCli = mkDotfilesCliPackage pkgs;
   syncVscodeRust = mkSyncVscodeRustPackage pkgs;
   dotfilesPackage = mkDotfilesPackage {
     inherit pkgs dotfilesCli syncVscodeRust;
   };
+  editorSyncAppProgram = mkEditorSyncAppProgram {
+    inherit pkgs dotfilesPackage;
+  };
+  mkEditorSyncApp = {
+    type = "app";
+    program = "${editorSyncAppProgram}";
+    meta.description = "Sync Doom Emacs and Neovim runtime configuration.";
+  };
   portableChecks = mkPortableChecks {
-    inherit pkgs syncVscodeRust dotfilesPackage;
+    inherit pkgs syncVscodeRust dotfilesPackage editorSyncAppProgram;
     formatterWrapper = config.treefmt.build.wrapper;
   };
 in

@@ -55,7 +55,7 @@ Behavior:
 - `sync emacs --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`
 - `sync emacs --check` and plain `sync emacs --apply` also report Doom runtime status as `doom=ready` or `doom=missing`
 - `sync emacs --apply` creates or rewrites the writable runtime Doom config files from the repo, then fails if Doom runtime is missing
-- `sync emacs --apply --bootstrap` writes config first, then backs up a non-Doom `${EMACSDIR:-~/.emacs.d}` to `.pre-doom.YYYYmmddHHMMSS`, shallow-clones Doom, and runs `doom install`; existing Doom checkouts run `doom sync`
+- `sync emacs --apply --bootstrap` writes config first, then backs up a non-Doom `${EMACSDIR:-~/.emacs.d}` to `.pre-doom.YYYYmmddHHMMSS`, shallow-clones Doom, and runs `doom install --no-env` non-interactively; existing Doom checkouts run `doom sync`
 - `sync emacs --adopt` copies runtime Doom config edits back into `apps/emacs/doom/`
 - `--item init`, `--item packages`, or `--item config` restricts reconciliation to one file
 - `--config-only` opts out of Doom runtime readiness for config-only tests and maintenance

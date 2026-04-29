@@ -31,7 +31,53 @@ let
       exec "${dotfilesCli}/bin/dotfiles" "$@"
     '';
 
-  mkPortableChecks = { pkgs, formatterWrapper, dotfilesPackage, syncVscodeRust }:
+  mkEditorSyncAppProgram = { pkgs, dotfilesPackage }:
+    pkgs.writeShellScript "dotfiles-sync" ''
+      set -uo pipefail
+
+      if [[ -z "''${DOTFILES_ROOT:-}" ]]; then
+        pwd_root="$(pwd)"
+        if [[ -f "$pwd_root/flake.nix" && -d "$pwd_root/scripts" ]]; then
+          export DOTFILES_ROOT="$pwd_root"
+        fi
+      fi
+      if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
+        candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+        if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/scripts" ]]; then
+          export DOTFILES_ROOT="$candidate_root"
+        fi
+      fi
+      export DOTFILES_ROOT="''${DOTFILES_ROOT:-${repoPaths.root}}"
+
+      status=0
+      run_surface() {
+        local surface="$1"
+        shift
+        printf 'dotfiles: running sync %s\n' "$surface" >&2
+        "${dotfilesPackage}/bin/dotfiles" sync "$surface" "$@"
+      }
+
+      run_and_remember_status() {
+        local surface="$1"
+        shift
+        run_surface "$surface" "$@" || {
+          local command_status=$?
+          if [[ "$status" -eq 0 ]]; then status=$command_status; fi
+        }
+      }
+
+      if [[ "$#" -eq 0 ]]; then
+        run_and_remember_status emacs --apply --bootstrap
+        run_and_remember_status neovim --apply
+      else
+        run_and_remember_status emacs "$@"
+        run_and_remember_status neovim "$@"
+      fi
+
+      exit "$status"
+    '';
+
+  mkPortableChecks = { pkgs, formatterWrapper, dotfilesPackage, syncVscodeRust, editorSyncAppProgram }:
     {
       treefmt = pkgs.runCommand "treefmt-check"
         {
@@ -208,6 +254,16 @@ let
         touch "$out"
       '';
 
+      emacsPlusNativeCompEnvSmoke = pkgs.runCommand "emacs-plus-native-comp-env-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/emacs-plus-native-comp-env-smoke-test.sh
+        touch "$out"
+      '';
+
       matrixToolsSmoke = pkgs.runCommand "matrix-tools-smoke-test"
         {
           nativeBuildInputs = [ pkgs.bash dotfilesPackage ];
@@ -297,6 +353,19 @@ let
         export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
         export DOTFILES_ROOT="$src"
         bash scripts/tests/sync-neovim-smoke-test.sh
+        touch "$out"
+      '';
+
+      syncEditorAppSmoke = pkgs.runCommand "sync-editor-app-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.diffutils pkgs.gnugrep dotfilesPackage ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
+        export DOTFILES_SYNC_APP="${editorSyncAppProgram}"
+        bash scripts/tests/sync-editor-app-smoke-test.sh
         touch "$out"
       '';
 
@@ -391,6 +460,7 @@ in
     treefmtConfigFor
     mkDotfilesCliPackage
     mkDotfilesPackage
+    mkEditorSyncAppProgram
     mkSyncVscodeRustPackage
     mkPortableChecks
     mkPortableDevShell
