@@ -28,5 +28,12 @@
       }
     }
   },
-  "nixEnvSelector.useFlakes": true
+  "nixEnvSelector.useFlakes": true,
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.profiles.osx": {
+    "zsh": {
+      "args": ["-l"],
+      "path": "/bin/zsh"
+    }
+  }
 }
