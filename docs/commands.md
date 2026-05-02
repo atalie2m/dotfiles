@@ -67,6 +67,19 @@ UPDATE_ALL=1 nix run .#update -- --host own_mac
 UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host own_mac
 ```
 
+## Nix store cleanup
+
+`gc` is hostless and does not resolve `darwinConfigurations`.
+
+```bash
+nix run .#gc
+nix run .#gc -- --apply
+nix run .#gc -- --apply --delete-older-than 14d
+nix run .#gc -- --apply --store-only
+```
+
+`--apply` uses non-interactive `sudo` for system and root profile history cleanup. Run `sudo -v` first if your sudo timestamp is not already active.
+
 ## Runtime sync
 
 ```bash
@@ -139,6 +152,7 @@ dotfiles-doom doctor
 Notes:
 
 - `scripts/*.sh` are thin shell wrappers over the Rust CLI.
+- `gc` first removes repo-local `result` / `result-*` symlinks that point into `/nix/store`, wipes non-current system, user, Home Manager, and root profile generations, then runs `nix store gc`. Without `--apply`, it reports the plan and runs safe dry-run checks. With `--apply`, it deletes all non-current profile generations by default; use `--delete-older-than <age>` to keep recent generations, or `--store-only` to skip profile history wiping.
 - `sync neovim` compares `apps/neovim` against `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` and treats `${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` as the effective Lazy lock when it exists.
 - `dotfiles-sync-vscode` is packaged separately; `dotfiles` dispatches `sync vscode` to that binary.
 - `ultra` runs VS Code, Neovim, and Emacs setup/sync during activation. `pro` installs editor tooling but leaves setup/sync disabled. Visual Studio Code.app itself is installed manually. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).

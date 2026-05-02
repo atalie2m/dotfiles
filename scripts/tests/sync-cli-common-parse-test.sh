@@ -9,6 +9,7 @@ UPDATE_SCRIPT="$ROOT/scripts/update.sh"
 LIST_TOOLS_SCRIPT="$ROOT/scripts/list-tools.sh"
 DOCTOR_SCRIPT="$ROOT/scripts/doctor.sh"
 BOOTSTRAP_SCRIPT="$ROOT/scripts/bootstrap.sh"
+GC_SCRIPT="$ROOT/scripts/gc.sh"
 DOTFILES_SCRIPT="$ROOT/scripts/dotfiles.sh"
 SOURCE_MANAGED_DIR="$ROOT/surfaces/shell/desired"
 REAL_DOTFILES_BIN="${DOTFILES_BIN:-$(command -v dotfiles 2>/dev/null || true)}"
@@ -20,6 +21,7 @@ for required in \
   "$LIST_TOOLS_SCRIPT" \
   "$DOCTOR_SCRIPT" \
   "$BOOTSTRAP_SCRIPT" \
+  "$GC_SCRIPT" \
   "$DOTFILES_SCRIPT"; do
   if [[ ! -f $required ]]; then
     echo "test: required script not found: $required" >&2
@@ -107,6 +109,7 @@ printf 'test: running sync cli common parse test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
 assert_wrapper_subcommand "$APPLY_SCRIPT" "apply --host own_mac --action build" --host own_mac --action build
+assert_wrapper_subcommand "$GC_SCRIPT" "gc --store-only" --store-only
 assert_wrapper_subcommand "$DOTFILES_SCRIPT" "sync shell --check" sync shell --check
 
 if ! run_shell_sync --apply --item bash-rc >/dev/null; then

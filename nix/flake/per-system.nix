@@ -233,7 +233,7 @@ in
   apps = {
     dotfiles = mkDotfilesApp {
       name = "cli";
-      description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/export-clean/list-tools/matrix-tools/sync).";
+      description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/export-clean/gc/list-tools/matrix-tools/sync).";
     };
     sync = mkEditorSyncApp;
     update = mkDotfilesApp {
@@ -275,6 +275,11 @@ in
       name = "export-clean";
       subcommand = "export-clean";
       description = "Export a clean tracked copy without .git metadata or AppleDouble files.";
+    };
+    gc = mkDotfilesApp {
+      name = "gc";
+      subcommand = "gc";
+      description = "Prune repository result GC roots and run Nix garbage collection.";
     };
     format = {
       type = "app";

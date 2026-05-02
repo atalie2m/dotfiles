@@ -67,6 +67,19 @@ UPDATE_ALL=1 nix run .#update -- --host own_mac
 UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host own_mac
 ```
 
+## Nix store cleanup
+
+`gc` は host を必要とせず、`darwinConfigurations` も解決しません。
+
+```bash
+nix run .#gc
+nix run .#gc -- --apply
+nix run .#gc -- --apply --delete-older-than 14d
+nix run .#gc -- --apply --store-only
+```
+
+`--apply` は system / root profile history cleanup に非対話の `sudo` を使います。sudo timestamp が有効でない場合は先に `sudo -v` を実行してください。
+
 ## runtime sync
 
 ```bash
@@ -139,6 +152,7 @@ dotfiles-doom doctor
 注意:
 
 - `scripts/*.sh` は Rust CLI の薄い shell wrapper です。
+- `gc` はまず repo 内の `/nix/store` 向き `result` / `result-*` symlink を外し、system / user / Home Manager / root profile の current 以外の generation を削除してから `nix store gc` を実行します。`--apply` なしでは plan と安全な dry-run check だけを行います。`--apply` ありでは default で current 以外をすべて削除します。直近 generation を残す場合は `--delete-older-than <age>`、profile history 削除を避ける場合は `--store-only` を使います。
 - `sync neovim` は `apps/neovim` と `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` を比較し、`${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` が存在する場合はそれを実効 Lazy lock として扱います。
 - `dotfiles-sync-vscode` は別 package として提供され、`dotfiles` が `sync vscode` をその binary に dispatch します。
 - `ultra` profile は activation 中に `sync emacs --apply`、初回 Doom bootstrap、Neovim setup、`sync vscode --apply` を実行します。`pro` profile は editor tooling を install しますが、setup/sync は実行しません。Visual Studio Code.app 自体は手動 install 前提で、まだ無ければ activation は安全に skip します。インストール対象の extension ID は `apps/vscode/`（`_default/extensions.txt` と profile ごとの `extensions.txt`）にあります。

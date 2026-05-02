@@ -15,7 +15,7 @@ This repository is a Darwin-first Nix flake for macOS system configuration. Keep
 - `crates/dotfiles-core` — shared Rust support plus shell and Emacs sync implementation.
 - `crates/dotfiles-cli` — operational CLI.
 - `crates/dotfiles-sync-vscode` — VS Code native profile sync engine.
-- `scripts/` — thin shell entrypoints (`apply`, `update`, `doctor`, `bootstrap`, `sync`) and smoke tests.
+- `scripts/` — thin shell entrypoints (`apply`, `update`, `doctor`, `bootstrap`, `gc`, `sync`) and smoke tests.
 - `nix/scripts/` — Nix expressions consumed by the CLI (`list-tools.nix`, `matrix-tools.nix`, `doctor/facts-schema.nix`).
 - `apps/` — app configs (for example `apps/shell/common.sh`, `apps/vscode/...`).
 - `surfaces/` — desired state for writable shell entrypoints.

@@ -15,7 +15,7 @@
 - `crates/dotfiles-core` — 共有 Rust support と shell / Emacs sync 実装。
 - `crates/dotfiles-cli` — 運用 CLI。
 - `crates/dotfiles-sync-vscode` — VS Code native profile sync engine。
-- `scripts/` — 薄い shell entrypoint（`apply`, `update`, `doctor`, `bootstrap`, `sync`）と smoke test。
+- `scripts/` — 薄い shell entrypoint（`apply`, `update`, `doctor`, `bootstrap`, `gc`, `sync`）と smoke test。
 - `nix/scripts/` — CLI が使う Nix expression（`list-tools.nix`, `matrix-tools.nix`, `doctor/facts-schema.nix`）。
 - `apps/` — app 設定（例: `apps/shell/common.sh`, `apps/vscode/...`）。
 - `surfaces/` — writable shell entrypoint の desired state。

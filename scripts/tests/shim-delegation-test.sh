@@ -43,6 +43,7 @@ run_wrapper "$ROOT/scripts/list-tools.sh" --host own_mac --format json
 run_wrapper "$ROOT/scripts/doctor.sh" --json
 run_wrapper "$ROOT/scripts/bootstrap.sh" --host own_mac --apply
 run_wrapper "$ROOT/scripts/export-clean.sh" --format dir --output "$TMP_ROOT/export"
+run_wrapper "$ROOT/scripts/gc.sh" --apply
 run_wrapper "$ROOT/scripts/matrix-tools.sh" --full --format json
 run_wrapper "$ROOT/scripts/sync.sh" shell --check
 run_wrapper "$ROOT/scripts/sync.sh" emacs --check
@@ -55,6 +56,7 @@ assert_logged "list-tools --host own_mac --format json"
 assert_logged "doctor --json"
 assert_logged "bootstrap --host own_mac --apply"
 assert_logged "export-clean --format dir --output $TMP_ROOT/export"
+assert_logged "gc --apply"
 assert_logged "matrix-tools --full --format json"
 assert_logged "sync shell --check"
 assert_logged "sync emacs --check"

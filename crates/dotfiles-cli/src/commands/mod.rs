@@ -2,6 +2,7 @@ pub(crate) mod apply;
 pub(crate) mod bootstrap;
 pub(crate) mod doctor;
 pub(crate) mod export_clean;
+pub(crate) mod gc;
 pub(crate) mod sync;
 pub(crate) mod tools;
 pub(crate) mod update;
@@ -48,6 +49,7 @@ enum RootCommand {
     Doctor(DoctorArgs),
     Bootstrap(BootstrapArgs),
     ExportClean(ExportCleanArgs),
+    Gc(GcArgs),
     #[command(name = "list-tools")]
     ListTools(ListToolsArgs),
     #[command(name = "matrix-tools")]
@@ -146,6 +148,22 @@ pub(crate) struct ExportCleanArgs {
     pub(crate) format: ExportFormat,
 }
 
+#[derive(Args, Clone, Debug)]
+pub(crate) struct GcArgs {
+    /// Actually remove repo GC roots and collect garbage. Without this, only report the plan.
+    #[arg(long)]
+    pub(crate) apply: bool,
+    /// Only delete non-current profile generations older than this age.
+    #[arg(long)]
+    pub(crate) delete_older_than: Option<String>,
+    /// Skip profile history wiping and only collect paths that are already unreachable.
+    #[arg(long)]
+    pub(crate) store_only: bool,
+    /// Run `nix store optimise` after collection.
+    #[arg(long)]
+    pub(crate) optimise: bool,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub(crate) enum OutputFormat {
     Json,
@@ -206,6 +224,7 @@ pub(crate) fn run(args: Vec<String>) -> Result<(), String> {
         RootCommand::Doctor(args) => doctor::command_doctor(&args),
         RootCommand::Bootstrap(args) => bootstrap::command_bootstrap(&args),
         RootCommand::ExportClean(args) => export_clean::command_export_clean(&args),
+        RootCommand::Gc(args) => gc::command_gc(&args),
         RootCommand::ListTools(args) => tools::command_list_tools(&args),
         RootCommand::MatrixTools(args) => tools::command_matrix_tools(&args),
         RootCommand::Sync(args) => sync::command_sync(&args),
