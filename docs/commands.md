@@ -152,7 +152,7 @@ dotfiles-doom doctor
 Notes:
 
 - `scripts/*.sh` are thin shell wrappers over the Rust CLI.
-- `gc` first removes repo-local `result` / `result-*` symlinks that point into `/nix/store`, wipes non-current system, user, Home Manager, and root profile generations, then runs `nix store gc`. Without `--apply`, it reports the plan and runs safe dry-run checks. With `--apply`, it deletes all non-current profile generations by default; use `--delete-older-than <age>` to keep recent generations, or `--store-only` to skip profile history wiping.
+- `gc` first removes repo-local `result` / `result-*` symlinks that point into `/nix/store`, prunes stale legacy Home Manager profile links when the current Home Manager gcroot has superseded them, wipes non-current system, user, Home Manager, and root profile generations, then runs `nix store gc`. Without `--apply`, it reports the plan and runs safe dry-run checks. With `--apply`, it deletes all non-current profile generations by default; use `--delete-older-than <age>` to keep recent generations, or `--store-only` to skip profile history wiping.
 - `sync neovim` compares `apps/neovim` against `${XDG_CONFIG_HOME:-$HOME/.config}/nvim` and treats `${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` as the effective Lazy lock when it exists.
 - `dotfiles-sync-vscode` is packaged separately; `dotfiles` dispatches `sync vscode` to that binary.
 - `ultra` runs VS Code, Neovim, and Emacs setup/sync during activation. `pro` installs editor tooling but leaves setup/sync disabled. Visual Studio Code.app itself is installed manually. Extension IDs to install live under `apps/vscode/` (`_default/extensions.txt` and per-profile `extensions.txt`).

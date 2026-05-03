@@ -551,7 +551,7 @@ For target evaluation and strict sync checks, pass `--host` so `doctor` can gate
 
 ### GC (repo-scoped Nix store cleanup)
 
-`gc` removes repo-local `result` / `result-*` symlinks that point into `/nix/store`, wipes non-current system/user/Home Manager/root profile generations, then runs Nix garbage collection. It defaults to a dry run; use `sudo -v` and then `nix run .#gc -- --apply` to delete every non-current profile generation and collect unreachable store paths. Add `--delete-older-than <age>` to keep recent generations, or `--store-only` to skip profile history cleanup.
+`gc` removes repo-local `result` / `result-*` symlinks that point into `/nix/store`, prunes stale legacy Home Manager profile links when the current Home Manager gcroot has superseded them, wipes non-current system/user/Home Manager/root profile generations, then runs Nix garbage collection. It defaults to a dry run; use `sudo -v` and then `nix run .#gc -- --apply` to delete every non-current profile generation and collect unreachable store paths. Add `--delete-older-than <age>` to keep recent generations, or `--store-only` to skip profile history cleanup.
 
 ### Formatter / Checks / Dev Shell
 
