@@ -77,7 +77,7 @@ let
       exit "$status"
     '';
 
-  mkPortableChecks = { pkgs, formatterWrapper, dotfilesPackage, syncVscodeRust, editorSyncAppProgram }:
+  mkPortableChecks = { pkgs, formatterWrapper, dotfilesPackage, syncVscodeRust, editorSyncAppProgram, vscodeZshLauncher }:
     {
       treefmt = pkgs.runCommand "treefmt-check"
         {
@@ -341,6 +341,21 @@ let
         export DOTFILES_ROOT="$src"
         export DOTFILES_SYNC_VSCODE_BIN="${syncVscodeRust}/bin/dotfiles-sync-vscode"
         bash scripts/tests/sync-vscode-smoke-test.sh
+        touch "$out"
+      '';
+
+      vscodeZshLauncherSmoke = pkgs.runCommand "vscode-zsh-launcher-smoke-test"
+        {
+          nativeBuildInputs = [
+            pkgs.bash
+            pkgs.gnugrep
+            vscodeZshLauncher
+          ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        export DOTFILES_VSCODE_ZSH_LAUNCHER="${vscodeZshLauncher}/bin/dotfiles-vscode-zsh"
+        bash scripts/tests/vscode-zsh-launcher-test.sh
         touch "$out"
       '';
 

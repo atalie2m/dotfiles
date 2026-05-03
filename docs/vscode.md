@@ -80,6 +80,15 @@ State schema notes:
 - older or malformed state files are treated as `needs-apply`
 - apply rewrites state in the current schema
 
+## Integrated terminal
+
+Managed profiles do not rely on VS Code's automatic shell detection for zsh.
+The shared macOS terminal profile explicitly calls `dotfiles-vscode-zsh` first, with `/bin/zsh` as the bootstrap fallback before the launcher is installed.
+
+`dotfiles-vscode-zsh` is installed by Home Manager when `tools.editor.vscode.enable = true`.
+It prepares Home Manager session variables and profile `PATH`, keeps VS Code's shell-integration `ZDOTDIR` when VS Code injected one, defaults user zsh config lookup to `$HOME/.nix` when needed, and then execs the real zsh.
+On Darwin VS Code sessions it chooses `/bin/zsh` because Nix zsh currently conflicts with VS Code shell integration; other contexts can still use Nix zsh, and `DOTFILES_VSCODE_ZSH_BIN` is available as an explicit override.
+
 ## Runtime locations
 
 On macOS:

@@ -80,6 +80,15 @@ state schema に関する補足:
 - 古い state file や malformed な state file は `needs-apply` として扱う
 - apply 時に current schema で state を書き直す
 
+## integrated terminal
+
+managed profile は zsh の選択を VS Code の automatic shell detection に任せません。
+shared macOS terminal profile はまず `dotfiles-vscode-zsh` を明示的に呼び、launcher がまだ install されていない bootstrap 中だけ `/bin/zsh` に fallback します。
+
+`dotfiles-vscode-zsh` は `tools.editor.vscode.enable = true` のとき Home Manager から install されます。
+launcher は Home Manager session variables と profile `PATH` を整え、VS Code が shell integration 用の `ZDOTDIR` を注入している場合はそれを保持し、必要な場面では user zsh config lookup を `$HOME/.nix` に寄せてから実際の zsh を exec します。
+Darwin の VS Code session では、現状 Nix zsh が VS Code shell integration と衝突するため `/bin/zsh` を選びます。それ以外の context では Nix zsh も使え、明示 override として `DOTFILES_VSCODE_ZSH_BIN` を用意しています。
+
 ## runtime location
 
 macOS では:

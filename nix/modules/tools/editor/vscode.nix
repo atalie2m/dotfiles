@@ -5,6 +5,7 @@
 let
   dotfilesCli = pkgs.callPackage ../../../pkgs/dotfiles-cli { };
   syncVscodeBin = pkgs.callPackage ../../../pkgs/dotfiles-sync-vscode { };
+  vscodeZshLauncher = pkgs.callPackage ../../../pkgs/dotfiles-vscode-zsh { };
   types = lib.types;
 in
 (dotmod.mkModule { inherit config; }) {
@@ -26,7 +27,10 @@ in
   };
 
   homeOnEnable = { ... }: {
-    home.packages = [ syncVscodeBin ];
+    home.packages = [
+      syncVscodeBin
+      vscodeZshLauncher
+    ];
   };
 
   darwinOnEnable = { cfg, ... }:

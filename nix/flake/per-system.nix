@@ -143,6 +143,7 @@ let
 
   dotfilesCli = mkDotfilesCliPackage pkgs;
   syncVscodeRust = mkSyncVscodeRustPackage pkgs;
+  vscodeZshLauncher = pkgs.callPackage ../pkgs/dotfiles-vscode-zsh { };
   dotfilesPackage = mkDotfilesPackage {
     inherit pkgs dotfilesCli syncVscodeRust;
   };
@@ -155,7 +156,7 @@ let
     meta.description = "Sync Doom Emacs and Neovim runtime configuration.";
   };
   portableChecks = mkPortableChecks {
-    inherit pkgs syncVscodeRust dotfilesPackage editorSyncAppProgram;
+    inherit pkgs syncVscodeRust dotfilesPackage editorSyncAppProgram vscodeZshLauncher;
     formatterWrapper = config.treefmt.build.wrapper;
   };
 in
@@ -227,6 +228,7 @@ in
     dotfiles = dotfilesPackage;
     dotfiles-cli = dotfilesCli;
     dotfiles-sync-vscode = syncVscodeRust;
+    dotfiles-vscode-zsh = vscodeZshLauncher;
     roots = pkgs.callPackage ../pkgs/roots { };
   };
 

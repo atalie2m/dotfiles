@@ -33,7 +33,7 @@
   "terminal.integrated.profiles.osx": {
     "zsh": {
       "args": ["-l"],
-      "path": "/bin/zsh"
+      "path": ["dotfiles-vscode-zsh", "/bin/zsh"]
     }
   }
 }
