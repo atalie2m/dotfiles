@@ -407,6 +407,7 @@ fn command_with_optional_sudo(program: &str, use_sudo: bool) -> Command {
     }
 
     let mut command = Command::new("sudo");
+    command.arg("-H");
     command.arg("-n");
     command.arg(format!("--preserve-env={}", sudo_preserve_env_vars()));
     command.arg(program);
@@ -637,6 +638,42 @@ mod tests {
                 "--older-than",
                 "7d",
                 "--dry-run"
+            ]
+        );
+    }
+
+    #[test]
+    fn profile_wipe_command_uses_root_home_for_sudo_profiles() {
+        let args = GcArgs {
+            apply: true,
+            delete_older_than: None,
+            store_only: false,
+            optimise: false,
+        };
+        let profile = ProfileHistory {
+            label: "system",
+            path: Path::new("/nix/var/nix/profiles/system").to_path_buf(),
+            needs_sudo: true,
+        };
+
+        let command = profile_wipe_command(&args, &profile, false);
+        let argv = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+
+        assert_eq!(command.get_program().to_string_lossy(), "sudo");
+        assert_eq!(argv[0], "-H");
+        assert_eq!(argv[1], "-n");
+        assert!(argv[2].starts_with("--preserve-env="));
+        assert_eq!(
+            &argv[3..],
+            [
+                "nix",
+                "profile",
+                "wipe-history",
+                "--profile",
+                "/nix/var/nix/profiles/system"
             ]
         );
     }
