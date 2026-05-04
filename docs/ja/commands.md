@@ -21,6 +21,18 @@ nix flake init -t github:atalie2m/dotfiles#infra-iac
 nix flake init -t github:atalie2m/dotfiles#python-research
 ```
 
+template 初期化後の project は Git flake として扱います。
+
+```bash
+nix run .#...
+nix build .#...
+nix develop
+nix flake check
+```
+
+`path:$PWD#...` のような unfiltered local path ref は使わないでください。
+`.git/`、`target/`、`node_modules/`、`.direnv/` が `/nix/store` にコピーされ得ます。
+
 ## 運用 CLI
 
 これらのコマンドは Darwin 専用で、`darwinConfigurations` を解決します。
@@ -79,6 +91,14 @@ nix run .#gc -- --apply --store-only
 ```
 
 `--apply` は system / root profile history cleanup に非対話の `sudo` を使います。sudo timestamp が有効でない場合は先に `sudo -v` を実行してください。
+
+unfiltered path-flake run で store が肥大化した場合は、まず collectable path を確認し、
+その後 old generation を cleanup してください。
+
+```bash
+nix store gc --dry-run
+sudo nix-collect-garbage -d
+```
 
 ## runtime sync
 

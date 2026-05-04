@@ -21,6 +21,18 @@ nix flake init -t github:atalie2m/dotfiles#infra-iac
 nix flake init -t github:atalie2m/dotfiles#python-research
 ```
 
+After initializing a template, treat the project as a Git flake:
+
+```bash
+nix run .#...
+nix build .#...
+nix develop
+nix flake check
+```
+
+Do not use unfiltered local path refs such as `path:$PWD#...`; they can copy
+`.git/`, `target/`, `node_modules/`, and `.direnv/` into `/nix/store`.
+
 ## Operational CLI
 
 These commands are Darwin-only and resolve `darwinConfigurations`.
@@ -79,6 +91,14 @@ nix run .#gc -- --apply --store-only
 ```
 
 `--apply` uses non-interactive `sudo` for system and root profile history cleanup. Run `sudo -v` first if your sudo timestamp is not already active.
+
+If an unfiltered path-flake run bloated the store, inspect collectable paths
+first and then clean old generations:
+
+```bash
+nix store gc --dry-run
+sudo nix-collect-garbage -d
+```
 
 ## Runtime sync
 

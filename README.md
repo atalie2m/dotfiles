@@ -22,6 +22,20 @@ for optional layers such as `api-db`, `docs`, `release`, `container-oci`,
 Standalone templates remain available for repos where those layers are the main
 purpose.
 
+## Template source hygiene
+
+Template-derived projects should be operated as Git flakes. From the repository
+root, use `nix run .#...`, `nix build .#...`, `nix develop`, and
+`nix flake check`; do not use unfiltered local path refs such as
+`nix run path:$PWD#...` or `nix build path:$PWD#...`. `path:` refs can copy the
+whole worktree into the Nix store, including `.git/`, `target/`,
+`node_modules/`, and `.direnv/`.
+
+Every template ships an `AGENTS.md`, `.gitignore`, a source evaluation
+guard, and `checks.flake-source-hygiene`. Keep those in place, and use explicit
+source filters such as `lib.cleanSourceWith`, `builtins.path`, or
+`nix-gitignore` if a package or check consumes local project source.
+
 # dotfiles
 
 ## Prerequisites

@@ -9,7 +9,24 @@
   };
 
   outputs = inputs @ { flake-parts, treefmt-nix, git-hooks-nix, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
+    let
+      unsafeFlakeSource =
+        builtins.any
+          (dir: builtins.pathExists (./. + "/${dir}"))
+          [
+            "target"
+            "node_modules"
+            ".git"
+            ".direnv"
+          ];
+    in
+    if unsafeFlakeSource then
+      throw ''
+        Refusing to evaluate this flake because target/, node_modules/, .git/, or .direnv/ is present in the flake source.
+
+        Use Git flake refs such as .#..., not path:$PWD#...
+      ''
+    else flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
       imports = [ treefmt-nix.flakeModule git-hooks-nix.flakeModule ];
       perSystem = { pkgs, config, lib, ... }: {
@@ -98,6 +115,17 @@
           taplo.enable = true;
           typos.enable = true;
         };
+        checks.flake-source-hygiene = pkgs.runCommand "flake-source-hygiene" { src = ./.; } ''
+          set -euo pipefail
+          for dir in target node_modules .git .direnv; do
+            if [ -e "$src/$dir" ]; then
+              echo "FAIL: $dir is present in the Nix flake source." >&2
+              echo "Use Git flake refs such as .#..., not path:\$PWD#..., and keep large generated directories ignored." >&2
+              exit 1
+            fi
+          done
+          touch "$out"
+        '';
         apps.format = { type = "app"; program = "${config.treefmt.build.wrapper}/bin/treefmt"; };
         formatter = config.treefmt.build.wrapper;
       };

@@ -33,6 +33,7 @@ require_contains "host.buildTarget"
 require_contains 'if host.defaultProfile == "minimal" then "ultra" else "minimal"'
 require_contains 'host.targetsByProfile.${extraProfile}'
 require_contains "Run target manifest test"
+require_contains "Run template source hygiene test"
 
 require_not_contains "homeConfigurations"
 require_not_contains "nixosConfigurations"

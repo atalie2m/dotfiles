@@ -54,6 +54,7 @@ Local inputs live outside Git at `~/.config/dotfiles/`:
 - VS Code sync is implemented by the dedicated `dotfiles-sync-vscode` binary and dispatched through `dotfiles sync vscode`.
 - Group toggles are taxonomy; rollout belongs in explicit capability bundles.
 - Stock global bundles must not enable project-pinned toolchains (`nodejs`, `go`, `terraform`, `opentofu`); keep those in project templates/devShells unless a host explicitly opts in.
+- Template projects must be documented and guarded as Git flakes. Do not add template instructions that use unfiltered `path:$PWD` refs; keep `target/`, `node_modules/`, `.git/`, and `.direnv/` ignored and source-filtered where local source is copied.
 
 ## Testing Guidance
 

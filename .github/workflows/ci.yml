@@ -35,6 +35,9 @@ jobs:
       - name: Run docs consistency test
         run: bash scripts/tests/docs-consistency-test.sh
 
+      - name: Run template source hygiene test
+        run: bash scripts/tests/template-source-hygiene-test.sh
+
       - name: Run host truth test
         run: bash scripts/tests/host-truth-test.sh
 

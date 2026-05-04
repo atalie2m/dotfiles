@@ -120,11 +120,17 @@ require_contains_file README.md 'scripts/tests/sync-emacs-smoke-test.sh'
 require_contains_file README.md 'scripts/tests/sync-neovim-smoke-test.sh'
 
 require_contains_file README.md 'managed profile settings are fully repo-owned'
+require_contains_file README.md 'Template-derived projects should be operated as Git flakes.'
+require_contains_file README.md '`nix run path:$PWD#...`'
+require_contains_file README.md 'a source evaluation'
+require_contains_file docs/commands.md 'Do not use unfiltered local path refs such as `path:$PWD#...`'
 require_contains_file docs/reconciled-surfaces.md 'Doom config files converge fully to repo state on apply'
 require_contains_file docs/reconciled-surfaces.md 'managed profile settings files converge fully to the repo state'
 require_contains_file docs/vscode.md 'manual settings changes inside a managed profile are overwritten on the next apply'
 require_contains_file docs/vscode.md 'VS Code'\''s built-in `Default` profile is intentionally unmanaged'
 require_contains_file docs/commands.md 'These commands are Darwin-only and resolve `darwinConfigurations`.'
+require_contains_file docs/ja/README.md 'template 由来の project は Git flake として扱ってください'
+require_contains_file docs/ja/commands.md '`path:$PWD#...` のような unfiltered local path ref は使わないでください。'
 
 for file in "${EN_DOC_FILES[@]}"; do
   require_not_contains_anywhere 'homeConfigurations'

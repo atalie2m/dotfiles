@@ -1,0 +1,30 @@
+# Nix build results and local environment state
+result
+result-*
+.direnv/
+.devenv/
+
+# Generated dependency/build directories that must not enter flake source
+node_modules/
+target/
+.git/
+
+# Common language/tool caches
+dist/
+build/
+out/
+coverage/
+.cache/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local/editor noise
+.DS_Store
+*.tmp
+*.swp
+*.swo
+*~

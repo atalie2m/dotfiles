@@ -22,6 +22,19 @@ selector もあります。`api-db`, `docs`, `release`, `container-oci`,
 必要な project でコメントを外して有効化できます。これらが repo の主目的である
 場合に備えて standalone template も残しています。
 
+## Template source hygiene
+
+template 由来の project は Git flake として扱ってください。repository root では
+`nix run .#...`、`nix build .#...`、`nix develop`、`nix flake check` を使い、
+`nix run path:$PWD#...` や `nix build path:$PWD#...` のような unfiltered local
+path ref は使わないでください。`path:` ref は `.git/`、`target/`、
+`node_modules/`、`.direnv/` を含む worktree 全体を Nix store にコピーし得ます。
+
+各 template には `AGENTS.md`、`.gitignore`、source evaluation guard、
+`checks.flake-source-hygiene` を含めています。これらは残し、package や check が
+local project source を consume する場合は `lib.cleanSourceWith`、`builtins.path`、
+`nix-gitignore` などの明示的な source filter を使ってください。
+
 # dotfiles
 
 ## 前提条件
