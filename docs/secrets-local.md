@@ -61,65 +61,68 @@ Notes
 
 ## Codex Slack notifications
 
-`scripts/codex-slack-notification` reads Slack credentials from:
+`dotfiles agent-notify codex` reads Slack credentials from:
 
 ```text
-~/.config/dotfiles/files/codex/slack-bot-token
-~/.config/dotfiles/files/codex/slack-channel-id
-~/.config/dotfiles/files/codex/slack-webhook-url
+~/.config/dotfiles/files/agent-notifications/slack-bot-token
+~/.config/dotfiles/files/agent-notifications/slack-channel-id
+~/.config/dotfiles/files/agent-notifications/slack-webhook-url
 ```
 
 Keep those files local with mode `0600`. `slack-bot-token` must contain a
 `xoxb-...` Bot User OAuth token with `chat:write`; `slack-channel-id` must
 contain the target Slack channel ID. `slack-webhook-url` is optional fallback.
-Use Codex lifecycle hooks to call the script; keep Slack credential values out
-of the Codex config and out of Git.
+Keep Slack credential values out of the Codex config and out of Git. Existing
+`~/.config/dotfiles/files/codex/slack-*` files are still read as fallback
+credentials.
 
-Slack-specific formatting, posting, thread-state, fallback, and error-log logic
-lives in `scripts/lib/agent_notifications/slack.py`. The executable script is
-the Codex adapter, so future coding-agent adapters can reuse the same local
-secret files and Slack transport without copying credential handling.
+The implementation lives in the Rust `dotfiles` control plane. Codex-specific
+hook and transcript parsing is isolated in the Codex adapter; Slack-specific
+formatting, posting, thread-state, fallback, and error-log logic is the generic
+Slack sink. `scripts/codex-slack-notification` is a compatibility shim that
+delegates to `dotfiles agent-notify codex`.
 
 Thread support also requires the Slack app or bot user to be able to post to
 the target channel. Invite the bot to private channels. For public channels,
 either invite the bot or add `chat:write.public` to the app's bot scopes and
 reinstall the app.
 
-The script also accepts these one-off overrides:
+The command also accepts these one-off overrides. Legacy `CODEX_SLACK_*` names
+remain fallback aliases for the same settings.
 
-- `CODEX_SLACK_BOT_TOKEN_FILE` / `CODEX_SLACK_BOT_TOKEN`
-- `CODEX_SLACK_CHANNEL_ID_FILE` / `CODEX_SLACK_CHANNEL_ID`
-- `CODEX_SLACK_WEBHOOK_FILE` / `CODEX_SLACK_WEBHOOK_URL`
-- `CODEX_SLACK_THREAD_STATE_FILE`
-- `CODEX_SLACK_QUESTION_STATE_FILE`
-- `CODEX_SLACK_ERROR_LOG_FILE`
-- `CODEX_SLACK_INCLUDE_CONTEXT=1`
-- `CODEX_SLACK_REPLY_MENTION` (defaults to `<!channel>`; set empty to disable)
-- `CODEX_SLACK_REPLY_MENTION_EVENTS` (comma-separated event names)
-- `CODEX_SLACK_REPLY_BROADCAST=1`
-- `CODEX_SLACK_DISABLE_WEBHOOK_FALLBACK_WITH_BOT=1`
+- `AGENT_NOTIFICATIONS_SLACK_BOT_TOKEN_FILE` / `AGENT_NOTIFICATIONS_SLACK_BOT_TOKEN`
+- `AGENT_NOTIFICATIONS_SLACK_CHANNEL_ID_FILE` / `AGENT_NOTIFICATIONS_SLACK_CHANNEL_ID`
+- `AGENT_NOTIFICATIONS_SLACK_WEBHOOK_FILE` / `AGENT_NOTIFICATIONS_SLACK_WEBHOOK_URL`
+- `AGENT_NOTIFICATIONS_SLACK_THREAD_STATE_FILE`
+- `AGENT_NOTIFICATIONS_DEDUPE_STATE_FILE`
+- `AGENT_NOTIFICATIONS_ERROR_LOG_FILE`
+- `AGENT_NOTIFICATIONS_INCLUDE_CONTEXT=1`
+- `AGENT_NOTIFICATIONS_REPLY_MENTION` (defaults to `<!channel>`; set empty to disable)
+- `AGENT_NOTIFICATIONS_REPLY_MENTION_EVENTS` (comma-separated event names)
+- `AGENT_NOTIFICATIONS_REPLY_BROADCAST=1`
+- `AGENT_NOTIFICATIONS_DISABLE_WEBHOOK_FALLBACK_WITH_BOT=1`
 
 Usage:
 
 1. Store Slack credentials locally:
 
    ```bash
-   mkdir -p ~/.config/dotfiles/files/codex
+   mkdir -p ~/.config/dotfiles/files/agent-notifications
    printf '%s\n' 'xoxb-...' \
-     > ~/.config/dotfiles/files/codex/slack-bot-token
+     > ~/.config/dotfiles/files/agent-notifications/slack-bot-token
    printf '%s\n' 'C0123456789' \
-     > ~/.config/dotfiles/files/codex/slack-channel-id
+     > ~/.config/dotfiles/files/agent-notifications/slack-channel-id
    chmod 0600 \
-     ~/.config/dotfiles/files/codex/slack-bot-token \
-     ~/.config/dotfiles/files/codex/slack-channel-id
+     ~/.config/dotfiles/files/agent-notifications/slack-bot-token \
+     ~/.config/dotfiles/files/agent-notifications/slack-channel-id
    ```
 
    Optional webhook fallback:
 
    ```bash
    printf '%s\n' 'https://hooks.slack.com/services/...' \
-     > ~/.config/dotfiles/files/codex/slack-webhook-url
-   chmod 0600 ~/.config/dotfiles/files/codex/slack-webhook-url
+     > ~/.config/dotfiles/files/agent-notifications/slack-webhook-url
+   chmod 0600 ~/.config/dotfiles/files/agent-notifications/slack-webhook-url
    ```
 
 2. Add Codex lifecycle hooks to `~/.codex/config.toml`:
@@ -142,7 +145,7 @@ Usage:
    [[hooks.SessionStart]]
    [[hooks.SessionStart.hooks]]
    type = "command"
-   command = "/path/to/dotfiles/scripts/codex-slack-notification --spawn-question-watcher"
+   command = "/path/to/dotfiles/scripts/codex-slack-notification --spawn-watcher"
    timeout = 5
    statusMessage = "Starting Codex Slack transcript watcher"
 
@@ -158,8 +161,7 @@ Usage:
 3. Preview the Slack payload without posting:
 
    ```bash
-   CODEX_SLACK_NOTIFICATION_DRY_RUN=1 \
-     /path/to/dotfiles/scripts/codex-slack-notification <<'JSON'
+   dotfiles agent-notify codex --dry-run <<'JSON'
    {
      "hook_event_name": "Stop",
      "cwd": "/path/to/project",
@@ -171,18 +173,21 @@ Usage:
 Thread state is stored locally at:
 
 ```text
-~/.local/state/dotfiles/codex-slack-threads.json
-~/.local/state/dotfiles/codex-slack-question-watch.json
-~/.local/state/dotfiles/codex-slack-notification.log
+~/.local/state/dotfiles/agent-notifications/slack-threads.json
+~/.local/state/dotfiles/agent-notifications/codex-dedupe.json
+~/.local/state/dotfiles/agent-notifications/slack.log
 ```
+
+If the new state files do not exist, the command reads the old
+`~/.local/state/dotfiles/codex-slack-*` files as fallback state and writes
+future updates to the new `agent-notifications` paths.
 
 If Slack returns `channel_not_found`, invite the Slack app or bot user to the
 target channel, or use a channel ID from the same workspace installation as the
 Bot User OAuth token. Incoming webhook fallback keeps notifications flowing, but
 it cannot populate the local `thread_ts` map, so thread support requires
 successful `chat.postMessage` calls through the Bot User OAuth token. Bot or
-webhook failures are recorded in `codex-slack-notification.log` without writing
-credential values.
+webhook failures are recorded in `slack.log` without writing credential values.
 
 `SessionStart` starts a transcript watcher, and the watcher creates the Slack
 parent from Codex's generated `thread_name_updated` title event when available.
@@ -191,25 +196,19 @@ the first notification derives a short title from the first user prompt before
 falling back to `Codex: <repo>`, and a later title event updates it. The watcher
 also posts Plan Mode questions and `task_complete` records from that exact
 transcript, so parallel Codex sessions in the same repo do not depend on "latest
-session for cwd" inference. Actionable or terminal
-notifications are posted as thread replies with `<!channel>` by default. They
-are not broadcast into the channel timeline unless `CODEX_SLACK_REPLY_BROADCAST=1`
-is set.
+session for cwd" inference. Actionable or terminal notifications are posted as
+thread replies with `<!channel>` by default. They are not broadcast into the
+channel timeline unless `AGENT_NOTIFICATIONS_REPLY_BROADCAST=1` is set.
 
 When bot token and channel id are configured, the helper tries threaded Bot API
 posting first. If Bot API posting fails, actionable and completion
 notifications fall back to the incoming webhook; thread-parent events are
 skipped because a webhook message cannot maintain the Codex-to-Slack thread map.
-Set `CODEX_SLACK_DISABLE_WEBHOOK_FALLBACK_WITH_BOT=1` only when you prefer hard
-failure over unthreaded best-effort notifications.
+Set `AGENT_NOTIFICATIONS_DISABLE_WEBHOOK_FALLBACK_WITH_BOT=1` only when you
+prefer hard failure over unthreaded best-effort notifications.
 
 4. Send a one-off test notification:
 
    ```bash
-   /path/to/dotfiles/scripts/codex-slack-notification --event-name setup-test <<'JSON'
-   {
-     "cwd": "/path/to/project",
-     "last_assistant_message": "Codex Slack notification setup test completed."
-   }
-   JSON
+   dotfiles agent-notify test
    ```

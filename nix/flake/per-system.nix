@@ -235,7 +235,7 @@ in
   apps = {
     dotfiles = mkDotfilesApp {
       name = "cli";
-      description = "Unified dotfiles CLI (apply/update/doctor/bootstrap/export-clean/gc/list-tools/matrix-tools/sync).";
+      description = "Unified dotfiles CLI (apply/agent-notify/update/doctor/bootstrap/export-clean/gc/list-tools/matrix-tools/sync).";
     };
     sync = mkEditorSyncApp;
     update = mkDotfilesApp {

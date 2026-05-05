@@ -137,35 +137,35 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 ## Codex Slack 通知
 
-通知 helper は repo 管理ですが、Slack credential は local に置きます。Slack thread
-対応には Bot User OAuth token mode を優先します。Incoming webhook は one-off posting
+`dotfiles agent-notify codex` が Codex Slack 通知の canonical な Rust command です。
+`scripts/codex-slack-notification` は既存 hook config のために
+`dotfiles agent-notify codex` へ委譲する互換 shim だけを残しています。Slack thread
+対応には Bot User OAuth token mode を優先します。Incoming webhook は one-off reply
 用の fallback です。
 
-Slack 層は `scripts/lib/agent_notifications/slack.py` に分けています。ここが payload 整形、
-Bot API / webhook 投稿、thread state、fallback、error log を担当します。
-`scripts/codex-slack-notification` は Codex adapter で、Codex hook stdin、transcript record、
-title、質問、approval、completion event を解釈して共通 Slack 層へ渡します。別の coding agent
-adapter を追加するときは Slack transport を複製せず、この形に合わせます。
+Rust 実装は generic agent-event core を使います。Codex adapter が Codex hook stdin、
+transcript record、title、質問、approval、completion event を typed event に変換し、
+Slack sink は title、body、thread key、event kind だけを受けて Bot API / webhook 投稿、
+thread state、fallback、error log を担当します。
 
 ```bash
 # Slack credential を Git の外に保存
-mkdir -p ~/.config/dotfiles/files/codex
+mkdir -p ~/.config/dotfiles/files/agent-notifications
 printf '%s\n' 'xoxb-...' \
-  > ~/.config/dotfiles/files/codex/slack-bot-token
+  > ~/.config/dotfiles/files/agent-notifications/slack-bot-token
 printf '%s\n' 'C0123456789' \
-  > ~/.config/dotfiles/files/codex/slack-channel-id
+  > ~/.config/dotfiles/files/agent-notifications/slack-channel-id
 chmod 0600 \
-  ~/.config/dotfiles/files/codex/slack-bot-token \
-  ~/.config/dotfiles/files/codex/slack-channel-id
+  ~/.config/dotfiles/files/agent-notifications/slack-bot-token \
+  ~/.config/dotfiles/files/agent-notifications/slack-channel-id
 
 # bot token mode が使えない場合の任意 fallback
 printf '%s\n' 'https://hooks.slack.com/services/...' \
-  > ~/.config/dotfiles/files/codex/slack-webhook-url
-chmod 0600 ~/.config/dotfiles/files/codex/slack-webhook-url
+  > ~/.config/dotfiles/files/agent-notifications/slack-webhook-url
+chmod 0600 ~/.config/dotfiles/files/agent-notifications/slack-webhook-url
 
 # Slack へ投稿せず payload を確認
-CODEX_SLACK_NOTIFICATION_DRY_RUN=1 \
-  ./scripts/codex-slack-notification <<'JSON'
+dotfiles agent-notify codex --dry-run <<'JSON'
 {
   "hook_event_name": "Stop",
   "cwd": "/path/to/project",
@@ -174,13 +174,11 @@ CODEX_SLACK_NOTIFICATION_DRY_RUN=1 \
 JSON
 
 # setup test notification を 1 回送る
-./scripts/codex-slack-notification --event-name setup-test <<'JSON'
-{
-  "cwd": "/path/to/project",
-  "last_assistant_message": "Codex Slack notification setup test completed."
-}
-JSON
+dotfiles agent-notify test
 ```
+
+旧 `~/.config/dotfiles/files/codex/slack-*` credential file も fallback として読むため、
+既存の local secret はすぐ移動しなくても動きます。
 
 `~/.codex/config.toml` に hook を追加します。
 
@@ -203,7 +201,7 @@ statusMessage = "Sending Codex Slack notification"
 [[hooks.SessionStart]]
 [[hooks.SessionStart.hooks]]
 type = "command"
-command = "/path/to/dotfiles/scripts/codex-slack-notification --spawn-question-watcher"
+command = "/path/to/dotfiles/scripts/codex-slack-notification --spawn-watcher"
 timeout = 5
 statusMessage = "Starting Codex Slack transcript watcher"
 
@@ -218,17 +216,15 @@ statusMessage = "Sending Codex approval Slack notification"
 
 `Stop`、`SessionStart`、`PermissionRequest` は Codex lifecycle event 名です。
 `SessionStart` は transcript watcher を起動します。watcher は session transcript を先頭から読み、
-Codex が `thread_name_updated` title event を出した時点で Slack 親 message を作り、後続通知を
+Codex が `thread_name_updated` を出した時点で Slack 親 message を作り、後続通知を
 その親への reply として投稿します。親 message は `Codex: <title> (<repo>)` 形式です。title event
 が無い場合は最初の user prompt から短い title を作り、それも無ければ `Codex: <repo>` に
 fallback します。後から title event が来れば `chat.update` で親 title を更新します。Plan Mode の
-`request_user_input` 質問と transcript の `task_complete` record は、その Codex session に対応する
+`request_user_input` 質問と transcript の `task_complete` record は、その exact Codex session の
 watcher から reply として投稿します。`Stop` は watcher 経路外の turn-completion payload 向け
 fallback として残し、最終 message が質問らしい場合は `Codex needs input` として表示します。
-`PreToolUse`、`UserPromptSubmit`、成功した
-`PostToolUse` は Slack のノイズや Codex 内部 helper prompt を避けるため default では
-投稿しません。script は複数 event の hook stdin payload と legacy `notify` argv payload を
-受けるため、名前は汎用のままにしています。secret 保管の詳細は
+`PreToolUse`、`UserPromptSubmit`、成功した `PostToolUse` は Slack のノイズや Codex 内部 helper
+prompt を避けるため default では投稿しません。secret 保管の詳細は
 [`docs/secrets-local.md`](secrets-local.md#codex-slack-通知) にあります。
 
 helper は `PostToolUse` failure payload にも対応していますが、この hook は opt-in 扱いに
@@ -237,46 +233,43 @@ helper が silent exit しても per-tool の hook overhead があり、`statusM
 成功時にも Codex UI に出ます。
 
 Slack message は compact view で読みやすくするため、default では full `cwd` と event
-context を出しません。debug で必要な場合だけ `CODEX_SLACK_INCLUDE_CONTEXT=1` を設定します。
+context を出しません。debug で必要な場合だけ `AGENT_NOTIFICATIONS_INCLUDE_CONTEXT=1` を
+設定します。旧 `CODEX_SLACK_INCLUDE_CONTEXT=1` も fallback として受け付けます。
 
 `slack-bot-token` と `slack-channel-id` が存在する場合、helper は `chat.postMessage`
-を使い、Codex と Slack thread の対応を次の local state に保存します。
+を使い、agent notification state を次の local path に保存します。
 
 ```text
-~/.local/state/dotfiles/codex-slack-threads.json
-~/.local/state/dotfiles/codex-slack-question-watch.json
+~/.local/state/dotfiles/agent-notifications/slack-threads.json
+~/.local/state/dotfiles/agent-notifications/codex-dedupe.json
+~/.local/state/dotfiles/agent-notifications/slack.log
 ```
 
-Codex title の親 message が通常は Codex `session_id` ごとの最初の Slack message です。同じ
-`session_id` の以後の通知は `thread_ts` 付きでその Slack thread に投稿されます。title が無い場合は
-最初の通知が fallback 親を作ります。hook payload
-に `transcript_path` しか無い場合も、helper が transcript filename から Codex session id
-を復元します。hook payload に `session_id` も `transcript_path` も無い場合は、同じ `cwd` の直近
-`task_complete` record から最終 assistant message を照合し、それでも特定できない場合だけ最新の
-Codex session に fallback します。並行する同一 repo の Codex session では、各 watcher が自分の
-transcript だけを読むため、この曖昧さを避けられます。watcher state file は
-`request_user_input` tool call と `task_complete` turn notification の重複通知を防ぎます。
+新 state file が無い場合だけ、Rust command は旧
+`~/.local/state/dotfiles/codex-slack-*` state を fallback として読み、以後の更新は新しい
+`agent-notifications` path に書きます。
 
 対応が必要な event や完了 event の thread reply には default で `<!channel>` を付けますが、
-Slack thread 内に留めます。mention 文言は `CODEX_SLACK_REPLY_MENTION` で変更でき、空文字に
-すると無効化できます。対象 event は comma-separated の `CODEX_SLACK_REPLY_MENTION_EVENTS`
-で絞れます。reply を channel timeline に再掲したい場合だけ
-`CODEX_SLACK_REPLY_BROADCAST=1` を設定します。
+Slack thread 内に留めます。mention 文言は `AGENT_NOTIFICATIONS_REPLY_MENTION` で変更でき、
+空文字にすると無効化できます。対象 event は comma-separated の
+`AGENT_NOTIFICATIONS_REPLY_MENTION_EVENTS` で絞れます。reply を channel timeline に再掲したい
+場合だけ `AGENT_NOTIFICATIONS_REPLY_BROADCAST=1` を設定します。旧 `CODEX_SLACK_*` 名も
+fallback として受け付けます。
 
 setup test で `channel_not_found` が返る場合、Bot User OAuth token は有効ですが、
 bot から投稿先 channel が見えていません。その Slack app / bot user を対象 channel に
 invite するか、public channel なら `chat:write.public` を追加するか、同じ workspace
 installation の channel ID を使ってください。Incoming webhook fallback では通知自体は継続
-できますが、local の `thread_ts` map は作成・更新できません。`codex-slack-threads.json`
-が空のままなら、thread mode はまだ `chat.postMessage` 経由で成功していません。
+できますが、local の `thread_ts` map は作成・更新できません。`slack-threads.json` が
+空のままなら、thread mode はまだ `chat.postMessage` 経由で成功していません。
 
 bot token と channel id が設定されている場合、helper はまず threaded Bot API posting を試します。
 Bot API posting に失敗した場合、対応が必要な通知や完了通知は incoming webhook に fallback
 します。thread parent event は webhook message では Codex と Slack thread の対応を維持できない
 ため skip します。Bot / webhook の失敗は credential 値を書かずに
-`~/.local/state/dotfiles/codex-slack-notification.log` へ記録します。unthreaded な best-effort
+`~/.local/state/dotfiles/agent-notifications/slack.log` へ記録します。unthreaded な best-effort
 通知より hard failure を優先したい場合だけ
-`CODEX_SLACK_DISABLE_WEBHOOK_FALLBACK_WITH_BOT=1` を設定します。
+`AGENT_NOTIFICATIONS_DISABLE_WEBHOOK_FALLBACK_WITH_BOT=1` を設定します。
 
 ## Doom Emacs
 

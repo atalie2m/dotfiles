@@ -1,3 +1,4 @@
+pub(crate) mod agent_notify;
 pub(crate) mod apply;
 pub(crate) mod bootstrap;
 pub(crate) mod doctor;
@@ -45,6 +46,8 @@ struct Cli {
 #[derive(Subcommand)]
 enum RootCommand {
     Apply(ApplyArgs),
+    #[command(name = "agent-notify")]
+    AgentNotify(AgentNotifyArgs),
     Update(UpdateArgs),
     Doctor(DoctorArgs),
     Bootstrap(BootstrapArgs),
@@ -164,6 +167,88 @@ pub(crate) struct GcArgs {
     pub(crate) optimise: bool,
 }
 
+#[derive(Args, Clone, Debug)]
+#[command(arg_required_else_help = true)]
+pub(crate) struct AgentNotifyArgs {
+    #[command(subcommand)]
+    pub(crate) command: AgentNotifyCommand,
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub(crate) enum AgentNotifyCommand {
+    /// Send Codex hook and transcript notifications.
+    Codex(AgentNotifyCodexArgs),
+    /// Send a setup test notification.
+    Test(AgentNotifyTestArgs),
+}
+
+#[derive(Args, Clone, Debug)]
+#[command(trailing_var_arg = true)]
+pub(crate) struct AgentNotifyCodexArgs {
+    #[arg(long)]
+    pub(crate) webhook_file: Option<String>,
+    #[arg(long)]
+    pub(crate) bot_token_file: Option<String>,
+    #[arg(long)]
+    pub(crate) channel_id_file: Option<String>,
+    #[arg(long)]
+    pub(crate) state_file: Option<String>,
+    #[arg(long)]
+    pub(crate) dedupe_state_file: Option<String>,
+    #[arg(long, hide = true)]
+    pub(crate) question_state_file: Option<String>,
+    #[arg(long, hide = true)]
+    pub(crate) error_log_file: Option<String>,
+    #[arg(long, hide = true)]
+    pub(crate) slack_api_url: Option<String>,
+    #[arg(long, hide = true)]
+    pub(crate) slack_update_api_url: Option<String>,
+    #[arg(long)]
+    pub(crate) spawn_watcher: bool,
+    #[arg(long, hide = true)]
+    pub(crate) spawn_question_watcher: bool,
+    #[arg(long, hide = true)]
+    pub(crate) watch_transcript: Option<String>,
+    #[arg(long, hide = true)]
+    pub(crate) watch_from_start: bool,
+    #[arg(long, hide = true)]
+    pub(crate) watch_timeout_seconds: Option<f64>,
+    #[arg(long, hide = true)]
+    pub(crate) session_id: Option<String>,
+    #[arg(long, hide = true)]
+    pub(crate) cwd: Option<String>,
+    #[arg(long)]
+    pub(crate) event_name: Option<String>,
+    #[arg(long)]
+    pub(crate) dry_run: bool,
+    #[arg(allow_hyphen_values = true)]
+    pub(crate) payload_args: Vec<String>,
+}
+
+#[derive(Args, Clone, Debug)]
+pub(crate) struct AgentNotifyTestArgs {
+    #[arg(long)]
+    pub(crate) webhook_file: Option<String>,
+    #[arg(long)]
+    pub(crate) bot_token_file: Option<String>,
+    #[arg(long)]
+    pub(crate) channel_id_file: Option<String>,
+    #[arg(long)]
+    pub(crate) state_file: Option<String>,
+    #[arg(long)]
+    pub(crate) dedupe_state_file: Option<String>,
+    #[arg(long, hide = true)]
+    pub(crate) error_log_file: Option<String>,
+    #[arg(long, hide = true)]
+    pub(crate) slack_api_url: Option<String>,
+    #[arg(long, hide = true)]
+    pub(crate) slack_update_api_url: Option<String>,
+    #[arg(long)]
+    pub(crate) cwd: Option<String>,
+    #[arg(long)]
+    pub(crate) dry_run: bool,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub(crate) enum OutputFormat {
     Json,
@@ -220,6 +305,7 @@ pub(crate) fn run(args: Vec<String>) -> Result<(), String> {
 
     match cli.command {
         RootCommand::Apply(args) => apply::command_apply(&args),
+        RootCommand::AgentNotify(args) => agent_notify::command_agent_notify(&args),
         RootCommand::Update(args) => update::command_update(&args),
         RootCommand::Doctor(args) => doctor::command_doctor(&args),
         RootCommand::Bootstrap(args) => bootstrap::command_bootstrap(&args),

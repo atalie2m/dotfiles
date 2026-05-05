@@ -70,7 +70,7 @@ Intent:
 After the reset:
 
 - Rust is a real workspace with `dotfiles-core`, `dotfiles-cli`, and `dotfiles-sync-vscode`
-- `dotfiles-cli` owns `apply`, `update`, `doctor`, `bootstrap`, `export-clean`, `list-tools`, `matrix-tools`, and `sync`
+- `dotfiles-cli` owns `apply`, `agent-notify`, `update`, `doctor`, `bootstrap`, `export-clean`, `list-tools`, `matrix-tools`, and `sync`
 - `dotfiles-sync-vscode` is packaged separately and invoked through `dotfiles`
 - shell sync is implemented in Rust instead of Bash
 

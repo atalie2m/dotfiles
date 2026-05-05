@@ -423,6 +423,18 @@ let
         bash scripts/tests/shim-delegation-test.sh
         touch "$out"
       '';
+
+      agentNotifications = pkgs.runCommand "agent-notifications-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.python3 dotfilesPackage ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
+        bash scripts/tests/codex-slack-notification-test.sh
+        touch "$out"
+      '';
     }
     // {
       docsConsistency = pkgs.runCommand "docs-consistency-test"

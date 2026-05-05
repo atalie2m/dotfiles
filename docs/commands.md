@@ -137,36 +137,36 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 
 ## Codex Slack notifications
 
-The notification helper is repo-owned, but Slack credentials stay local. Prefer
-Bot User OAuth token mode for Slack thread support. The incoming webhook is a
-fallback for one-off posting.
+`dotfiles agent-notify codex` is the canonical Rust command for Codex Slack
+notifications. `scripts/codex-slack-notification` is only a compatibility shim
+that delegates to `dotfiles agent-notify codex` for existing hook configs.
+Prefer Bot User OAuth token mode for Slack thread support; the incoming webhook
+is a fallback for one-off replies only.
 
-The Slack layer is shared under `scripts/lib/agent_notifications/slack.py`. It
-owns payload formatting, Bot API and webhook posting, thread state, fallback,
-and error logging. `scripts/codex-slack-notification` is the Codex adapter: it
+The Rust implementation uses a generic agent-event core. The Codex adapter
 parses Codex hook stdin, transcript records, titles, questions, approvals, and
-completion events, then calls the shared Slack layer. New coding-agent adapters
-should follow that shape instead of duplicating Slack transport code.
+completion events into typed events. The Slack sink receives only titles, body,
+thread key, and event kind; it owns Bot API / webhook posting, thread state,
+fallback, and error logging.
 
 ```bash
 # Store Slack credentials locally, outside Git
-mkdir -p ~/.config/dotfiles/files/codex
+mkdir -p ~/.config/dotfiles/files/agent-notifications
 printf '%s\n' 'xoxb-...' \
-  > ~/.config/dotfiles/files/codex/slack-bot-token
+  > ~/.config/dotfiles/files/agent-notifications/slack-bot-token
 printf '%s\n' 'C0123456789' \
-  > ~/.config/dotfiles/files/codex/slack-channel-id
+  > ~/.config/dotfiles/files/agent-notifications/slack-channel-id
 chmod 0600 \
-  ~/.config/dotfiles/files/codex/slack-bot-token \
-  ~/.config/dotfiles/files/codex/slack-channel-id
+  ~/.config/dotfiles/files/agent-notifications/slack-bot-token \
+  ~/.config/dotfiles/files/agent-notifications/slack-channel-id
 
 # Optional fallback when bot token mode is unavailable
 printf '%s\n' 'https://hooks.slack.com/services/...' \
-  > ~/.config/dotfiles/files/codex/slack-webhook-url
-chmod 0600 ~/.config/dotfiles/files/codex/slack-webhook-url
+  > ~/.config/dotfiles/files/agent-notifications/slack-webhook-url
+chmod 0600 ~/.config/dotfiles/files/agent-notifications/slack-webhook-url
 
 # Preview the Slack payload without posting
-CODEX_SLACK_NOTIFICATION_DRY_RUN=1 \
-  ./scripts/codex-slack-notification <<'JSON'
+dotfiles agent-notify codex --dry-run <<'JSON'
 {
   "hook_event_name": "Stop",
   "cwd": "/path/to/project",
@@ -175,13 +175,11 @@ CODEX_SLACK_NOTIFICATION_DRY_RUN=1 \
 JSON
 
 # Send a one-off setup test notification
-./scripts/codex-slack-notification --event-name setup-test <<'JSON'
-{
-  "cwd": "/path/to/project",
-  "last_assistant_message": "Codex Slack notification setup test completed."
-}
-JSON
+dotfiles agent-notify test
 ```
+
+The old `~/.config/dotfiles/files/codex/slack-*` credential files are still read
+as fallback inputs, so existing local secrets do not need to move immediately.
 
 Add the hooks to `~/.codex/config.toml`:
 
@@ -205,7 +203,7 @@ statusMessage = "Sending Codex Slack notification"
 [[hooks.SessionStart]]
 [[hooks.SessionStart.hooks]]
 type = "command"
-command = "/path/to/dotfiles/scripts/codex-slack-notification --spawn-question-watcher"
+command = "/path/to/dotfiles/scripts/codex-slack-notification --spawn-watcher"
 timeout = 5
 statusMessage = "Starting Codex Slack transcript watcher"
 
@@ -220,20 +218,17 @@ statusMessage = "Sending Codex approval Slack notification"
 
 `Stop`, `SessionStart`, and `PermissionRequest` are Codex lifecycle event names.
 `SessionStart` starts the transcript watcher. The watcher reads from the start
-of the session transcript, creates the Slack parent when Codex emits the
-`thread_name_updated` title event, and formats it as
-`Codex: <title> (<repo>)`. If a title event is unavailable, the first reply
-derives a short title from the first user prompt before falling back to
-`Codex: <repo>`; a later title event updates the parent with `chat.update`. Plan
-Mode `request_user_input` questions and transcript `task_complete` records are
-posted as replies from the watcher that belongs to that Codex session. `Stop`
-remains as a fallback for turn-completion payloads that arrive outside the
-watcher path, and labels question-like final messages as `Codex needs input`.
-`PreToolUse`,
-`UserPromptSubmit`, and `PostToolUse` are intentionally not enabled by default to
-avoid Slack noise and Codex-internal helper prompts. The script name stays
-generic because it accepts hook stdin payloads for multiple events and legacy
-`notify` argv payloads.
+of the session transcript, creates the Slack parent when Codex emits
+`thread_name_updated`, and formats it as `Codex: <title> (<repo>)`. If no title
+event is available, the first reply derives a short title from the first user
+prompt before falling back to `Codex: <repo>`; a later title event updates the
+parent with `chat.update`. Plan Mode `request_user_input` questions and
+transcript `task_complete` records are posted as replies from the watcher that
+belongs to that exact Codex session. `Stop` remains as a fallback for
+turn-completion payloads that arrive outside the watcher path, and labels
+question-like final messages as `Codex needs input`. `PreToolUse`,
+`UserPromptSubmit`, and successful `PostToolUse` events are intentionally not
+enabled by default to avoid Slack noise and Codex-internal helper prompts.
 
 The helper still supports `PostToolUse` failure payloads, but keep that hook
 opt-in. Codex runs `PostToolUse` after every matched tool call, so even a silent
@@ -243,53 +238,48 @@ Secret storage details live in
 [`docs/secrets-local.md`](secrets-local.md#codex-slack-notifications).
 
 Slack messages omit the full `cwd` and event context by default so compact views
-stay readable. Set `CODEX_SLACK_INCLUDE_CONTEXT=1` for debugging if that context
-is needed.
+stay readable. Set `AGENT_NOTIFICATIONS_INCLUDE_CONTEXT=1` for debugging if that
+context is needed. The legacy `CODEX_SLACK_INCLUDE_CONTEXT=1` name is still
+accepted.
 
 When `slack-bot-token` and `slack-channel-id` exist, the helper uses
-`chat.postMessage` and stores the Codex-to-Slack thread map in:
+`chat.postMessage` and stores the agent notification state in:
 
 ```text
-~/.local/state/dotfiles/codex-slack-threads.json
-~/.local/state/dotfiles/codex-slack-question-watch.json
+~/.local/state/dotfiles/agent-notifications/slack-threads.json
+~/.local/state/dotfiles/agent-notifications/codex-dedupe.json
+~/.local/state/dotfiles/agent-notifications/slack.log
 ```
 
-The Codex title parent message is normally the first Slack message for a Codex
-`session_id`. Later notifications for the same `session_id` are posted with
-`thread_ts` into that Slack thread. If a title is unavailable, the first
-notification creates a fallback parent. If a hook payload only has a
-`transcript_path`, the helper derives the Codex session id from that transcript
-filename. If a hook payload has neither `session_id` nor `transcript_path`, the
-helper first tries to match the final assistant message against recent
-`task_complete` records for the same `cwd`, then falls back to the latest
-matching Codex session. The transcript watcher avoids that ambiguity for
-parallel Codex sessions in the same repo because each watcher reads only its own
-transcript. The watcher state file dedupes both `request_user_input` tool calls
-and `task_complete` turn notifications.
+If the new state files do not exist, the Rust command reads the old
+`~/.local/state/dotfiles/codex-slack-*` files once as fallback state and writes
+future updates to the new `agent-notifications` paths.
 
 Thread replies for actionable or terminal events include `<!channel>` by
 default, but stay inside the Slack thread. Override the mention with
-`CODEX_SLACK_REPLY_MENTION`, disable it with `CODEX_SLACK_REPLY_MENTION=`, or
-limit event names with comma-separated `CODEX_SLACK_REPLY_MENTION_EVENTS`. Set
-`CODEX_SLACK_REPLY_BROADCAST=1` only when you intentionally want replies to be
-reposted into the channel timeline.
+`AGENT_NOTIFICATIONS_REPLY_MENTION`, disable it with
+`AGENT_NOTIFICATIONS_REPLY_MENTION=`, or limit event names with comma-separated
+`AGENT_NOTIFICATIONS_REPLY_MENTION_EVENTS`. Set
+`AGENT_NOTIFICATIONS_REPLY_BROADCAST=1` only when you intentionally want replies
+to be reposted into the channel timeline. Legacy `CODEX_SLACK_*` names remain
+fallbacks for those settings.
 
 If setup testing returns `channel_not_found`, the Bot User OAuth token is valid
 but the bot cannot see the target channel. Invite the Slack app or bot user to
 that channel, add `chat:write.public` for public-channel posting without an
 invite, or use a channel ID from the same workspace installation. Incoming
 webhook fallback can keep notifications flowing, but it cannot create or update
-the local `thread_ts` map; an empty `codex-slack-threads.json` means thread mode
-has not successfully posted through `chat.postMessage` yet.
+the local `thread_ts` map; an empty `slack-threads.json` means thread mode has
+not successfully posted through `chat.postMessage` yet.
 
 When bot token and channel id are configured, the helper tries threaded Bot API
 posting first. If Bot API posting fails, actionable and completion notifications
 fall back to the incoming webhook; thread-parent events are skipped because a
 webhook message cannot maintain the Codex-to-Slack thread map. Those Bot or
 webhook failures are recorded in
-`~/.local/state/dotfiles/codex-slack-notification.log` without credential
-values. Set `CODEX_SLACK_DISABLE_WEBHOOK_FALLBACK_WITH_BOT=1` only when you
-prefer hard failure over unthreaded best-effort notifications.
+`~/.local/state/dotfiles/agent-notifications/slack.log` without credential
+values. Set `AGENT_NOTIFICATIONS_DISABLE_WEBHOOK_FALLBACK_WITH_BOT=1` only when
+you prefer hard failure over unthreaded best-effort notifications.
 
 ## Doom Emacs
 

@@ -70,7 +70,7 @@ reset 後:
 reset 後:
 
 - Rust は `dotfiles-core`、`dotfiles-cli`、`dotfiles-sync-vscode` の real workspace になった
-- `dotfiles-cli` が `apply`、`update`、`doctor`、`bootstrap`、`export-clean`、`list-tools`、`matrix-tools`、`sync` を所有する
+- `dotfiles-cli` が `apply`、`agent-notify`、`update`、`doctor`、`bootstrap`、`export-clean`、`list-tools`、`matrix-tools`、`sync` を所有する
 - `dotfiles-sync-vscode` は別 package として提供しつつ、`dotfiles` 経由で呼び出す
 - shell sync は Bash ではなく Rust で実装する
 

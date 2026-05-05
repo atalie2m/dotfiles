@@ -89,26 +89,21 @@ reset の理由、before/after、設計意図は [`docs/architecture-reset.md`](
 から latest-first の Homebrew cask として管理します。有効にすると
 nix-darwin の Homebrew activation に `claude-code@latest` cask が追加されます。
 
-## Codex Slack 通知
+## Agent Slack 通知
 
-`scripts/codex-slack-notification` は Codex lifecycle notification を Slack
-に送る helper です。Slack credential は Git や `~/.codex/config.toml` には入れません。
-Bot User OAuth token と channel ID を `~/.config/dotfiles/files/codex/` に置くと、
-Codex thread ごとに Slack thread を連動できます。軽い session transcript watcher が
-Codex の生成 title を `Codex: <title> (<repo>)` 形式の Slack 親 message として使います。
-title event が無い場合は最初の user prompt から短い title を作り、それも無ければ
-`Codex: <repo>` に fallback します。Codex の direct hook event ではない Plan Mode の
-`request_user_input` 質問も拾います。
-完了 reply も各 session の transcript から送るため、同じ repo で Codex thread を並行しても
-`cwd` だけの fallback 推定に混線しにくくしています。
-対応が必要な reply は default で `<!channel>` を付けますが、Slack thread 内に留めます。
-Slack Incoming Webhook は Bot API の thread posting が使えない場合の best-effort fallback
-として同じ場所に残せます。
+`dotfiles agent-notify codex` は Codex lifecycle notification を Slack
+に送る Rust control plane の command です。既存 hook config のために
+`scripts/codex-slack-notification` は互換 shim として残します。Slack credential は Git や
+`~/.codex/config.toml` には入れず、
+`~/.config/dotfiles/files/agent-notifications/` に置きます。旧
+`~/.config/dotfiles/files/codex/` の credential file は fallback として読みます。
 
-実装は他の coding agent adapter も足せるように分けています。
-`scripts/lib/agent_notifications/slack.py` が Slack 整形、送信、thread state、fallback、error log
-を担当し、`scripts/codex-slack-notification` は Codex hook / transcript record を汎用 Slack
-通知へ変換する Codex adapter です。
+実装は Codex 固有の parsing を Codex adapter に閉じ込め、Slack は generic sink にしています。
+adapter は hook / transcript record を typed agent event に変換し、Slack sink が整形、Bot API /
+webhook 送信、thread state、fallback、error log を担当します。軽い transcript watcher が
+Codex の `thread_name_updated` から Slack 親 message を作成または更新し、Plan Mode の
+`request_user_input` と exact session transcript の completion reply を拾います。対応が必要な
+reply は default で `<!channel>` を付けますが、Slack thread 内に留めます。
 
 setup と test command は [`docs/commands.md`](commands.md#codex-slack-通知) にあります。
 secret の保管境界は [`docs/secrets-local.md`](secrets-local.md#codex-slack-通知) にあります。
@@ -545,7 +540,8 @@ keyboard hardware の差分は host facts に残します。
 すべての CLI command は自動的に以下を付加します。
 `--override-input local "$FACTS"` と `--override-input secrets "$SECRETS"`。
 
-これらの operational CLI command は Darwin-first です。`darwinConfigurations` と macOS 固有の check / build を対象にします。
+多くの operational CLI command は Darwin-first です。`darwinConfigurations` と macOS 固有の check / build を対象にします。
+`agent-notify` は coding-agent Slack 通知向けの local runtime tooling です。
 `apply` と `list-tools` は `--host`、位置引数の host、または `HOST=...` が必要です。
 `matrix-tools` は利用可能な `darwinConfigurations` をすべて評価し、`--host` は不要です。
 `update` は build が有効（default）な場合にのみ host が必要です。
