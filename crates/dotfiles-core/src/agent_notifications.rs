@@ -16,6 +16,8 @@ const MAX_MESSAGE_LENGTH: usize = 900;
 const MAX_THREAD_TITLE_LENGTH: usize = 52;
 const WATCH_POLL_MILLIS: u64 = 500;
 const WATCH_TIMEOUT_SECONDS: f64 = 12.0 * 60.0 * 60.0;
+const PERMISSION_DECISION_WAIT_SECONDS: f64 = 15.0;
+const PERMISSION_DECISION_POLL_MILLIS: u64 = 250;
 const MAX_TRANSCRIPT_INFERENCE_CANDIDATES: usize = 40;
 const TRANSCRIPT_INFERENCE_TAIL_BYTES: u64 = 256 * 1024;
 
@@ -154,6 +156,20 @@ impl CodexTranscriptContext {
     }
 }
 
+#[derive(Clone, Debug, Default)]
+struct TranscriptPermissionState {
+    function_calls: HashMap<String, Value>,
+    pending: HashMap<String, PendingPermissionRequest>,
+}
+
+#[derive(Clone, Debug)]
+struct PendingPermissionRequest {
+    payload: Value,
+    transcript_path: PathBuf,
+    notify_after: Instant,
+    notified: bool,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct DedupeState {
     version: u8,
@@ -289,6 +305,10 @@ fn run_codex_notification_inner(
     let event_name = resolved_event_name(&payload, options.event_name.as_deref());
     if COMPLETION_EVENTS.contains(&event_name.as_str()) {
         notify_completion_once(&config, &payload, None)?;
+        return Ok(());
+    }
+
+    if event_name == "PermissionRequest" && permission_request_should_skip(&payload) {
         return Ok(());
     }
 
@@ -923,6 +943,22 @@ fn notify_completion_once(
     send_notification(config, &notification, false)
 }
 
+fn notify_permission_request_once(
+    config: &AgentNotifyConfig,
+    notification_payload: &Value,
+    transcript_path: &Path,
+) -> Result<bool, String> {
+    let Some(key) = permission_request_state_key(notification_payload, transcript_path) else {
+        return Ok(false);
+    };
+    if let Some(notification) = codex_notification_from_payload(notification_payload, None) {
+        send_notification_once(config, &notification, &key)
+    } else {
+        mark_dedupe(config, &key)?;
+        Ok(true)
+    }
+}
+
 fn completion_state_key(notification_payload: &Value, transcript_path: &str) -> Option<String> {
     if transcript_path.is_empty() {
         return None;
@@ -939,6 +975,21 @@ fn completion_state_key(notification_payload: &Value, transcript_path: &str) -> 
     Some(format!(
         "task_complete:{}:{}:{}",
         session_id, turn_id, transcript_path
+    ))
+}
+
+fn permission_request_state_key(
+    notification_payload: &Value,
+    transcript_path: &Path,
+) -> Option<String> {
+    let call_id = permission_request_call_id(notification_payload)?;
+    let transcript_path_text = transcript_path.display().to_string();
+    let session_id = codex_thread_key(notification_payload)
+        .or_else(|| session_id_from_transcript_path(&transcript_path_text))
+        .unwrap_or_default();
+    Some(format!(
+        "permission_request:{}:{}:{}",
+        session_id, call_id, transcript_path_text
     ))
 }
 
@@ -985,6 +1036,7 @@ fn watch_transcript_for_codex(
             .unwrap_or(0)
     };
     let mut transcript_context = CodexTranscriptContext::default();
+    let mut permission_state = TranscriptPermissionState::default();
 
     while Instant::now() < deadline {
         let mut lines = Vec::new();
@@ -1017,6 +1069,14 @@ fn watch_transcript_for_codex(
                 transcript_context.update(record_payload);
                 continue;
             }
+
+            process_permission_record(
+                &mut permission_state,
+                record_payload,
+                session_id.as_deref(),
+                cwd.as_deref(),
+                &transcript_path,
+            )?;
 
             if let Some(payload) = request_user_input_record_payload(
                 record_payload,
@@ -1051,6 +1111,7 @@ fn watch_transcript_for_codex(
             }
         }
 
+        flush_pending_permission_requests(config, &mut permission_state)?;
         thread::sleep(Duration::from_millis(WATCH_POLL_MILLIS));
     }
 
@@ -1133,6 +1194,143 @@ fn append_config_args(command: &mut Command, config: &AgentNotifyConfig) {
     if config.dry_run {
         command.arg("--dry-run");
     }
+}
+
+fn process_permission_record(
+    state: &mut TranscriptPermissionState,
+    record_payload: &Map<String, Value>,
+    session_id: Option<&str>,
+    cwd: Option<&str>,
+    transcript_path: &Path,
+) -> Result<(), String> {
+    if record_payload.get("type").and_then(Value::as_str) == Some("function_call") {
+        if let Some(call_id) = record_payload.get("call_id").and_then(Value::as_str) {
+            state
+                .function_calls
+                .insert(call_id.to_string(), Value::Object(record_payload.clone()));
+        }
+        return Ok(());
+    }
+
+    if record_payload.get("type").and_then(Value::as_str) != Some("guardian_assessment") {
+        return Ok(());
+    }
+    let Some(target_item_id) =
+        first_string_from_map(record_payload, &["target_item_id", "target-item-id"])
+    else {
+        return Ok(());
+    };
+
+    if guardian_assessment_is_agent_approval(record_payload)
+        || guardian_assessment_is_final(record_payload)
+    {
+        state.pending.remove(&target_item_id);
+        state.function_calls.remove(&target_item_id);
+        return Ok(());
+    }
+
+    let Some(payload) = permission_request_record_payload(
+        record_payload,
+        state.function_calls.get(&target_item_id),
+        session_id,
+        cwd,
+        transcript_path,
+    ) else {
+        return Ok(());
+    };
+
+    let wait = if bool_env(
+        "AGENT_NOTIFICATIONS_DISABLE_PERMISSION_DECISION_WAIT",
+        Some("CODEX_SLACK_DISABLE_PERMISSION_DECISION_WAIT"),
+    ) {
+        Duration::ZERO
+    } else {
+        permission_decision_wait_duration()
+    };
+
+    state
+        .pending
+        .entry(target_item_id)
+        .and_modify(|pending| {
+            pending.payload = payload.clone();
+        })
+        .or_insert_with(|| PendingPermissionRequest {
+            payload,
+            transcript_path: transcript_path.to_path_buf(),
+            notify_after: Instant::now() + wait,
+            notified: false,
+        });
+    Ok(())
+}
+
+fn flush_pending_permission_requests(
+    config: &AgentNotifyConfig,
+    state: &mut TranscriptPermissionState,
+) -> Result<(), String> {
+    let now = Instant::now();
+    for pending in state.pending.values_mut() {
+        if pending.notified || now < pending.notify_after {
+            continue;
+        }
+        notify_permission_request_once(config, &pending.payload, &pending.transcript_path)?;
+        pending.notified = true;
+    }
+    Ok(())
+}
+
+fn permission_request_record_payload(
+    guardian_payload: &Map<String, Value>,
+    function_call: Option<&Value>,
+    session_id: Option<&str>,
+    cwd: Option<&str>,
+    transcript_path: &Path,
+) -> Option<Value> {
+    let target_item_id =
+        first_string_from_map(guardian_payload, &["target_item_id", "target-item-id"])?;
+    let function_call = function_call.and_then(Value::as_object);
+    let arguments = function_call.and_then(function_call_arguments);
+    let action = guardian_payload.get("action").and_then(Value::as_object);
+
+    let tool_name = function_call
+        .and_then(|payload| first_string_from_map(payload, &["name"]))
+        .or_else(|| action.and_then(|payload| first_string_from_map(payload, &["source", "type"])))
+        .unwrap_or_else(|| "tool".to_string());
+    let cwd = action
+        .and_then(|payload| first_string_from_map(payload, &["cwd"]))
+        .or_else(|| cwd.map(ToOwned::to_owned))
+        .unwrap_or_else(|| ".".to_string());
+    let command = arguments
+        .as_ref()
+        .and_then(|arguments| first_string(arguments, &["cmd", "command", "input"]))
+        .or_else(|| action.and_then(|payload| first_string_from_map(payload, &["command"])));
+    let description = arguments
+        .as_ref()
+        .and_then(|arguments| first_string(arguments, &["justification", "description"]))
+        .or_else(|| first_string_from_map(guardian_payload, &["rationale", "message"]));
+
+    let mut tool_input = Map::new();
+    if let Some(description) = description {
+        tool_input.insert("description".to_string(), Value::String(description));
+    }
+    if let Some(command) = command {
+        tool_input.insert("command".to_string(), Value::String(command));
+    }
+
+    let mut payload = json!({
+        "hook_event_name": "PermissionRequest",
+        "cwd": cwd,
+        "tool_name": tool_name,
+        "tool_use_id": target_item_id,
+        "tool_input": Value::Object(tool_input),
+        "transcript_path": transcript_path.display().to_string(),
+    });
+    if let Some(session_id) = session_id {
+        value_set_string(&mut payload, "session_id", session_id);
+    }
+    if let Some(turn_id) = first_string_from_map(guardian_payload, &["turn_id", "turn-id"]) {
+        value_set_string(&mut payload, "turn_id", &turn_id);
+    }
+    Some(payload)
 }
 
 fn request_user_input_record_payload(
@@ -1367,6 +1565,316 @@ fn permission_request_auto_resolved(payload: &Value) -> bool {
             ],
         )
         .is_some_and(|profile| profile.eq_ignore_ascii_case("disabled"))
+}
+
+fn permission_request_should_skip(payload: &Value) -> bool {
+    if permission_request_auto_resolved(payload) {
+        return true;
+    }
+    if bool_env(
+        "AGENT_NOTIFICATIONS_DISABLE_PERMISSION_DECISION_WAIT",
+        Some("CODEX_SLACK_DISABLE_PERMISSION_DECISION_WAIT"),
+    ) {
+        return false;
+    }
+    permission_request_auto_approved_by_reviewer(payload, permission_decision_wait_duration())
+}
+
+fn permission_decision_wait_duration() -> Duration {
+    let seconds = env_value("AGENT_NOTIFICATIONS_PERMISSION_DECISION_WAIT_SECONDS")
+        .or_else(|| env_value("CODEX_SLACK_PERMISSION_DECISION_WAIT_SECONDS"))
+        .and_then(|value| value.parse::<f64>().ok())
+        .unwrap_or(PERMISSION_DECISION_WAIT_SECONDS)
+        .max(0.0);
+    Duration::from_secs_f64(seconds)
+}
+
+fn permission_request_auto_approved_by_reviewer(payload: &Value, timeout: Duration) -> bool {
+    let Some(transcript_path) = permission_request_transcript_path(payload) else {
+        return false;
+    };
+    let direct_call_id = permission_request_call_id(payload);
+    let fingerprint = PermissionRequestFingerprint::from_payload(payload);
+    if direct_call_id.is_none() && !fingerprint.has_specific_match() {
+        return false;
+    }
+
+    let deadline = Instant::now() + timeout;
+    loop {
+        match permission_decision_from_transcript(
+            &transcript_path,
+            direct_call_id.as_deref(),
+            &fingerprint,
+        ) {
+            PermissionReviewDecision::AutoApproved => return true,
+            PermissionReviewDecision::RequiresUser => return false,
+            PermissionReviewDecision::Pending => {}
+        }
+        if timeout.is_zero() || Instant::now() >= deadline {
+            return false;
+        }
+        thread::sleep(Duration::from_millis(PERMISSION_DECISION_POLL_MILLIS));
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum PermissionReviewDecision {
+    AutoApproved,
+    RequiresUser,
+    Pending,
+}
+
+#[derive(Debug, Default)]
+struct PermissionRequestFingerprint {
+    command: Option<String>,
+    justification: Option<String>,
+    cwd: Option<String>,
+}
+
+impl PermissionRequestFingerprint {
+    fn from_payload(payload: &Value) -> Self {
+        Self {
+            command: permission_request_command(payload),
+            justification: permission_request_justification(payload),
+            cwd: first_string(payload, &["cwd"]).or_else(|| event_string(payload, &["cwd"])),
+        }
+    }
+
+    fn has_specific_match(&self) -> bool {
+        self.command.is_some() || self.justification.is_some()
+    }
+
+    fn matches_function_call(&self, arguments: &Value) -> bool {
+        let mut checked_specific = false;
+        if let Some(expected) = self.command.as_deref() {
+            checked_specific = true;
+            if !action_field_matches(arguments, &["cmd", "command", "input"], expected) {
+                return false;
+            }
+        }
+        if let Some(expected) = self.justification.as_deref() {
+            checked_specific = true;
+            if !action_field_matches(arguments, &["justification", "description"], expected) {
+                return false;
+            }
+        }
+        if !checked_specific {
+            return false;
+        }
+        if let Some(expected) = self.cwd.as_deref() {
+            if let Some(actual) = first_string(arguments, &["cwd", "workdir", "working_directory"])
+            {
+                if !same_collapsed_text(&actual, expected) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+}
+
+fn permission_request_transcript_path(payload: &Value) -> Option<String> {
+    explicit_transcript_path(payload)
+        .or_else(|| {
+            explicit_thread_key(payload).and_then(|key| transcript_path_for_session_id(&key))
+        })
+        .or_else(|| infer_transcript_path(payload))
+}
+
+fn permission_request_call_id(payload: &Value) -> Option<String> {
+    first_string(
+        payload,
+        &[
+            "tool_use_id",
+            "tool-use-id",
+            "call_id",
+            "call-id",
+            "tool_call_id",
+            "tool-call-id",
+            "target_item_id",
+            "target-item-id",
+        ],
+    )
+    .or_else(|| {
+        event_string(
+            payload,
+            &[
+                "tool_use_id",
+                "tool-use-id",
+                "call_id",
+                "call-id",
+                "tool_call_id",
+                "tool-call-id",
+                "target_item_id",
+                "target-item-id",
+            ],
+        )
+    })
+}
+
+fn permission_request_command(payload: &Value) -> Option<String> {
+    nested_string(
+        payload,
+        &[
+            &["tool_input", "command"],
+            &["tool_input", "cmd"],
+            &["tool_input", "input"],
+            &["tool_input", "params", "command"],
+            &["tool_input", "params", "cmd"],
+            &["tool-input", "command"],
+            &["tool-input", "cmd"],
+            &["tool-input", "input"],
+            &["tool-input", "params", "command"],
+            &["tool-input", "params", "cmd"],
+            &["hook_event", "tool_input", "command"],
+            &["hook_event", "tool_input", "cmd"],
+            &["hook_event", "tool-input", "command"],
+            &["hook_event", "tool-input", "cmd"],
+        ],
+    )
+}
+
+fn permission_request_justification(payload: &Value) -> Option<String> {
+    first_string(payload, &["justification", "description"])
+        .or_else(|| event_string(payload, &["justification", "description"]))
+        .or_else(|| {
+            nested_string(
+                payload,
+                &[
+                    &["tool_input", "justification"],
+                    &["tool_input", "description"],
+                    &["tool-input", "justification"],
+                    &["tool-input", "description"],
+                    &["hook_event", "tool_input", "justification"],
+                    &["hook_event", "tool_input", "description"],
+                    &["hook_event", "tool-input", "justification"],
+                    &["hook_event", "tool-input", "description"],
+                ],
+            )
+        })
+}
+
+fn permission_decision_from_transcript(
+    transcript_path: &str,
+    direct_call_id: Option<&str>,
+    fingerprint: &PermissionRequestFingerprint,
+) -> PermissionReviewDecision {
+    let path = expand_path(transcript_path);
+    let mut candidate_call_ids = Vec::new();
+    if let Some(call_id) = direct_call_id {
+        candidate_call_ids.push(call_id.to_string());
+    }
+
+    for line in transcript_tail(&path, TRANSCRIPT_INFERENCE_TAIL_BYTES).lines() {
+        let Ok(record) = serde_json::from_str::<Value>(line) else {
+            continue;
+        };
+        let Some(payload) = record_payload(&record) else {
+            continue;
+        };
+
+        if matching_permission_function_call_id(payload, fingerprint)
+            .is_some_and(|call_id| push_unique(&mut candidate_call_ids, call_id))
+        {
+            continue;
+        }
+
+        if payload.get("type").and_then(Value::as_str) != Some("guardian_assessment") {
+            continue;
+        }
+        let Some(target_item_id) = payload.get("target_item_id").and_then(Value::as_str) else {
+            continue;
+        };
+        if !candidate_call_ids
+            .iter()
+            .any(|call_id| call_id == target_item_id)
+        {
+            continue;
+        }
+        if guardian_assessment_is_agent_approval(payload) {
+            return PermissionReviewDecision::AutoApproved;
+        }
+        if guardian_assessment_is_final(payload) {
+            return PermissionReviewDecision::RequiresUser;
+        }
+    }
+
+    PermissionReviewDecision::Pending
+}
+
+fn matching_permission_function_call_id(
+    payload: &Map<String, Value>,
+    fingerprint: &PermissionRequestFingerprint,
+) -> Option<String> {
+    if payload.get("type").and_then(Value::as_str) != Some("function_call") {
+        return None;
+    }
+    let arguments = function_call_arguments(payload)?;
+    if !fingerprint.matches_function_call(&arguments) {
+        return None;
+    }
+    payload
+        .get("call_id")
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned)
+}
+
+fn function_call_arguments(payload: &Map<String, Value>) -> Option<Value> {
+    let arguments = payload.get("arguments")?;
+    match arguments {
+        Value::String(text) => serde_json::from_str::<Value>(text).ok(),
+        Value::Object(_) => Some(arguments.clone()),
+        _ => None,
+    }
+}
+
+fn action_field_matches(arguments: &Value, keys: &[&str], expected: &str) -> bool {
+    first_string(arguments, keys).is_some_and(|actual| same_collapsed_text(&actual, expected))
+}
+
+fn same_collapsed_text(left: &str, right: &str) -> bool {
+    collapse(left) == collapse(right)
+}
+
+fn push_unique(values: &mut Vec<String>, value: String) -> bool {
+    if !values.iter().any(|existing| existing == &value) {
+        values.push(value);
+    }
+    true
+}
+
+fn guardian_assessment_is_agent_approval(payload: &Map<String, Value>) -> bool {
+    let status = first_string_from_map(payload, &["status"])
+        .map(|value| normalized_identifier(&value))
+        .unwrap_or_default();
+    let outcome = first_string_from_map(payload, &["outcome"])
+        .map(|value| normalized_identifier(&value))
+        .unwrap_or_default();
+    let decision_source = first_string_from_map(payload, &["decision_source", "decision-source"])
+        .map(|value| normalized_identifier(&value))
+        .unwrap_or_default();
+    decision_source == "agent"
+        && (matches!(status.as_str(), "approved" | "allowed") || outcome == "allow")
+}
+
+fn guardian_assessment_is_final(payload: &Map<String, Value>) -> bool {
+    first_string_from_map(payload, &["status"])
+        .map(|value| normalized_identifier(&value))
+        .is_some_and(|status| {
+            matches!(
+                status.as_str(),
+                "approved"
+                    | "allowed"
+                    | "denied"
+                    | "rejected"
+                    | "cancelled"
+                    | "canceled"
+                    | "failed"
+            )
+        })
+        || first_string_from_map(payload, &["outcome"])
+            .map(|value| normalized_identifier(&value))
+            .is_some_and(|outcome| matches!(outcome.as_str(), "allow" | "deny"))
 }
 
 fn codex_collaboration_mode(payload: &Value) -> Option<String> {
@@ -2010,8 +2518,16 @@ fn event_string(payload: &Value, keys: &[&str]) -> Option<String> {
 fn nested_string(payload: &Value, paths: &[&[&str]]) -> Option<String> {
     for path in paths {
         let mut value = payload;
+        let mut found = true;
         for key in *path {
-            value = value.get(*key)?;
+            let Some(next) = value.get(*key) else {
+                found = false;
+                break;
+            };
+            value = next;
+        }
+        if !found {
+            continue;
         }
         if let Some(text) = value_to_nonempty_string(value) {
             return Some(text);
@@ -2587,6 +3103,105 @@ mod tests {
     }
 
     #[test]
+    fn transcript_permission_payload_uses_guardian_action() {
+        let function_call = json!({
+            "type": "function_call",
+            "name": "exec_command",
+            "call_id": "call-approval",
+            "arguments": "{\"cmd\":\"date\",\"workdir\":\"/tmp/approval-project\",\"sandbox_permissions\":\"require_escalated\",\"justification\":\"Run a command.\"}"
+        });
+        let guardian = json!({
+            "type": "guardian_assessment",
+            "target_item_id": "call-approval",
+            "turn_id": "turn-1",
+            "status": "in_progress",
+            "action": {
+                "type": "command",
+                "source": "unified_exec",
+                "command": "/bin/zsh -lc date",
+                "cwd": "/tmp/approval-project"
+            }
+        });
+        let payload = permission_request_record_payload(
+            guardian.as_object().expect("guardian"),
+            Some(&function_call),
+            Some("session-1"),
+            Some("/tmp/fallback"),
+            Path::new("/tmp/transcript.jsonl"),
+        )
+        .expect("payload");
+
+        assert_eq!(payload["hook_event_name"], "PermissionRequest");
+        assert_eq!(payload["cwd"], "/tmp/approval-project");
+        assert_eq!(payload["tool_name"], "exec_command");
+        assert_eq!(payload["tool_use_id"], "call-approval");
+        assert_eq!(payload["tool_input"]["description"], "Run a command.");
+        assert_eq!(payload["tool_input"]["command"], "date");
+
+        let notification = codex_notification_from_payload(&payload, None).expect("notification");
+        let slack = slack_payload(&notification);
+        let body = slack["blocks"][1]["text"]["text"].as_str().expect("body");
+        assert!(body.contains("Run a command."));
+    }
+
+    #[test]
+    fn transcript_permission_state_skips_agent_approved_requests() {
+        let mut state = TranscriptPermissionState::default();
+        let transcript_path = Path::new("/tmp/transcript.jsonl");
+        let function_call = json!({
+            "type": "function_call",
+            "name": "exec_command",
+            "call_id": "call-auto-approved",
+            "arguments": "{\"cmd\":\"date\",\"workdir\":\"/tmp/approval-project\",\"sandbox_permissions\":\"require_escalated\",\"justification\":\"Run a command.\"}"
+        });
+        let in_progress = json!({
+            "type": "guardian_assessment",
+            "target_item_id": "call-auto-approved",
+            "status": "in_progress",
+            "action": {
+                "type": "command",
+                "source": "unified_exec",
+                "command": "/bin/zsh -lc date",
+                "cwd": "/tmp/approval-project"
+            }
+        });
+        let approved = json!({
+            "type": "guardian_assessment",
+            "target_item_id": "call-auto-approved",
+            "status": "approved",
+            "decision_source": "agent"
+        });
+
+        process_permission_record(
+            &mut state,
+            function_call.as_object().expect("function call"),
+            Some("session-1"),
+            Some("/tmp/approval-project"),
+            transcript_path,
+        )
+        .expect("function call");
+        process_permission_record(
+            &mut state,
+            in_progress.as_object().expect("in progress"),
+            Some("session-1"),
+            Some("/tmp/approval-project"),
+            transcript_path,
+        )
+        .expect("in progress");
+        assert_eq!(state.pending.len(), 1);
+
+        process_permission_record(
+            &mut state,
+            approved.as_object().expect("approved"),
+            Some("session-1"),
+            Some("/tmp/approval-project"),
+            transcript_path,
+        )
+        .expect("approved");
+        assert!(state.pending.is_empty());
+    }
+
+    #[test]
     fn filters_auto_approved_permission_requests() {
         let auto_approved = json!({
             "hook_event_name": "PermissionRequest",
@@ -2605,6 +3220,60 @@ mod tests {
             "tool_input": {"description": "Run a command."}
         });
         assert!(codex_notification_from_payload(&approval_disabled, None).is_none());
+
+        let temp = tempdir().expect("tempdir");
+        let transcript = temp.path().join("approval.jsonl");
+        fs::write(
+            &transcript,
+            format!(
+                "{}\n{}\n",
+                json!({
+                    "type": "response_item",
+                    "payload": {
+                        "type": "function_call",
+                        "name": "exec_command",
+                        "call_id": "call-auto-approved",
+                        "arguments": "{\"cmd\":\"date\",\"workdir\":\"/tmp/approval-project\",\"sandbox_permissions\":\"require_escalated\",\"justification\":\"Run a command.\"}"
+                    }
+                }),
+                json!({
+                    "type": "event_msg",
+                    "payload": {
+                        "type": "guardian_assessment",
+                        "target_item_id": "call-auto-approved",
+                        "status": "approved",
+                        "decision_source": "agent"
+                    }
+                })
+            ),
+        )
+        .expect("write transcript");
+        let reviewer_approved = json!({
+            "hook_event_name": "PermissionRequest",
+            "cwd": "/tmp/approval-project",
+            "transcript_path": transcript.display().to_string(),
+            "tool_name": "Bash",
+            "tool_input": {"description": "Run a command."}
+        });
+        let reviewer_fingerprint = PermissionRequestFingerprint::from_payload(&reviewer_approved);
+        assert!(reviewer_fingerprint.matches_function_call(
+            &serde_json::from_str::<Value>(
+                "{\"cmd\":\"date\",\"workdir\":\"/tmp/approval-project\",\"sandbox_permissions\":\"require_escalated\",\"justification\":\"Run a command.\"}"
+            )
+            .expect("arguments")
+        ));
+        assert_eq!(
+            permission_decision_from_transcript(
+                &transcript.display().to_string(),
+                None,
+                &reviewer_fingerprint
+            ),
+            PermissionReviewDecision::AutoApproved
+        );
+        assert!(permission_request_auto_approved_by_reviewer(
+            &reviewer_approved,
+            Duration::from_millis(0)
+        ));
 
         let waits_for_user = json!({
             "hook_event_name": "PermissionRequest",

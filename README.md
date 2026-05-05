@@ -114,8 +114,11 @@ webhook transport, thread state, fallback, and error logging. A lightweight
 transcript watcher creates or updates the Slack parent from Codex
 `thread_name_updated`, catches Plan Mode `request_user_input`, and posts
 completion replies from the exact session transcript. `request_user_input`
-records that Codex auto-resolves outside Plan Mode are skipped. Actionable
-replies mention `<!channel>` by default but stay inside the Slack thread.
+records that Codex auto-resolves outside Plan Mode are skipped. The watcher also
+follows Codex `guardian_assessment` records for approval waits, delays pending
+approvals through the auto-review window, and skips requests approved
+automatically. Actionable replies mention `<!channel>` by default but stay
+inside the Slack thread.
 
 Setup and test commands live in [`docs/commands.md`](docs/commands.md#codex-slack-notifications).
 Secret storage details live in [`docs/secrets-local.md`](docs/secrets-local.md#codex-slack-notifications).

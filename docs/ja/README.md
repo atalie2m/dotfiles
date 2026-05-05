@@ -109,8 +109,10 @@ adapter は hook / transcript record を typed agent event に変換し、Slack 
 webhook 送信、thread state、fallback、error log を担当します。軽い transcript watcher が
 Codex の `thread_name_updated` から Slack 親 message を作成または更新し、Plan Mode の
 `request_user_input` と exact session transcript の completion reply を拾います。Plan Mode
-外で Codex が自動解決した `request_user_input` record は skip します。対応が必要な reply は
-default で `<!channel>` を付けますが、Slack thread 内に留めます。
+外で Codex が自動解決した `request_user_input` record は skip します。watcher は
+`guardian_assessment` record から approval wait も拾い、auto-review window を待ってから、
+自動承認された request は skip します。対応が必要な reply は default で `<!channel>` を付けますが、
+Slack thread 内に留めます。
 
 setup と test command は [`docs/commands.md`](commands.md#codex-slack-通知) にあります。
 secret の保管境界は [`docs/secrets-local.md`](secrets-local.md#codex-slack-通知) にあります。

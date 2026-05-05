@@ -116,6 +116,75 @@ if [[ -n $permission_auto_output ]]; then
   exit 1
 fi
 
+permission_review_transcript="$TMP_HOME/permission-review.jsonl"
+printf '%s\n' \
+  '{"type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"call-auto-approved","arguments":"{\"cmd\":\"date\",\"workdir\":\"/tmp/approval-project\",\"sandbox_permissions\":\"require_escalated\",\"justification\":\"Run a command.\"}"}}' \
+  '{"type":"event_msg","payload":{"type":"guardian_assessment","target_item_id":"call-auto-approved","status":"approved","decision_source":"agent"}}' \
+  >"$permission_review_transcript"
+
+permission_reviewer_auto_output=$(
+  HOME="$TMP_HOME" AGENT_NOTIFICATIONS_PERMISSION_DECISION_WAIT_SECONDS=0 \
+    "$DOTFILES_BIN" agent-notify codex --dry-run <<JSON
+{
+  "hook_event_name": "PermissionRequest",
+  "cwd": "/tmp/approval-project",
+  "transcript_path": "$permission_review_transcript",
+  "tool_name": "Bash",
+  "tool_input": {
+    "description": "Run a command."
+  }
+}
+JSON
+)
+
+if [[ -n $permission_reviewer_auto_output ]]; then
+  echo "FAIL: reviewer-approved PermissionRequest produced Slack payload" >&2
+  exit 1
+fi
+
+permission_watch_transcript="$TMP_HOME/permission-watch.jsonl"
+printf '%s\n' \
+  '{"type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"call-watch","arguments":"{\"cmd\":\"date\",\"workdir\":\"/tmp/approval-project\",\"sandbox_permissions\":\"require_escalated\",\"justification\":\"Run a command.\"}"}}' \
+  '{"type":"event_msg","payload":{"type":"guardian_assessment","target_item_id":"call-watch","status":"in_progress","action":{"type":"command","source":"unified_exec","command":"/bin/zsh -lc date","cwd":"/tmp/approval-project"}}}' \
+  >"$permission_watch_transcript"
+
+permission_watch_output=$(
+  HOME="$TMP_HOME" AGENT_NOTIFICATIONS_PERMISSION_DECISION_WAIT_SECONDS=0 \
+    "$DOTFILES_BIN" agent-notify codex --dry-run \
+    --watch-transcript "$permission_watch_transcript" \
+    --watch-from-start \
+    --watch-timeout-seconds 1 \
+    --session-id session-watch \
+    --cwd /tmp/approval-project
+)
+
+if [[ $permission_watch_output != *"Codex needs approval: approval-project"* ]]; then
+  echo "FAIL: transcript watcher did not emit pending permission notification" >&2
+  exit 1
+fi
+
+permission_watch_auto_transcript="$TMP_HOME/permission-watch-auto.jsonl"
+printf '%s\n' \
+  '{"type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"call-watch-auto","arguments":"{\"cmd\":\"date\",\"workdir\":\"/tmp/approval-project\",\"sandbox_permissions\":\"require_escalated\",\"justification\":\"Run a command.\"}"}}' \
+  '{"type":"event_msg","payload":{"type":"guardian_assessment","target_item_id":"call-watch-auto","status":"in_progress","action":{"type":"command","source":"unified_exec","command":"/bin/zsh -lc date","cwd":"/tmp/approval-project"}}}' \
+  '{"type":"event_msg","payload":{"type":"guardian_assessment","target_item_id":"call-watch-auto","status":"approved","decision_source":"agent"}}' \
+  >"$permission_watch_auto_transcript"
+
+permission_watch_auto_output=$(
+  HOME="$TMP_HOME" AGENT_NOTIFICATIONS_PERMISSION_DECISION_WAIT_SECONDS=0 \
+    "$DOTFILES_BIN" agent-notify codex --dry-run \
+    --watch-transcript "$permission_watch_auto_transcript" \
+    --watch-from-start \
+    --watch-timeout-seconds 1 \
+    --session-id session-watch-auto \
+    --cwd /tmp/approval-project
+)
+
+if [[ -n $permission_watch_auto_output ]]; then
+  echo "FAIL: transcript watcher emitted auto-approved permission notification" >&2
+  exit 1
+fi
+
 prompt_submit_default_output=$(
   HOME="$TMP_HOME" "$DOTFILES_BIN" agent-notify codex --dry-run <<'JSON'
 {

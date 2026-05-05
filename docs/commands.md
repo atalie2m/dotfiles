@@ -215,52 +215,50 @@ Add the hooks to `~/.codex/config.toml`:
 [features]
 codex_hooks = true
 
-# Fallback turn-completion hook. The transcript watcher owns normal completion
-# delivery when SessionStart provided a transcript path.
-[[hooks.Stop]]
-[[hooks.Stop.hooks]]
-type = "command"
-command = "/path/to/dotfiles/scripts/codex-slack-notification"
-timeout = 10
-statusMessage = "Sending Codex Slack notification"
-
 # Start a lightweight transcript watcher. It creates the Slack parent from the
 # Codex-generated title when available, catches Plan Mode request_user_input
-# questions before the answer is submitted, skips auto-resolved request_user_input
-# records outside Plan Mode, and sends completion replies from that exact Codex
-# transcript.
+# questions and approval waits before the answer is submitted, skips auto-
+# resolved records, and sends completion replies from that exact Codex transcript.
 [[hooks.SessionStart]]
 [[hooks.SessionStart.hooks]]
 type = "command"
 command = "/path/to/dotfiles/scripts/codex-slack-notification --spawn-watcher"
 timeout = 5
 statusMessage = "Starting Codex Slack transcript watcher"
-
-# Notify when Codex is waiting for an approval or permission answer.
-[[hooks.PermissionRequest]]
-[[hooks.PermissionRequest.hooks]]
-type = "command"
-command = "/path/to/dotfiles/scripts/codex-slack-notification"
-timeout = 10
 ```
 
-`Stop`, `SessionStart`, and `PermissionRequest` are Codex lifecycle event names.
-`SessionStart` starts the transcript watcher. The watcher reads from the start
-of the session transcript, creates the Slack parent when Codex emits
+`SessionStart` starts the transcript watcher. The watcher reads from the start of
+the session transcript, creates the Slack parent when Codex emits
 `thread_name_updated`, and formats it as `Codex: <title> (<repo>)`. If no title
 event is available, the first reply derives a short title from the first user
 prompt before falling back to `Codex: <repo>`; a later title event updates the
-parent with `chat.update`. Plan Mode `request_user_input` questions and
-transcript `task_complete` records are posted as replies from the watcher that
-belongs to that exact Codex session. `request_user_input` records that Codex
-auto-resolves outside Plan Mode are ignored. `Stop` remains as a fallback for
-turn-completion payloads that arrive outside the watcher path, and labels
-question-like final messages as `Codex needs input`. `PreToolUse`,
-`UserPromptSubmit`, and successful `PostToolUse` events are intentionally not
-enabled by default to avoid Slack noise and Codex-internal helper prompts.
-Leave `statusMessage` unset on `PermissionRequest`: Codex renders it before the
-helper can inspect the payload, so auto-resolved permission events can otherwise
-create UI noise even when no Slack message is sent.
+parent with `chat.update`. Plan Mode `request_user_input` questions, approval
+waits from `guardian_assessment`, and transcript `task_complete` records are
+posted as replies from the watcher that belongs to that exact Codex session.
+`request_user_input` records that Codex auto-resolves outside Plan Mode are
+ignored. Approval waits are delayed up to 15 seconds while the watcher waits for
+Codex auto-review; requests that receive an agent `approved` decision are
+skipped, and requests without automatic approval still post to Slack.
+
+Do not configure `PermissionRequest` by default. Codex runs that hook for each
+approval event, so even a silent helper adds per-approval overhead, and any
+`statusMessage` appears before the helper can skip auto-approved requests.
+`Stop` is also optional now because the watcher sends normal completion replies.
+Keep it only as a compatibility fallback for environments where `SessionStart`
+does not provide a transcript path:
+
+```toml
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = "/path/to/dotfiles/scripts/codex-slack-notification"
+timeout = 10
+statusMessage = "Sending Codex Slack notification"
+```
+
+`PreToolUse`, `UserPromptSubmit`, and successful `PostToolUse` events are
+intentionally not enabled by default to avoid Slack noise and Codex-internal
+helper prompts.
 
 The helper still supports `PostToolUse` failure payloads, but keep that hook
 opt-in. Codex runs `PostToolUse` after every matched tool call, so even a silent

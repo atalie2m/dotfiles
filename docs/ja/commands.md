@@ -211,18 +211,9 @@ nix run .#codex-slack-update
 [features]
 codex_hooks = true
 
-# turn 完了の fallback hook です。SessionStart で transcript path が取れる場合、
-# 通常の完了通知は transcript watcher 側が担当します。
-[[hooks.Stop]]
-[[hooks.Stop.hooks]]
-type = "command"
-command = "/path/to/dotfiles/scripts/codex-slack-notification"
-timeout = 10
-statusMessage = "Sending Codex Slack notification"
-
 # 軽い transcript watcher を起動します。Codex の生成 title を Slack 親 message
 # として使い、Plan Mode の request_user_input 質問を回答前に拾い、
-# Plan Mode 外で自動解決された request_user_input は skip して、
+# approval wait も拾います。自動解決された record は skip し、
 # その Codex transcript から完了 reply も送ります。
 [[hooks.SessionStart]]
 [[hooks.SessionStart.hooks]]
@@ -230,31 +221,37 @@ type = "command"
 command = "/path/to/dotfiles/scripts/codex-slack-notification --spawn-watcher"
 timeout = 5
 statusMessage = "Starting Codex Slack transcript watcher"
-
-# Codex が approval / permission の回答待ちになった時に通知します。
-[[hooks.PermissionRequest]]
-[[hooks.PermissionRequest.hooks]]
-type = "command"
-command = "/path/to/dotfiles/scripts/codex-slack-notification"
-timeout = 10
 ```
 
-`Stop`、`SessionStart`、`PermissionRequest` は Codex lifecycle event 名です。
 `SessionStart` は transcript watcher を起動します。watcher は session transcript を先頭から読み、
 Codex が `thread_name_updated` を出した時点で Slack 親 message を作り、後続通知を
 その親への reply として投稿します。親 message は `Codex: <title> (<repo>)` 形式です。title event
 が無い場合は最初の user prompt から短い title を作り、それも無ければ `Codex: <repo>` に
 fallback します。後から title event が来れば `chat.update` で親 title を更新します。Plan Mode の
-`request_user_input` 質問と transcript の `task_complete` record は、その exact Codex session の
-watcher から reply として投稿します。Plan Mode 外で Codex が自動解決した `request_user_input`
-record は無視します。`Stop` は watcher 経路外の turn-completion payload 向け fallback として残し、
-最終 message が質問らしい場合は `Codex needs input` として表示します。
+`request_user_input` 質問、`guardian_assessment` から得た approval wait、transcript の
+`task_complete` record は、その exact Codex session の watcher から reply として投稿します。
+Plan Mode 外で Codex が自動解決した `request_user_input` record は無視します。approval wait は
+最大 15 秒、Codex auto-review の判定を待ちます。agent が `approved` と判定した request は skip し、
+自動承認されなかった request は Slack に投稿します。
+
+default では `PermissionRequest` を設定しないでください。Codex は approval event ごとに
+その hook を実行するため、helper が silent exit しても per-approval overhead があり、
+`statusMessage` があると auto-approved request でも helper が skip する前に UI へ表示されます。
+`Stop` も通常の完了 reply には不要です。`SessionStart` が transcript path を渡せない環境向けの
+互換 fallback としてだけ残してください。
+
+```toml
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = "/path/to/dotfiles/scripts/codex-slack-notification"
+timeout = 10
+statusMessage = "Sending Codex Slack notification"
+```
+
 `PreToolUse`、`UserPromptSubmit`、成功した `PostToolUse` は Slack のノイズや Codex 内部 helper
 prompt を避けるため default では投稿しません。secret 保管の詳細は
 [`docs/secrets-local.md`](secrets-local.md#codex-slack-通知) にあります。
-`PermissionRequest` には `statusMessage` を付けないでください。Codex は helper が
-payload を見て skip する前に `statusMessage` を表示するため、自動解決された permission event
-でも UI ノイズになります。
 
 helper は `PostToolUse` failure payload にも対応していますが、この hook は opt-in 扱いに
 してください。Codex は match した tool call の後に毎回 `PostToolUse` を走らせるため、

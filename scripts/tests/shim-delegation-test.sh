@@ -12,6 +12,8 @@ trap cleanup EXIT
 
 FAKE_DOTFILES="$TMP_ROOT/fake-dotfiles"
 LOG_FILE="$TMP_ROOT/delegation.log"
+PROFILE_HOME="$TMP_ROOT/profile-home"
+PROFILE_DOTFILES="$PROFILE_HOME/.nix-profile/bin/dotfiles"
 
 cat >"$FAKE_DOTFILES" <<'EOF_FAKE'
 #!/usr/bin/env bash
@@ -19,6 +21,14 @@ set -euo pipefail
 printf '%s\n' "$*" >>"${FAKE_DOTFILES_LOG_FILE:?}"
 EOF_FAKE
 chmod +x "$FAKE_DOTFILES"
+
+mkdir -p "$(dirname "$PROFILE_DOTFILES")"
+cat >"$PROFILE_DOTFILES" <<'EOF_PROFILE'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'profile %s\n' "$*" >>"${FAKE_DOTFILES_LOG_FILE:?}"
+EOF_PROFILE
+chmod +x "$PROFILE_DOTFILES"
 
 run_wrapper() {
   local script="$1"
@@ -51,6 +61,8 @@ run_wrapper "$ROOT/scripts/sync.sh" neovim --check
 run_wrapper "$ROOT/scripts/dotfiles.sh" sync vscode --check --profile native
 run_wrapper "$ROOT/scripts/codex-slack-notification" --dry-run
 run_wrapper "$ROOT/scripts/codex-slack-update" --no-install
+FAKE_DOTFILES_LOG_FILE="$LOG_FILE" HOME="$PROFILE_HOME" PATH="/usr/bin:/bin" \
+  bash "$ROOT/scripts/codex-slack-notification" --dry-run >/dev/null
 
 assert_logged "apply --host own_mac --action build"
 assert_logged "update --host own_mac"
@@ -66,5 +78,6 @@ assert_logged "sync neovim --check"
 assert_logged "sync vscode --check --profile native"
 assert_logged "agent-notify codex --dry-run"
 assert_logged "agent-notify update-runtime --no-install"
+assert_logged "profile agent-notify codex --dry-run"
 
 echo "PASS: shim delegation"

@@ -14,6 +14,12 @@ if [[ -n ${DOTFILES_BIN:-} && -x ${DOTFILES_BIN} ]]; then
   exec "${DOTFILES_BIN}" "$@"
 fi
 
+PROFILE_DOTFILES="${HOME:-}/.nix-profile/bin/dotfiles"
+if [[ -x "$PROFILE_DOTFILES" ]]; then
+  export DOTFILES_ROOT="$ROOT"
+  exec "$PROFILE_DOTFILES" "$@"
+fi
+
 if command -v dotfiles >/dev/null 2>&1; then
   export DOTFILES_ROOT="$ROOT"
   exec "$(command -v dotfiles)" "$@"
