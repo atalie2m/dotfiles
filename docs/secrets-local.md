@@ -145,7 +145,8 @@ Usage:
    statusMessage = "Sending Codex Slack notification"
 
    # Transcript watcher for Codex thread titles, Plan Mode questions, and
-   # completion replies tied to this exact Codex transcript.
+   # completion replies tied to this exact Codex transcript. Auto-resolved
+   # request_user_input records outside Plan Mode are skipped.
    [[hooks.SessionStart]]
    [[hooks.SessionStart.hooks]]
    type = "command"
@@ -159,7 +160,6 @@ Usage:
    type = "command"
    command = "/path/to/dotfiles/scripts/codex-slack-notification"
    timeout = 10
-   statusMessage = "Sending Codex approval Slack notification"
    ```
 
 3. Preview the Slack payload without posting:
@@ -200,9 +200,14 @@ the first notification derives a short title from the first user prompt before
 falling back to `Codex: <repo>`, and a later title event updates it. The watcher
 also posts Plan Mode questions and `task_complete` records from that exact
 transcript, so parallel Codex sessions in the same repo do not depend on "latest
-session for cwd" inference. Actionable or terminal notifications are posted as
-thread replies with `<!channel>` by default. They are not broadcast into the
-channel timeline unless `AGENT_NOTIFICATIONS_REPLY_BROADCAST=1` is set.
+session for cwd" inference. Auto-resolved `request_user_input` records outside
+Plan Mode are ignored. Actionable or terminal notifications are posted as thread
+replies with `<!channel>` by default. They are not broadcast into the channel
+timeline unless `AGENT_NOTIFICATIONS_REPLY_BROADCAST=1` is set.
+
+Leave `statusMessage` unset on `PermissionRequest`: Codex renders it before the
+helper can inspect the payload, so auto-resolved permission events can otherwise
+create UI noise even when no Slack message is sent.
 
 When bot token and channel id are configured, the helper tries threaded Bot API
 posting first. If Bot API posting fails, actionable and completion

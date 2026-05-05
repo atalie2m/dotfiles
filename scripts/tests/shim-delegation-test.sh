@@ -50,6 +50,7 @@ run_wrapper "$ROOT/scripts/sync.sh" emacs --check
 run_wrapper "$ROOT/scripts/sync.sh" neovim --check
 run_wrapper "$ROOT/scripts/dotfiles.sh" sync vscode --check --profile native
 run_wrapper "$ROOT/scripts/codex-slack-notification" --dry-run
+run_wrapper "$ROOT/scripts/codex-slack-update" --no-install
 
 assert_logged "apply --host own_mac --action build"
 assert_logged "update --host own_mac"
@@ -64,5 +65,6 @@ assert_logged "sync emacs --check"
 assert_logged "sync neovim --check"
 assert_logged "sync vscode --check --profile native"
 assert_logged "agent-notify codex --dry-run"
+assert_logged "agent-notify update-runtime --no-install"
 
 echo "PASS: shim delegation"

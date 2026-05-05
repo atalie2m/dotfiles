@@ -48,5 +48,8 @@ pub(crate) fn command_agent_notify(args: &AgentNotifyArgs) -> Result<(), String>
                 cwd: args.cwd.clone(),
             },
         ),
+        AgentNotifyCommand::UpdateRuntime(args) => {
+            super::update::update_dotfiles_user_profile(!args.no_install)
+        }
     }
 }

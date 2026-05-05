@@ -140,6 +140,20 @@ struct ThreadEntry {
     updated_at: String,
 }
 
+#[derive(Clone, Debug, Default)]
+struct CodexTranscriptContext {
+    collaboration_mode: Option<String>,
+}
+
+impl CodexTranscriptContext {
+    fn update(&mut self, payload: &Map<String, Value>) {
+        let payload = Value::Object(payload.clone());
+        if let Some(mode) = codex_collaboration_mode(&payload) {
+            self.collaboration_mode = Some(mode);
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct DedupeState {
     version: u8,
@@ -336,6 +350,9 @@ fn codex_notification_from_payload(
     {
         return None;
     }
+    if event_name == "PermissionRequest" && permission_request_auto_resolved(payload) {
+        return None;
+    }
 
     let thread_key = codex_thread_key(payload);
     let parent_title = codex_parent_title(payload);
@@ -393,11 +410,16 @@ fn codex_notification_from_payload(
             };
             (AgentEventKind::PromptSubmitted, title, message)
         }
-        "RequestUserInput" | "request_user_input" => (
-            AgentEventKind::NeedsInput,
-            format!("Codex needs input: {}", project),
-            request_user_input_message(payload),
-        ),
+        "RequestUserInput" | "request_user_input" => {
+            if request_user_input_auto_resolved(payload) {
+                return None;
+            }
+            (
+                AgentEventKind::NeedsInput,
+                format!("Codex needs input: {}", project),
+                request_user_input_message(payload),
+            )
+        }
         "Stop" | "agent-turn-complete" => {
             let message = assistant_message(payload);
             let title = if looks_like_question(&message) {
@@ -962,6 +984,7 @@ fn watch_transcript_for_codex(
             .map(|metadata| metadata.len())
             .unwrap_or(0)
     };
+    let mut transcript_context = CodexTranscriptContext::default();
 
     while Instant::now() < deadline {
         let mut lines = Vec::new();
@@ -990,12 +1013,17 @@ fn watch_transcript_for_codex(
             let Some(record_payload) = record_payload(&record) else {
                 continue;
             };
+            if record.get("type").and_then(Value::as_str) == Some("turn_context") {
+                transcript_context.update(record_payload);
+                continue;
+            }
 
             if let Some(payload) = request_user_input_record_payload(
                 record_payload,
                 session_id.as_deref(),
                 cwd.as_deref(),
                 &transcript_path,
+                &transcript_context,
             ) {
                 notify_request_user_input_once(config, &payload, &transcript_path)?;
                 continue;
@@ -1112,6 +1140,7 @@ fn request_user_input_record_payload(
     session_id: Option<&str>,
     cwd: Option<&str>,
     transcript_path: &Path,
+    context: &CodexTranscriptContext,
 ) -> Option<Value> {
     if record_payload.get("type").and_then(Value::as_str) != Some("function_call") {
         return None;
@@ -1134,6 +1163,9 @@ fn request_user_input_record_payload(
     });
     if let Some(session_id) = session_id {
         value_set_string(&mut payload, "session_id", session_id);
+    }
+    if let Some(mode) = context.collaboration_mode.as_deref() {
+        value_set_collaboration_mode(&mut payload, mode);
     }
     Some(payload)
 }
@@ -1313,6 +1345,49 @@ fn request_user_input_args(payload: &Value) -> Option<Value> {
         return Some(payload.clone());
     }
     None
+}
+
+fn request_user_input_auto_resolved(payload: &Value) -> bool {
+    codex_collaboration_mode(payload).is_some_and(|mode| !mode.eq_ignore_ascii_case("plan"))
+        || payload_has_auto_approve_marker(payload)
+}
+
+fn permission_request_auto_resolved(payload: &Value) -> bool {
+    payload_has_auto_approve_marker(payload)
+        || first_string(payload, &["approval_policy", "approval-policy"])
+            .or_else(|| event_string(payload, &["approval_policy", "approval-policy"]))
+            .is_some_and(|policy| policy.eq_ignore_ascii_case("never"))
+        || nested_string(
+            payload,
+            &[
+                &["permission_profile", "type"],
+                &["permission-profile", "type"],
+                &["hook_event", "permission_profile", "type"],
+                &["hook_event", "permission-profile", "type"],
+            ],
+        )
+        .is_some_and(|profile| profile.eq_ignore_ascii_case("disabled"))
+}
+
+fn codex_collaboration_mode(payload: &Value) -> Option<String> {
+    let value = value_get(payload, "collaboration_mode")
+        .or_else(|| value_get(payload, "collaboration-mode"))?;
+    match value {
+        Value::String(mode) => nonempty_trimmed(mode),
+        Value::Object(object) => first_string_from_map(object, &["mode"]),
+        _ => None,
+    }
+}
+
+fn value_set_collaboration_mode(value: &mut Value, mode: &str) {
+    if let Some(map) = value.as_object_mut() {
+        map.insert(
+            "collaboration_mode".to_string(),
+            json!({
+                "mode": mode,
+            }),
+        );
+    }
 }
 
 fn request_user_input_message(payload: &Value) -> String {
@@ -1967,6 +2042,86 @@ fn value_to_nonempty_string(value: &Value) -> Option<String> {
     }
 }
 
+fn nonempty_trimmed(text: &str) -> Option<String> {
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
+fn payload_has_auto_approve_marker(value: &Value) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    for (key, value) in object {
+        let key = normalized_identifier(key);
+        if matches!(
+            key.as_str(),
+            "autoapprove" | "autoapproved" | "automaticallyapproved" | "approvedautomatically"
+        ) && value_is_truthy(value)
+        {
+            return true;
+        }
+        if matches!(
+            key.as_str(),
+            "approval"
+                | "approvalstatus"
+                | "approvalstate"
+                | "approvaldecision"
+                | "decision"
+                | "outcome"
+                | "status"
+                | "result"
+        ) && value_mentions_auto_approval(value)
+        {
+            return true;
+        }
+        if matches!(
+            key.as_str(),
+            "hookevent" | "toolinput" | "permission" | "approvalrequest"
+        ) && payload_has_auto_approve_marker(value)
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn value_is_truthy(value: &Value) -> bool {
+    match value {
+        Value::Bool(value) => *value,
+        Value::Number(value) => value.as_i64().is_some_and(|value| value != 0),
+        Value::String(value) => {
+            let value = value.trim().to_ascii_lowercase();
+            !value.is_empty()
+                && !matches!(
+                    value.as_str(),
+                    "0" | "false" | "no" | "n" | "off" | "disabled" | "none" | "null"
+                )
+        }
+        Value::Null => false,
+        _ => true,
+    }
+}
+
+fn value_mentions_auto_approval(value: &Value) -> bool {
+    let Some(value) = value.as_str() else {
+        return false;
+    };
+    let value = normalized_identifier(value);
+    value.contains("auto") && value.contains("approv")
+}
+
+fn normalized_identifier(value: &str) -> String {
+    value
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
 fn value_set_string(value: &mut Value, key: &str, text: &str) {
     if let Some(map) = value.as_object_mut() {
         map.insert(key.to_string(), Value::String(text.to_string()));
@@ -2376,6 +2531,89 @@ mod tests {
         assert!(body.contains("*Question*"));
         assert!(body.contains("Which option should I use?"));
         assert!(body.contains("Options: Yes (Recommended), No"));
+    }
+
+    #[test]
+    fn filters_auto_resolved_request_user_input() {
+        let default_mode = json!({
+            "hook_event_name": "RequestUserInput",
+            "cwd": "/tmp/question-project",
+            "tool_name": "request_user_input",
+            "collaboration_mode": {"mode": "default"},
+            "tool_input": {"questions": [{"question": "Choose an option."}]}
+        });
+        assert!(codex_notification_from_payload(&default_mode, None).is_none());
+
+        let plan_mode = json!({
+            "hook_event_name": "RequestUserInput",
+            "cwd": "/tmp/question-project",
+            "tool_name": "request_user_input",
+            "collaboration_mode": {"mode": "plan"},
+            "tool_input": {"questions": [{"question": "Choose an option."}]}
+        });
+        assert!(codex_notification_from_payload(&plan_mode, None).is_some());
+
+        let auto_approved = json!({
+            "hook_event_name": "RequestUserInput",
+            "cwd": "/tmp/question-project",
+            "tool_name": "request_user_input",
+            "auto_approved": true,
+            "tool_input": {"questions": [{"question": "Choose an option."}]}
+        });
+        assert!(codex_notification_from_payload(&auto_approved, None).is_none());
+    }
+
+    #[test]
+    fn transcript_request_user_input_uses_collaboration_mode_context() {
+        let call = json!({
+            "type": "function_call",
+            "name": "request_user_input",
+            "call_id": "call-auto",
+            "arguments": "{\"questions\":[{\"question\":\"Choose an option.\"}]}"
+        });
+        let record_payload = call.as_object().expect("record payload");
+        let context = CodexTranscriptContext {
+            collaboration_mode: Some("default".to_string()),
+        };
+        let payload = request_user_input_record_payload(
+            record_payload,
+            Some("session-1"),
+            Some("/tmp/question-project"),
+            Path::new("/tmp/transcript.jsonl"),
+            &context,
+        )
+        .expect("payload");
+        assert!(codex_notification_from_payload(&payload, None).is_none());
+    }
+
+    #[test]
+    fn filters_auto_approved_permission_requests() {
+        let auto_approved = json!({
+            "hook_event_name": "PermissionRequest",
+            "cwd": "/tmp/approval-project",
+            "tool_name": "exec_command",
+            "auto_approved": true,
+            "tool_input": {"description": "Run a command."}
+        });
+        assert!(codex_notification_from_payload(&auto_approved, None).is_none());
+
+        let approval_disabled = json!({
+            "hook_event_name": "PermissionRequest",
+            "cwd": "/tmp/approval-project",
+            "tool_name": "exec_command",
+            "approval_policy": "never",
+            "tool_input": {"description": "Run a command."}
+        });
+        assert!(codex_notification_from_payload(&approval_disabled, None).is_none());
+
+        let waits_for_user = json!({
+            "hook_event_name": "PermissionRequest",
+            "cwd": "/tmp/approval-project",
+            "tool_name": "exec_command",
+            "approval_policy": "on-request",
+            "tool_input": {"description": "Run a command."}
+        });
+        assert!(codex_notification_from_payload(&waits_for_user, None).is_some());
     }
 
     #[test]

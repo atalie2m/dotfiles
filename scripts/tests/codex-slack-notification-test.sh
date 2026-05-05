@@ -69,6 +69,53 @@ request_input_output=$(
 JSON
 )
 
+request_input_auto_output=$(
+  HOME="$TMP_HOME" "$DOTFILES_BIN" agent-notify codex --dry-run --event-name RequestUserInput <<'JSON'
+{
+  "cwd": "/tmp/question-project",
+  "collaboration_mode": {"mode": "default"},
+  "tool_name": "request_user_input",
+  "tool_input": {
+    "questions": [
+      {
+        "header": "Question",
+        "id": "question_test",
+        "question": "Which option should I use?",
+        "options": [
+          {"label": "Yes (Recommended)", "description": "Use the default path."},
+          {"label": "No", "description": "Do not continue."}
+        ]
+      }
+    ]
+  }
+}
+JSON
+)
+
+if [[ -n $request_input_auto_output ]]; then
+  echo "FAIL: auto-resolved RequestUserInput produced Slack payload" >&2
+  exit 1
+fi
+
+permission_auto_output=$(
+  HOME="$TMP_HOME" "$DOTFILES_BIN" agent-notify codex --dry-run <<'JSON'
+{
+  "hook_event_name": "PermissionRequest",
+  "cwd": "/tmp/approval-project",
+  "approval_policy": "never",
+  "tool_name": "exec_command",
+  "tool_input": {
+    "description": "Run a command."
+  }
+}
+JSON
+)
+
+if [[ -n $permission_auto_output ]]; then
+  echo "FAIL: auto-resolved PermissionRequest produced Slack payload" >&2
+  exit 1
+fi
+
 prompt_submit_default_output=$(
   HOME="$TMP_HOME" "$DOTFILES_BIN" agent-notify codex --dry-run <<'JSON'
 {

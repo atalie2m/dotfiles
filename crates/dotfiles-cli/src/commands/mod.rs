@@ -49,6 +49,8 @@ enum RootCommand {
     #[command(name = "agent-notify")]
     AgentNotify(AgentNotifyArgs),
     Update(UpdateArgs),
+    #[command(name = "self-update")]
+    SelfUpdate(SelfUpdateArgs),
     Doctor(DoctorArgs),
     Bootstrap(BootstrapArgs),
     ExportClean(ExportCleanArgs),
@@ -111,6 +113,18 @@ pub(crate) struct ApplyArgs {
 pub(crate) struct UpdateArgs {
     #[command(flatten)]
     pub(crate) target: TargetSelector,
+}
+
+#[derive(Args, Clone, Debug)]
+pub(crate) struct SelfUpdateArgs {
+    #[command(flatten)]
+    pub(crate) target: TargetSelector,
+    #[arg(long, value_enum, default_value_t = ApplyAction::Switch)]
+    pub(crate) action: ApplyAction,
+    #[arg(long)]
+    pub(crate) no_sudo: bool,
+    #[arg(long)]
+    pub(crate) no_user_profile: bool,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -180,6 +194,9 @@ pub(crate) enum AgentNotifyCommand {
     Codex(AgentNotifyCodexArgs),
     /// Send a setup test notification.
     Test(AgentNotifyTestArgs),
+    /// Update only the user-profile runtime used by Codex notification hooks.
+    #[command(name = "update-runtime")]
+    UpdateRuntime(AgentNotifyUpdateRuntimeArgs),
 }
 
 #[derive(Args, Clone, Debug)]
@@ -249,6 +266,13 @@ pub(crate) struct AgentNotifyTestArgs {
     pub(crate) dry_run: bool,
 }
 
+#[derive(Args, Clone, Debug)]
+pub(crate) struct AgentNotifyUpdateRuntimeArgs {
+    /// Do not install dotfiles into the default user Nix profile if it is absent.
+    #[arg(long)]
+    pub(crate) no_install: bool,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub(crate) enum OutputFormat {
     Json,
@@ -307,6 +331,7 @@ pub(crate) fn run(args: Vec<String>) -> Result<(), String> {
         RootCommand::Apply(args) => apply::command_apply(&args),
         RootCommand::AgentNotify(args) => agent_notify::command_agent_notify(&args),
         RootCommand::Update(args) => update::command_update(&args),
+        RootCommand::SelfUpdate(args) => update::command_self_update(&args),
         RootCommand::Doctor(args) => doctor::command_doctor(&args),
         RootCommand::Bootstrap(args) => bootstrap::command_bootstrap(&args),
         RootCommand::ExportClean(args) => export_clean::command_export_clean(&args),

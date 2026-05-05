@@ -235,13 +235,23 @@ in
   apps = {
     dotfiles = mkDotfilesApp {
       name = "cli";
-      description = "Unified dotfiles CLI (apply/agent-notify/update/doctor/bootstrap/export-clean/gc/list-tools/matrix-tools/sync).";
+      description = "Unified dotfiles CLI (apply/agent-notify/update/self-update/doctor/bootstrap/export-clean/gc/list-tools/matrix-tools/sync).";
     };
     sync = mkEditorSyncApp;
     update = mkDotfilesApp {
       name = "update";
       subcommand = "update";
       description = "Update flake inputs, run checks, and build host targets.";
+    };
+    self-update = mkDotfilesApp {
+      name = "self-update";
+      subcommand = "self-update";
+      description = "Refresh the installed dotfiles CLI and switch the selected Darwin/Home Manager target.";
+    };
+    codex-slack-update = mkDotfilesApp {
+      name = "codex-slack-update";
+      subcommand = "agent-notify update-runtime";
+      description = "Refresh only the Codex Slack notification runtime in the default user Nix profile.";
     };
     list-tools = mkDotfilesApp {
       name = "list-tools";

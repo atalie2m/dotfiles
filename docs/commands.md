@@ -77,7 +77,22 @@ UPDATE_SKIP_BUILD=1 nix run .#update
 nix run .#update -- --host own_mac
 UPDATE_ALL=1 nix run .#update -- --host own_mac
 UPDATE_CHECKS=1 UPDATE_FORMAT=1 nix run .#update -- --host own_mac
+
+# Refresh the installed dotfiles CLI/runtime from this checkout
+nix run .#self-update -- --host own_mac
+nix run .#self-update -- --host own_mac --profile ultra
+
+# Validate the target without changing user or Home Manager profiles
+nix run .#self-update -- --host own_mac --action build --no-user-profile
 ```
+
+`self-update` is the one-shot command for changes to the dotfiles Rust CLI,
+including the Codex Slack notification runtime. It upgrades an existing
+`dotfiles` entry in the default user Nix profile when present, then runs the
+canonical Darwin/Home Manager apply path for the selected target. The second
+step is what refreshes the `dotfiles` binary normally found first in `PATH` at
+`/etc/profiles/per-user/$USER/bin/dotfiles`. Use `--no-user-profile` if the
+ad-hoc user profile entry is not part of the host setup you want to maintain.
 
 ## Nix store cleanup
 
@@ -179,10 +194,20 @@ JSON
 
 # Send a one-off setup test notification
 dotfiles agent-notify test
+
+# Update only the Codex Slack notification runtime; no Darwin switch.
+nix run .#codex-slack-update
 ```
 
 The old `~/.config/dotfiles/files/codex/slack-*` credential files are still read
 as fallback inputs, so existing local secrets do not need to move immediately.
+
+`codex-slack-update` installs or upgrades the `dotfiles` entry in the default
+user Nix profile only. `scripts/codex-slack-notification` prefers
+`$HOME/.nix-profile/bin/dotfiles` when it exists, so Codex Slack hook fixes can
+be rolled out without running a full Darwin/Home Manager switch. Use
+`nix run .#self-update -- --host <host>` only when the broader installed
+dotfiles runtime should converge too.
 
 Add the hooks to `~/.codex/config.toml`:
 
@@ -201,8 +226,9 @@ statusMessage = "Sending Codex Slack notification"
 
 # Start a lightweight transcript watcher. It creates the Slack parent from the
 # Codex-generated title when available, catches Plan Mode request_user_input
-# questions before the answer is submitted, and sends completion replies from
-# that exact Codex transcript.
+# questions before the answer is submitted, skips auto-resolved request_user_input
+# records outside Plan Mode, and sends completion replies from that exact Codex
+# transcript.
 [[hooks.SessionStart]]
 [[hooks.SessionStart.hooks]]
 type = "command"
@@ -216,7 +242,6 @@ statusMessage = "Starting Codex Slack transcript watcher"
 type = "command"
 command = "/path/to/dotfiles/scripts/codex-slack-notification"
 timeout = 10
-statusMessage = "Sending Codex approval Slack notification"
 ```
 
 `Stop`, `SessionStart`, and `PermissionRequest` are Codex lifecycle event names.
@@ -227,11 +252,15 @@ event is available, the first reply derives a short title from the first user
 prompt before falling back to `Codex: <repo>`; a later title event updates the
 parent with `chat.update`. Plan Mode `request_user_input` questions and
 transcript `task_complete` records are posted as replies from the watcher that
-belongs to that exact Codex session. `Stop` remains as a fallback for
+belongs to that exact Codex session. `request_user_input` records that Codex
+auto-resolves outside Plan Mode are ignored. `Stop` remains as a fallback for
 turn-completion payloads that arrive outside the watcher path, and labels
 question-like final messages as `Codex needs input`. `PreToolUse`,
 `UserPromptSubmit`, and successful `PostToolUse` events are intentionally not
 enabled by default to avoid Slack noise and Codex-internal helper prompts.
+Leave `statusMessage` unset on `PermissionRequest`: Codex renders it before the
+helper can inspect the payload, so auto-resolved permission events can otherwise
+create UI noise even when no Slack message is sent.
 
 The helper still supports `PostToolUse` failure payloads, but keep that hook
 opt-in. Codex runs `PostToolUse` after every matched tool call, so even a silent

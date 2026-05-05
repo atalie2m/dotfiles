@@ -2,4 +2,9 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+if [[ -z ${DOTFILES_BIN:-} && -n ${HOME:-} && -x "$HOME/.nix-profile/bin/dotfiles" ]]; then
+  export DOTFILES_BIN="$HOME/.nix-profile/bin/dotfiles"
+fi
+
 exec bash "$SCRIPT_DIR/lib/exec-dotfiles-subcommand.sh" agent-notify codex "$@"

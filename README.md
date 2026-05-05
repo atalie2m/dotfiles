@@ -103,6 +103,9 @@ Store a Bot User OAuth token and channel ID under
 `~/.config/dotfiles/files/agent-notifications/` to link each Codex thread to a
 Slack thread. The old `~/.config/dotfiles/files/codex/` credential files remain
 as fallback inputs.
+For notification-runtime-only updates, use `nix run .#codex-slack-update`.
+That refreshes the user-profile `dotfiles` binary preferred by
+`scripts/codex-slack-notification` without running a Darwin/Home Manager switch.
 
 The Rust implementation keeps Codex-specific parsing in the Codex adapter and
 keeps Slack as a generic sink. The adapter turns hook and transcript records
@@ -110,8 +113,9 @@ into typed agent events, while the Slack sink owns formatting, Bot API and
 webhook transport, thread state, fallback, and error logging. A lightweight
 transcript watcher creates or updates the Slack parent from Codex
 `thread_name_updated`, catches Plan Mode `request_user_input`, and posts
-completion replies from the exact session transcript. Actionable replies mention
-`<!channel>` by default but stay inside the Slack thread.
+completion replies from the exact session transcript. `request_user_input`
+records that Codex auto-resolves outside Plan Mode are skipped. Actionable
+replies mention `<!channel>` by default but stay inside the Slack thread.
 
 Setup and test commands live in [`docs/commands.md`](docs/commands.md#codex-slack-notifications).
 Secret storage details live in [`docs/secrets-local.md`](docs/secrets-local.md#codex-slack-notifications).
@@ -589,6 +593,16 @@ For target evaluation and strict sync checks, pass `--host` so `doctor` can gate
 ### Apply (build/switch)
 
 ### Update (flake inputs + checks/build)
+
+`self-update` refreshes the installed dotfiles CLI/runtime from the current
+checkout. It upgrades an existing `dotfiles` entry in the default user Nix
+profile when present, then runs the canonical Darwin/Home Manager apply path so
+`/etc/profiles/per-user/$USER/bin/dotfiles` is updated too. Use it for Rust CLI
+changes such as the Codex Slack notification runtime:
+
+```bash
+nix run .#self-update -- --host own_mac
+```
 
 ### GC (repo-scoped Nix store cleanup)
 
