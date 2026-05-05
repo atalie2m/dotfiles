@@ -90,6 +90,33 @@ Application/tool sourcing priority is:
 catalog-backed `tools.aiCodingAgent.claudeCode` toggle. Enabling it adds the
 `claude-code@latest` cask to the nix-darwin Homebrew activation.
 
+## Codex Slack Notifications
+
+`scripts/codex-slack-notification` posts Codex lifecycle notifications to Slack
+without storing Slack credentials in Git or in `~/.codex/config.toml`. Store a
+Bot User OAuth token and channel ID under `~/.config/dotfiles/files/codex/` to
+link each Codex thread to a Slack thread. A lightweight session transcript
+watcher uses Codex's generated thread title as the Slack parent message when
+that transcript event is available, formatted as `Codex: <title> (<repo>)`. If
+the title event is unavailable, the helper derives a short title from the first
+user prompt before falling back to `Codex: <repo>`. The watcher then picks up
+Plan Mode `request_user_input` questions because Codex does not expose them as
+a direct hook event. It also sends completion replies from each exact session
+transcript, which keeps parallel Codex threads in the same repo from being
+confused by `cwd`-only fallback inference. Actionable replies mention
+`<!channel>` by default but stay inside the Slack thread. A Slack Incoming
+Webhook can stay there as a best-effort fallback when Bot API thread posting is
+unavailable.
+
+The implementation is split so other coding agents can reuse the same Slack
+path. `scripts/lib/agent_notifications/slack.py` owns Slack formatting,
+transport, thread state, fallback, and error logging. `scripts/codex-slack-notification`
+is the Codex adapter that turns Codex hook and transcript records into those
+generic Slack notifications.
+
+Setup and test commands live in [`docs/commands.md`](docs/commands.md#codex-slack-notifications).
+Secret storage details live in [`docs/secrets-local.md`](docs/secrets-local.md#codex-slack-notifications).
+
 ## Repository-Scoped Toolchain Policy
 
 1. `terraform`, `opentofu`, `nodejs`, and `go` should be pinned per repository via that repo's own `flake.nix` / devShell.

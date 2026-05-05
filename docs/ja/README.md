@@ -89,6 +89,30 @@ reset の理由、before/after、設計意図は [`docs/architecture-reset.md`](
 から latest-first の Homebrew cask として管理します。有効にすると
 nix-darwin の Homebrew activation に `claude-code@latest` cask が追加されます。
 
+## Codex Slack 通知
+
+`scripts/codex-slack-notification` は Codex lifecycle notification を Slack
+に送る helper です。Slack credential は Git や `~/.codex/config.toml` には入れません。
+Bot User OAuth token と channel ID を `~/.config/dotfiles/files/codex/` に置くと、
+Codex thread ごとに Slack thread を連動できます。軽い session transcript watcher が
+Codex の生成 title を `Codex: <title> (<repo>)` 形式の Slack 親 message として使います。
+title event が無い場合は最初の user prompt から短い title を作り、それも無ければ
+`Codex: <repo>` に fallback します。Codex の direct hook event ではない Plan Mode の
+`request_user_input` 質問も拾います。
+完了 reply も各 session の transcript から送るため、同じ repo で Codex thread を並行しても
+`cwd` だけの fallback 推定に混線しにくくしています。
+対応が必要な reply は default で `<!channel>` を付けますが、Slack thread 内に留めます。
+Slack Incoming Webhook は Bot API の thread posting が使えない場合の best-effort fallback
+として同じ場所に残せます。
+
+実装は他の coding agent adapter も足せるように分けています。
+`scripts/lib/agent_notifications/slack.py` が Slack 整形、送信、thread state、fallback、error log
+を担当し、`scripts/codex-slack-notification` は Codex hook / transcript record を汎用 Slack
+通知へ変換する Codex adapter です。
+
+setup と test command は [`docs/commands.md`](commands.md#codex-slack-通知) にあります。
+secret の保管境界は [`docs/secrets-local.md`](secrets-local.md#codex-slack-通知) にあります。
+
 ## リポジトリ単位のツールチェイン方針
 
 1. `terraform`, `opentofu`, `nodejs`, `go` は、その repo 自身の `flake.nix` / devShell で pin する前提にする。

@@ -1,0 +1,1479 @@
+#!/usr/bin/env python3
+import argparse
+from collections.abc import Mapping, Sequence
+import datetime
+import fcntl
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import time
+import urllib.error
+
+SCRIPT_LIB = Path(__file__).resolve().parent / "lib"
+sys.path.insert(0, str(SCRIPT_LIB))
+
+from agent_notifications import slack as agent_slack
+
+
+DEFAULT_BOT_TOKEN_FILE = "~/.config/dotfiles/files/codex/slack-bot-token"
+DEFAULT_CHANNEL_ID_FILE = "~/.config/dotfiles/files/codex/slack-channel-id"
+DEFAULT_ERROR_LOG_FILE = "~/.local/state/dotfiles/codex-slack-notification.log"
+DEFAULT_QUESTION_STATE_FILE = "~/.local/state/dotfiles/codex-slack-question-watch.json"
+DEFAULT_STATE_FILE = "~/.local/state/dotfiles/codex-slack-threads.json"
+DEFAULT_SLACK_API_URL = "https://slack.com/api/chat.postMessage"
+DEFAULT_SLACK_UPDATE_API_URL = "https://slack.com/api/chat.update"
+DEFAULT_WEBHOOK_FILE = "~/.config/dotfiles/files/codex/slack-webhook-url"
+DEFAULT_TIMEOUT_SECONDS = 5
+MAX_THREAD_TITLE_LENGTH = 52
+QUESTION_WATCH_POLL_SECONDS = 0.5
+QUESTION_WATCH_TIMEOUT_SECONDS = 12 * 60 * 60
+MAX_TRANSCRIPT_INFERENCE_CANDIDATES = 40
+TRANSCRIPT_INFERENCE_TAIL_BYTES = 256 * 1024
+THREAD_PARENT_EVENTS = {"ThreadNameUpdated", "ThreadStart", "SessionStart"}
+COMPLETION_EVENTS = {"Stop", "agent-turn-complete"}
+THREAD_REPLY_MENTION_EVENTS = {
+    "PermissionRequest",
+    "PostToolUse",
+    "RequestUserInput",
+    "Stop",
+    "agent-turn-complete",
+    "request_user_input",
+}
+SESSION_ID_PATTERN = re.compile(
+    r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\.jsonl)?$",
+    re.IGNORECASE,
+)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Send a Codex lifecycle notification to Slack."
+    )
+    parser.add_argument(
+        "--webhook-file",
+        default=os.environ.get("CODEX_SLACK_WEBHOOK_FILE", DEFAULT_WEBHOOK_FILE),
+        help="Path to a file containing a Slack Incoming Webhook URL.",
+    )
+    parser.add_argument(
+        "--bot-token-file",
+        default=os.environ.get("CODEX_SLACK_BOT_TOKEN_FILE", DEFAULT_BOT_TOKEN_FILE),
+        help="Path to a file containing a Slack Bot User OAuth token.",
+    )
+    parser.add_argument(
+        "--channel-id-file",
+        default=os.environ.get("CODEX_SLACK_CHANNEL_ID_FILE", DEFAULT_CHANNEL_ID_FILE),
+        help="Path to a file containing the Slack channel ID.",
+    )
+    parser.add_argument(
+        "--state-file",
+        default=os.environ.get("CODEX_SLACK_THREAD_STATE_FILE", DEFAULT_STATE_FILE),
+        help="Path to the local Codex-to-Slack thread mapping file.",
+    )
+    parser.add_argument(
+        "--question-state-file",
+        default=os.environ.get(
+            "CODEX_SLACK_QUESTION_STATE_FILE",
+            DEFAULT_QUESTION_STATE_FILE,
+        ),
+        help="Path to the local request_user_input notification state file.",
+    )
+    parser.add_argument(
+        "--error-log-file",
+        default=os.environ.get("CODEX_SLACK_ERROR_LOG_FILE", DEFAULT_ERROR_LOG_FILE),
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--slack-api-url",
+        default=os.environ.get("CODEX_SLACK_API_URL", DEFAULT_SLACK_API_URL),
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--slack-update-api-url",
+        default=os.environ.get(
+            "CODEX_SLACK_UPDATE_API_URL",
+            DEFAULT_SLACK_UPDATE_API_URL,
+        ),
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--spawn-question-watcher",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--watch-transcript",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--watch-from-start",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--watch-timeout-seconds",
+        type=float,
+        default=float(
+            os.environ.get(
+                "CODEX_SLACK_QUESTION_WATCH_TIMEOUT_SECONDS",
+                QUESTION_WATCH_TIMEOUT_SECONDS,
+            )
+        ),
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--session-id",
+        default=os.environ.get("CODEX_SLACK_SESSION_ID"),
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--cwd",
+        default=os.environ.get("CODEX_SLACK_CWD"),
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--event-name",
+        default=os.environ.get("CODEX_SLACK_EVENT_NAME"),
+        help="Optional event label override.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=os.environ.get("CODEX_SLACK_NOTIFICATION_DRY_RUN") == "1",
+        help="Print the Slack payload instead of posting it.",
+    )
+    parser.add_argument("payload_args", nargs="*")
+    return parser.parse_args()
+
+
+def read_payload(payload_args: list[str]) -> dict:
+    raw = ""
+    if not sys.stdin.isatty():
+        raw = sys.stdin.read().strip()
+
+    if not raw:
+        for arg in reversed(payload_args):
+            candidate = arg.strip()
+            if candidate.startswith("{") and candidate.endswith("}"):
+                raw = candidate
+                break
+
+    if not raw:
+        return {}
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"invalid Codex notification JSON: {error}") from error
+
+    if not isinstance(payload, dict):
+        raise SystemExit("invalid Codex notification JSON: expected object")
+
+    return payload
+
+
+def first_value(payload: dict, *keys: str, default=None):
+    for key in keys:
+        value = payload.get(key)
+        if value not in (None, ""):
+            return value
+    return default
+
+
+def nested_value(payload: dict, *paths: tuple[str, ...], default=None):
+    for path in paths:
+        value = payload
+        for key in path:
+            if not isinstance(value, dict):
+                value = None
+                break
+            value = value.get(key)
+        if value not in (None, ""):
+            return value
+    return default
+
+
+def hook_event(payload: dict) -> Mapping | None:
+    event = payload.get("hook_event")
+    return event if isinstance(event, Mapping) else None
+
+
+def event_value(payload: dict, *keys: str, default=None):
+    event = hook_event(payload)
+    if event is None:
+        return default
+    return first_value(event, *keys, default=default)
+
+
+def collapse(text: str) -> str:
+    return agent_slack.collapse(text)
+
+
+def truncate(text: str, limit: int = agent_slack.MAX_MESSAGE_LENGTH) -> str:
+    return agent_slack.truncate(text, limit)
+
+
+def format_value(value) -> str:
+    return agent_slack.format_value(value)
+
+
+def slack_escape(text: str) -> str:
+    return agent_slack.slack_escape(text)
+
+
+def read_webhook_url(path: str) -> str | None:
+    return agent_slack.read_webhook_url(path)
+
+
+def read_secret(path: str, env_name: str) -> str | None:
+    return agent_slack.read_secret(path, env_name)
+
+
+def content_text(content) -> str | None:
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, Sequence) or isinstance(content, (bytes, bytearray, str)):
+        return None
+
+    parts = []
+    for item in content:
+        if not isinstance(item, Mapping):
+            continue
+        text = item.get("text")
+        if isinstance(text, str) and item.get("type") in {
+            "output_text",
+            "text",
+            "input_text",
+        }:
+            parts.append(text)
+
+    return "\n".join(parts) if parts else None
+
+
+def message_from_transcript(path: str | None) -> str | None:
+    if not path:
+        return None
+
+    transcript_path = Path(os.path.expandvars(os.path.expanduser(path)))
+    try:
+        lines = transcript_path.read_text(encoding="utf-8").splitlines()
+    except (FileNotFoundError, OSError, UnicodeDecodeError):
+        return None
+
+    for line in reversed(lines):
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(record, Mapping):
+            continue
+
+        payload = record.get("payload")
+        if not isinstance(payload, Mapping):
+            continue
+
+        if payload.get("type") == "task_complete":
+            message = first_value(payload, "last_agent_message", "last_assistant_message")
+            if isinstance(message, str):
+                return message
+
+        if payload.get("type") == "message" and payload.get("role") in {"assistant", "agent"}:
+            if payload.get("phase") == "commentary":
+                continue
+            message = content_text(payload.get("content"))
+            if message:
+                return message
+
+        if payload.get("type") == "agent_message" and payload.get("phase") != "commentary":
+            message = payload.get("message")
+            if isinstance(message, str):
+                return message
+
+    return None
+
+
+def direct_assistant_message_raw(payload: dict) -> str | None:
+    message = first_value(
+        payload,
+        "last_assistant_message",
+        "last-assistant-message",
+        "last_agent_message",
+        "last-agent-message",
+    )
+    if message:
+        return message
+    return event_value(
+        payload,
+        "last_assistant_message",
+        "last-assistant-message",
+        "last_agent_message",
+        "last-agent-message",
+    )
+
+
+def record_payload(record: Mapping) -> Mapping | None:
+    payload = record.get("payload")
+    return payload if isinstance(payload, Mapping) else None
+
+
+def task_complete_message(record_payload: Mapping) -> str | None:
+    if record_payload.get("type") != "task_complete":
+        return None
+    message = first_value(record_payload, "last_agent_message", "last_assistant_message")
+    return message if isinstance(message, str) else None
+
+
+def task_complete_turn_id_from_transcript(
+    path: str | None,
+    message: str | None = None,
+) -> str | None:
+    if not path:
+        return None
+
+    expected = collapse(message) if message else None
+    for line in reversed(transcript_tail(expand_path(path)).splitlines()):
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(record, Mapping):
+            continue
+        payload = record_payload(record)
+        if payload is None or payload.get("type") != "task_complete":
+            continue
+        if expected:
+            candidate = task_complete_message(payload)
+            if not candidate or collapse(candidate) != expected:
+                continue
+        turn_id = payload.get("turn_id")
+        return str(turn_id) if turn_id else None
+
+    return None
+
+
+def explicit_transcript_path(payload: dict) -> str | None:
+    return (
+        first_value(payload, "transcript_path", "transcript-path")
+        or nested_value(
+            payload,
+            ("hook_event", "transcript_path"),
+            ("hook_event", "transcript-path"),
+            ("session", "transcript_path"),
+            ("session", "transcript-path"),
+        )
+    )
+
+
+def transcript_tail(path: Path, limit: int = TRANSCRIPT_INFERENCE_TAIL_BYTES) -> str:
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as handle:
+            if size > limit:
+                handle.seek(size - limit)
+            return handle.read().decode("utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def thread_name_from_transcript(path: str | None) -> str | None:
+    if not path:
+        return None
+
+    for line in reversed(transcript_tail(expand_path(path)).splitlines()):
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(record, Mapping):
+            continue
+        record_payload = record.get("payload")
+        if not isinstance(record_payload, Mapping):
+            continue
+        if record_payload.get("type") != "thread_name_updated":
+            continue
+        title = record_payload.get("thread_name")
+        if isinstance(title, str) and title.strip():
+            return collapse(title)
+
+    return None
+
+
+def infer_transcript_path(payload: dict) -> str | None:
+    transcript_path = explicit_transcript_path(payload)
+    if transcript_path:
+        return str(transcript_path)
+
+    cwd = first_value(payload, "cwd") or event_value(payload, "cwd")
+    message = direct_assistant_message_raw(payload)
+    sessions_root = Path.home() / ".codex" / "sessions"
+    try:
+        candidates = sorted(
+            sessions_root.glob("**/*.jsonl"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+    except OSError:
+        return None
+
+    cwd_matches = []
+    for candidate in candidates[:MAX_TRANSCRIPT_INFERENCE_CANDIDATES]:
+        if not cwd and not message:
+            return str(candidate)
+        tail = transcript_tail(candidate)
+        if cwd and str(cwd) not in tail:
+            continue
+        if message and task_complete_turn_id_from_transcript(str(candidate), message):
+            return str(candidate)
+        cwd_matches.append(candidate)
+
+    if cwd_matches:
+        return str(cwd_matches[0])
+
+    return None
+
+
+def explicit_thread_key(payload: dict) -> str | None:
+    explicit_key = first_value(
+        payload,
+        "session_id",
+        "session-id",
+        "thread_id",
+        "thread-id",
+        "conversation_id",
+        "conversation-id",
+    )
+    if explicit_key:
+        return str(explicit_key)
+
+    event_key = nested_value(
+        payload,
+        ("hook_event", "session_id"),
+        ("hook_event", "session-id"),
+        ("hook_event", "thread_id"),
+        ("hook_event", "thread-id"),
+        ("hook_event", "conversation_id"),
+        ("hook_event", "conversation-id"),
+    )
+    if event_key:
+        return str(event_key)
+
+    return None
+
+
+def transcript_path_for_session_id(session_id: str | None) -> str | None:
+    if not session_id or not SESSION_ID_PATTERN.fullmatch(str(session_id)):
+        return None
+
+    sessions_root = Path.home() / ".codex" / "sessions"
+    try:
+        matches = sorted(
+            sessions_root.glob(f"**/*{session_id}.jsonl"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+    except OSError:
+        return None
+
+    return str(matches[0]) if matches else None
+
+
+def title_transcript_path(payload: dict) -> str | None:
+    transcript_path = explicit_transcript_path(payload)
+    if transcript_path:
+        return str(transcript_path)
+
+    key = explicit_thread_key(payload)
+    if key:
+        return transcript_path_for_session_id(key)
+
+    return infer_transcript_path(payload)
+
+
+def resolved_event_name(payload: dict, event_name_override: str | None = None) -> str:
+    return str(
+        event_name_override
+        or first_value(payload, "hook_event_name", "hook-event-name", "type")
+        or "codex-notification"
+    )
+
+
+def project_name(payload: dict) -> str:
+    cwd = first_value(payload, "cwd", default=os.getcwd())
+    return Path(cwd).name if cwd else "unknown"
+
+
+def assistant_message_raw(payload: dict) -> str | None:
+    message = direct_assistant_message_raw(payload)
+    if not message:
+        transcript_path = infer_transcript_path(payload)
+        message = message_from_transcript(transcript_path)
+    return message
+
+
+def assistant_message(payload: dict) -> str:
+    return truncate(assistant_message_raw(payload) or "Codex completed.")
+
+
+def user_prompt_message(payload: dict) -> str:
+    prompt = first_value(payload, "prompt") or event_value(payload, "prompt")
+    return truncate(prompt or "User submitted a prompt to Codex.")
+
+
+def request_user_input_args(payload: dict) -> Mapping | None:
+    tool_input = first_value(payload, "tool_input", "tool-input", default=None)
+    if isinstance(tool_input, Mapping):
+        arguments = tool_input.get("arguments")
+        if isinstance(arguments, str):
+            try:
+                parsed = json.loads(arguments)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, Mapping):
+                return parsed
+        return tool_input
+
+    arguments = first_value(payload, "arguments", default=None)
+    if isinstance(arguments, str):
+        try:
+            parsed = json.loads(arguments)
+        except json.JSONDecodeError:
+            return None
+        return parsed if isinstance(parsed, Mapping) else None
+
+    if isinstance(arguments, Mapping):
+        return arguments
+
+    if isinstance(payload.get("questions"), Sequence):
+        return payload
+
+    return None
+
+
+def request_user_input_message(payload: dict) -> str:
+    args = request_user_input_args(payload)
+    if args is None:
+        return "Codex is waiting for your input."
+
+    questions = args.get("questions")
+    if not isinstance(questions, Sequence) or isinstance(questions, (str, bytes, bytearray)):
+        return "Codex is waiting for your input."
+
+    lines = []
+    for index, question in enumerate(questions, 1):
+        if not isinstance(question, Mapping):
+            continue
+
+        header = question.get("header")
+        text = question.get("question") or header or f"Question {index}"
+        if header and text != header:
+            lines.append(f"*{header}*")
+        lines.append(format_value(text))
+
+        options = question.get("options")
+        if isinstance(options, Sequence) and not isinstance(options, (str, bytes, bytearray)):
+            labels = []
+            for option in options:
+                if isinstance(option, Mapping) and option.get("label"):
+                    labels.append(format_value(option["label"]))
+            if labels:
+                lines.append(f"Options: {', '.join(labels)}")
+
+    return truncate("\n".join(lines) or "Codex is waiting for your input.")
+
+
+def looks_like_internal_title_prompt(message: str) -> bool:
+    return message.startswith(
+        "You are a helpful assistant. You will be presented with a user prompt,"
+    )
+
+
+def looks_like_title_generation_result(message: str) -> bool:
+    return title_generation_result(message) is not None
+
+
+def title_generation_result(message: str | None) -> str | None:
+    if not message:
+        return None
+
+    try:
+        parsed = json.loads(message)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(parsed, Mapping):
+        return None
+
+    title = parsed.get("title")
+    if set(parsed.keys()) == {"title"} and isinstance(title, str):
+        return collapse(title)
+
+    return None
+
+
+def prompt_title_from_text(message: str | None) -> str | None:
+    if not message:
+        return None
+
+    first_line = next(
+        (line.strip() for line in str(message).splitlines() if line.strip()),
+        "",
+    )
+    if not first_line:
+        return None
+    if first_line.startswith("# AGENTS.md instructions"):
+        return None
+    if looks_like_internal_title_prompt(first_line):
+        return None
+
+    sentence = re.split(r"[。！？!?]", first_line, maxsplit=1)[0]
+    title = collapse(sentence).strip(" -:：,、。！？!?\"'`「」")
+    title = re.sub(
+        r"(を)?(してください|して下さい|お願いします|ください|下さい)$",
+        "",
+        title,
+    ).strip()
+    title = re.sub(r"(です|ます)$", "", title).strip()
+    if len(title) < 3:
+        return None
+    return truncate(title, MAX_THREAD_TITLE_LENGTH)
+
+
+def prompt_title_from_transcript(path: str | None) -> str | None:
+    if not path:
+        return None
+
+    transcript_path = expand_path(path)
+    try:
+        handle = transcript_path.open("r", encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+    with handle:
+        for line in handle:
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(record, Mapping):
+                continue
+
+            record_payload = record.get("payload")
+            if not isinstance(record_payload, Mapping):
+                continue
+            if record_payload.get("type") != "user_message":
+                continue
+
+            title = prompt_title_from_text(record_payload.get("message"))
+            if title:
+                return title
+
+    return None
+
+
+def prompt_title(payload: dict) -> str | None:
+    title = prompt_title_from_text(first_value(payload, "prompt") or event_value(payload, "prompt"))
+    if title:
+        return title
+
+    transcript_path = title_transcript_path(payload)
+    return prompt_title_from_transcript(str(transcript_path) if transcript_path else None)
+
+
+def thread_title(payload: dict) -> str | None:
+    title = first_value(
+        payload,
+        "thread_name",
+        "thread-name",
+        "title",
+        "codex_title",
+        "codex-title",
+    )
+    if title:
+        return collapse(title)
+
+    event_title = nested_value(
+        payload,
+        ("hook_event", "thread_name"),
+        ("hook_event", "thread-name"),
+        ("hook_event", "title"),
+    )
+    if event_title:
+        return collapse(event_title)
+
+    transcript_path = title_transcript_path(payload)
+    transcript_title = thread_name_from_transcript(
+        str(transcript_path) if transcript_path else None
+    )
+    if transcript_title:
+        return transcript_title
+
+    generated_title = title_generation_result(assistant_message_raw(payload))
+    if generated_title:
+        return generated_title
+
+    return prompt_title(payload)
+
+
+def looks_like_question(message: str) -> bool:
+    stripped = message.strip()
+    if not stripped:
+        return False
+    return stripped.endswith("?") or stripped.endswith("？")
+
+
+def permission_request_message(payload: dict) -> str:
+    tool_name = first_value(payload, "tool_name", "tool-name", default="tool")
+    description = nested_value(
+        payload,
+        ("tool_input", "description"),
+        ("tool-input", "description"),
+    )
+    command = nested_value(
+        payload,
+        ("tool_input", "command"),
+        ("tool-input", "command"),
+    )
+
+    if description:
+        detail = truncate(description)
+    elif command:
+        detail = f"```{truncate(command, 700)}```"
+    else:
+        detail = "Codex is waiting for approval."
+
+    return f"Tool: `{tool_name}`\n{detail}"
+
+
+def response_indicates_failure(response) -> bool:
+    if not isinstance(response, Mapping):
+        return False
+
+    for key in ("success", "ok"):
+        value = response.get(key)
+        if value is False:
+            return True
+
+    for key in ("exit_code", "exitCode", "status_code", "statusCode", "code"):
+        value = response.get(key)
+        if isinstance(value, int) and value != 0:
+            return True
+
+    status = response.get("status")
+    if isinstance(status, str) and status.lower() in {"error", "failed", "failure"}:
+        return True
+
+    return any(response.get(key) for key in ("error", "exception"))
+
+
+def extract_tool_command(payload: dict) -> str | None:
+    tool_input = first_value(payload, "tool_input", "tool-input", default={})
+    if not isinstance(tool_input, Mapping):
+        return format_value(tool_input) if tool_input else None
+
+    direct = first_value(tool_input, "command", "cmd", "input")
+    if direct:
+        return format_value(direct)
+
+    params = tool_input.get("params")
+    if isinstance(params, Mapping):
+        command = first_value(params, "command", "cmd")
+        if command:
+            return format_value(command)
+
+    arguments = tool_input.get("arguments")
+    if isinstance(arguments, str):
+        try:
+            parsed = json.loads(arguments)
+        except json.JSONDecodeError:
+            return arguments
+        if isinstance(parsed, Mapping):
+            command = first_value(parsed, "command", "cmd")
+            if command:
+                return format_value(command)
+        return format_value(parsed)
+
+    return format_value(tool_input)
+
+
+def extract_response_preview(payload: dict) -> str | None:
+    response = first_value(payload, "tool_response", "tool-response", default={})
+    if not isinstance(response, Mapping):
+        return format_value(response) if response else None
+
+    for key in (
+        "error",
+        "exception",
+        "message",
+        "stderr",
+        "output",
+        "stdout",
+        "output_preview",
+        "outputPreview",
+    ):
+        value = response.get(key)
+        if value:
+            return format_value(value)
+
+    return format_value(response)
+
+
+def post_tool_use_failure_message(payload: dict) -> str | None:
+    response = first_value(payload, "tool_response", "tool-response", default={})
+    if not response_indicates_failure(response):
+        return None
+
+    tool_name = first_value(payload, "tool_name", "tool-name", default="tool")
+    parts = [f"Tool: `{tool_name}`"]
+
+    command = extract_tool_command(payload)
+    if command:
+        parts.append(f"Command: ```{truncate(command, 500)}```")
+
+    preview = extract_response_preview(payload)
+    if preview:
+        parts.append(f"Output: ```{truncate(preview, 700)}```")
+
+    return "\n".join(parts)
+
+
+def slack_channel_mention() -> str | None:
+    return agent_slack.channel_mention()
+
+
+def should_mention_event(event_name: str) -> bool:
+    return agent_slack.should_mention_event(event_name, THREAD_REPLY_MENTION_EVENTS)
+
+
+def should_broadcast_reply() -> bool:
+    return agent_slack.should_broadcast_reply()
+
+
+def thread_parent_title(payload: dict) -> str:
+    project = project_name(payload)
+    title = thread_title(payload)
+    if title:
+        return f"Codex: {title} ({project})"
+    return f"Codex: {project}"
+
+
+def build_thread_parent_payload(payload: dict) -> dict:
+    title = thread_parent_title(payload)
+    cwd = first_value(payload, "cwd", default=os.getcwd())
+    return agent_slack.build_thread_parent_payload(
+        title=title,
+        cwd=cwd,
+        context_label="Codex thread",
+    )
+
+
+def is_thread_parent_event(payload: dict, event_name: str) -> bool:
+    if event_name in THREAD_PARENT_EVENTS:
+        return True
+    if event_name in ("Stop", "agent-turn-complete"):
+        return thread_title(payload) is not None and title_generation_result(
+            assistant_message_raw(payload)
+        ) is not None
+    return False
+
+
+def build_slack_payload(payload: dict, event_name_override: str | None) -> dict | None:
+    cwd = first_value(payload, "cwd", default=os.getcwd())
+    project = project_name(payload)
+    event_name = resolved_event_name(payload, event_name_override)
+    if is_thread_parent_event(payload, event_name):
+        if thread_key(payload):
+            return build_thread_parent_payload(payload)
+        return None
+
+    if event_name == "PermissionRequest":
+        message = permission_request_message(payload)
+    elif event_name == "PostToolUse":
+        message = post_tool_use_failure_message(payload)
+        if not message:
+            return None
+    elif event_name == "UserPromptSubmit":
+        if os.environ.get("CODEX_SLACK_NOTIFY_USER_PROMPTS") != "1":
+            return None
+        message = user_prompt_message(payload)
+        if looks_like_internal_title_prompt(message):
+            return None
+    elif event_name in ("RequestUserInput", "request_user_input"):
+        message = request_user_input_message(payload)
+    else:
+        message = assistant_message(payload)
+        if event_name in ("Stop", "agent-turn-complete") and looks_like_title_generation_result(
+            message
+        ):
+            return None
+
+    event_label = str(event_name).replace("-", " ")
+    if event_name == "PermissionRequest":
+        title = f"Codex needs approval: {project}"
+    elif event_name == "PostToolUse":
+        title = f"Codex tool failed: {project}"
+    elif event_name == "UserPromptSubmit":
+        if looks_like_question(message):
+            title = f"User asked Codex: {project}"
+        else:
+            title = f"Codex prompt submitted: {project}"
+    elif event_name in ("RequestUserInput", "request_user_input"):
+        title = f"Codex needs input: {project}"
+    elif event_name in ("Stop", "agent-turn-complete"):
+        if looks_like_question(message):
+            title = f"Codex needs input: {project}"
+        else:
+            title = f"Codex completed: {project}"
+    else:
+        title = f"Codex notification: {project}"
+
+    mention = None
+    if should_mention_event(event_name):
+        mention = slack_channel_mention()
+
+    return agent_slack.build_reply_payload(
+        title=title,
+        message=message,
+        cwd=cwd,
+        event_label=event_label,
+        mention=mention,
+    )
+
+
+def session_id_from_transcript_path(transcript_path: str | None) -> str | None:
+    if not transcript_path:
+        return None
+
+    match = SESSION_ID_PATTERN.search(Path(str(transcript_path)).name)
+    if not match:
+        return None
+    return match.group(1)
+
+
+def thread_key(payload: dict) -> str | None:
+    explicit_key = explicit_thread_key(payload)
+    if explicit_key:
+        return explicit_key
+
+    transcript_path = infer_transcript_path(payload)
+    return session_id_from_transcript_path(str(transcript_path))
+
+
+def expand_path(path: str) -> Path:
+    return agent_slack.expand_path(path)
+
+
+def empty_state() -> dict:
+    return agent_slack.empty_thread_state()
+
+
+def read_state(state_file: Path) -> dict:
+    return agent_slack.read_thread_state(state_file)
+
+
+def write_state(state_file: Path, state: dict) -> None:
+    agent_slack.write_state(state_file, state)
+
+
+def append_error_log(error_log_file: str, payload: dict, message: str) -> None:
+    agent_slack.append_error_log(
+        error_log_file=error_log_file,
+        event_name=resolved_event_name(payload),
+        project=project_name(payload),
+        thread_key=thread_key(payload),
+        message=message,
+    )
+
+
+def read_question_state(state_file: Path) -> dict:
+    return agent_slack.read_dedupe_state(state_file)
+
+
+def post_webhook(webhook_url: str, slack_payload: dict) -> None:
+    agent_slack.post_webhook(webhook_url, slack_payload)
+
+
+def post_web_api(api_url: str, bot_token: str, slack_payload: dict) -> dict:
+    return agent_slack.post_web_api(api_url, bot_token, slack_payload)
+
+
+def send_slack_payload(args: argparse.Namespace, payload: dict, slack_payload: dict) -> bool:
+    event_name = resolved_event_name(payload)
+
+    def post_threaded_adapter(**kwargs):
+        return post_threaded(
+            api_url=kwargs["api_url"],
+            update_api_url=kwargs["update_api_url"],
+            bot_token=kwargs["bot_token"],
+            channel_id=kwargs["channel_id"],
+            state_file_path=kwargs["state_file_path"],
+            payload=payload,
+            slack_payload=kwargs["slack_payload"],
+        )
+
+    return agent_slack.send_payload(
+        bot_token_file=args.bot_token_file,
+        channel_id_file=args.channel_id_file,
+        webhook_file=args.webhook_file,
+        error_log_file=args.error_log_file,
+        api_url=args.slack_api_url,
+        update_api_url=args.slack_update_api_url,
+        state_file_path=args.state_file,
+        slack_payload=slack_payload,
+        event_name=event_name,
+        project=project_name(payload),
+        thread_key=thread_key(payload),
+        thread_parent_event=is_thread_parent_event(payload, event_name),
+        parent_title=thread_parent_title(payload),
+        parent_cwd=first_value(payload, "cwd", default=os.getcwd()),
+        parent_context_label="Codex thread",
+        mention_reply=should_mention_event(event_name),
+        broadcast_reply=should_broadcast_reply(),
+        debug_label="codex-slack-notification",
+        post_threaded_func=post_threaded_adapter,
+        post_webhook_func=post_webhook,
+        read_secret_func=read_secret,
+        read_webhook_func=read_webhook_url,
+        append_error_log_func=lambda **kwargs: agent_slack.append_error_log(**kwargs),
+    )
+
+
+def post_threaded(
+    *,
+    api_url: str,
+    update_api_url: str,
+    bot_token: str,
+    channel_id: str,
+    state_file_path: str,
+    payload: dict,
+    slack_payload: dict,
+) -> bool:
+    event_name = resolved_event_name(payload)
+    return agent_slack.post_threaded(
+        api_url=api_url,
+        update_api_url=update_api_url,
+        bot_token=bot_token,
+        channel_id=channel_id,
+        state_file_path=state_file_path,
+        slack_payload=slack_payload,
+        thread_key=thread_key(payload),
+        thread_parent_event=is_thread_parent_event(payload, event_name),
+        parent_title=thread_parent_title(payload),
+        parent_cwd=first_value(payload, "cwd", default=os.getcwd()),
+        parent_context_label="Codex thread",
+        mention_reply=should_mention_event(event_name),
+        broadcast_reply=should_broadcast_reply(),
+        post_api=post_web_api,
+    )
+
+
+def request_user_input_record_payload(
+    *,
+    record_payload: Mapping,
+    session_id: str | None,
+    cwd: str | None,
+    transcript_path: Path | None = None,
+) -> dict | None:
+    if record_payload.get("type") != "function_call":
+        return None
+    if record_payload.get("name") != "request_user_input":
+        return None
+
+    arguments = record_payload.get("arguments")
+    if not isinstance(arguments, str):
+        return None
+
+    try:
+        parsed_arguments = json.loads(arguments)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(parsed_arguments, Mapping):
+        return None
+
+    payload = {
+        "hook_event_name": "RequestUserInput",
+        "cwd": cwd or os.getcwd(),
+        "tool_name": "request_user_input",
+        "tool_use_id": record_payload.get("call_id"),
+        "tool_input": parsed_arguments,
+    }
+    if session_id:
+        payload["session_id"] = session_id
+    if transcript_path:
+        payload["transcript_path"] = str(transcript_path)
+    return payload
+
+
+def thread_name_record_payload(
+    *,
+    record_payload: Mapping,
+    session_id: str | None,
+    cwd: str | None,
+    transcript_path: Path,
+) -> dict | None:
+    if record_payload.get("type") != "thread_name_updated":
+        return None
+
+    title = record_payload.get("thread_name")
+    if not isinstance(title, str) or not title.strip():
+        return None
+
+    payload = {
+        "hook_event_name": "ThreadNameUpdated",
+        "cwd": cwd or os.getcwd(),
+        "thread_name": title,
+        "transcript_path": str(transcript_path),
+    }
+
+    thread_id = record_payload.get("thread_id") or session_id
+    if thread_id:
+        payload["session_id"] = str(thread_id)
+
+    return payload
+
+
+def thread_start_payload(
+    *,
+    session_id: str | None,
+    cwd: str | None,
+    transcript_path: str,
+) -> dict:
+    payload = {
+        "hook_event_name": "ThreadStart",
+        "cwd": cwd or os.getcwd(),
+        "transcript_path": transcript_path,
+    }
+    if session_id:
+        payload["session_id"] = session_id
+    title = thread_name_from_transcript(transcript_path)
+    if title:
+        payload["thread_name"] = title
+    return payload
+
+
+def send_thread_parent(args: argparse.Namespace, notification_payload: dict) -> bool:
+    slack_payload = build_slack_payload(notification_payload, None)
+    if slack_payload is None:
+        return True
+
+    if args.dry_run:
+        print(json.dumps(slack_payload, ensure_ascii=False, sort_keys=True))
+        return True
+    else:
+        return send_slack_payload(args, notification_payload, slack_payload)
+
+
+def notify_request_user_input_once(
+    *,
+    args: argparse.Namespace,
+    notification_payload: dict,
+    transcript_path: Path,
+) -> None:
+    call_id = first_value(notification_payload, "tool_use_id", "call_id", default="")
+    key_parts = [
+        str(first_value(notification_payload, "session_id", default="")),
+        str(call_id),
+        str(transcript_path),
+    ]
+    key = ":".join(key_parts)
+    if not call_id:
+        return
+
+    state_file = expand_path(args.question_state_file)
+    lock_file = state_file.with_suffix(f"{state_file.suffix}.lock")
+    lock_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with lock_file.open("a+") as lock_handle:
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+        state = read_question_state(state_file)
+        notified = state.setdefault("notified", {})
+        if key in notified:
+            return
+
+        slack_payload = build_slack_payload(notification_payload, None)
+        if slack_payload is None:
+            notified[key] = datetime.datetime.now(datetime.UTC).isoformat()
+            write_state(state_file, state)
+            return
+
+        if args.dry_run:
+            print(json.dumps(slack_payload, ensure_ascii=False, sort_keys=True))
+            sent = True
+        else:
+            sent = send_slack_payload(args, notification_payload, slack_payload)
+
+        if not sent:
+            return
+
+        notified[key] = datetime.datetime.now(datetime.UTC).isoformat()
+        write_state(state_file, state)
+
+
+def completion_record_payload(
+    *,
+    record_payload: Mapping,
+    session_id: str | None,
+    cwd: str | None,
+    transcript_path: Path,
+) -> dict | None:
+    message = task_complete_message(record_payload)
+    if not message:
+        return None
+
+    payload = {
+        "hook_event_name": "Stop",
+        "cwd": cwd or os.getcwd(),
+        "last_agent_message": message,
+        "transcript_path": str(transcript_path),
+    }
+    if session_id:
+        payload["session_id"] = session_id
+
+    turn_id = record_payload.get("turn_id")
+    if turn_id:
+        payload["turn_id"] = str(turn_id)
+
+    return payload
+
+
+def completion_state_key(notification_payload: dict, transcript_path: str | None) -> str | None:
+    if not transcript_path:
+        return None
+
+    turn_id = first_value(notification_payload, "turn_id", "turn-id")
+    if not turn_id:
+        turn_id = task_complete_turn_id_from_transcript(
+            transcript_path,
+            direct_assistant_message_raw(notification_payload),
+        )
+    if not turn_id:
+        return None
+
+    session_id = thread_key(notification_payload) or session_id_from_transcript_path(
+        transcript_path
+    )
+    return f"task_complete:{session_id or ''}:{turn_id}:{transcript_path}"
+
+
+def notify_completion_once(
+    *,
+    args: argparse.Namespace,
+    notification_payload: dict,
+    transcript_path: str | Path | None = None,
+) -> bool:
+    transcript_path_text = str(transcript_path or infer_transcript_path(notification_payload) or "")
+    key = completion_state_key(notification_payload, transcript_path_text)
+
+    if not key:
+        slack_payload = build_slack_payload(notification_payload, None)
+        if slack_payload is None:
+            return True
+        if args.dry_run:
+            print(json.dumps(slack_payload, ensure_ascii=False, sort_keys=True))
+            return True
+        return send_slack_payload(args, notification_payload, slack_payload)
+
+    state_file = expand_path(args.question_state_file)
+    lock_file = state_file.with_suffix(f"{state_file.suffix}.lock")
+    lock_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with lock_file.open("a+") as lock_handle:
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+        state = read_question_state(state_file)
+        notified = state.setdefault("notified", {})
+        if key in notified:
+            return True
+
+        payload = dict(notification_payload)
+        payload.setdefault("transcript_path", transcript_path_text)
+        session_id = session_id_from_transcript_path(transcript_path_text)
+        if session_id:
+            payload.setdefault("session_id", session_id)
+
+        slack_payload = build_slack_payload(payload, None)
+        if slack_payload is None:
+            notified[key] = datetime.datetime.now(datetime.UTC).isoformat()
+            write_state(state_file, state)
+            return True
+
+        if args.dry_run:
+            print(json.dumps(slack_payload, ensure_ascii=False, sort_keys=True))
+            sent = True
+        else:
+            sent = send_slack_payload(args, payload, slack_payload)
+
+        if not sent:
+            return False
+
+        notified[key] = datetime.datetime.now(datetime.UTC).isoformat()
+        write_state(state_file, state)
+        return True
+
+
+def watch_transcript_for_questions(args: argparse.Namespace) -> int:
+    transcript_path = expand_path(args.watch_transcript)
+    cwd = args.cwd
+    session_id = args.session_id
+    deadline = time.monotonic() + max(args.watch_timeout_seconds, 1)
+    position = 0
+
+    if not args.watch_from_start:
+        try:
+            position = transcript_path.stat().st_size
+        except FileNotFoundError:
+            position = 0
+
+    while time.monotonic() < deadline:
+        try:
+            with transcript_path.open("r", encoding="utf-8", errors="replace") as handle:
+                handle.seek(position)
+                lines = handle.readlines()
+                position = handle.tell()
+        except FileNotFoundError:
+            lines = []
+
+        for line in lines:
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(record, Mapping):
+                continue
+
+            record_payload = record.get("payload")
+            if not isinstance(record_payload, Mapping):
+                continue
+
+            notification_payload = request_user_input_record_payload(
+                record_payload=record_payload,
+                session_id=session_id,
+                cwd=cwd,
+                transcript_path=transcript_path,
+            )
+            if notification_payload is not None:
+                notify_request_user_input_once(
+                    args=args,
+                    notification_payload=notification_payload,
+                    transcript_path=transcript_path,
+                )
+                continue
+
+            thread_parent_payload = thread_name_record_payload(
+                record_payload=record_payload,
+                session_id=session_id,
+                cwd=cwd,
+                transcript_path=transcript_path,
+            )
+            if thread_parent_payload is not None:
+                send_thread_parent(args, thread_parent_payload)
+                continue
+
+            completion_payload = completion_record_payload(
+                record_payload=record_payload,
+                session_id=session_id,
+                cwd=cwd,
+                transcript_path=transcript_path,
+            )
+            if completion_payload is not None:
+                notify_completion_once(
+                    args=args,
+                    notification_payload=completion_payload,
+                    transcript_path=transcript_path,
+                )
+
+        time.sleep(QUESTION_WATCH_POLL_SECONDS)
+
+    return 0
+
+
+def spawn_question_watcher(args: argparse.Namespace, payload: dict) -> int:
+    transcript_path = first_value(payload, "transcript_path", "transcript-path")
+    if not transcript_path:
+        return 0
+
+    watcher_session_id = thread_key(payload) or session_id_from_transcript_path(
+        str(transcript_path)
+    )
+    cwd = str(first_value(payload, "cwd", default=os.getcwd()))
+    command = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "--watch-transcript",
+        transcript_path,
+        "--watch-from-start",
+        "--session-id",
+        str(watcher_session_id or ""),
+        "--cwd",
+        cwd,
+        "--webhook-file",
+        args.webhook_file,
+        "--bot-token-file",
+        args.bot_token_file,
+        "--channel-id-file",
+        args.channel_id_file,
+        "--state-file",
+        args.state_file,
+        "--question-state-file",
+        args.question_state_file,
+        "--error-log-file",
+        args.error_log_file,
+        "--slack-api-url",
+        args.slack_api_url,
+        "--slack-update-api-url",
+        args.slack_update_api_url,
+        "--watch-timeout-seconds",
+        str(args.watch_timeout_seconds),
+    ]
+
+    subprocess.Popen(
+        command,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+        close_fds=True,
+    )
+    return 0
+
+
+def main() -> int:
+    args = parse_args()
+
+    try:
+        if args.watch_transcript:
+            return watch_transcript_for_questions(args)
+
+        payload = read_payload(args.payload_args)
+        if args.event_name and "hook_event_name" not in payload:
+            payload = dict(payload)
+            payload["hook_event_name"] = args.event_name
+        if args.spawn_question_watcher:
+            return spawn_question_watcher(args, payload)
+
+        event_name = resolved_event_name(payload, args.event_name)
+        if event_name in COMPLETION_EVENTS:
+            notify_completion_once(args=args, notification_payload=payload)
+            return 0
+
+        slack_payload = build_slack_payload(payload, args.event_name)
+
+        if slack_payload is None:
+            return 0
+
+        if args.dry_run:
+            print(json.dumps(slack_payload, ensure_ascii=False, sort_keys=True))
+            return 0
+
+        send_slack_payload(args, payload, slack_payload)
+    except (OSError, urllib.error.URLError, SystemExit) as error:
+        if os.environ.get("CODEX_SLACK_NOTIFICATION_DEBUG") == "1":
+            print(f"codex-slack-notification: {error}", file=sys.stderr)
+        return 0
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
