@@ -64,7 +64,7 @@ reset の理由、before/after、設計意図は [`docs/architecture-reset.md`](
   - `minimal`: Nix settings と Git を中心にした最小構成
   - `lite`: shell、core CLI、navigation/search、Git、secrets basics、macOS integration を含む実用 baseline
   - `pro`: global tool catalog と editor を install するが、editor setup/sync は実行しない
-  - `ultra`: `pro` に VS Code、Neovim、Emacs の setup/sync を追加する
+  - `ultra`: `pro` に VS Code、Neovim、Emacs の setup/sync と Codex Slack 通知を追加する
 
 正式な host 名と CLI 例は [`docs/commands.md`](commands.md) にあります。
 
@@ -95,6 +95,9 @@ nix-darwin の Homebrew activation に `claude-code@latest` cask が追加され
 に送る Rust control plane の command です。既存 hook config のために
 `scripts/codex-slack-notification` は互換 shim として残します。Slack credential は Git や
 `~/.codex/config.toml` には入れず、
+この runtime の stock profile toggle は
+`tools.aiCodingAgent.codex.slackNotifications.enable` で、`pro` ではなく
+`ultra` が有効化します。
 `~/.config/dotfiles/files/agent-notifications/` に置きます。旧
 `~/.config/dotfiles/files/codex/` の credential file は fallback として読みます。
 

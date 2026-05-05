@@ -140,6 +140,9 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 `dotfiles agent-notify codex` is the canonical Rust command for Codex Slack
 notifications. `scripts/codex-slack-notification` is only a compatibility shim
 that delegates to `dotfiles agent-notify codex` for existing hook configs.
+Stock profile ownership is `ultra`-only through
+`tools.aiCodingAgent.codex.slackNotifications.enable`; `pro` does not enable
+the notification runtime by default.
 Prefer Bot User OAuth token mode for Slack thread support; the incoming webhook
 is a fallback for one-off replies only.
 

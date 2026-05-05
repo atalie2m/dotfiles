@@ -5,6 +5,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$ROOT"
+flake_ref="path:$ROOT"
 
 if ! command -v nix >/dev/null 2>&1; then
   echo "FAIL: work policy test requires nix" >&2
@@ -14,7 +15,7 @@ fi
 work_state="$(
   nix eval --raw --impure --expr '
     let
-      flake = builtins.getFlake (toString ./.);
+      flake = builtins.getFlake "'"$flake_ref"'";
       cfg = flake.darwinConfigurations.work_mac-ultra.config.myconfig.tools;
       bool = value: if value then "true" else "false";
     in
@@ -25,6 +26,7 @@ work_state="$(
       "tools.editor.vscode.sync.enable=${bool cfg.editor.vscode.sync.enable}"
       "tools.aiCodingAgent.enable=${bool cfg.aiCodingAgent.enable}"
       "tools.aiCodingAgent.codex.enable=${bool cfg.aiCodingAgent.codex.enable}"
+      "tools.aiCodingAgent.codex.slackNotifications.enable=${bool cfg.aiCodingAgent.codex.slackNotifications.enable}"
       "tools.aiLlm.enable=${bool cfg.aiLlm.enable}"
       "tools.aiLlm.aider.enable=${bool cfg.aiLlm.aider.enable}"
       "tools.modelHfPersonal.enable=${bool cfg.modelHfPersonal.enable}"
@@ -45,7 +47,15 @@ work_state="$(
 )"
 
 own_ultra_vscode_sync="$(
-  nix eval --json .#darwinConfigurations.own_mac-ultra.config.myconfig.tools.editor.vscode.sync.enable --impure
+  nix eval --json "${flake_ref}#darwinConfigurations.own_mac-ultra.config.myconfig.tools.editor.vscode.sync.enable" --impure
+)"
+
+own_pro_codex_slack_notifications="$(
+  nix eval --json "${flake_ref}#darwinConfigurations.own_mac.config.myconfig.tools.aiCodingAgent.codex.slackNotifications.enable" --impure
+)"
+
+own_ultra_codex_slack_notifications="$(
+  nix eval --json "${flake_ref}#darwinConfigurations.own_mac-ultra.config.myconfig.tools.aiCodingAgent.codex.slackNotifications.enable" --impure
 )"
 
 assert_toggle() {
@@ -70,6 +80,7 @@ for path in \
   tools.editor.vscode.sync.enable \
   tools.aiCodingAgent.enable \
   tools.aiCodingAgent.codex.enable \
+  tools.aiCodingAgent.codex.slackNotifications.enable \
   tools.aiLlm.enable \
   tools.aiLlm.aider.enable \
   tools.modelHfPersonal.enable \
@@ -94,6 +105,16 @@ done
 
 if [[ $own_ultra_vscode_sync != "true" ]]; then
   echo "FAIL: own_mac-ultra.tools.editor.vscode.sync.enable expected true, got $own_ultra_vscode_sync" >&2
+  exit 1
+fi
+
+if [[ $own_pro_codex_slack_notifications != "false" ]]; then
+  echo "FAIL: own_mac.tools.aiCodingAgent.codex.slackNotifications.enable expected false, got $own_pro_codex_slack_notifications" >&2
+  exit 1
+fi
+
+if [[ $own_ultra_codex_slack_notifications != "true" ]]; then
+  echo "FAIL: own_mac-ultra.tools.aiCodingAgent.codex.slackNotifications.enable expected true, got $own_ultra_codex_slack_notifications" >&2
   exit 1
 fi
 

@@ -143,6 +143,10 @@ nix run .#dotfiles -- sync vscode --apply --profile native
 対応には Bot User OAuth token mode を優先します。Incoming webhook は one-off reply
 用の fallback です。
 
+この通知 runtime の stock profile ownership は
+`tools.aiCodingAgent.codex.slackNotifications.enable` 経由の `ultra` 限定です。
+`pro` は default では有効化しません。
+
 Rust 実装は generic agent-event core を使います。Codex adapter が Codex hook stdin、
 transcript record、title、質問、approval、completion event を typed event に変換し、
 Slack sink は title、body、thread key、event kind だけを受けて Bot API / webhook 投稿、

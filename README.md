@@ -65,7 +65,7 @@ Operational note: the supported root flake API is Darwin-first and exposes `darw
   - `minimal`: absolute essentials, currently Nix settings plus Git.
   - `lite`: practical daily baseline with shells, core CLI tools, navigation/search, Git, secrets basics, and macOS integrations.
   - `pro`: full global tool catalog and editor installation, with editor setup/sync disabled.
-  - `ultra`: `pro` plus VS Code, Neovim, and Emacs setup/sync.
+  - `ultra`: `pro` plus VS Code, Neovim, and Emacs setup/sync, and Codex Slack notifications.
 
 Canonical host names and CLI examples live in [`docs/commands.md`](docs/commands.md).
 
@@ -96,6 +96,9 @@ catalog-backed `tools.aiCodingAgent.claudeCode` toggle. Enabling it adds the
 without storing Slack credentials in Git or in `~/.codex/config.toml`.
 `scripts/codex-slack-notification` remains as a compatibility shim for existing
 Codex hook configs, but the implementation now lives in the Rust control plane.
+The stock profile toggle for this runtime is
+`tools.aiCodingAgent.codex.slackNotifications.enable`; it is enabled by
+`ultra`, not `pro`.
 Store a Bot User OAuth token and channel ID under
 `~/.config/dotfiles/files/agent-notifications/` to link each Codex thread to a
 Slack thread. The old `~/.config/dotfiles/files/codex/` credential files remain

@@ -69,6 +69,10 @@ Notes
 ~/.config/dotfiles/files/agent-notifications/slack-webhook-url
 ```
 
+The stock Darwin profile toggle for this notification runtime is
+`tools.aiCodingAgent.codex.slackNotifications.enable`. It is enabled in
+`ultra`, not `pro`.
+
 Keep those files local with mode `0600`. `slack-bot-token` must contain a
 `xoxb-...` Bot User OAuth token with `chat:write`; `slack-channel-id` must
 contain the target Slack channel ID. `slack-webhook-url` is optional fallback.
