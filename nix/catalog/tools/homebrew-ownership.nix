@@ -115,6 +115,15 @@
     casks = [ "wezterm" ];
   };
 
+  "network.mosh" = {
+    group = "network";
+    tool = "mosh";
+    optionPath = [ "myconfig" "tools" "network" "mosh" "enable" ];
+    mode = "dedicated";
+    backend = "homebrewNative";
+    brews = [ "mosh" ];
+  };
+
   "aiCodingAgent.codex" = {
     group = "aiCodingAgent";
     tool = "codex";

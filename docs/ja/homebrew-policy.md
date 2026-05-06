@@ -39,3 +39,4 @@
 3. `Claude Code`: `tools.aiCodingAgent.claudeCode` 経由で latest-first の Homebrew cask（`claude-code@latest`）を使います。
 4. `Goneovim`: Homebrew cask は Homebrew `neovim` に依存し、Gatekeeper deprecation 後に disable 予定のため使わず、upstream Darwin release 由来の repo Nix package を使います。
 5. `Sourcery`: stock profile で tool toggle を有効化しても、runtime facts が full Xcode.app build environment を検出した場合だけ Homebrew formula を出力します。
+6. `Mosh`: Darwin では Homebrew `mosh` formula を使い、`mosh-server` の macOS firewall-facing runtime surface を安定させます。repo は non-interactive SSH bootstrap discovery 用に `mosh-server` profile wrapper だけを install します。

@@ -47,6 +47,18 @@ assert_logged() {
   fi
 }
 
+assert_logged_count() {
+  local expected="$1"
+  local count="$2"
+  local actual
+  actual=$(grep -Fx -- "$expected" "$LOG_FILE" | wc -l | tr -d ' ')
+  if [[ "$actual" != "$count" ]]; then
+    echo "FAIL: wrapper delegation count changed: $expected ($actual != $count)" >&2
+    cat "$LOG_FILE" >&2 || true
+    exit 1
+  fi
+}
+
 run_wrapper "$ROOT/scripts/apply.sh" --host own_mac --action build
 run_wrapper "$ROOT/scripts/update.sh" --host own_mac
 run_wrapper "$ROOT/scripts/list-tools.sh" --host own_mac --format json
@@ -60,6 +72,7 @@ run_wrapper "$ROOT/scripts/sync.sh" emacs --check
 run_wrapper "$ROOT/scripts/sync.sh" neovim --check
 run_wrapper "$ROOT/scripts/dotfiles.sh" sync vscode --check --profile native
 run_wrapper "$ROOT/scripts/codex-slack-notification" --dry-run
+run_wrapper "$ROOT/scripts/agent-notifications-update" --no-install
 run_wrapper "$ROOT/scripts/codex-slack-update" --no-install
 FAKE_DOTFILES_LOG_FILE="$LOG_FILE" HOME="$PROFILE_HOME" PATH="/usr/bin:/bin" \
   bash "$ROOT/scripts/codex-slack-notification" --dry-run >/dev/null
@@ -77,7 +90,7 @@ assert_logged "sync emacs --check"
 assert_logged "sync neovim --check"
 assert_logged "sync vscode --check --profile native"
 assert_logged "agent-notify codex --dry-run"
-assert_logged "agent-notify update-runtime --no-install"
+assert_logged_count "agent-notify update-runtime --no-install" 2
 assert_logged "profile agent-notify codex --dry-run"
 
 echo "PASS: shim delegation"

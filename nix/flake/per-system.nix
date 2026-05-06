@@ -248,10 +248,15 @@ in
       subcommand = "self-update";
       description = "Refresh the installed dotfiles CLI and switch the selected Darwin/Home Manager target.";
     };
+    agent-notifications-update = mkDotfilesApp {
+      name = "agent-notifications-update";
+      subcommand = "agent-notify update-runtime";
+      description = "Refresh only the coding-agent notification runtime in the default user Nix profile.";
+    };
     codex-slack-update = mkDotfilesApp {
       name = "codex-slack-update";
       subcommand = "agent-notify update-runtime";
-      description = "Refresh only the Codex Slack notification runtime in the default user Nix profile.";
+      description = "Compatibility alias for agent-notifications-update.";
     };
     list-tools = mkDotfilesApp {
       name = "list-tools";

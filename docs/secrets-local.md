@@ -186,7 +186,7 @@ also posts Plan Mode questions, approval waits, and `task_complete` records from
 that exact transcript, so parallel Codex sessions in the same repo do not depend
 on "latest session for cwd" inference. Auto-resolved `request_user_input`
 records outside Plan Mode are ignored. Approval waits from
-`guardian_assessment` records are delayed up to 15 seconds while the watcher
+`guardian_assessment` records are delayed up to 30 seconds while the watcher
 checks for Codex auto-review. Requests that receive an agent `approved` decision
 are skipped; requests without an automatic approval still post to Slack.
 Actionable or terminal notifications are posted as thread replies with

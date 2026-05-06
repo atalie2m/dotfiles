@@ -103,7 +103,7 @@ Store a Bot User OAuth token and channel ID under
 `~/.config/dotfiles/files/agent-notifications/` to link each Codex thread to a
 Slack thread. The old `~/.config/dotfiles/files/codex/` credential files remain
 as fallback inputs.
-For notification-runtime-only updates, use `nix run .#codex-slack-update`.
+For notification-runtime-only updates, use `nix run .#agent-notifications-update`.
 That refreshes the user-profile `dotfiles` binary preferred by
 `scripts/codex-slack-notification` without running a Darwin/Home Manager switch.
 
@@ -222,6 +222,8 @@ The default Zsh prompt is Pure. Zsh has a managed profile switch at `tools.shell
 - `autocomplete`: uses `zsh-autocomplete` as the completion UI and disables `fzf-tab` as the Tab owner.
 - `debug`: loads the stable profile plus `zprof`, `bindkey`, and `zinit` timing/report output.
 
+Mosh sessions keep SSH bootstrap metadata, but the Pure prompt hides the remote `user@host` prefix for Mosh only.
+
 `lite`, `pro`, and `ultra` carry the daily shell stack; `minimal` keeps only the absolute essentials:
 
 - `fzf` keybindings: `CTRL-T` for file insert, `ALT-C` for directory jump
@@ -246,7 +248,7 @@ The stock catalog also installs workflow helpers such as `ghq`, `roots`,
 Shell sync is a small, stateless writable-entrypoint manager.
 Runtime sync operations are implemented through `nix run .#dotfiles -- sync shell`; `scripts/sync.sh` is only a thin shell wrapper over the Rust `dotfiles` CLI.
 Its job is to keep writable shell entrypoints in place and update only repo-managed blocks/files.
-Shared shell helpers are shipped separately as `apps/shell/common.sh` and linked to `~/.config/shell/common.sh`; the repo's `scripts/` directory is also added to `PATH` when shell tooling is enabled. Both are declarative Home Manager content, not part of runtime sync state.
+Shared shell helpers are shipped separately as `apps/shell/common.sh` and linked to `~/.config/shell/common.sh`; the repo's `scripts/` directory is also added to `PATH` when shell tooling is enabled. Home Manager session PATH also includes the active user profile bins so non-interactive remote commands, such as SSH-started `mosh-server`, can resolve profile-installed tools. Both are declarative Home Manager content, not part of runtime sync state.
 
 - Desired source:
   - `surfaces/shell/desired/zdotdir.zshrc.block.sh`
@@ -601,7 +603,7 @@ For target evaluation and strict sync checks, pass `--host` so `doctor` can gate
 checkout. It upgrades an existing `dotfiles` entry in the default user Nix
 profile when present, then runs the canonical Darwin/Home Manager apply path so
 `/etc/profiles/per-user/$USER/bin/dotfiles` is updated too. Use it for Rust CLI
-changes such as the Codex Slack notification runtime:
+changes such as the coding-agent notification runtime:
 
 ```bash
 nix run .#self-update -- --host own_mac

@@ -75,7 +75,31 @@ dotfilesFirstProfileFile() {
   return 1
 }
 
+dotfilesIsMoshSession() {
+  if [[ -n ${DOTFILES_MOSH_SESSION:-} ]]; then
+    return 0
+  fi
+
+  local parentCommand=""
+  local parentPid="${PPID:-}"
+
+  if [[ -n $parentPid ]] && command -v ps >/dev/null 2>&1; then
+    parentCommand="$(command ps -o comm= -p "$parentPid" 2>/dev/null || true)"
+  fi
+
+  case "$parentCommand" in
+    *mosh-server*)
+      export DOTFILES_MOSH_SESSION=1
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
 dotfilesAddProfileBins
+
+dotfilesIsMoshSession || true
 
 hmSessionVars="$(dotfilesFirstProfileFile "etc/profile.d/hm-session-vars.sh" || true)"
 if [[ -f $hmSessionVars ]]; then

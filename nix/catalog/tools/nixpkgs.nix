@@ -177,7 +177,6 @@
   networkCurl = { group = "network"; tool = "curl"; pkg = "curl"; };
   networkWget = { group = "network"; tool = "wget"; pkg = "wget"; };
   networkGping = { group = "network"; tool = "gping"; pkg = "gping"; };
-  networkMosh = { group = "network"; tool = "mosh"; pkg = "mosh"; };
   networkKeychain = { group = "network"; tool = "keychain"; pkg = "keychain"; };
   networkTeleport = { group = "network"; tool = "teleport"; pkg = "teleport"; };
   networkTsh = { group = "network"; tool = "tsh"; pkg = "teleport"; };

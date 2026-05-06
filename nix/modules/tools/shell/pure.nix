@@ -30,6 +30,9 @@
         fi
         promptinit
         prompt pure
+        if [[ -n ''${DOTFILES_MOSH_SESSION:-} ]] && (( ''${+prompt_pure_state} )); then
+          prompt_pure_state[username]=""
+        fi
       '';
     };
 }

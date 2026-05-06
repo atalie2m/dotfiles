@@ -12,9 +12,14 @@
     extraAliases = attrsOption { };
   };
 
-  homeOnEnable = { cfg, ... }:
+  homeOnEnable = { cfg, myconfig, ... }:
     let
       commonShellPath = repoPaths.apps + "/shell/common.sh";
+      userName = myconfig.hostContext.user.username or "";
+      homeDir = myconfig.hostContext.user.homeDirectory or "";
+      profileBins =
+        lib.optional (userName != "") "/etc/profiles/per-user/${userName}/bin"
+        ++ lib.optional (homeDir != "") "${homeDir}/.nix-profile/bin";
     in
     {
       home = {
@@ -37,7 +42,8 @@
 
         sessionPath =
           [ "${repoPaths.scripts}" ]
-          ++ lib.optional pkgs.stdenv.isDarwin "${pkgs.coreutils}/libexec/gnubin";
+          ++ lib.optional pkgs.stdenv.isDarwin "${pkgs.coreutils}/libexec/gnubin"
+          ++ profileBins;
       };
 
       xdg.configFile."shell/common.sh" = {

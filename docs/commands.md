@@ -87,7 +87,7 @@ nix run .#self-update -- --host own_mac --action build --no-user-profile
 ```
 
 `self-update` is the one-shot command for changes to the dotfiles Rust CLI,
-including the Codex Slack notification runtime. It upgrades an existing
+including the coding-agent notification runtime. It upgrades an existing
 `dotfiles` entry in the default user Nix profile when present, then runs the
 canonical Darwin/Home Manager apply path for the selected target. The second
 step is what refreshes the `dotfiles` binary normally found first in `PATH` at
@@ -195,19 +195,20 @@ JSON
 # Send a one-off setup test notification
 dotfiles agent-notify test
 
-# Update only the Codex Slack notification runtime; no Darwin switch.
-nix run .#codex-slack-update
+# Update only the coding-agent notification runtime; no Darwin switch.
+nix run .#agent-notifications-update
 ```
 
 The old `~/.config/dotfiles/files/codex/slack-*` credential files are still read
 as fallback inputs, so existing local secrets do not need to move immediately.
 
-`codex-slack-update` installs or upgrades the `dotfiles` entry in the default
+`agent-notifications-update` installs or upgrades the `dotfiles` entry in the default
 user Nix profile only. `scripts/codex-slack-notification` prefers
 `$HOME/.nix-profile/bin/dotfiles` when it exists, so Codex Slack hook fixes can
 be rolled out without running a full Darwin/Home Manager switch. Use
 `nix run .#self-update -- --host <host>` only when the broader installed
 dotfiles runtime should converge too.
+`codex-slack-update` remains as a compatibility app alias.
 
 Add the hooks to `~/.codex/config.toml`:
 
@@ -236,7 +237,7 @@ parent with `chat.update`. Plan Mode `request_user_input` questions, approval
 waits from `guardian_assessment`, and transcript `task_complete` records are
 posted as replies from the watcher that belongs to that exact Codex session.
 `request_user_input` records that Codex auto-resolves outside Plan Mode are
-ignored. Approval waits are delayed up to 15 seconds while the watcher waits for
+ignored. Approval waits are delayed up to 30 seconds while the watcher waits for
 Codex auto-review; requests that receive an agent `approved` decision are
 skipped, and requests without automatic approval still post to Slack.
 
@@ -336,6 +337,7 @@ dotfiles-doom doctor
 - `HOME` is required for `nix run .#dotfiles -- sync shell ...`, `nix run .#dotfiles -- sync emacs ...`, `nix run .#dotfiles -- sync neovim ...`, and `nix run .#dotfiles -- sync vscode ...`, and it is also required whenever a command needs repo-default user-scoped paths.
 - `DOTFILES_ROOT` overrides flake-root discovery for the Rust CLI and shell wrappers.
 - `DOTFILES_PROFILE_DIRS` prepends colon-separated profile directories to shell profile discovery before `/etc/profiles/per-user/$USER` and `$HOME/.nix-profile`.
+- Shell tooling adds the active user profile bins to Home Manager session PATH so non-interactive zsh remote commands can resolve tools installed in the user profile.
 - `DOOMDIR` overrides the runtime Doom config directory for `sync emacs`; otherwise it defaults to `~/.config/doom`. Use `--doom-dir` for one command.
 - `EMACSDIR` overrides the Doom checkout directory for `sync emacs`; otherwise it defaults to `~/.emacs.d`. Use `--emacs-dir` for one command.
 - `FACTS_DIR` / `SECRETS_DIR` default to `~/.config/dotfiles`; `FACTS` / `SECRETS` default to `path:$FACTS_DIR` / `path:$SECRETS_DIR`.

@@ -86,7 +86,7 @@ nix run .#self-update -- --host own_mac --profile ultra
 nix run .#self-update -- --host own_mac --action build --no-user-profile
 ```
 
-`self-update` は dotfiles Rust CLI の変更、Codex Slack 通知 runtime の変更を反映する
+`self-update` は dotfiles Rust CLI の変更、coding-agent notification runtime の変更を反映する
 one-shot command です。default user Nix profile に `dotfiles` entry があれば先に更新し、
 その後 selected target に対して canonical な Darwin/Home Manager apply path を実行します。
 通常 `PATH` で先に見つかる `/etc/profiles/per-user/$USER/bin/dotfiles` を更新するのは後者です。
@@ -193,17 +193,18 @@ JSON
 # setup test notification を 1 回送る
 dotfiles agent-notify test
 
-# Codex Slack 通知 runtime だけを更新します。Darwin switch はしません。
-nix run .#codex-slack-update
+# coding-agent notification runtime だけを更新します。Darwin switch はしません。
+nix run .#agent-notifications-update
 ```
 
 旧 `~/.config/dotfiles/files/codex/slack-*` credential file も fallback として読むため、
 既存の local secret はすぐ移動しなくても動きます。
 
-`codex-slack-update` は default user Nix profile の `dotfiles` entry だけを install / upgrade
+`agent-notifications-update` は default user Nix profile の `dotfiles` entry だけを install / upgrade
 します。`scripts/codex-slack-notification` は `$HOME/.nix-profile/bin/dotfiles` が存在する場合に
 それを優先するため、Codex Slack hook の修正は full Darwin/Home Manager switch なしで反映できます。
 広い installed dotfiles runtime も揃える場合だけ `nix run .#self-update -- --host <host>` を使います。
+`codex-slack-update` は compatibility app alias として残しています。
 
 `~/.codex/config.toml` に hook を追加します。
 
@@ -231,7 +232,7 @@ fallback します。後から title event が来れば `chat.update` で親 tit
 `request_user_input` 質問、`guardian_assessment` から得た approval wait、transcript の
 `task_complete` record は、その exact Codex session の watcher から reply として投稿します。
 Plan Mode 外で Codex が自動解決した `request_user_input` record は無視します。approval wait は
-最大 15 秒、Codex auto-review の判定を待ちます。agent が `approved` と判定した request は skip し、
+最大 30 秒、Codex auto-review の判定を待ちます。agent が `approved` と判定した request は skip し、
 自動承認されなかった request は Slack に投稿します。
 
 default では `PermissionRequest` を設定しないでください。Codex は approval event ごとに
@@ -322,6 +323,7 @@ dotfiles-doom doctor
 - `HOME` は `nix run .#dotfiles -- sync shell ...`、`nix run .#dotfiles -- sync emacs ...`、`nix run .#dotfiles -- sync neovim ...`、`nix run .#dotfiles -- sync vscode ...` に必須です。また、repo default の user-scoped path が必要な command でも必須です。
 - `DOTFILES_ROOT` は Rust CLI と shell wrapper の flake-root discovery を上書きします。
 - `DOTFILES_PROFILE_DIRS` は colon 区切りの profile directory を shell profile discovery に先頭追加し、`/etc/profiles/per-user/$USER` と `$HOME/.nix-profile` より優先します。
+- shell tooling は active user profile の bin を Home Manager session PATH に追加するため、non-interactive な zsh remote command でも user profile に install された tool を解決できます。
 - `DOOMDIR` は `sync emacs` が対象にする runtime Doom config directory を上書きします。未指定時は `~/.config/doom` です。1 command だけ変える場合は `--doom-dir` を使います。
 - `EMACSDIR` は `sync emacs` が対象にする Doom checkout directory を上書きします。未指定時は `~/.emacs.d` です。1 command だけ変える場合は `--emacs-dir` を使います。
 - `FACTS_DIR` / `SECRETS_DIR` の default は `~/.config/dotfiles` で、`FACTS` / `SECRETS` の default は `path:$FACTS_DIR` / `path:$SECRETS_DIR` です。
