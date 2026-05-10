@@ -67,15 +67,26 @@ run_launcher() {
   done
 
   : >"$LOG_FILE"
-  env -i \
-    HOME="$HOME_DIR" \
-    USER=tester \
-    LOGNAME=tester \
-    PATH="/usr/bin:/bin" \
-    DOTFILES_LAUNCHER_LOG="$LOG_FILE" \
-    DOTFILES_VSCODE_ZSH_BIN="$FAKE_ZSH" \
-    "${extra_env[@]}" \
-    "$LAUNCHER" "$@"
+  if [[ ${#extra_env[@]} -gt 0 ]]; then
+    env -i \
+      HOME="$HOME_DIR" \
+      USER=tester \
+      LOGNAME=tester \
+      PATH="/usr/bin:/bin" \
+      DOTFILES_LAUNCHER_LOG="$LOG_FILE" \
+      DOTFILES_VSCODE_ZSH_BIN="$FAKE_ZSH" \
+      "${extra_env[@]}" \
+      "$LAUNCHER" "$@"
+  else
+    env -i \
+      HOME="$HOME_DIR" \
+      USER=tester \
+      LOGNAME=tester \
+      PATH="/usr/bin:/bin" \
+      DOTFILES_LAUNCHER_LOG="$LOG_FILE" \
+      DOTFILES_VSCODE_ZSH_BIN="$FAKE_ZSH" \
+      "$LAUNCHER" "$@"
+  fi
 }
 
 VSCODE_ZDOTDIR="$TMP_ROOT/vscode-zdotdir"
@@ -97,6 +108,8 @@ assert_line "ZDOTDIR=$HOME_DIR/.nix"
 PROFILE_DIR="$TMP_ROOT/profile"
 mkdir -p "$PROFILE_DIR/bin" "$PROFILE_DIR/etc/profile.d"
 cat >"$PROFILE_DIR/etc/profile.d/hm-session-vars.sh" <<'EOF_HM_SESSION_VARS'
+if [ -n "$__HM_SESS_VARS_SOURCED" ]; then return; fi
+export __HM_SESS_VARS_SOURCED=1
 export DOTFILES_LAUNCHER_TEST_VAR=from_hm_session_vars
 EOF_HM_SESSION_VARS
 

@@ -59,6 +59,22 @@ dotfilesAddProfileBins() {
   fi
 }
 
+dotfilesSourceWithNounsetGuard() {
+  local restore_nounset=0
+  local source_path="$1"
+
+  case $- in
+    *u*) restore_nounset=1 ;;
+  esac
+
+  set +u
+  # shellcheck disable=SC1090
+  source "$source_path"
+  if [[ $restore_nounset -eq 1 ]]; then
+    set -u
+  fi
+}
+
 dotfilesFirstProfileFile() {
   local profileDir
   local profileFile
@@ -108,14 +124,15 @@ if [[ -f $hmSessionVars ]]; then
   # Clear the HM guard first because shells may inherit __HM_SESS_VARS_SOURCED
   # without inheriting the managed PATH entries we expect.
   unset __HM_SESS_VARS_SOURCED
-  # shellcheck disable=SC1090
-  source "$hmSessionVars"
+  dotfilesSourceWithNounsetGuard "$hmSessionVars"
 fi
 
-if [[ -x /opt/homebrew/bin/brew ]]; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-elif [[ -x /usr/local/bin/brew ]]; then
-  eval "$(/usr/local/bin/brew shellenv)"
+if [[ $- == *i* ]]; then
+  if [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [[ -x /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
 fi
 
 dedupePath

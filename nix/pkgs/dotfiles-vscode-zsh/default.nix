@@ -49,6 +49,22 @@ writeShellApplication {
       export PATH
     }
 
+    source_with_nounset_guard() {
+      local restore_nounset=0
+      local source_path="$1"
+
+      case "$-" in
+        *u*) restore_nounset=1 ;;
+      esac
+
+      set +u
+      # shellcheck disable=SC1090
+      source "$source_path"
+      if [[ "$restore_nounset" -eq 1 ]]; then
+        set -u
+      fi
+    }
+
     first_profile_file() {
       local relative_path="$1"
       local profile_dir
@@ -128,8 +144,7 @@ writeShellApplication {
 
     if hm_session_vars="$(first_profile_file "etc/profile.d/hm-session-vars.sh")"; then
       unset __HM_SESS_VARS_SOURCED
-      # shellcheck disable=SC1090
-      source "$hm_session_vars"
+      source_with_nounset_guard "$hm_session_vars"
       prepend_profile_bins
     fi
 

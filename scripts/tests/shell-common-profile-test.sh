@@ -79,10 +79,14 @@ EOF_FALLBACK_TOOL
 chmod +x "$fallback_profile/bin/fallback-only-tool"
 
 cat >"$primary_profile/etc/profile.d/hm-session-vars.sh" <<'EOF_PRIMARY_HM'
+if [ -n "$__HM_SESS_VARS_SOURCED" ]; then return; fi
+export __HM_SESS_VARS_SOURCED=1
 export DOTFILES_TEST_HM_PROFILE=primary
 EOF_PRIMARY_HM
 
 cat >"$fallback_profile/etc/profile.d/hm-session-vars.sh" <<'EOF_FALLBACK_HM'
+if [ -n "$__HM_SESS_VARS_SOURCED" ]; then return; fi
+export __HM_SESS_VARS_SOURCED=1
 export DOTFILES_TEST_HM_PROFILE=fallback
 EOF_FALLBACK_HM
 
@@ -95,6 +99,7 @@ export DOTFILES_TEST_COMMAND_NOT_FOUND_PROFILE=fallback
 EOF_FALLBACK_CNF
 
 cat >"$runner" <<'EOF_RUNNER'
+set -u
 source "$DOTFILES_TEST_COMMON_SH"
 printf 'nvim=%s\n' "$(command -v nvim || true)"
 printf 'fallback_only=%s\n' "$(command -v fallback-only-tool || true)"
