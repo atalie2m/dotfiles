@@ -51,8 +51,8 @@ assert_logged_count() {
   local expected="$1"
   local count="$2"
   local actual
-  actual=$(grep -Fx -- "$expected" "$LOG_FILE" | wc -l | tr -d ' ')
-  if [[ "$actual" != "$count" ]]; then
+  actual=$(grep -Fxc -- "$expected" "$LOG_FILE")
+  if [[ $actual != "$count" ]]; then
     echo "FAIL: wrapper delegation count changed: $expected ($actual != $count)" >&2
     cat "$LOG_FILE" >&2 || true
     exit 1
