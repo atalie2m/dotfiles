@@ -1,4 +1,4 @@
-{ dotmod, config, lib, dotlib, inputs, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, dotlib, pkgs, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
@@ -6,7 +6,7 @@ let
   dotfilesCli = pkgs.callPackage ../../../pkgs/dotfiles-cli { };
   types = lib.types;
   emacsDir = repoPaths.apps + "/emacs";
-  doomConfigDir = emacsDir + "/doom";
+  emacsConfigDir = emacsDir + "/config";
   iconPath = emacsDir + "/emacs-icon-1.0.icns";
   hasIcon = builtins.pathExists iconPath;
   treeSitterGrammars = with pkgs.tree-sitter-grammars; {
@@ -42,63 +42,9 @@ let
     ];
     text = builtins.readFile ./refresh-emacs-plus-native-comp-env.sh;
   };
-  doomBootstrap = pkgs.writeShellApplication {
-    name = "dotfiles-doom";
-    runtimeInputs = with pkgs; [
-      coreutils
-      fd
-      git
-      ripgrep
-    ];
-    text = ''
-      command="''${1:-sync}"
-      emacsdir="''${EMACSDIR:-$HOME/.emacs.d}"
-      doomdir="''${DOOMDIR:-$HOME/.config/doom}"
-
-      for path in /usr/bin /bin /opt/homebrew/bin /usr/local/bin /Applications/Emacs.app/Contents/MacOS/bin; do
-        if [ -d "$path" ]; then
-          export PATH="$path:$PATH"
-        fi
-      done
-      if command -v xcrun >/dev/null 2>&1; then
-        xcode_as="$(xcrun -find as 2>/dev/null || true)"
-        if [ -n "$xcode_as" ]; then
-          xcode_as_dir="$(dirname "$xcode_as")"
-          export PATH="$xcode_as_dir:$PATH"
-        fi
-      fi
-      if [ -z "''${EMACS:-}" ]; then
-        export EMACS="/Applications/Emacs.app/Contents/MacOS/Emacs"
-      fi
-
-      case "$command" in
-        bootstrap|install)
-          ${dotfilesCli}/bin/dotfiles sync emacs --apply --bootstrap --managed-dir "${doomConfigDir}" --doom-dir "$doomdir" --emacs-dir "$emacsdir"
-          ;;
-        sync)
-          if [ ! -x "$emacsdir/bin/doom" ]; then
-            printf 'Doom is not installed at %s. Run: nix run .#dotfiles -- sync emacs --apply --bootstrap\n' "$emacsdir" >&2
-            exit 1
-          fi
-          "$emacsdir/bin/doom" sync
-          ;;
-        doctor)
-          if [ ! -x "$emacsdir/bin/doom" ]; then
-            printf 'Doom is not installed at %s. Run: nix run .#dotfiles -- sync emacs --apply --bootstrap\n' "$emacsdir" >&2
-            exit 1
-          fi
-          "$emacsdir/bin/doom" doctor
-          ;;
-        *)
-          printf 'usage: dotfiles-doom [bootstrap|install|sync|doctor]\n' >&2
-          exit 64
-          ;;
-      esac
-    '';
-  };
 in
 
-# Emacs (GUI via Homebrew) + Doom user configuration
+# Emacs (GUI via Homebrew) + vanilla user configuration
 
 (dotmod.mkModule { inherit config; }) {
   path = "tools.editor.emacs";
@@ -111,7 +57,7 @@ in
         type = types.nullOr types.path;
         default = null;
       };
-      doomDir = lib.mkOption {
+      emacsDir = lib.mkOption {
         type = types.nullOr types.str;
         default = null;
       };
@@ -139,7 +85,6 @@ in
         diffutils
         direnv
         dotfilesCli
-        doomBootstrap
         emacsTreeSitterGrammars
         enchant
         eslint
@@ -176,16 +121,7 @@ in
           en
         ]))
       ];
-      emacsFiles = {
-        ".config/doom/modules/editor/meow" = {
-          force = true;
-          source = inputs.doom-meow;
-          recursive = true;
-        };
-        ".config/doom/snippets/.keep" = {
-          text = "";
-        };
-      } // lib.optionalAttrs hasIcon {
+      emacsFiles = lib.optionalAttrs hasIcon {
         ".config/emacs-plus/build.yml" = {
           force = true;
           text = ''
@@ -199,6 +135,7 @@ in
     {
       home.packages = emacsRuntimePackages;
       home.file = emacsFiles;
+      home.sessionVariables.EMACS_TREE_SITTER_GRAMMAR_DIR = "${emacsTreeSitterGrammars}/lib/emacs-tree-sitter-grammars";
     };
 
   darwinOnEnable = { cfg, ... }:
@@ -211,18 +148,15 @@ in
         pkgs.git
         pkgs.ripgrep
         dotfilesCli
-        doomBootstrap
       ];
       managedDirArg =
         if cfg.sync.managedDir != null
         then toString cfg.sync.managedDir
-        else "${doomConfigDir}";
-      doomDirExpr =
-        if cfg.sync.doomDir != null
-        then lib.escapeShellArg cfg.sync.doomDir
-        else "\"\${DOOMDIR:-$HOME/.config/doom}\"";
+        else "${emacsConfigDir}";
       emacsDirExpr =
-        if cfg.bootstrap.emacsDir != null
+        if cfg.sync.emacsDir != null
+        then lib.escapeShellArg cfg.sync.emacsDir
+        else if cfg.bootstrap.emacsDir != null
         then lib.escapeShellArg cfg.bootstrap.emacsDir
         else "\"\${EMACSDIR:-$HOME/.emacs.d}\"";
       syncArgs = [
@@ -242,7 +176,7 @@ in
           '';
         })
       ] ++ lib.optional (cfg.sync.enable || cfg.bootstrap.enable) ({ ... }: {
-        home.activation.syncEmacsDoom = lib.mkOrder 890 ''
+        home.activation.syncEmacsConfig = lib.mkOrder 890 ''
           export PATH="/usr/bin:/bin:${runtimePath}:$PATH"
           if command -v xcrun >/dev/null 2>&1; then
             xcode_as="$(xcrun -find as 2>/dev/null || true)"
@@ -251,16 +185,8 @@ in
               export PATH="$xcode_as_dir:$PATH"
             fi
           fi
-          doom_dir=${doomDirExpr}
           emacs_dir=${emacsDirExpr}
-          ${lib.optionalString (cfg.sync.enable && !cfg.bootstrap.enable) ''
-            ${lib.escapeShellArgs syncArgs} --doom-dir "$doom_dir" --emacs-dir "$emacs_dir"
-          ''}
-          ${lib.optionalString cfg.bootstrap.enable ''
-            export EMACSDIR="$emacs_dir"
-            export DOOMDIR="$doom_dir"
-            ${doomBootstrap}/bin/dotfiles-doom bootstrap
-          ''}
+          ${lib.escapeShellArgs syncArgs} --emacs-dir "$emacs_dir"
         '';
       });
     };

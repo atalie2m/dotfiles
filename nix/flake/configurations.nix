@@ -16,6 +16,29 @@ let
   normalizedFacts = dotlib.normalizeRawFacts rawFacts;
   username = normalizedFacts.user.username;
 
+  codexHomebrewBinCopyCask = {
+    name = "codex";
+    postinstall = ''
+      prefix=$(brew --prefix)
+      binary=$(/usr/bin/find $prefix/Caskroom/codex -type f -name 'codex-*apple-darwin' -print -quit)
+      if [ x$binary != x ]; then
+        /bin/rm -f $prefix/bin/codex
+        /usr/bin/install -m 0755 $binary $prefix/bin/codex
+        /usr/bin/xattr -c $prefix/bin/codex 2>/dev/null || true
+      fi
+    '';
+  };
+
+  hostLocalMyconfigFor = host:
+    let
+      codexExtra = (host.machine.extra.codex or { });
+      useCodexBinCopyWorkaround = codexExtra.homebrewBinCopyWorkaround or false;
+    in
+    lib.optionalAttrs (builtins.isBool useCodexBinCopyWorkaround && useCodexBinCopyWorkaround) {
+      tools.aiCodingAgent.codex.enable = lib.mkDefault true;
+      tools.system.homebrewNative.casks = lib.mkAfter [ codexHomebrewBinCopyCask ];
+    };
+
   mkHomeManagerModule = host: { ... }: {
     imports = [ inputs.sops-nix.homeManagerModules.sops ];
 
@@ -42,6 +65,7 @@ let
       };
       profileMyconfig = catalog.profiles.${profileName};
       hostExtraMyconfig = hostSpec.extraMyconfig or { };
+      hostLocalMyconfig = hostLocalMyconfigFor host;
       hostPolicyMyconfig =
         if hostName == "work_mac" then
           catalog.policyLib.forcedOverridesFor
@@ -93,6 +117,7 @@ let
             }
             profileMyconfig
             hostExtraMyconfig
+            hostLocalMyconfig
             hostPolicyMyconfig
           ];
         })

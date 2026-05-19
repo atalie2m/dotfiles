@@ -7,7 +7,7 @@
 ## 基本事項
 
 - 正式なコマンド例と最新の host 名は `docs/commands.md` にあります。
-- 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `DOTFILES_PROFILE_DIRS`, `DOOMDIR`, `EMACSDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
+- 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `DOTFILES_PROFILE_DIRS`, `EMACSDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
 - サポートされる operational root API は Darwin-first です。`darwinConfigurations` と project `templates` を公開します。
 - public 向け placeholder facts は `nix/local/` にあり、default secrets input は意図的に inert です。実機では両方とも `~/.config/dotfiles/` で override してください。
 

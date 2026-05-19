@@ -443,15 +443,12 @@ fn record_strict_sync_checks(
 
     if emacs_enabled == Some(true) && emacs_sync == Some(true) {
         let result = run_emacs_sync(EmacsSyncOptions {
-            managed_dir: Some(root.join("apps/emacs/doom")),
-            doom_dir: None,
+            managed_dir: Some(root.join("apps/emacs/config")),
             emacs_dir: None,
             mode: EmacsSyncMode::Check,
             details: false,
             diff_output: false,
             item_filter: None,
-            config_only: false,
-            bootstrap: false,
         })?;
         if result.exit_code(EmacsSyncMode::Check) == 0 {
             checks.push(CheckRecord::new(

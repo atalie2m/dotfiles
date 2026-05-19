@@ -33,7 +33,6 @@ cleanup() {
 trap cleanup EXIT
 
 home_dir="$tmp_root/home"
-doom_dir="$home_dir/.config/doom"
 emacs_dir="$home_dir/.emacs.d"
 nvim_dir="$home_dir/.config/nvim"
 mkdir -p "$home_dir"
@@ -45,17 +44,10 @@ run_with_home() {
 printf 'test: running editor sync app smoke test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
-if ! run_with_home "$DOTFILES_BIN" sync emacs --apply --config-only >/dev/null; then
-  echo "FAIL: failed to prime Doom config runtime" >&2
+if ! run_with_home "$DOTFILES_BIN" sync emacs --apply >/dev/null; then
+  echo "FAIL: failed to prime Emacs config runtime" >&2
   exit 1
 fi
-
-mkdir -p "$emacs_dir/bin"
-cat >"$emacs_dir/bin/doom" <<'EOF_DOOM'
-#!/usr/bin/env bash
-exit 0
-EOF_DOOM
-chmod +x "$emacs_dir/bin/doom"
 
 if ! run_with_home "$DOTFILES_BIN" sync neovim --apply >/dev/null; then
   echo "FAIL: failed to prime Neovim runtime" >&2
@@ -82,7 +74,7 @@ for surface in emacs neovim; do
   fi
 done
 
-printf '\n;; wrapper smoke drift\n' >>"$doom_dir/config.el"
+printf '\n;; wrapper smoke drift\n' >>"$emacs_dir/init.el"
 printf '\n-- wrapper smoke drift\n' >>"$nvim_dir/init.lua"
 
 if run_with_home "$DOTFILES_SYNC_APP" --check >"$tmp_root/drift.out" 2>"$tmp_root/drift.err"; then

@@ -80,22 +80,6 @@
         "type": "github"
       }
     },
-    "doom-meow": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1735798891,
-        "narHash": "sha256-LJv5uQWW1LDhllfr5a/RmKt8rHtm32IvcX9t2+6IvZU=",
-        "owner": "meow-edit",
-        "repo": "doom-meow",
-        "rev": "df4c42ae4cfc83899cf98c867ca0df633e015be9",
-        "type": "github"
-      },
-      "original": {
-        "owner": "meow-edit",
-        "repo": "doom-meow",
-        "type": "github"
-      }
-    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -384,7 +368,6 @@
         "brew-api": "brew-api",
         "brew-nix": "brew-nix",
         "brew-src": "brew-src",
-        "doom-meow": "doom-meow",
         "flake-parts": "flake-parts",
         "home-manager": "home-manager",
         "homebrew-emacs-plus": "homebrew-emacs-plus",

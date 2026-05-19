@@ -153,7 +153,7 @@ let
   mkEditorSyncApp = {
     type = "app";
     program = "${editorSyncAppProgram}";
-    meta.description = "Sync Doom Emacs and Neovim runtime configuration.";
+    meta.description = "Sync Emacs and Neovim runtime configuration.";
   };
   portableChecks = mkPortableChecks {
     inherit pkgs syncVscodeRust dotfilesPackage editorSyncAppProgram vscodeZshLauncher;

@@ -22,19 +22,30 @@ let
     ,
     }:
     let
+      homebrewItemName = raw:
+        if builtins.isAttrs raw then raw.name or ""
+        else raw;
       brewClaims = map
-        (itemName: {
-          inherit key itemName;
-          source = claimSource;
-          itemType = "brew";
-        })
+        (raw:
+          let
+            itemName = homebrewItemName raw;
+          in
+          {
+            inherit key itemName;
+            source = claimSource;
+            itemType = "brew";
+          })
         brews;
       caskClaims = map
-        (itemName: {
-          inherit key itemName;
-          source = claimSource;
-          itemType = "cask";
-        })
+        (raw:
+          let
+            itemName = homebrewItemName raw;
+          in
+          {
+            inherit key itemName;
+            source = claimSource;
+            itemType = "cask";
+          })
         casks;
       masClaims = map
         (itemName: {
@@ -137,11 +148,12 @@ let
 
   homebrewItems = homebrew:
     let
+      homebrewItemName = raw:
+        if builtins.isAttrs raw then raw.name or ""
+        else raw;
       mkItem = itemType: raw:
         let
-          itemName =
-            if builtins.isAttrs raw then raw.name or ""
-            else raw;
+          itemName = homebrewItemName raw;
         in
         {
           inherit itemType itemName;

@@ -33,11 +33,6 @@
       flake = false;
     };
 
-    doom-meow = {
-      url = "github:meow-edit/doom-meow";
-      flake = false;
-    };
-
     brew-api = {
       url = "github:BatteredBunny/brew-api";
       flake = false;

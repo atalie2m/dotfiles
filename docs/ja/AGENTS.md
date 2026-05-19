@@ -30,7 +30,7 @@
 ## ビルド・テスト・開発コマンド
 
 - 正式なコマンド例と最新の host 名は `docs/commands.md` を参照してください。
-- 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `DOTFILES_PROFILE_DIRS`, `DOOMDIR`, `EMACSDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
+- 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `DOTFILES_PROFILE_DIRS`, `EMACSDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
 - `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles`
 - `nix run .#apply -- --host <host> --action build`
 - `nix flake init -t github:atalie2m/dotfiles#web-dev`
@@ -50,7 +50,7 @@
 - module は host truth を `myconfig.hostContext.*` から読むこと。
 - 承認済みの host-model/bootstrap 境界の外で、新しい直接 `config.host.*`、legacy facts option read、raw `inputs.local/facts.nix` read を追加しないこと。
 - shell sync は Rust の `dotfiles` CLI（`sync shell`）で実装されています。`scripts/sync.sh` は薄い shell wrapper のみです。
-- Emacs sync は Rust の `dotfiles` CLI（`sync emacs`）で writable Doom config file 向けに実装されています。
+- Emacs sync は Rust の `dotfiles` CLI（`sync emacs`）で writable vanilla Emacs config file 向けに実装されています。
 - VS Code sync は専用の `dotfiles-sync-vscode` binary で実装され、`dotfiles sync vscode` から dispatch されます。
 - group toggle は taxonomy であり、rollout は明示的な capability bundle に属します。
 - Stock global bundle では project-pinned toolchain（`nodejs`, `go`, `terraform`, `opentofu`）を有効化しません。host が明示 opt-in しない限り、それらの version は project template / devShell 側に閉じます。

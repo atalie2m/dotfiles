@@ -5,7 +5,7 @@
 このリポジトリには 4 つの runtime sync surface と、activation で管理する 1 つの system-app boundary があります。
 
 - shell entrypoint
-- Doom Emacs config
+- Emacs config
 - Neovim config
 - VS Code native profile
 - Home Manager-owned XDG config file
@@ -33,37 +33,31 @@ control plane は Rust で実装され、`scripts/sync.sh` は薄い shell wrapp
 - `sync shell --check` は `in-sync`、`needs-apply`、`missing`、`invalid` を返す
 - shell sync は local change を repo に逆流させない
 
-## Doom Emacs config
+## Emacs config
 
-`nix run .#dotfiles -- sync emacs` は public な writable Doom config manager です。
+`nix run .#dotfiles -- sync emacs` は public な writable Emacs config manager です。
 control plane は `dotfiles-core` の Rust 実装で、`scripts/sync.sh` は薄い shell wrapper のみです。
 
 - Desired:
-  - `apps/emacs/doom/init.el`
-  - `apps/emacs/doom/packages.el`
-  - `apps/emacs/doom/config.el`
+  - `apps/emacs/config/early-init.el`
+  - `apps/emacs/config/init.el`
 - Actual:
-  - `${DOOMDIR:-~/.config/doom}/init.el`
-  - `${DOOMDIR:-~/.config/doom}/packages.el`
-  - `${DOOMDIR:-~/.config/doom}/config.el`
+  - `${EMACSDIR:-~/.emacs.d}/early-init.el`
+  - `${EMACSDIR:-~/.emacs.d}/init.el`
 - State: なし
-- Model: fully repo-owned な Doom config file を writable runtime file と比較し、明示的な `--config-only` 以外では Doom runtime readiness も検査する
-- Contract: `apply` では Doom config file が repo state に完全収束し、通常の check/apply は `${EMACSDIR:-~/.emacs.d}/bin/doom` が無い場合に失敗する
+- Model: fully repo-owned な vanilla Emacs config file を writable runtime file と比較する
+- Contract: `apply` では Emacs config file が repo state に完全収束する。`${EMACSDIR:-~/.emacs.d}` 配下の package state は mutable のままで、Emacs 起動時に Elpaca が管理する
 
 挙動:
 
 - `sync emacs --check` は `in-sync`、`needs-apply`、`missing`、`invalid` を返す
-- `sync emacs --check` と通常の `sync emacs --apply` は Doom runtime status も `doom=ready` / `doom=missing` として返す
-- `sync emacs --apply` は repo から writable runtime Doom config file を作成または上書きし、その後 Doom runtime が無ければ失敗する
-- `sync emacs --apply --bootstrap` は先に config を書き、Doom ではない `${EMACSDIR:-~/.emacs.d}` を `.pre-doom.YYYYmmddHHMMSS` に退避してから Doom を shallow clone し、非対話で `doom install --no-env` を実行する。既存 Doom checkout では `doom sync` を実行する
-- `sync emacs --adopt` は runtime Doom config edit を `apps/emacs/doom/` に取り込む
-- `--item init`、`--item packages`、`--item config` で対象 file を 1 つに絞れる
-- `--config-only` は config-only test / maintenance 用に Doom runtime readiness を無効化する opt-in
+- `sync emacs --apply` は repo から writable runtime Emacs config file を作成または上書きする
+- `sync emacs --adopt` は runtime Emacs config edit を `apps/emacs/config/` に取り込む
+- `--item early-init` または `--item init` で対象 file を 1 つに絞れる
 - `--emacs-dir` は 1 command だけ `${EMACSDIR:-~/.emacs.d}` を上書きする
-- `tools.editor.emacs.enable` は Emacs app、sync tooling、外部 `doom-meow` module を所有する。Doom 本体は mutable checkout のまま
-- Doom は `${EMACSDIR:-~/.emacs.d}` に install され、標準の GUI / daemon 起動から直接使われる
-- `tools.editor.emacs.bootstrap.enable` は `${EMACSDIR:-~/.emacs.d}/bin/doom` が無い場合だけ `dotfiles-doom bootstrap` を実行する
-- `ultra` は activation-time Emacs sync と初回 Doom bootstrap を有効にし、`pro` は Emacs を install するだけで setup は行わない
+- `tools.editor.emacs.enable` は Emacs app、sync tooling、language/runtime helper、Tree-sitter grammar path を所有する
+- `tools.editor.emacs.bootstrap.enable` は legacy profile toggle として残し、現在は activation-time config sync にだけ関与する
+- `ultra` は activation-time Emacs sync を有効にし、`pro` は Emacs を install するだけで setup は行わない
 
 ## Neovim config
 

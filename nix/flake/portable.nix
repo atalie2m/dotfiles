@@ -67,7 +67,7 @@ let
       }
 
       if [[ "$#" -eq 0 ]]; then
-        run_and_remember_status emacs --apply --bootstrap
+        run_and_remember_status emacs --apply
         run_and_remember_status neovim --apply
       else
         run_and_remember_status emacs "$@"

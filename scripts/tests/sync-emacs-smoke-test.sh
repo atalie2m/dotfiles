@@ -11,7 +11,7 @@ Usage:
   scripts/tests/sync-emacs-smoke-test.sh
 
 Description:
-  Runs a lightweight Doom Emacs config sync smoke test with a temporary HOME.
+  Runs a lightweight Emacs config sync smoke test with a temporary HOME.
 USAGE
 }
 
@@ -33,35 +33,23 @@ trap cleanup EXIT
 
 home_dir="$tmp_root/home"
 managed_dir="$tmp_root/managed"
-doom_dir="$home_dir/.config/doom"
 emacs_dir="$home_dir/.emacs.d"
 mkdir -p "$home_dir" "$managed_dir"
+
+cat >"$managed_dir/early-init.el" <<'EOF_EARLY_INIT'
+;;; early-init.el -*- lexical-binding: t; -*-
+
+(setq package-enable-at-startup nil)
+EOF_EARLY_INIT
 
 cat >"$managed_dir/init.el" <<'EOF_INIT'
 ;;; init.el -*- lexical-binding: t; -*-
 
-(doom! :editor
-       (meow +qwerty))
+(setq dotfiles-emacs-ready t)
 EOF_INIT
 
-cat >"$managed_dir/packages.el" <<'EOF_PACKAGES'
-;;; packages.el -*- no-byte-compile: t; -*-
-
-(package! vundo)
-EOF_PACKAGES
-
-cat >"$managed_dir/config.el" <<'EOF_CONFIG'
-;;; config.el -*- lexical-binding: t; -*-
-
-(setq doom-theme 'doom-one)
-EOF_CONFIG
-
 run_emacs_sync() {
-  HOME="$home_dir" bash "$SYNC_SCRIPT" emacs "$@" --config-only --managed-dir "$managed_dir" --doom-dir "$doom_dir" --emacs-dir "$emacs_dir"
-}
-
-run_emacs_sync_runtime() {
-  HOME="$home_dir" bash "$SYNC_SCRIPT" emacs "$@" --managed-dir "$managed_dir" --doom-dir "$doom_dir" --emacs-dir "$emacs_dir"
+  HOME="$home_dir" bash "$SYNC_SCRIPT" emacs "$@" --managed-dir "$managed_dir" --emacs-dir "$emacs_dir"
 }
 
 run_emacs_sync_from_copy() {
@@ -72,145 +60,116 @@ run_emacs_sync_from_copy() {
     chmod -R u+w "$copied_root"
   fi
 
-  HOME="$home_dir" bash "$copied_root/sync.sh" emacs "$@" --config-only --managed-dir "$managed_dir" --doom-dir "$doom_dir" --emacs-dir "$emacs_dir"
+  HOME="$home_dir" bash "$copied_root/sync.sh" emacs "$@" --managed-dir "$managed_dir" --emacs-dir "$emacs_dir"
 }
 
 printf 'test: running Emacs sync smoke test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
 if run_emacs_sync --check >/dev/null; then
-  echo "FAIL: check unexpectedly passed before Doom config apply" >&2
+  echo "FAIL: check unexpectedly passed before Emacs config apply" >&2
   exit 1
 fi
 
 if ! run_emacs_sync --apply >/dev/null; then
-  echo "FAIL: apply failed for missing Doom config" >&2
+  echo "FAIL: apply failed for missing Emacs config" >&2
   exit 1
 fi
 
-for file in init.el packages.el config.el; do
-  if [[ ! -f $doom_dir/$file || -L $doom_dir/$file ]]; then
-    echo "FAIL: missing writable Doom config file after apply: $file" >&2
+for file in early-init.el init.el; do
+  if [[ ! -f $emacs_dir/$file || -L $emacs_dir/$file ]]; then
+    echo "FAIL: missing writable Emacs config file after apply: $file" >&2
     exit 1
   fi
 done
-
-if run_emacs_sync_runtime --check >"$tmp_root/doom-missing.out" 2>"$tmp_root/doom-missing.err"; then
-  echo "FAIL: runtime check unexpectedly passed without Doom checkout" >&2
-  exit 1
-fi
-
-if ! grep -Fq "doom=missing" "$tmp_root/doom-missing.err"; then
-  echo "FAIL: runtime check did not report missing Doom checkout" >&2
-  cat "$tmp_root/doom-missing.err" >&2 || true
-  exit 1
-fi
-
-if ! grep -Fq -- "--bootstrap" "$tmp_root/doom-missing.err"; then
-  echo "FAIL: runtime missing guidance did not mention --bootstrap" >&2
-  cat "$tmp_root/doom-missing.err" >&2 || true
-  exit 1
-fi
-
-mkdir -p "$emacs_dir/bin"
-cat >"$emacs_dir/bin/doom" <<'EOF_DOOM'
-#!/usr/bin/env bash
-exit 0
-EOF_DOOM
-chmod +x "$emacs_dir/bin/doom"
-
-if ! run_emacs_sync_runtime --check >/dev/null; then
-  echo "FAIL: runtime check failed with fake Doom executable" >&2
-  exit 1
-fi
 
 if ! run_emacs_sync --check >/dev/null; then
   echo "FAIL: check after initial apply failed" >&2
   exit 1
 fi
 
-if ! run_emacs_sync_from_copy --check --item config.el >/dev/null; then
+if ! run_emacs_sync_from_copy --check --item init.el >/dev/null; then
   echo "FAIL: check failed when sync script ran outside repo root with explicit dirs" >&2
   exit 1
 fi
 
-cat >"$doom_dir/config.el" <<'EOF_LOCAL_CONFIG'
-;;; config.el -*- lexical-binding: t; -*-
+cat >"$emacs_dir/init.el" <<'EOF_LOCAL_INIT'
+;;; init.el -*- lexical-binding: t; -*-
 
-(setq doom-theme 'modus-vivendi)
-EOF_LOCAL_CONFIG
+(setq dotfiles-emacs-ready nil)
+EOF_LOCAL_INIT
 
-if run_emacs_sync --check --details --diff --item config >"$tmp_root/config-check.out" 2>"$tmp_root/config-check.err"; then
-  echo "FAIL: check unexpectedly passed after Doom config drift" >&2
+if run_emacs_sync --check --details --diff --item init >"$tmp_root/init-check.out" 2>"$tmp_root/init-check.err"; then
+  echo "FAIL: check unexpectedly passed after Emacs config drift" >&2
   exit 1
 fi
 
-if ! grep -Fq "details: config" "$tmp_root/config-check.err"; then
+if ! grep -Fq "details: init" "$tmp_root/init-check.err"; then
   echo "FAIL: details output missing for drifted config" >&2
-  cat "$tmp_root/config-check.err" >&2 || true
+  cat "$tmp_root/init-check.err" >&2 || true
   exit 1
 fi
 
-if ! grep -Fq "modus-vivendi" "$tmp_root/config-check.out"; then
-  echo "FAIL: diff output missing local Doom config drift" >&2
-  cat "$tmp_root/config-check.out" >&2 || true
+if ! grep -Fq "dotfiles-emacs-ready nil" "$tmp_root/init-check.out"; then
+  echo "FAIL: diff output missing local Emacs config drift" >&2
+  cat "$tmp_root/init-check.out" >&2 || true
   exit 1
 fi
 
-if ! run_emacs_sync --adopt --item config >/dev/null; then
-  echo "FAIL: adopt failed for local Doom config drift" >&2
+if ! run_emacs_sync --adopt --item init >/dev/null; then
+  echo "FAIL: adopt failed for local Emacs config drift" >&2
   exit 1
 fi
 
-if ! grep -Fq "modus-vivendi" "$managed_dir/config.el"; then
+if ! grep -Fq "dotfiles-emacs-ready nil" "$managed_dir/init.el"; then
   echo "FAIL: adopt did not copy runtime config back to managed dir" >&2
   exit 1
 fi
 
-if ! run_emacs_sync --check --item config >/dev/null; then
-  echo "FAIL: config check failed after adopt" >&2
+if ! run_emacs_sync --check --item init >/dev/null; then
+  echo "FAIL: init check failed after adopt" >&2
   exit 1
 fi
 
-cat >"$managed_dir/packages.el" <<'EOF_PACKAGES_UPDATED'
-;;; packages.el -*- no-byte-compile: t; -*-
+cat >"$managed_dir/early-init.el" <<'EOF_EARLY_UPDATED'
+;;; early-init.el -*- lexical-binding: t; -*-
 
-(package! vundo)
-(package! dirvish)
-EOF_PACKAGES_UPDATED
+(setq package-enable-at-startup nil)
+(setq frame-inhibit-implied-resize t)
+EOF_EARLY_UPDATED
 
-if run_emacs_sync --check --item packages >/dev/null; then
-  echo "FAIL: packages check unexpectedly passed after managed-dir update" >&2
+if run_emacs_sync --check --item early-init >/dev/null; then
+  echo "FAIL: early-init check unexpectedly passed after managed-dir update" >&2
   exit 1
 fi
 
-if ! run_emacs_sync --apply --item packages.el >/dev/null; then
-  echo "FAIL: apply failed for managed packages update" >&2
+if ! run_emacs_sync --apply --item early-init.el >/dev/null; then
+  echo "FAIL: apply failed for managed early-init update" >&2
   exit 1
 fi
 
-if ! grep -Fq "(package! dirvish)" "$doom_dir/packages.el"; then
-  echo "FAIL: apply did not copy managed packages update to runtime" >&2
+if ! grep -Fq "frame-inhibit-implied-resize" "$emacs_dir/early-init.el"; then
+  echo "FAIL: apply did not copy managed early-init update to runtime" >&2
   exit 1
 fi
 
 linked_init="$tmp_root/linked-init.el"
 cp "$managed_dir/init.el" "$linked_init"
-rm -f "$doom_dir/init.el"
-ln -s "$linked_init" "$doom_dir/init.el"
+rm -f "$emacs_dir/init.el"
+ln -s "$linked_init" "$emacs_dir/init.el"
 
 if run_emacs_sync --check --item init >/dev/null; then
-  echo "FAIL: check unexpectedly accepted symlinked Doom init" >&2
+  echo "FAIL: check unexpectedly accepted symlinked Emacs init" >&2
   exit 1
 fi
 
 if ! run_emacs_sync --apply --item init >/dev/null; then
-  echo "FAIL: apply failed to materialize symlinked Doom init" >&2
+  echo "FAIL: apply failed to materialize symlinked Emacs init" >&2
   exit 1
 fi
 
-if [[ -L $doom_dir/init.el ]]; then
-  echo "FAIL: symlinked Doom init was not materialized" >&2
+if [[ -L $emacs_dir/init.el ]]; then
+  echo "FAIL: symlinked Emacs init was not materialized" >&2
   exit 1
 fi
 

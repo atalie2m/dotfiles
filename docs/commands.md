@@ -118,7 +118,7 @@ sudo nix-collect-garbage -d
 ## Runtime sync
 
 ```bash
-# Apply Doom Emacs bootstrap/sync and Neovim config sync together
+# Apply Emacs and Neovim config sync together
 nix run .#sync
 nix run .#sync -- --check
 nix run .#sync -- --check --details --diff
@@ -128,13 +128,11 @@ nix run .#dotfiles -- sync shell --check
 nix run .#dotfiles -- sync shell --check --details --diff
 nix run .#dotfiles -- sync shell --apply
 
-# Doom Emacs config
+# Emacs config
 nix run .#dotfiles -- sync emacs --check
 nix run .#dotfiles -- sync emacs --check --details --diff
 nix run .#dotfiles -- sync emacs --apply
-nix run .#dotfiles -- sync emacs --apply --bootstrap
-nix run .#dotfiles -- sync emacs --check --config-only
-nix run .#dotfiles -- sync emacs --adopt --item config
+nix run .#dotfiles -- sync emacs --adopt --item init
 
 # Neovim config and Lazy lock state
 nix run .#dotfiles -- sync neovim --check
@@ -312,25 +310,21 @@ webhook failures are recorded in
 values. Set `AGENT_NOTIFICATIONS_DISABLE_WEBHOOK_FALLBACK_WITH_BOT=1` only when
 you prefer hard failure over unthreaded best-effort notifications.
 
-## Doom Emacs
+## Emacs
 
-`tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew, installs the Doom/Meow sync tooling, and keeps `doom-meow` available under `~/.config/doom/modules/editor/meow`. Doom config files are writable runtime state reconciled by `sync emacs`; plain `sync emacs --check` and `sync emacs --apply` also verify that `${EMACSDIR:-~/.emacs.d}/bin/doom` is executable. Use `--config-only` only for tests or maintenance that intentionally reconciles the three config files without checking Doom runtime readiness.
+`tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew, installs the Emacs sync tooling, and provides language/runtime helpers plus Tree-sitter grammar paths. The repo-managed configuration is vanilla Emacs, not Doom: Meow is the editing center, Elpaca owns packages, and the initial package set includes doom-modeline, nerd-icons, ef-themes, Vertico/Marginalia/Consult/Orderless/Embark, Corfu/Cape/Eglot, Dired enhancements, Org visual packages, Markdown/Nix modes, Popper, Dashboard, and Magit.
 
-`sync emacs --apply --bootstrap` first writes `~/.config/doom/{init,packages,config}.el` from the repo, then installs Doom non-interactively when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing or runs `doom sync` when it is already present. If `${EMACSDIR:-~/.emacs.d}` exists but is not a Doom checkout, the bootstrapper moves it to a timestamped `.pre-doom.*` backup before cloning Doom.
+`sync emacs --apply` writes `apps/emacs/config/{early-init,init}.el` to `${EMACSDIR:-~/.emacs.d}` as writable regular files. `sync emacs --adopt --item init` copies runtime edits back to the repo-managed config. Elpaca package checkout/build state remains mutable under `${EMACSDIR:-~/.emacs.d}/elpaca` and is populated by Emacs at startup.
 
-`tools.editor.emacs.bootstrap.enable = true` keeps the activation-time `dotfiles-doom bootstrap` path, backed by the same CLI behavior. The `ultra` profile enables both `tools.editor.emacs.sync.enable` and `tools.editor.emacs.bootstrap.enable`; `pro` installs Emacs without setup.
+`tools.editor.emacs.bootstrap.enable = true` is retained as a legacy profile toggle and now only participates in activation-time config sync. The `ultra` profile enables Emacs sync during activation; `pro` installs Emacs without setup.
 
-```bash
-dotfiles-doom bootstrap
-dotfiles-doom sync
-dotfiles-doom doctor
-```
+For live package QA after `sync emacs --apply`, run `scripts/tests/emacs-package-qa-test.sh`. It uses the configured Emacs directory and real Elpaca package state, but writes only to a temporary QA workspace.
 
 ## Neovim and Goneovim
 
 `tools.editor.neovim.enable = true` installs Neovim. `tools.editor.neovim.sync.enable = true` wires the repo-managed LazyVim config from `apps/neovim/` and installs the external runtime helpers that config expects, including file pickers, LazyGit, Tree-sitter CLI, configured language servers and formatters, and document/image preview converters; `ultra` enables that setup and `pro` leaves it disabled. `tools.editor.goneovim.enable = true` installs the Goneovim GUI from the upstream Darwin release. This deliberately avoids the Homebrew cask because that cask depends on Homebrew `neovim`, is marked deprecated for macOS Gatekeeper validation, and is scheduled for disablement on 2026-09-01.
 
-`nix run .#sync` is a convenience app for the personal editor setup. With no arguments it runs `sync emacs --apply --bootstrap` and then `sync neovim --apply`. Extra arguments are forwarded to both editor sync engines, so shared inspection flags such as `--check`, `--details`, and `--diff` work on both.
+`nix run .#sync` is a convenience app for the personal editor setup. With no arguments it runs `sync emacs --apply` and then `sync neovim --apply`. Extra arguments are forwarded to both editor sync engines, so shared inspection flags such as `--check`, `--details`, and `--diff` work on both.
 
 ## Runtime overrides
 
@@ -338,8 +332,7 @@ dotfiles-doom doctor
 - `DOTFILES_ROOT` overrides flake-root discovery for the Rust CLI and shell wrappers.
 - `DOTFILES_PROFILE_DIRS` prepends colon-separated profile directories to shell profile discovery before `/etc/profiles/per-user/$USER` and `$HOME/.nix-profile`.
 - Shell tooling adds the active user profile bins to Home Manager session PATH so non-interactive zsh remote commands can resolve tools installed in the user profile.
-- `DOOMDIR` overrides the runtime Doom config directory for `sync emacs`; otherwise it defaults to `~/.config/doom`. Use `--doom-dir` for one command.
-- `EMACSDIR` overrides the Doom checkout directory for `sync emacs`; otherwise it defaults to `~/.emacs.d`. Use `--emacs-dir` for one command.
+- `EMACSDIR` overrides the writable Emacs config directory for `sync emacs`; otherwise it defaults to `~/.emacs.d`. Use `--emacs-dir` for one command.
 - `FACTS_DIR` / `SECRETS_DIR` default to `~/.config/dotfiles`; `FACTS` / `SECRETS` default to `path:$FACTS_DIR` / `path:$SECRETS_DIR`.
 - `DARWIN_REBUILD_BIN` overrides the pinned `darwin-rebuild` path used by `apply`.
 - `DOTFILES_SYNC_VSCODE_BIN` overrides the `sync vscode` engine path.

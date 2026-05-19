@@ -5,7 +5,7 @@
 This repository has four runtime sync surfaces and one activation-managed system-app boundary:
 
 - shell entrypoints
-- Doom Emacs config
+- Emacs config
 - Neovim config
 - VS Code native profiles
 - Home Manager-owned XDG config files
@@ -33,37 +33,31 @@ Behavior:
 - `sync shell --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`
 - shell sync does not adopt local changes back into the repo
 
-## Doom Emacs config
+## Emacs config
 
-`nix run .#dotfiles -- sync emacs` is the public writable Doom config manager.
+`nix run .#dotfiles -- sync emacs` is the public writable Emacs config manager.
 The control plane is implemented in Rust in `dotfiles-core`; `scripts/sync.sh` is only a thin shell wrapper.
 
 - Desired:
-  - `apps/emacs/doom/init.el`
-  - `apps/emacs/doom/packages.el`
-  - `apps/emacs/doom/config.el`
+  - `apps/emacs/config/early-init.el`
+  - `apps/emacs/config/init.el`
 - Actual:
-  - `${DOOMDIR:-~/.config/doom}/init.el`
-  - `${DOOMDIR:-~/.config/doom}/packages.el`
-  - `${DOOMDIR:-~/.config/doom}/config.el`
+  - `${EMACSDIR:-~/.emacs.d}/early-init.el`
+  - `${EMACSDIR:-~/.emacs.d}/init.el`
 - State: none
-- Model: compare fully repo-owned Doom config files against writable runtime files, then verify Doom runtime readiness unless `--config-only` is explicit
-- Contract: Doom config files converge fully to repo state on apply, and plain check/apply fails when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing
+- Model: compare fully repo-owned vanilla Emacs config files against writable runtime files
+- Contract: Emacs config files converge fully to repo state on apply; package state under `${EMACSDIR:-~/.emacs.d}` remains mutable and is managed by Elpaca at Emacs startup
 
 Behavior:
 
 - `sync emacs --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`
-- `sync emacs --check` and plain `sync emacs --apply` also report Doom runtime status as `doom=ready` or `doom=missing`
-- `sync emacs --apply` creates or rewrites the writable runtime Doom config files from the repo, then fails if Doom runtime is missing
-- `sync emacs --apply --bootstrap` writes config first, then backs up a non-Doom `${EMACSDIR:-~/.emacs.d}` to `.pre-doom.YYYYmmddHHMMSS`, shallow-clones Doom, and runs `doom install --no-env` non-interactively; existing Doom checkouts run `doom sync`
-- `sync emacs --adopt` copies runtime Doom config edits back into `apps/emacs/doom/`
-- `--item init`, `--item packages`, or `--item config` restricts reconciliation to one file
-- `--config-only` opts out of Doom runtime readiness for config-only tests and maintenance
+- `sync emacs --apply` creates or rewrites the writable runtime Emacs config files from the repo
+- `sync emacs --adopt` copies runtime Emacs config edits back into `apps/emacs/config/`
+- `--item early-init` or `--item init` restricts reconciliation to one file
 - `--emacs-dir` overrides `${EMACSDIR:-~/.emacs.d}` for one command
-- `tools.editor.emacs.enable` owns the Emacs app, sync tooling, and external `doom-meow` module; Doom itself remains a mutable checkout
-- Doom is installed at `${EMACSDIR:-~/.emacs.d}` so standard GUI/daemon startup uses it directly
-- `tools.editor.emacs.bootstrap.enable` runs `dotfiles-doom bootstrap` only when `${EMACSDIR:-~/.emacs.d}/bin/doom` is missing
-- `ultra` enables activation-time Emacs sync and first-run Doom bootstrap; `pro` installs Emacs without setup
+- `tools.editor.emacs.enable` owns the Emacs app, sync tooling, language/runtime helpers, and Tree-sitter grammar path
+- `tools.editor.emacs.bootstrap.enable` is retained as a legacy profile toggle and now only participates in activation-time config sync
+- `ultra` enables activation-time Emacs sync; `pro` installs Emacs without setup
 
 ## Neovim config
 
