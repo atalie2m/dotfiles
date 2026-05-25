@@ -125,8 +125,8 @@ Secret storage details live in [`docs/secrets-local.md`](docs/secrets-local.md#c
 
 ## Repository-Scoped Toolchain Policy
 
-1. `terraform`, `opentofu`, `nodejs`, and `go` should be pinned per repository via that repo's own `flake.nix` / devShell.
-2. Stock Darwin profiles leave `go`, `nodejs`, `opentofu`, and `terraform` to project templates/devShells so one machine-wide version does not leak across repos.
+1. `terraform`, `opentofu`, `nodejs`, `go`, and `bun` should be pinned per repository via that repo's own `flake.nix` / devShell.
+2. Stock Darwin profiles leave `go`, `nodejs`, `bun`, `opentofu`, and `terraform` to project templates/devShells so one machine-wide version does not leak across repos.
 3. The `work_mac` policy allows the `dev` group on that premise; adding project-pinned toolchains back to stock profiles would also flow into `work_mac`.
 4. If a machine really needs one globally, enable it explicitly with `myconfig.tools.dev.<tool>.enable = true`; do not add it back to the stock profiles.
 5. Terraform remains unfree. The allow-list is derived from enabled tools (for example `terraform`, `emacs`) via helper wiring, and `allowAll` remains disabled.

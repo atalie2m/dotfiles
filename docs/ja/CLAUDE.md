@@ -34,7 +34,7 @@
 - shell は薄い entrypoint か OS 末端の挙動に限定してください。
 - host truth は `myconfig.hostContext.*` の下に集中させてください。
 - public behavior が変わったら docs を正確に更新してください。
-- project-pinned toolchain（`nodejs`, `go`, `terraform`, `opentofu`）は stock global bundle に入れず、project template / devShell 側で version を固定します。
+- project-pinned toolchain（`nodejs`, `go`, `bun`, `terraform`, `opentofu`）は stock global bundle に入れず、project template / devShell 側で version を固定します。
 - template は Git-flake-first に保ってください。unfiltered `path:$PWD` instruction は追加せず、`target/`、`node_modules/`、`.git/`、`.direnv/` は ignore と source filter で flake source から外します。
 
 ## 検証

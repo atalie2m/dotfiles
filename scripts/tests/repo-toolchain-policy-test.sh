@@ -41,6 +41,7 @@ require_file "$README_JA_FILE"
 
 require_not_contains "$BUNDLES_FILE" "tools.dev.go.enable = true;"
 require_not_contains "$BUNDLES_FILE" "tools.dev.nodejs.enable = true;"
+require_not_contains "$BUNDLES_FILE" "tools.dev.bun.enable = true;"
 require_not_contains "$BUNDLES_FILE" "tools.dev.opentofu.enable = true;"
 require_not_contains "$BUNDLES_FILE" "tools.dev.terraform.enable = true;"
 require_not_contains "$BUNDLES_FILE" "tools.downloadArchive.ytDlp.enable = true;"
@@ -52,7 +53,7 @@ require_not_contains "$ROOT/nix/catalog/tools/nixpkgs.nix" 'pkg = "bitwarden-cli
 require_not_contains "$ROOT/nix/catalog/tools/nixpkgs.nix" 'pkg = "rbw";'
 require_contains "$HOMEBREW_OWNERSHIP_FILE" "requiresFullXcode = true;"
 
-require_contains "$README_FILE" 'Stock Darwin profiles leave `go`, `nodejs`, `opentofu`, and `terraform` to project templates/devShells'
-require_contains "$README_JA_FILE" 'stock Darwin profile は `go`, `nodejs`, `opentofu`, `terraform` を project template/devShell に残します'
+require_contains "$README_FILE" 'Stock Darwin profiles leave `go`, `nodejs`, `bun`, `opentofu`, and `terraform` to project templates/devShells'
+require_contains "$README_JA_FILE" 'stock Darwin profile は `go`, `nodejs`, `bun`, `opentofu`, `terraform` を project template/devShell に残します'
 
 echo "PASS: repo toolchain policy"

@@ -94,7 +94,7 @@ modules such as `core`, `shell`, `dev`, `editor`, `system`, `terminal`,
 
 `allowedGroups` is a group boundary. It is not a complete per-tool whitelist.
 The current policy allows `dev` because stock Darwin profiles do not enable
-project-pinned toolchains (`go`, `nodejs`, `terraform`, `opentofu`). If those
+project-pinned toolchains (`go`, `nodejs`, `bun`, `terraform`, `opentofu`). If those
 return to stock profiles later, they will also flow into `work_mac`.
 
 Broad groups need explicit review before widening:

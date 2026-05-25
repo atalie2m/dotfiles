@@ -119,8 +119,8 @@ secret の保管境界は [`docs/secrets-local.md`](secrets-local.md#codex-slack
 
 ## リポジトリ単位のツールチェイン方針
 
-1. `terraform`, `opentofu`, `nodejs`, `go` は、その repo 自身の `flake.nix` / devShell で pin する前提にする。
-2. stock Darwin profile は `go`, `nodejs`, `opentofu`, `terraform` を project template/devShell に残します。machine-wide version が repo 間に漏れないようにするためです。
+1. `terraform`, `opentofu`, `nodejs`, `go`, `bun` は、その repo 自身の `flake.nix` / devShell で pin する前提にする。
+2. stock Darwin profile は `go`, `nodejs`, `bun`, `opentofu`, `terraform` を project template/devShell に残します。machine-wide version が repo 間に漏れないようにするためです。
 3. `work_mac` policy はこの前提で `dev` group を許可しています。project-pinned toolchain を stock profile に戻すと、それも `work_mac` に流れます。
 4. どうしても machine-global に必要なら `myconfig.tools.dev.<tool>.enable = true` を明示する。ただし stock profile には戻さない。
 5. Terraform は引き続き unfree。allow-list は helper wiring によって有効化 tool（例: `terraform`, `emacs`）から導出し、`allowAll` は無効のままにする。

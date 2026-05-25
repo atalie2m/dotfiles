@@ -24,6 +24,7 @@
   ansible = { group = "dev"; pkg = "ansible"; };
   actionlint = { group = "dev"; pkg = "actionlint"; };
   awscli2 = { group = "dev"; pkg = "awscli2"; };
+  bun = { group = "dev"; pkg = "bun"; };
   gh = { group = "dev"; pkg = "gh"; };
   go = { group = "dev"; pkg = "go"; };
   gitAbsorb = { group = "dev"; pkg = "git-absorb"; };

@@ -81,7 +81,7 @@ policy helper は profile と host data から実際に現れた `tools` toggle 
 
 `allowedGroups` は group 境界であり、完全な per-tool whitelist ではありません。
 現行 policy は、stock Darwin profile が project-pinned toolchain（`go`,
-`nodejs`, `terraform`, `opentofu`）を有効化しない前提で `dev` を許可します。
+`nodejs`, `bun`, `terraform`, `opentofu`）を有効化しない前提で `dev` を許可します。
 将来それらを stock profile に戻すと、`work_mac` にも流れます。
 
 broad group を広げるときは明示的に review してください。

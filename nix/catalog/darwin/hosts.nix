@@ -14,6 +14,12 @@ let
       homeTrampolines.timeoutSeconds = 15;
     };
   };
+
+  ownMacOverrides = powerUserOverrides // {
+    tools = powerUserOverrides.tools // {
+      dev.bun.enable = true;
+    };
+  };
 in
 {
   inherit supportedProfiles;
@@ -26,7 +32,7 @@ in
       inherit supportedProfiles;
       machineKey = "own_mac";
       system = "aarch64-darwin";
-      extraMyconfig = powerUserOverrides;
+      extraMyconfig = ownMacOverrides;
     };
 
     work_mac = {
