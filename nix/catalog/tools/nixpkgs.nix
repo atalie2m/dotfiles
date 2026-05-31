@@ -26,22 +26,14 @@
   awscli2 = { group = "dev"; pkg = "awscli2"; };
   bun = { group = "dev"; pkg = "bun"; };
   gh = { group = "dev"; pkg = "gh"; };
-  go = { group = "dev"; pkg = "go"; };
   gitAbsorb = { group = "dev"; pkg = "git-absorb"; };
   gnugrep = { group = "dev"; pkg = "gnugrep"; };
   gnused = { group = "dev"; pkg = "gnused"; };
   lychee = { group = "dev"; pkg = "lychee"; };
   mercurial = { group = "dev"; pkg = "mercurial"; };
-  nodejs = { group = "dev"; pkg = "nodejs"; };
-  opentofu = { group = "dev"; pkg = "opentofu"; };
   shellcheck = { group = "dev"; pkg = "shellcheck"; };
   shfmt = { group = "dev"; pkg = "shfmt"; };
   taplo = { group = "dev"; pkg = "taplo"; };
-  terraform = {
-    group = "dev";
-    pkg = "terraform";
-    unfree = [ "terraform" ];
-  };
   typos = { group = "dev"; pkg = "typos"; };
   yamllint = { group = "dev"; pkg = "yamllint"; };
 

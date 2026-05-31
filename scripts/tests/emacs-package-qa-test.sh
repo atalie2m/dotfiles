@@ -49,18 +49,41 @@ for file in "$early_init" "$init"; do
 done
 
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/emacs-package-qa.XXXXXX")"
+qa_root="$tmp_root/work"
+state_dir="$tmp_root/state"
 cleanup() {
   rm -rf "$tmp_root"
 }
 trap cleanup EXIT
+mkdir -p "$state_dir"
+
+qa_state_eval='
+(let ((state-dir (file-name-as-directory (getenv "DOTFILES_EMACS_QA_STATE_DIR"))))
+  (setq abbrev-file-name (expand-file-name "abbrev_defs" state-dir)
+        auto-save-list-file-prefix (expand-file-name "auto-save-list/.saves-" state-dir)
+        backup-directory-alist `(("." . ,(expand-file-name "backups/" state-dir)))
+        bookmark-default-file (expand-file-name "bookmarks" state-dir)
+        project-list-file (expand-file-name "projects" state-dir)
+        recentf-save-file (expand-file-name "recentf" state-dir)
+        savehist-file (expand-file-name "history" state-dir)
+        save-place-file (expand-file-name "places" state-dir)
+        tramp-persistency-file-name (expand-file-name "tramp" state-dir)
+        transient-history-file (expand-file-name "transient/history.el" state-dir)
+        transient-levels-file (expand-file-name "transient/levels.el" state-dir)
+        transient-values-file (expand-file-name "transient/values.el" state-dir)
+        url-configuration-directory (expand-file-name "url/" state-dir)))
+'
 
 printf 'test: running Emacs package QA\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
-DOTFILES_EMACS_QA_ROOT="$tmp_root" \
+DOTFILES_EMACS_QA_ROOT="$qa_root" \
+  DOTFILES_EMACS_QA_STATE_DIR="$state_dir" \
   "$emacs_bin" --batch --debug-init \
   -l "$early_init" \
+  --eval "$qa_state_eval" \
   -l "$init" \
+  --eval "$qa_state_eval" \
   -l "$ROOT/scripts/tests/emacs-package-qa.el"
 
 echo "PASS: Emacs package QA"

@@ -53,7 +53,7 @@
 - Emacs sync は Rust の `dotfiles` CLI（`sync emacs`）で writable vanilla Emacs config file 向けに実装されています。
 - VS Code sync は専用の `dotfiles-sync-vscode` binary で実装され、`dotfiles sync vscode` から dispatch されます。
 - group toggle は taxonomy であり、rollout は明示的な capability bundle に属します。
-- Stock global bundle では project-pinned toolchain（`nodejs`, `go`, `bun`, `terraform`, `opentofu`）を有効化しません。host が明示 opt-in しない限り、それらの version は project template / devShell 側に閉じます。
+- Stock global bundle では project-pinned toolchain を有効化しません。`go`, `nodejs`, `terraform`, `opentofu` は host opt-in path を持たせず、project template / devShell 側に閉じます。`bun` だけを明示的な host opt-in 例外にします。
 - Template project は Git flake として document / guard してください。unfiltered `path:$PWD` ref を使う template instruction は追加しないでください。`target/`、`node_modules/`、`.git/`、`.direnv/` は ignore し、local source をコピーする箇所では source filter を使ってください。
 
 ## テスト方針

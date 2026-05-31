@@ -125,11 +125,11 @@ Secret storage details live in [`docs/secrets-local.md`](docs/secrets-local.md#c
 
 ## Repository-Scoped Toolchain Policy
 
-1. `terraform`, `opentofu`, `nodejs`, `go`, and `bun` should be pinned per repository via that repo's own `flake.nix` / devShell.
-2. Stock Darwin profiles leave `go`, `nodejs`, `bun`, `opentofu`, and `terraform` to project templates/devShells so one machine-wide version does not leak across repos.
-3. The `work_mac` policy allows the `dev` group on that premise; adding project-pinned toolchains back to stock profiles would also flow into `work_mac`.
-4. If a machine really needs one globally, enable it explicitly with `myconfig.tools.dev.<tool>.enable = true`; do not add it back to the stock profiles.
-5. Terraform remains unfree. The allow-list is derived from enabled tools (for example `terraform`, `emacs`) via helper wiring, and `allowAll` remains disabled.
+1. `terraform`, `opentofu`, `nodejs`, and `go` must be pinned per repository via that repo's own `flake.nix` / devShell.
+2. Stock Darwin profiles and host overrides do not expose global opt-in toggles for `go`, `nodejs`, `opentofu`, or `terraform`; keep them in project templates/devShells so one machine-wide version does not leak across repos.
+3. `bun` is the only project-pinned toolchain exception that may be enabled explicitly with `myconfig.tools.dev.bun.enable = true`; do not add it back to stock profiles.
+4. The `work_mac` policy allows the `dev` group on the premise that project-pinned toolchains are not exposed through stock profiles or host opt-ins, except for the explicit `bun` exception.
+5. Terraform remains unfree. Repository flakes that need it must set their own unfree allow-list; `allowAll` remains disabled here.
 6. For Terraform/OpenTofu repos, set `nixpkgs.config.allowUnfreePredicate` in that repo's flake and include `pkgs.terraform` / `pkgs.opentofu` in the devShell.
 
 Example (`flake.nix` for a Terraform repo):

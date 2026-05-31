@@ -80,9 +80,10 @@ policy helper は profile と host data から実際に現れた `tools` toggle 
 `system`, `terminal`, `security`, `aiCodingAgent` のような個別 module の group も対象にします。
 
 `allowedGroups` は group 境界であり、完全な per-tool whitelist ではありません。
-現行 policy は、stock Darwin profile が project-pinned toolchain（`go`,
-`nodejs`, `bun`, `terraform`, `opentofu`）を有効化しない前提で `dev` を許可します。
-将来それらを stock profile に戻すと、`work_mac` にも流れます。
+現行 policy は、stock Darwin profile と host override が project-pinned toolchain
+（`go`, `nodejs`, `terraform`, `opentofu`）の global opt-in toggle を提供しない前提で
+`dev` を許可します。`bun` だけは明示的な host opt-in 例外です。
+将来それらを stock profile や host opt-in に戻すと、`work_mac` にも流れます。
 
 broad group を広げるときは明示的に review してください。
 

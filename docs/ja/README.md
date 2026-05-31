@@ -119,11 +119,11 @@ secret の保管境界は [`docs/secrets-local.md`](secrets-local.md#codex-slack
 
 ## リポジトリ単位のツールチェイン方針
 
-1. `terraform`, `opentofu`, `nodejs`, `go`, `bun` は、その repo 自身の `flake.nix` / devShell で pin する前提にする。
-2. stock Darwin profile は `go`, `nodejs`, `bun`, `opentofu`, `terraform` を project template/devShell に残します。machine-wide version が repo 間に漏れないようにするためです。
-3. `work_mac` policy はこの前提で `dev` group を許可しています。project-pinned toolchain を stock profile に戻すと、それも `work_mac` に流れます。
-4. どうしても machine-global に必要なら `myconfig.tools.dev.<tool>.enable = true` を明示する。ただし stock profile には戻さない。
-5. Terraform は引き続き unfree。allow-list は helper wiring によって有効化 tool（例: `terraform`, `emacs`）から導出し、`allowAll` は無効のままにする。
+1. `terraform`, `opentofu`, `nodejs`, `go` は、その repo 自身の `flake.nix` / devShell で pin する前提にする。
+2. stock Darwin profile と host override は `go`, `nodejs`, `opentofu`, `terraform` の global opt-in toggle を提供しません。machine-wide version が repo 間に漏れないよう、project template/devShell 側に閉じます。
+3. `bun` だけは project-pinned toolchain の例外として、`myconfig.tools.dev.bun.enable = true` で明示 opt-in できます。ただし stock profile には戻さない。
+4. `work_mac` policy は、明示的な `bun` 例外を除き、project-pinned toolchain が stock profile や host opt-in 経由で露出しない前提で `dev` group を許可しています。
+5. Terraform は引き続き unfree。必要な repo は自分の flake で allow-list を設定し、この repo では `allowAll` を無効のままにする。
 6. Terraform / OpenTofu repo では、その repo の flake で `nixpkgs.config.allowUnfreePredicate` を設定し、devShell に `pkgs.terraform` / `pkgs.opentofu` を含める。
 
 例（Terraform repo の `flake.nix`）:

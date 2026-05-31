@@ -145,7 +145,7 @@ require_not_contains_anywhere 'user-added settings keys'
 require_not_contains_anywhere 'state schema version is `3`'
 
 if command -v nix >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-  flake_ref="path:$ROOT"
+  flake_ref="git+file://$ROOT"
   manifest_json="$(
     nix eval --json "${flake_ref}#darwinConfigurations" \
       --impure \

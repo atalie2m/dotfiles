@@ -5,7 +5,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$ROOT"
-flake_ref="path:$ROOT"
+flake_ref="git+file://$ROOT"
 
 if ! command -v nix >/dev/null 2>&1; then
   echo "FAIL: work policy test requires nix" >&2

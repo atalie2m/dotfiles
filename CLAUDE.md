@@ -34,7 +34,7 @@ This file provides repository guidance for coding agents working in this repo.
 - Keep shell limited to thin entrypoints or OS-leaf behavior.
 - Keep host truth centralized under `myconfig.hostContext.*`.
 - Keep docs accurate when public behavior changes.
-- Keep project-pinned toolchains (`nodejs`, `go`, `bun`, `terraform`, `opentofu`) out of stock global bundles; use project templates/devShells for those versions.
+- Keep project-pinned toolchains out of stock global bundles. `go`, `nodejs`, `terraform`, and `opentofu` must stay in project templates/devShells with no host opt-in path; `bun` is the only explicit host opt-in exception.
 - Keep templates Git-flake-first: no unfiltered `path:$PWD` instructions, and keep `target/`, `node_modules/`, `.git/`, and `.direnv/` out of flake source through ignores and source filters.
 
 ## Verification
