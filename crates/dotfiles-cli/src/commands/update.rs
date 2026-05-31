@@ -144,7 +144,7 @@ pub(crate) fn update_dotfiles_user_profile(install_if_missing: bool) -> Result<(
     }
 
     let root = repo_root()?;
-    let flake_ref = git_file_flake_ref_for_root(&root);
+    let flake_ref = flake_ref_for_root(&root);
     log(&format!(
         "user nix profile: installing dotfiles entry from {}",
         flake_ref
@@ -178,10 +178,6 @@ fn default_user_profile_has_dotfiles() -> Result<bool, String> {
     Ok(profile_list_json_has_entry(&stdout, "dotfiles"))
 }
 
-fn git_file_flake_ref_for_root(root: &std::path::Path) -> String {
-    format!("git+file://{}", root.display())
-}
-
 fn profile_list_json_has_entry(profile_json: &str, name: &str) -> bool {
     profile_json.contains(&format!("\"{}\":", name))
 }
@@ -200,13 +196,5 @@ mod tests {
             r#"{"elements":{"other":{"originalUrl":"github:atalie2m/dotfiles"}},"version":3}"#,
             "dotfiles"
         ));
-    }
-
-    #[test]
-    fn local_runtime_install_uses_git_file_flake_ref() {
-        assert_eq!(
-            super::git_file_flake_ref_for_root(std::path::Path::new("/repo/dotfiles")),
-            "git+file:///repo/dotfiles"
-        );
     }
 }

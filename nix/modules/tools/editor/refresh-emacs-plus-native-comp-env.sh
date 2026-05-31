@@ -95,38 +95,116 @@ plist_set_string() {
   fi
 }
 
+plist_root_key_exists() {
+  local key="$1"
+  "$plistbuddy" -c "Print :$key" "$plist" >/dev/null 2>&1
+}
+
+plist_root_get() {
+  local key="$1"
+  "$plistbuddy" -c "Print :$key" "$plist" 2>/dev/null || true
+}
+
+plist_set_root_string() {
+  local key="$1"
+  local value="$2"
+
+  if [[ $(plist_root_get "$key") == "$value" ]]; then
+    return 1
+  fi
+
+  if plist_root_key_exists "$key"; then
+    "$plistbuddy" -c "Set :$key $value" "$plist"
+  else
+    "$plistbuddy" -c "Add :$key string $value" "$plist"
+  fi
+}
+
+icon_destination() {
+  local icon_file
+
+  icon_file="$(plist_root_get CFBundleIconFile)"
+  if [[ -z $icon_file ]]; then
+    icon_file="Emacs.icns"
+  fi
+  if [[ $icon_file != *.icns ]]; then
+    icon_file="$icon_file.icns"
+  fi
+
+  printf '%s\n' "$emacs_app/Contents/Resources/$icon_file"
+}
+
+install_icon() {
+  local source_icon="$1"
+  local destination_icon
+  local resources_dir
+
+  [[ -f $source_icon ]] || return 1
+
+  destination_icon="$(icon_destination)"
+  resources_dir="$(dirname "$destination_icon")"
+  [[ -d $resources_dir ]] || return 1
+
+  if [[ -f $destination_icon ]] && cmp -s "$source_icon" "$destination_icon"; then
+    return 1
+  fi
+
+  cp "$source_icon" "$destination_icon"
+}
+
 if [[ ! -f $plist || ! -x $plistbuddy ]]; then
   exit 0
 fi
 
+desired_cc=""
+desired_library_path=""
+desired_tree_sitter_grammar_dir="${EMACS_TREE_SITTER_GRAMMAR_DIR:-}"
+desired_icon="${EMACS_PLUS_ICON:-}"
+
 brew_prefix="$(find_brew_prefix || true)"
-[[ -n $brew_prefix ]] || exit 0
-
-gcc_bin="$(find_gcc_bin "$brew_prefix" || true)"
-[[ -n $gcc_bin ]] || exit 0
-
-gcc_major="${gcc_bin##*-}"
-emutls_dir="$(find_emutls_dir "$brew_prefix" "$gcc_bin" "$gcc_major" || true)"
-[[ -n $emutls_dir ]] || exit 0
-
-desired_cc="$brew_prefix/opt/gcc/bin/gcc-$gcc_major"
-if [[ ! -x $desired_cc ]]; then
-  desired_cc="$brew_prefix/bin/gcc-$gcc_major"
+if [[ -n $brew_prefix ]]; then
+  gcc_bin="$(find_gcc_bin "$brew_prefix" || true)"
+  if [[ -n $gcc_bin ]]; then
+    gcc_major="${gcc_bin##*-}"
+    emutls_dir="$(find_emutls_dir "$brew_prefix" "$gcc_bin" "$gcc_major" || true)"
+    if [[ -n $emutls_dir ]]; then
+      desired_cc="$brew_prefix/opt/gcc/bin/gcc-$gcc_major"
+      if [[ ! -x $desired_cc ]]; then
+        desired_cc="$brew_prefix/bin/gcc-$gcc_major"
+      fi
+      desired_library_path="$emutls_dir:$brew_prefix/lib/gcc/current:$brew_prefix/lib"
+    fi
+  fi
 fi
-desired_library_path="$emutls_dir:$brew_prefix/lib/gcc/current:$brew_prefix/lib"
+
 changed=0
 
-if ! "$plistbuddy" -c "Print :LSEnvironment" "$plist" >/dev/null 2>&1; then
+if [[ -n $desired_cc || -n $desired_library_path || -n $desired_tree_sitter_grammar_dir ]] &&
+  ! "$plistbuddy" -c "Print :LSEnvironment" "$plist" >/dev/null 2>&1; then
   "$plistbuddy" -c "Add :LSEnvironment dict" "$plist"
   changed=1
 fi
 
-if plist_set_string CC "$desired_cc"; then
+if [[ -n $desired_cc ]] && plist_set_string CC "$desired_cc"; then
   changed=1
 fi
 
-if plist_set_string LIBRARY_PATH "$desired_library_path"; then
+if [[ -n $desired_library_path ]] && plist_set_string LIBRARY_PATH "$desired_library_path"; then
   changed=1
+fi
+
+if [[ -n $desired_tree_sitter_grammar_dir ]] &&
+  plist_set_string EMACS_TREE_SITTER_GRAMMAR_DIR "$desired_tree_sitter_grammar_dir"; then
+  changed=1
+fi
+
+if [[ -n $desired_icon ]]; then
+  if plist_set_root_string CFBundleIconFile "Emacs.icns"; then
+    changed=1
+  fi
+  if install_icon "$desired_icon"; then
+    changed=1
+  fi
 fi
 
 if [[ $changed -eq 1 ]]; then

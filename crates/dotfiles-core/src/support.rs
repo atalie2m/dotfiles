@@ -76,7 +76,11 @@ mod env_paths {
     }
 
     pub fn flake_ref_for_root(root: &Path) -> String {
-        format!("path:{}", root.display())
+        if root.join(".git").exists() {
+            format!("git+file://{}", root.display())
+        } else {
+            format!("path:{}", root.display())
+        }
     }
 
     pub fn require_host_argument(host: Option<&str>, command_name: &str) -> Result<String, String> {
@@ -139,6 +143,34 @@ mod env_paths {
         fs::metadata(path)
             .map(|metadata| !metadata.permissions().readonly())
             .unwrap_or(false)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::flake_ref_for_root;
+        use std::fs;
+        use tempfile::tempdir;
+
+        #[test]
+        fn flake_ref_uses_git_file_for_git_checkout() {
+            let temp = tempdir().expect("tempdir");
+            fs::create_dir(temp.path().join(".git")).expect("git dir");
+
+            assert_eq!(
+                flake_ref_for_root(temp.path()),
+                format!("git+file://{}", temp.path().display())
+            );
+        }
+
+        #[test]
+        fn flake_ref_uses_path_for_plain_directory() {
+            let temp = tempdir().expect("tempdir");
+
+            assert_eq!(
+                flake_ref_for_root(temp.path()),
+                format!("path:{}", temp.path().display())
+            );
+        }
     }
 }
 

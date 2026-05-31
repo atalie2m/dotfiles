@@ -172,6 +172,8 @@ in
       home-manager.sharedModules = [
         ({ ... }: {
           home.activation.refreshEmacsPlusNativeCompEnv = lib.mkOrder 880 ''
+            ${lib.optionalString hasIcon ''export EMACS_PLUS_ICON="${iconPath}"''}
+            export EMACS_TREE_SITTER_GRAMMAR_DIR="${emacsTreeSitterGrammars}/lib/emacs-tree-sitter-grammars"
             ${refreshEmacsPlusNativeCompEnv}/bin/dotfiles-refresh-emacs-plus-native-comp-env
           '';
         })

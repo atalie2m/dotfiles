@@ -27,6 +27,7 @@
 (let* ((repo (expand-file-name "elpaca/" elpaca-sources-directory))
        (build (expand-file-name "elpaca/" elpaca-builds-directory))
        (order (cdr elpaca-order))
+       (emacs (expand-file-name invocation-name invocation-directory))
        (default-directory repo))
   (add-to-list 'load-path repo)
   (when (file-exists-p build)

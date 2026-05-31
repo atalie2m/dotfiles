@@ -45,6 +45,10 @@ major="15"
 stable_emutls_dir="$brew_prefix/opt/gcc/lib/gcc/current/gcc/$machine/$major"
 expected_cc="$brew_prefix/opt/gcc/bin/gcc-$major"
 expected_library_path="$stable_emutls_dir:$brew_prefix/lib/gcc/current:$brew_prefix/lib"
+expected_tree_sitter_grammar_dir="$tmp_root/nix/store/emacs-tree-sitter-grammars/lib/emacs-tree-sitter-grammars"
+expected_bundle_icon_file="Emacs.icns"
+icon_source="$tmp_root/repo/apps/emacs/emacs-icon-1.0.icns"
+icon_dest="$app/Contents/Resources/$expected_bundle_icon_file"
 
 mkdir -p \
   "$brew_prefix/bin" \
@@ -52,9 +56,12 @@ mkdir -p \
   "$stable_emutls_dir" \
   "$brew_prefix/lib/gcc/current" \
   "$brew_prefix/lib" \
-  "$app/Contents"
+  "$app/Contents/Resources" \
+  "$(dirname "$icon_source")"
 
 touch "$stable_emutls_dir/libemutls_w.a"
+printf 'repo emacs icon\n' >"$icon_source"
+printf 'stale emacs icon\n' >"$icon_dest"
 
 cat >"$brew_prefix/bin/brew" <<'EOF_BREW'
 #!/usr/bin/env bash
@@ -84,12 +91,16 @@ write_plist_with_stale_environment() {
 <dict>
   <key>CFBundleIdentifier</key>
   <string>org.gnu.Emacs</string>
+  <key>CFBundleIconFile</key>
+  <string>StaleEmacs.icns</string>
   <key>LSEnvironment</key>
   <dict>
     <key>CC</key>
     <string>/opt/homebrew/bin/gcc-15</string>
     <key>LIBRARY_PATH</key>
     <string>/opt/homebrew/Cellar/gcc/15.2.0/lib/gcc/current/gcc/aarch64-apple-darwin25/15:/opt/homebrew/lib/gcc/current:/opt/homebrew/lib</string>
+    <key>EMACS_TREE_SITTER_GRAMMAR_DIR</key>
+    <string>/nix/store/stale-emacs-tree-sitter-grammars/lib/emacs-tree-sitter-grammars</string>
   </dict>
 </dict>
 </plist>
@@ -99,6 +110,11 @@ EOF_PLIST
 plist_value() {
   local key="$1"
   "$PLISTBUDDY" -c "Print :LSEnvironment:$key" "$plist"
+}
+
+plist_root_value() {
+  local key="$1"
+  "$PLISTBUDDY" -c "Print :$key" "$plist"
 }
 
 assert_plist_value() {
@@ -114,10 +130,32 @@ assert_plist_value() {
   fi
 }
 
+assert_plist_root_value() {
+  local key="$1"
+  local expected="$2"
+  local actual
+  actual="$(plist_root_value "$key")"
+  if [[ $actual != "$expected" ]]; then
+    echo "FAIL: unexpected $key" >&2
+    echo "expected: $expected" >&2
+    echo "actual:   $actual" >&2
+    exit 1
+  fi
+}
+
+assert_icon_installed() {
+  if ! cmp -s "$icon_source" "$icon_dest"; then
+    echo "FAIL: Emacs icon was not installed" >&2
+    exit 1
+  fi
+}
+
 run_refresh() {
   HOMEBREW_PREFIX="$brew_prefix" \
     EMACS_PLUS_APP="$app" \
     EMACS_PLUS_SKIP_CODESIGN=1 \
+    EMACS_PLUS_ICON="$icon_source" \
+    EMACS_TREE_SITTER_GRAMMAR_DIR="$expected_tree_sitter_grammar_dir" \
     PLISTBUDDY="$PLISTBUDDY" \
     bash "$REFRESH_SCRIPT"
 }
@@ -127,13 +165,18 @@ printf 'test: temp root = %s\n' "$tmp_root"
 
 write_plist_with_stale_environment
 run_refresh
+assert_plist_root_value CFBundleIconFile "$expected_bundle_icon_file"
+assert_icon_installed
 assert_plist_value CC "$expected_cc"
 assert_plist_value LIBRARY_PATH "$expected_library_path"
+assert_plist_value EMACS_TREE_SITTER_GRAMMAR_DIR "$expected_tree_sitter_grammar_dir"
 
 if [[ $(plist_value LIBRARY_PATH) == *"/Cellar/gcc/15.2.0/"* ]]; then
   echo "FAIL: stale Cellar path survived repair" >&2
   exit 1
 fi
+
+printf 'stale emacs icon after empty plist\n' >"$icon_dest"
 
 cat >"$plist" <<'EOF_EMPTY_PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -147,7 +190,10 @@ cat >"$plist" <<'EOF_EMPTY_PLIST'
 EOF_EMPTY_PLIST
 
 run_refresh
+assert_plist_root_value CFBundleIconFile "$expected_bundle_icon_file"
+assert_icon_installed
 assert_plist_value CC "$expected_cc"
 assert_plist_value LIBRARY_PATH "$expected_library_path"
+assert_plist_value EMACS_TREE_SITTER_GRAMMAR_DIR "$expected_tree_sitter_grammar_dir"
 
 echo "PASS: Emacs+ native comp env smoke"

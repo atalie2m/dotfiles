@@ -206,14 +206,14 @@ cat >"$empty_nix_bin/nix" <<'EOF_EMPTY_NIX'
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigurations && $4 == "--impure" && $5 == "--apply" ]]; then
+if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) && $4 == "--impure" && $5 == "--apply" ]]; then
   if [[ $6 == *"targets-manifest.nix"* ]]; then
     printf '{"hosts":{}}'
     exit 0
   fi
 fi
 
-if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
+if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) ]]; then
   exit 0
 fi
 
@@ -265,13 +265,13 @@ cat >"$failing_nix_bin/nix" <<'EOF_FAILING_NIX'
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigurations && $4 == "--impure" && $5 == "--apply" ]]; then
+if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) && $4 == "--impure" && $5 == "--apply" ]]; then
   if [[ $6 == *"targets-manifest.nix"* ]]; then
     exit 1
   fi
 fi
 
-if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
+if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) ]]; then
   exit 1
 fi
 
@@ -386,7 +386,7 @@ EOF_FACTS
   fi
 fi
 
-if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigurations && $4 == "--impure" && $5 == "--apply" ]]; then
+if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) && $4 == "--impure" && $5 == "--apply" ]]; then
   if [[ $6 == *"targets-manifest.nix"* ]]; then
     if [[ $3 == *"empty-home"* ]]; then
       printf '{"hosts":{}}'
@@ -400,7 +400,7 @@ EOF_MANIFEST
   fi
 fi
 
-if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
+if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) ]]; then
   printf 'own_mac\nwork_mac\n'
   exit 0
 fi

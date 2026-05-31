@@ -314,6 +314,8 @@ you prefer hard failure over unthreaded best-effort notifications.
 
 `tools.editor.emacs.enable = true` installs the GUI Emacs app through Homebrew, installs the Emacs sync tooling, and provides language/runtime helpers plus Tree-sitter grammar paths. The repo-managed configuration is vanilla Emacs, not Doom: Meow is the editing center, Elpaca owns packages, and the initial package set includes doom-modeline, nerd-icons, ef-themes, Vertico/Marginalia/Consult/Orderless/Embark, Corfu/Cape/Eglot, Dired enhancements, Org visual packages, Markdown/Nix modes, Popper, Dashboard, and Magit.
 
+When `apps/emacs/emacs-icon-1.0.icns` is present, activation also refreshes the installed Emacs.app bundle icon from that repo-managed asset.
+
 `sync emacs --apply` writes `apps/emacs/config/{early-init,init}.el` to `${EMACSDIR:-~/.emacs.d}` as writable regular files. `sync emacs --adopt --item init` copies runtime edits back to the repo-managed config. Elpaca package checkout/build state remains mutable under `${EMACSDIR:-~/.emacs.d}/elpaca` and is populated by Emacs at startup.
 
 `tools.editor.emacs.bootstrap.enable = true` is retained as a legacy profile toggle and now only participates in activation-time config sync. The `ultra` profile enables Emacs sync during activation; `pro` installs Emacs without setup.
