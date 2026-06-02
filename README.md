@@ -89,6 +89,9 @@ Application/tool sourcing priority is:
 `Claude Code` is managed as a latest-first Homebrew cask through the
 catalog-backed `tools.aiCodingAgent.claudeCode` toggle. Enabling it adds the
 `claude-code@latest` cask to the nix-darwin Homebrew activation.
+`ultra` also enables `tools.aiCodingAgent.headroom`, which installs
+telemetry-off `uv` wrappers for Headroom's PyPI runtime:
+`headroom`, `headroom-codex`, and `headroom-claude`.
 
 ## Agent Slack Notifications
 

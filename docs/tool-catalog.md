@@ -12,6 +12,10 @@ catalog-owned tools in that group.
 `tools.aiCodingAgent.claudeCode.enable` is catalog-backed through the
 Homebrew-native backend and installs the latest-first `claude-code@latest`
 cask during nix-darwin activation.
+`tools.aiCodingAgent.headroom.enable` is a dedicated Home Manager integration
+that installs `headroom`, `headroom-codex`, and `headroom-claude` wrappers.
+Those wrappers resolve the latest `headroom-ai[proxy,code,mcp]` PyPI runtime
+through Nix-provided `uv` and Python 3.13, and export `HEADROOM_TELEMETRY=off`.
 Fast-moving macOS tools that are better owned by Homebrew, such as `git-xet`,
 Apple project CLIs, and optional terminal fonts, use the same ownership
 registry so `flake check` can still verify there is a single owner for each

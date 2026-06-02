@@ -26,6 +26,7 @@ work_state="$(
       "tools.editor.vscode.sync.enable=${bool cfg.editor.vscode.sync.enable}"
       "tools.aiCodingAgent.enable=${bool cfg.aiCodingAgent.enable}"
       "tools.aiCodingAgent.codex.enable=${bool cfg.aiCodingAgent.codex.enable}"
+      "tools.aiCodingAgent.headroom.enable=${bool cfg.aiCodingAgent.headroom.enable}"
       "tools.aiCodingAgent.codex.slackNotifications.enable=${bool cfg.aiCodingAgent.codex.slackNotifications.enable}"
       "tools.aiLlm.enable=${bool cfg.aiLlm.enable}"
       "tools.aiLlm.aider.enable=${bool cfg.aiLlm.aider.enable}"
@@ -58,6 +59,14 @@ own_ultra_codex_slack_notifications="$(
   nix eval --json "${flake_ref}#darwinConfigurations.own_mac-ultra.config.myconfig.tools.aiCodingAgent.codex.slackNotifications.enable" --impure
 )"
 
+own_pro_headroom="$(
+  nix eval --json "${flake_ref}#darwinConfigurations.own_mac.config.myconfig.tools.aiCodingAgent.headroom.enable" --impure
+)"
+
+own_ultra_headroom="$(
+  nix eval --json "${flake_ref}#darwinConfigurations.own_mac-ultra.config.myconfig.tools.aiCodingAgent.headroom.enable" --impure
+)"
+
 assert_toggle() {
   local path="$1"
   local expected="$2"
@@ -80,6 +89,7 @@ for path in \
   tools.editor.vscode.sync.enable \
   tools.aiCodingAgent.enable \
   tools.aiCodingAgent.codex.enable \
+  tools.aiCodingAgent.headroom.enable \
   tools.aiCodingAgent.codex.slackNotifications.enable \
   tools.aiLlm.enable \
   tools.aiLlm.aider.enable \
@@ -115,6 +125,16 @@ fi
 
 if [[ $own_ultra_codex_slack_notifications != "true" ]]; then
   echo "FAIL: own_mac-ultra.tools.aiCodingAgent.codex.slackNotifications.enable expected true, got $own_ultra_codex_slack_notifications" >&2
+  exit 1
+fi
+
+if [[ $own_pro_headroom != "false" ]]; then
+  echo "FAIL: own_mac.tools.aiCodingAgent.headroom.enable expected false, got $own_pro_headroom" >&2
+  exit 1
+fi
+
+if [[ $own_ultra_headroom != "true" ]]; then
+  echo "FAIL: own_mac-ultra.tools.aiCodingAgent.headroom.enable expected true, got $own_ultra_headroom" >&2
   exit 1
 fi
 

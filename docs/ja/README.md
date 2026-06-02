@@ -88,6 +88,9 @@ reset の理由、before/after、設計意図は [`docs/architecture-reset.md`](
 `Claude Code` は catalog-backed な `tools.aiCodingAgent.claudeCode` toggle
 から latest-first の Homebrew cask として管理します。有効にすると
 nix-darwin の Homebrew activation に `claude-code@latest` cask が追加されます。
+`ultra` では `tools.aiCodingAgent.headroom` も有効化し、Headroom の PyPI runtime
+を使う telemetry-off の `uv` wrapper として `headroom`, `headroom-codex`,
+`headroom-claude` を install します。
 
 ## Agent Slack 通知
 

@@ -416,6 +416,10 @@ let
     tools.aiCodingAgent.codex.slackNotifications.enable = true;
   };
 
+  headroomCodingAgents = {
+    tools.aiCodingAgent.headroom.enable = true;
+  };
+
   editorInstall = {
     tools.editor.enable = true;
     tools.editor.emacs.enable = true;
@@ -458,6 +462,7 @@ rec {
   ultra = merge [
     pro
     codexSlackNotifications
+    headroomCodingAgents
     editorSync
   ];
 }
