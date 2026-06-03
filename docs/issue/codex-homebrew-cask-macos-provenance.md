@@ -79,6 +79,18 @@ Use dotfiles activation for managed Homebrew updates:
 nix run .#apply -- --host own_mac
 ```
 
+If a previous workaround left `/opt/homebrew/bin/codex` as a regular copied
+binary while the cask is no longer installed, Homebrew can fail before the
+per-cask `postinstall` hook runs:
+
+```text
+Error: It seems there is already a Binary at '/opt/homebrew/bin/codex'.
+```
+
+The dotfiles Homebrew activation preflight moves only that stale unmanaged
+shape to `/opt/homebrew/bin/codex.dotfiles-stale-<timestamp>` before
+`brew bundle` runs, allowing the cask install to proceed.
+
 Avoid using standalone `brew upgrade --cask codex` as the normal path on hosts
 that need the workaround. A plain cask upgrade can restore Homebrew's default
 Caskroom symlink shape without running the dotfiles-specific host-local

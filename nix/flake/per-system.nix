@@ -88,6 +88,36 @@ let
     };
     homebrew.casks = [ "keyclu" ];
   };
+  dotmod = import ../lib/module-helpers.nix { inherit lib; };
+  evalHomebrewNativeModule = casks:
+    lib.evalModules {
+      specialArgs = {
+        inherit dotmod lib;
+      };
+      modules = [
+        ../modules/tools/system/homebrew-native.nix
+        ({ lib, ... }: {
+          options = {
+            homebrew = lib.mkOption {
+              type = lib.types.attrs;
+              default = { };
+            };
+            system.activationScripts.homebrew.text = lib.mkOption {
+              type = lib.types.lines;
+              default = "";
+            };
+          };
+          config.myconfig.tools.system.homebrewNative = {
+            enable = true;
+            inherit casks;
+          };
+        })
+      ];
+    };
+  codexHomebrewNativeActivationText =
+    (evalHomebrewNativeModule [ "codex" ]).config.system.activationScripts.homebrew.text;
+  nonCodexHomebrewNativeActivationText =
+    (evalHomebrewNativeModule [ "keyclu" ]).config.system.activationScripts.homebrew.text;
   homeManagerGlobalPkgsFailures =
     lib.concatMap
       (targetName:
@@ -216,6 +246,19 @@ in
       fi
       touch "$out"
     '';
+
+    homebrewNativeCodexPreflight =
+      let
+        _ =
+          assert lib.hasInfix "Codex cask preflight" codexHomebrewNativeActivationText;
+          assert lib.hasInfix "dotfiles-stale-" codexHomebrewNativeActivationText;
+          assert lib.hasInfix "list --cask codex" codexHomebrewNativeActivationText;
+          assert (!lib.hasInfix "Codex cask preflight" nonCodexHomebrewNativeActivationText);
+          null;
+      in
+      builtins.seq _ (pkgs.runCommand "homebrew-native-codex-preflight-check" { } ''
+        touch "$out"
+      '');
   };
 
   devShells.default = mkPortableDevShell {

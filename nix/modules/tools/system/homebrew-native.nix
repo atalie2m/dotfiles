@@ -1,4 +1,4 @@
-{ dotmod, config, ... }:
+{ dotmod, config, lib, ... }:
 
 # Native Homebrew integration for macOS applications and tools.
 # Preferred for fast-moving apps/tools that should stay up to date.
@@ -63,6 +63,8 @@ in
   darwinOnEnable = { cfg, myconfig, ... }:
     let
       casks = dedupeCasks cfg.casks;
+      hasCask = name:
+        builtins.any (raw: caskName raw == name) casks;
     in
     {
       # Standard nix-darwin homebrew configuration
@@ -80,5 +82,26 @@ in
           upgrade = cfg.enableAutoUpdate;
         };
       };
+
+      system.activationScripts.homebrew.text = lib.mkIf (hasCask "codex") (lib.mkBefore ''
+        # Codex cask preflight
+        # A previous host-local workaround may leave /opt/homebrew/bin/codex as
+        # a regular copied binary while the cask itself is no longer installed.
+        # Homebrew then refuses to install the cask before the cask postinstall
+        # repair hook can run. Move only that stale unmanaged shape aside.
+        for prefix in /opt/homebrew /usr/local; do
+          brew_bin="$prefix/bin/brew"
+          codex_bin="$prefix/bin/codex"
+
+          if [ -x "$brew_bin" ] \
+            && ! "$brew_bin" list --cask codex >/dev/null 2>&1 \
+            && [ -f "$codex_bin" ] \
+            && [ ! -L "$codex_bin" ]; then
+            backup="$codex_bin.dotfiles-stale-$(/bin/date +%Y%m%d%H%M%S)"
+            echo >&2 "dotfiles: moving stale unmanaged Codex binary: $codex_bin -> $backup"
+            /bin/mv "$codex_bin" "$backup"
+          fi
+        done
+      '');
     };
 }
