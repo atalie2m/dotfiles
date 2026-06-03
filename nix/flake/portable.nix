@@ -327,6 +327,43 @@ let
         touch "$out"
       '';
 
+      ghosttyConfig = pkgs.runCommand "ghostty-config-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        module=nix/modules/tools/profile-defaults.nix
+
+        if ! grep -Fq 'theme = "Catppuccin Mocha";' "$module"; then
+          echo "FAIL: Ghostty theme must use the bundled theme name: Catppuccin Mocha" >&2
+          exit 1
+        fi
+
+        if grep -Fq 'theme = "catppuccin-mocha";' "$module"; then
+          echo "FAIL: Ghostty no longer accepts the old lower-case catppuccin-mocha theme name" >&2
+          exit 1
+        fi
+
+        touch "$out"
+      '';
+
+      kittyConfig = pkgs.runCommand "kitty-config-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        module=nix/modules/tools/profile-defaults.nix
+
+        if ! grep -Fq 'name = "JetBrainsMono Nerd Font Mono";' "$module"; then
+          echo "FAIL: Kitty should use the CoreText-visible JetBrainsMono Nerd Font Mono family" >&2
+          exit 1
+        fi
+
+        touch "$out"
+      '';
+
       syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
         {
           nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep dotfilesPackage ];

@@ -277,7 +277,7 @@ in
           background-opacity = 0.92;
           window-padding-x = 8;
           window-padding-y = 8;
-          theme = "catppuccin-mocha";
+          theme = "Catppuccin Mocha";
           macos-titlebar-style = "hidden";
           macos-option-as-alt = true;
         };
@@ -287,7 +287,7 @@ in
         enable = true;
         package = null;
         font = {
-          name = "JetBrainsMono Nerd Font";
+          name = "JetBrainsMono Nerd Font Mono";
           size = 14.0;
         };
         settings = {
