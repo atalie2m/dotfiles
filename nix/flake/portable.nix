@@ -297,6 +297,36 @@ let
         touch "$out"
       '';
 
+      weztermConfig = pkgs.runCommand "wezterm-config-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        config=apps/wezterm/wezterm.lua
+
+        require_contains() {
+          needle=$1
+          if ! grep -Fq "$needle" "$config"; then
+            echo "FAIL: expected $config to contain: $needle" >&2
+            exit 1
+          fi
+        }
+
+        require_contains "config.color_scheme = 'Catppuccin Mocha'"
+        require_contains 'config.check_for_updates = false'
+        require_contains 'config.macos_window_background_blur = 20'
+        require_contains 'config.native_macos_fullscreen_mode = true'
+        require_contains 'config.adjust_window_size_when_changing_font_size = false'
+        require_contains 'config.enable_scroll_bar = true'
+        require_contains "config.default_cursor_style = 'SteadyBar'"
+        require_contains 'config.cursor_blink_rate = 0'
+        require_contains "config.audible_bell = 'Disabled'"
+        require_contains 'config.scrollback_lines = 30000'
+
+        touch "$out"
+      '';
+
       syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
         {
           nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep dotfilesPackage ];
