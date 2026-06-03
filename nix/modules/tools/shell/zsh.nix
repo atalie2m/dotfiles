@@ -1,4 +1,4 @@
-{ dotmod, config, lib, dotlib, pkgs, ... }:
+{ dotmod, config, lib, dotlib, pkgs, repoPaths, ... }:
 
 # Zsh configuration
 
@@ -24,6 +24,7 @@
       useAutocomplete = cfg.profile == "autocomplete";
       useDebug = cfg.profile == "debug";
       useStablePlugins = cfg.profile == "stable" || cfg.profile == "debug";
+      terminalUxPath = repoPaths.apps + "/shell/terminal-ux.zsh";
     in
     {
       assertions = [
@@ -98,6 +99,9 @@
             bindkey '^[[A' history-substring-search-up
             bindkey '^[[B' history-substring-search-down
           ''))
+          (lib.mkOrder 910 ''
+            source ${terminalUxPath}
+          '')
           (lib.mkOrder 906 ''
             if command -v carapace >/dev/null 2>&1; then
               export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'

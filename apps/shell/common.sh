@@ -113,9 +113,26 @@ dotfilesIsMoshSession() {
   return 1
 }
 
+dotfilesSetControlCharEcho() {
+  if ! command -v stty >/dev/null 2>&1; then
+    return 0
+  fi
+
+  stty echoctl 2>/dev/null || stty ctlecho 2>/dev/null || true
+}
+
+dotfilesConfigureInteractiveTty() {
+  if [[ $- != *i* ]] || [[ ! -t 0 ]]; then
+    return 0
+  fi
+
+  dotfilesSetControlCharEcho
+}
+
 dotfilesAddProfileBins
 
 dotfilesIsMoshSession || true
+dotfilesConfigureInteractiveTty
 
 hmSessionVars="$(dotfilesFirstProfileFile "etc/profile.d/hm-session-vars.sh" || true)"
 if [[ -f $hmSessionVars ]]; then

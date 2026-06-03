@@ -231,7 +231,9 @@ Mosh sessions keep SSH bootstrap metadata, but the Pure prompt hides the remote 
 
 - `fzf` keybindings: `CTRL-T` for file insert, `ALT-C` for directory jump
 - `fzf-tab` on `TAB`
-- `Atuin` on `CTRL-R`
+- `Atuin`-backed contextual history on `CTRL-R`: current directory first, then workspace, parent directories, and global history
+- terminal tab titles show the current directory at prompts and the running command during execution
+- `CTRL-X CTRL-E` edits the current command line in `$VISUAL` / `$EDITOR`
 - `zoxide` via `z` and `zi`
 - `direnv` + `nix-direnv`
 - `delta` for Git paging

@@ -1,4 +1,4 @@
-{ dotmod, config, lib, pkgs, ... }:
+{ dotmod, config, lib, pkgs, repoPaths, ... }:
 
 # Atuin history integration
 
@@ -14,6 +14,7 @@
       zshEnabled = (((myconfig.tools or { }).shell or { }).zsh or { }).enable or false;
       atuinFlags = [ ];
       atuinInitArgs = lib.optionalString (atuinFlags != [ ]) (" " + lib.concatStringsSep " " atuinFlags);
+      contextHistoryPath = repoPaths.apps + "/shell/atuin-context-history.zsh";
     in
     lib.mkIf zshEnabled {
       programs.atuin = {
@@ -47,6 +48,7 @@
         if [[ $options[zle] = on ]]; then
           export PATH="${lib.makeBinPath [ pkgs.atuin ]}:$PATH"
           eval "$(${lib.getExe pkgs.atuin} init zsh${atuinInitArgs})"
+          source "${contextHistoryPath}"
         fi
       '';
     };

@@ -230,6 +230,26 @@ let
         touch "$out"
       '';
 
+      atuinContextHistory = pkgs.runCommand "atuin-context-history-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gnugrep pkgs.zsh ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/atuin-context-history-test.sh
+        touch "$out"
+      '';
+
+      terminalUx = pkgs.runCommand "terminal-ux-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gnugrep pkgs.zsh ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/terminal-ux-test.sh
+        touch "$out"
+      '';
+
       syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
         {
           nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep dotfilesPackage ];

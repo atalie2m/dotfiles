@@ -225,7 +225,9 @@ Mosh session では SSH bootstrap metadata が残りますが、Pure prompt の 
 
 - `fzf` keybinding: `CTRL-T` で file 挿入、`ALT-C` で directory jump
 - `fzf-tab` を `TAB` に割り当て
-- `Atuin` を `CTRL-R` に割り当て
+- `Atuin` ベースの文脈付き履歴検索を `CTRL-R` に割り当て。current directory, workspace, parent directories, global history の順に表示
+- terminal tab title は prompt では current directory、実行中は running command を表示
+- `CTRL-X CTRL-E` で現在入力中の command line を `$VISUAL` / `$EDITOR` で編集
 - `zoxide` を `z` と `zi` で利用
 - `direnv` + `nix-direnv`
 - Git pager として `delta`

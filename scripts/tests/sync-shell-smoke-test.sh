@@ -195,7 +195,12 @@ export PATH="$HOME/.local/bin${PATH:+:}$PATH"
 EOF_HM_SESSION_VARS
 
 common_path_output="$tmp_root/common.path"
-if ! HOME="$home_dir" bash -lc "source \"$ROOT/apps/shell/common.sh\" && command -v fallback-profile-tool && printf 'PATH=%s\n' \"\$PATH\"" >"$common_path_output"; then
+if ! env -i \
+  HOME="$home_dir" \
+  USER=shellsmoke \
+  LOGNAME=shellsmoke \
+  PATH="$PATH" \
+  bash -lc "source \"$ROOT/apps/shell/common.sh\" && command -v fallback-profile-tool && printf 'PATH=%s\n' \"\$PATH\"" >"$common_path_output"; then
   echo "FAIL: sourcing common.sh failed" >&2
   exit 1
 fi

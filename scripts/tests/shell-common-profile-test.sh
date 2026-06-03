@@ -52,13 +52,26 @@ trap cleanup EXIT
 home_dir="$tmp_root/home"
 primary_profile="$tmp_root/profiles/per-user/profiletest"
 fallback_profile="$home_dir/.nix-profile"
+fake_bin="$tmp_root/fake-bin"
 runner="$tmp_root/source-common.sh"
 
 mkdir -p \
+  "$fake_bin" \
   "$primary_profile/bin" \
   "$primary_profile/etc/profile.d" \
   "$fallback_profile/bin" \
   "$fallback_profile/etc/profile.d"
+
+cat >"$fake_bin/stty" <<EOF_FAKE_STTY
+#!$bash_bin
+set -euo pipefail
+printf '%s\n' "\$*" >>"\$DOTFILES_TEST_STTY_LOG"
+if [[ \${1:-} == echoctl ]]; then
+  exit "\${DOTFILES_TEST_STTY_ECHOCTL_STATUS:-0}"
+fi
+exit 0
+EOF_FAKE_STTY
+chmod +x "$fake_bin/stty"
 
 cat >"$primary_profile/bin/nvim" <<'EOF_PRIMARY_NVIM'
 #!/usr/bin/env bash
@@ -105,6 +118,11 @@ printf 'nvim=%s\n' "$(command -v nvim || true)"
 printf 'fallback_only=%s\n' "$(command -v fallback-only-tool || true)"
 printf 'hm=%s\n' "${DOTFILES_TEST_HM_PROFILE:-missing}"
 printf 'command_not_found=%s\n' "${DOTFILES_TEST_COMMAND_NOT_FOUND_PROFILE:-missing}"
+if dotfilesSetControlCharEcho; then
+  printf 'stty_setter=ok\n'
+else
+  printf 'stty_setter=failed\n'
+fi
 EOF_RUNNER
 chmod +x "$runner"
 
@@ -114,13 +132,18 @@ run_shell_case() {
   local shell_name="$1"
   local shell_bin="$2"
   local output_file="$tmp_root/$shell_name.out"
+  local stty_log="$tmp_root/$shell_name.stty.log"
+
+  : >"$stty_log"
 
   if ! env -i \
     HOME="$home_dir" \
     USER=profiletest \
     DOTFILES_PROFILE_DIRS="$primary_profile" \
     DOTFILES_TEST_COMMON_SH="$COMMON_SH" \
-    PATH="$base_path" \
+    DOTFILES_TEST_STTY_ECHOCTL_STATUS=1 \
+    DOTFILES_TEST_STTY_LOG="$stty_log" \
+    PATH="$fake_bin:$base_path" \
     "$shell_bin" "$runner" >"$output_file"; then
     echo "FAIL: sourcing common.sh failed under $shell_name" >&2
     cat "$output_file" >&2 || true
@@ -148,6 +171,18 @@ run_shell_case() {
   if ! grep -Fqx "command_not_found=primary" "$output_file"; then
     echo "FAIL: $shell_name did not source command-not-found.sh from the primary profile" >&2
     cat "$output_file" >&2 || true
+    exit 1
+  fi
+
+  if ! grep -Fqx "stty_setter=ok" "$output_file"; then
+    echo "FAIL: $shell_name control-character echo setter failed" >&2
+    cat "$output_file" >&2 || true
+    exit 1
+  fi
+
+  if [[ $(cat "$stty_log") != $'echoctl\nctlecho' ]]; then
+    echo "FAIL: $shell_name did not configure control-character echo with BSD fallback" >&2
+    cat "$stty_log" >&2 || true
     exit 1
   fi
 }
