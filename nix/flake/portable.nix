@@ -250,6 +250,53 @@ let
         touch "$out"
       '';
 
+      rioConfig = pkgs.runCommand "rio-config-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        template=apps/rio/config.toml.template
+        module=nix/modules/tools/terminal/rio.nix
+
+        require_contains() {
+          needle=$1
+          file=$2
+          if ! grep -Fq "$needle" "$file"; then
+            echo "FAIL: expected $file to contain: $needle" >&2
+            exit 1
+          fi
+        }
+
+        reject_contains() {
+          needle=$1
+          file=$2
+          if grep -Fq "$needle" "$file"; then
+            echo "FAIL: expected $file to omit: $needle" >&2
+            exit 1
+          fi
+        }
+
+        require_contains 'backend = "@@RENDERER_BACKEND@@"' "$template"
+        require_contains 'padding = [8]' "$template"
+        require_contains 'scrollback-history-limit = 30000' "$template"
+        require_contains 'enable-scroll-bar = true' "$template"
+        require_contains 'current-working-directory = true' "$template"
+        require_contains 'opacity = 0.92' "$template"
+        require_contains 'blur = true' "$template"
+
+        reject_contains 'backend = "Automatic"' "$template"
+        reject_contains 'padding-x' "$template"
+        reject_contains 'padding-y' "$template"
+
+        require_contains 'navigationMode = if tmuxEnabled then "Plain" else "Tab";' "$module"
+        require_contains 'rendererBackend = if pkgs.stdenv.isDarwin then "Metal" else "Vulkan";' "$module"
+        require_contains '@@COLOR_AUTOMATION_BLOCK@@' "$module"
+        reject_contains '"Bookmark"' "$module"
+
+        touch "$out"
+      '';
+
       syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
         {
           nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep dotfilesPackage ];

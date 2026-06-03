@@ -20,7 +20,8 @@ in
   homeOnEnable = { myconfig, ... }:
     let
       tmuxEnabled = (((myconfig.tools or { }).terminal or { }).tmux or { }).enable or false;
-      navigationMode = if tmuxEnabled then "Plain" else "Bookmark";
+      navigationMode = if tmuxEnabled then "Plain" else "Tab";
+      rendererBackend = if pkgs.stdenv.isDarwin then "Metal" else "Vulkan";
       optionAsAltLine = lib.optionalString pkgs.stdenv.isDarwin ''
         option-as-alt = "left"
       '';
@@ -40,12 +41,14 @@ in
           [
             "@@OPTION_AS_ALT@@"
             "@@NAVIGATION_MODE@@"
+            "@@RENDERER_BACKEND@@"
             "@@COLOR_AUTOMATION_BLOCK@@"
             "@@PLATFORM_BLOCK@@"
           ]
           [
             optionAsAltLine
             navigationMode
+            rendererBackend
             colorAutomationBlock
             platformBlock
           ]

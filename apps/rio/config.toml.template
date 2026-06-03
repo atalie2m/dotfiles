@@ -1,8 +1,9 @@
 # Root keys must stay above any [section] tables.
+use-fork = false
 line-height = 1.08
-padding-x = 8
-padding-y = [8, 8]
-opacity = 0.92
+padding = [8]
+scrollback-history-limit = 30000
+enable-scroll-bar = true
 hide-mouse-cursor-when-typing = true
 confirm-before-quit = true
 @@OPTION_AS_ALT@@
@@ -19,17 +20,25 @@ blinking = false
 audio = false
 visual = false
 
+[window]
+opacity = 0.92
+opacity-cells = false
+blur = true
+macos-use-shadow = true
+
 [keyboard]
+disable-ctlseqs-alt = false
 ime-cursor-positioning = true
 
 [navigation]
 mode = "@@NAVIGATION_MODE@@"
 use-split = true
 hide-if-single = true
+current-working-directory = true
 unfocused-split-opacity = 0.92
 @@COLOR_AUTOMATION_BLOCK@@
 [renderer]
-backend = "Automatic"
+backend = "@@RENDERER_BACKEND@@"
 disable-occluded-render = true
 strategy = "events"
 
