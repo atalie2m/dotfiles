@@ -64,7 +64,7 @@ dotfilesSourceWithNounsetGuard() {
   local source_path="$1"
 
   case $- in
-    *u*) restore_nounset=1 ;;
+  *u*) restore_nounset=1 ;;
   esac
 
   set +u
@@ -104,10 +104,10 @@ dotfilesIsMoshSession() {
   fi
 
   case "$parentCommand" in
-    *mosh-server*)
-      export DOTFILES_MOSH_SESSION=1
-      return 0
-      ;;
+  *mosh-server*)
+    export DOTFILES_MOSH_SESSION=1
+    return 0
+    ;;
   esac
 
   return 1
@@ -121,12 +121,25 @@ dotfilesSetControlCharEcho() {
   stty echoctl 2>/dev/null || stty ctlecho 2>/dev/null || true
 }
 
+dotfilesSetStatusKey() {
+  if ! command -v stty >/dev/null 2>&1; then
+    return 0
+  fi
+
+  case "$(uname -s 2>/dev/null || true)" in
+  Darwin | *BSD)
+    stty status '^T' kerninfo 2>/dev/null || true
+    ;;
+  esac
+}
+
 dotfilesConfigureInteractiveTty() {
   if [[ $- != *i* ]] || [[ ! -t 0 ]]; then
     return 0
   fi
 
   dotfilesSetControlCharEcho
+  dotfilesSetStatusKey
 }
 
 dotfilesAddProfileBins

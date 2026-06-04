@@ -83,6 +83,37 @@ _dotfiles_terminal_set_title() {
   printf '\033]0;%s\a' "$title"
 }
 
+_dotfiles_terminal_install_action_feedback() {
+  emulate -L zsh
+  unsetopt local_options
+
+  if [[ "${DOTFILES_TERMINAL_JOB_NOTIFY:-1}" != "0" ]]; then
+    setopt notify
+  fi
+
+  if [[ "${DOTFILES_TERMINAL_REPORTTIME:-1}" != "0" ]]; then
+    if [[ -z "${REPORTTIME+x}" ]]; then
+      REPORTTIME="${DOTFILES_TERMINAL_REPORTTIME_SECONDS:-5}"
+    fi
+    if [[ -z "${TIMEFMT+x}" ]]; then
+      TIMEFMT='%J  %U user %S system %P cpu %*E total'
+    fi
+  fi
+
+  if [[
+    "${DOTFILES_TERMINAL_STATUS_RPROMPT:-1}" != "0" &&
+    "${_dotfiles_terminal_status_rprompt_installed:-0}" != "1"
+  ]]; then
+    setopt prompt_subst
+    typeset -g _dotfiles_terminal_status_rprompt_installed=1
+    RPROMPT='%(?..%F{red}exit:%?%f )%(1j.%F{yellow}%j job%f .)'"${RPROMPT:-}"
+  fi
+
+  if [[ "${DOTFILES_TERMINAL_PARSER_PS2:-1}" != "0" ]]; then
+    PS2='%_> '
+  fi
+}
+
 _dotfiles_terminal_visible_prompt_interrupt() {
   emulate -L zsh
 
@@ -173,6 +204,7 @@ _dotfiles_terminal_install_title_hooks() {
 _dotfiles_terminal_install() {
   emulate -L zsh
 
+  _dotfiles_terminal_install_action_feedback
   _dotfiles_terminal_install_title_hooks
   _dotfiles_terminal_install_edit_command_line
   _dotfiles_terminal_install_visible_interrupt

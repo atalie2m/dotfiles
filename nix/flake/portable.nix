@@ -250,6 +250,27 @@ let
         touch "$out"
       '';
 
+      purePromptDefaults = pkgs.runCommand "pure-prompt-defaults-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        module=nix/modules/tools/shell/pure.nix
+
+        if ! grep -Fq 'PURE_CMD_MAX_EXEC_TIME:=2' "$module"; then
+          echo "FAIL: Pure should default long-command visibility to 2 seconds" >&2
+          exit 1
+        fi
+
+        if ! grep -Fq 'export PURE_CMD_MAX_EXEC_TIME' "$module"; then
+          echo "FAIL: Pure long-command threshold should be exported before prompt setup" >&2
+          exit 1
+        fi
+
+        touch "$out"
+      '';
+
       rioConfig = pkgs.runCommand "rio-config-test"
         {
           nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];

@@ -19,6 +19,8 @@
       programs.zsh.initContent = lib.mkOrder 1000 ''
         fpath+=(${pkgs.pure-prompt}/share/zsh/site-functions)
         autoload -Uz promptinit
+        : ''${PURE_CMD_MAX_EXEC_TIME:=2}
+        export PURE_CMD_MAX_EXEC_TIME
         if [[ -n "$IN_NIX_SHELL" || -n "$NIX_SHELL" || -n "$NIX_SHELL_NAME" ]]; then
           typeset pure_prompt_symbol="❯"
           if [[ -n "$PURE_PROMPT_SYMBOL" ]]; then

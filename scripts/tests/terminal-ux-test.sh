@@ -31,6 +31,7 @@ install_output="$tmp_root/install.out"
 trap_output="$tmp_root/trap.out"
 prompt_interrupt_output="$tmp_root/prompt-interrupt.out"
 status_interrupt_output="$tmp_root/status-interrupt.out"
+preserve_output="$tmp_root/preserve.out"
 
 mkdir -p "$work_dir"
 
@@ -44,6 +45,15 @@ printf 'display=%s\n' "$(_dotfiles_terminal_display_dir "$PWD")"
 printf 'cwd_title=%s\n' "$(_dotfiles_terminal_cwd_title)"
 printf 'command_title=%s\n' "$(_dotfiles_terminal_command_title $'printf hello\nprintf ignored')"
 printf 'clean=%s\n' "$(_dotfiles_terminal_clean_title $'bad\033title\aclean\nline')"
+printf 'notify=%s\n' "$options[notify]"
+printf 'reporttime=%s\n' "${REPORTTIME:-}"
+if [[ "${TIMEFMT:-}" == '%J  %U user %S system %P cpu %*E total' ]]; then
+  printf 'timefmt=default\n'
+else
+  printf 'timefmt=%s\n' "${TIMEFMT:-}"
+fi
+printf 'rprompt=%s\n' "${RPROMPT:-}"
+printf 'ps2=%s\n' "${PS2:-}"
 
 DOTFILES_TERMINAL_TITLE_FORCE=1 TERM=xterm-256color _dotfiles_terminal_set_title "forced title"
 printf '\n'
@@ -85,6 +95,36 @@ fi
 
 if ! grep -Fqx "clean=badtitleclean line" "$output_file"; then
   echo "FAIL: terminal title cleaner did not remove control characters" >&2
+  cat "$output_file" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "notify=on" "$output_file"; then
+  echo "FAIL: terminal UX did not enable immediate background job notifications" >&2
+  cat "$output_file" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "reporttime=5" "$output_file"; then
+  echo "FAIL: terminal UX did not set default REPORTTIME" >&2
+  cat "$output_file" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "timefmt=default" "$output_file"; then
+  echo "FAIL: terminal UX did not set default TIMEFMT" >&2
+  cat "$output_file" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "rprompt=%(?..%F{red}exit:%?%f )%(1j.%F{yellow}%j job%f .)" "$output_file"; then
+  echo "FAIL: terminal UX did not add the non-zero status right prompt" >&2
+  cat "$output_file" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "ps2=%_> " "$output_file"; then
+  echo "FAIL: terminal UX did not set parser-state PS2" >&2
   cat "$output_file" >&2
   exit 1
 fi
@@ -215,6 +255,42 @@ fi
 if [[ $(cat "$prompt_interrupt_output") != "^C" ]]; then
   echo "FAIL: prompt interrupt did not emit visible control marker" >&2
   cat "$prompt_interrupt_output" >&2 || true
+  exit 1
+fi
+
+if ! env -i \
+  HOME="$home_dir" \
+  PATH="/usr/bin:/bin" \
+  DOTFILES_TEST_TERMINAL_UX_ZSH="$TERMINAL_UX_ZSH" \
+  "$zsh_bin" -fc '
+    REPORTTIME=9
+    TIMEFMT="custom"
+    RPROMPT="right"
+    source "$DOTFILES_TEST_TERMINAL_UX_ZSH"
+    printf "preserve_reporttime=%s\n" "$REPORTTIME"
+    printf "preserve_timefmt=%s\n" "$TIMEFMT"
+    printf "preserve_rprompt=%s\n" "$RPROMPT"
+  ' >"$preserve_output"; then
+  echo "FAIL: terminal UX preserve runner failed" >&2
+  cat "$preserve_output" >&2 || true
+  exit 1
+fi
+
+if ! grep -Fqx "preserve_reporttime=9" "$preserve_output"; then
+  echo "FAIL: terminal UX overwrote existing REPORTTIME" >&2
+  cat "$preserve_output" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "preserve_timefmt=custom" "$preserve_output"; then
+  echo "FAIL: terminal UX overwrote existing TIMEFMT" >&2
+  cat "$preserve_output" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "preserve_rprompt=%(?..%F{red}exit:%?%f )%(1j.%F{yellow}%j job%f .)right" "$preserve_output"; then
+  echo "FAIL: terminal UX did not preserve existing RPROMPT content" >&2
+  cat "$preserve_output" >&2
   exit 1
 fi
 

@@ -73,6 +73,17 @@ exit 0
 EOF_FAKE_STTY
 chmod +x "$fake_bin/stty"
 
+cat >"$fake_bin/uname" <<EOF_FAKE_UNAME
+#!$bash_bin
+set -euo pipefail
+if [[ \${1:-} == -s ]]; then
+  printf 'Darwin\n'
+else
+  printf 'Darwin\n'
+fi
+EOF_FAKE_UNAME
+chmod +x "$fake_bin/uname"
+
 cat >"$primary_profile/bin/nvim" <<'EOF_PRIMARY_NVIM'
 #!/usr/bin/env bash
 printf 'primary nvim\n'
@@ -122,6 +133,11 @@ if dotfilesSetControlCharEcho; then
   printf 'stty_setter=ok\n'
 else
   printf 'stty_setter=failed\n'
+fi
+if dotfilesSetStatusKey; then
+  printf 'status_key_setter=ok\n'
+else
+  printf 'status_key_setter=failed\n'
 fi
 EOF_RUNNER
 chmod +x "$runner"
@@ -180,8 +196,14 @@ run_shell_case() {
     exit 1
   fi
 
-  if [[ $(cat "$stty_log") != $'echoctl\nctlecho' ]]; then
-    echo "FAIL: $shell_name did not configure control-character echo with BSD fallback" >&2
+  if ! grep -Fqx "status_key_setter=ok" "$output_file"; then
+    echo "FAIL: $shell_name status key setter failed" >&2
+    cat "$output_file" >&2 || true
+    exit 1
+  fi
+
+  if [[ $(cat "$stty_log") != $'echoctl\nctlecho\nstatus ^T kerninfo' ]]; then
+    echo "FAIL: $shell_name did not configure control-character echo and status key" >&2
     cat "$stty_log" >&2 || true
     exit 1
   fi
