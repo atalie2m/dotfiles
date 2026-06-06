@@ -171,6 +171,9 @@ nix eval --json .#darwinConfigurations.work_mac-ultra.config.myconfig.tools
 
 `nix/catalog/darwin/work-policy.nix` is the allow boundary for `work_mac`.
 The helper applies after selected profile data and host positive overrides, and emits `mkForce false` overrides for disallowed groups/tools and editor sync/bootstrap toggles.
+Registry-owned Homebrew and brew-nix payloads are filtered against the final
+owner toggles, so a policy-denied cask/formula is not left in the install plan
+as a direct store or Homebrew target.
 
 - Denied personal or high-surface groups include `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, and `terminalVisual.*`.
 - `downloadArchive` and `passwordSecrets` are allowed groups with specific extras denied (`ffmpeg`, `p7zip`, `pigz`, `zstd`, `op`, YubiKey age plugin, and ssh-to-age).

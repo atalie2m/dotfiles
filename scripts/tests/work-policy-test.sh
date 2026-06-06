@@ -47,6 +47,19 @@ work_state="$(
   '
 )"
 
+work_homebrew_casks="$(
+  nix eval --raw --impure --expr '
+    let
+      flake = builtins.getFlake "'"$flake_ref"'";
+      caskName = raw:
+        if builtins.isAttrs raw then raw.name or ""
+        else raw;
+      casks = flake.darwinConfigurations.work_mac-ultra.config.homebrew.casks or [];
+    in
+    builtins.concatStringsSep "\n" (builtins.map caskName casks)
+  '
+)"
+
 own_ultra_vscode_sync="$(
   nix eval --json "${flake_ref}#darwinConfigurations.own_mac-ultra.config.myconfig.tools.editor.vscode.sync.enable" --impure
 )"
@@ -82,6 +95,17 @@ assert_toggle() {
   fi
 }
 
+assert_line_absent() {
+  local label="$1"
+  local list="$2"
+  local forbidden="$3"
+
+  if printf '%s\n' "$list" | awk -v item="$forbidden" '$0 == item { found = 1 } END { exit found ? 0 : 1 }'; then
+    echo "FAIL: ${label} unexpectedly contains ${forbidden}" >&2
+    exit 1
+  fi
+}
+
 for path in \
   tools.editor.emacs.sync.enable \
   tools.editor.emacs.bootstrap.enable \
@@ -111,6 +135,19 @@ for path in \
   tools.downloadArchive.unzip.enable \
   tools.passwordSecrets.age.enable; do
   assert_toggle "$path" true
+done
+
+for cask in \
+  codex \
+  claude-code@latest \
+  copilot-cli \
+  keyclu \
+  latest \
+  nikitabobko/tap/aerospace \
+  xcodes-app \
+  font-anka-coder \
+  kitty; do
+  assert_line_absent "work_mac-ultra.homebrew.casks" "$work_homebrew_casks" "$cask"
 done
 
 if [[ $own_ultra_vscode_sync != "true" ]]; then

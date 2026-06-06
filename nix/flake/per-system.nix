@@ -89,10 +89,13 @@ let
     homebrew.casks = [ "keyclu" ];
   };
   dotmod = import ../lib/module-helpers.nix { inherit lib; };
-  evalHomebrewNativeModule = casks:
+  homebrewCaskName = raw:
+    if builtins.isAttrs raw then raw.name or ""
+    else raw;
+  evalHomebrewNativeModule = { casks, extraMyconfig ? { } }:
     lib.evalModules {
       specialArgs = {
-        inherit dotmod lib;
+        inherit dotmod lib repoPaths;
       };
       modules = [
         ../modules/tools/system/homebrew-native.nix
@@ -106,18 +109,48 @@ let
               type = lib.types.lines;
               default = "";
             };
+            myconfig.tools.aiCodingAgent.codex.enable = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+            };
+            myconfig.tools.system.keyclu.enable = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+            };
           };
-          config.myconfig.tools.system.homebrewNative = {
-            enable = true;
-            inherit casks;
-          };
+          config.myconfig = lib.recursiveUpdate
+            {
+              tools.system.homebrewNative = {
+                enable = true;
+                inherit casks;
+              };
+            }
+            extraMyconfig;
         })
       ];
     };
+  codexHomebrewNativeModule =
+    evalHomebrewNativeModule {
+      casks = [ "codex" ];
+      extraMyconfig.tools.aiCodingAgent.codex.enable = true;
+    };
+  codexFilteredHomebrewNativeModule =
+    evalHomebrewNativeModule {
+      casks = [ "codex" ];
+    };
+  keycluHomebrewNativeModule =
+    evalHomebrewNativeModule {
+      casks = [ "keyclu" ];
+      extraMyconfig.tools.system.keyclu.enable = true;
+    };
+  keycluFilteredHomebrewNativeModule =
+    evalHomebrewNativeModule {
+      casks = [ "keyclu" ];
+    };
   codexHomebrewNativeActivationText =
-    (evalHomebrewNativeModule [ "codex" ]).config.system.activationScripts.homebrew.text;
+    codexHomebrewNativeModule.config.system.activationScripts.homebrew.text;
   nonCodexHomebrewNativeActivationText =
-    (evalHomebrewNativeModule [ "keyclu" ]).config.system.activationScripts.homebrew.text;
+    keycluHomebrewNativeModule.config.system.activationScripts.homebrew.text;
   homeManagerGlobalPkgsFailures =
     lib.concatMap
       (targetName:
@@ -254,6 +287,10 @@ in
           assert lib.hasInfix "dotfiles-stale-" codexHomebrewNativeActivationText;
           assert lib.hasInfix "list --cask codex" codexHomebrewNativeActivationText;
           assert (!lib.hasInfix "Codex cask preflight" nonCodexHomebrewNativeActivationText);
+          assert (map homebrewCaskName codexHomebrewNativeModule.config.homebrew.casks) == [ "codex" ];
+          assert (map homebrewCaskName codexFilteredHomebrewNativeModule.config.homebrew.casks) == [ ];
+          assert (map homebrewCaskName keycluHomebrewNativeModule.config.homebrew.casks) == [ "keyclu" ];
+          assert (map homebrewCaskName keycluFilteredHomebrewNativeModule.config.homebrew.casks) == [ ];
           null;
       in
       builtins.seq _ (pkgs.runCommand "homebrew-native-codex-preflight-check" { } ''

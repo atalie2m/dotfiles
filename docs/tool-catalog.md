@@ -96,6 +96,11 @@ host data, so it covers groups defined by catalog modules as well as individual
 modules such as `core`, `shell`, `dev`, `editor`, `system`, `terminal`,
 `security`, and `aiCodingAgent`.
 
+Policy denial is an install boundary, not only a PATH boundary. Registry-owned
+Homebrew and brew-nix payloads are filtered against the final owner toggles, so
+a denied cask/formula is removed from the final install plan instead of merely
+being hidden from shell lookup.
+
 `allowedGroups` is a group boundary. It is not a complete per-tool whitelist.
 The current policy allows `dev` because stock Darwin profiles and host overrides
 do not expose global opt-in toggles for project-pinned toolchains (`go`, `nodejs`,
@@ -115,6 +120,8 @@ Broad groups need explicit review before widening:
 
 Deep toggles such as `editor.emacs.sync.enable` are intentionally outside the
 `list-tools` output; use direct `nix eval` checks for those policy assertions.
+Use final-config evals for install payload assertions because `list-tools`
+prints toggles, not Homebrew or Nix store payloads.
 
 `flake check` includes a final-config tool-ownership check. It fails when a
 Darwin target contains the same `group.tool` key from multiple registries, when

@@ -84,6 +84,11 @@ policy helper は profile と host data から実際に現れた `tools` toggle 
 するため、catalog module の group だけでなく、`core`, `shell`, `dev`, `editor`,
 `system`, `terminal`, `security`, `aiCodingAgent` のような個別 module の group も対象にします。
 
+policy deny は PATH 境界だけではなく install 境界です。registry-owned な
+Homebrew / brew-nix payload は最終 owner toggle で filter されるため、deny
+された cask/formula は shell lookup から隠すだけでなく、最終 install plan から
+削除します。
+
 `allowedGroups` は group 境界であり、完全な per-tool whitelist ではありません。
 現行 policy は、stock Darwin profile と host override が project-pinned toolchain
 （`go`, `nodejs`, `terraform`, `opentofu`）の global opt-in toggle を提供しない前提で
@@ -102,6 +107,8 @@ broad group を広げるときは明示的に review してください。
 
 `editor.emacs.sync.enable` のような deep toggle は `list-tools` 出力の対象外です。
 policy assertion では direct `nix eval` を使って確認します。
+`list-tools` は toggle 表示であり、Homebrew や Nix store payload は表示しないため、
+install payload の assertion は final config の eval で確認します。
 
 `flake check` には final-config tool-ownership check が含まれます。Darwin target に同じ `group.tool` key が複数 registry から現れる場合、最終 Homebrew config に複数 owner が claim する brew / cask / MAS item が含まれる場合、Homebrew cask が `tools.system.brewNix` と重複する場合、または ownership registry に claim されていない item がある場合に fail します。
 

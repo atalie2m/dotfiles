@@ -165,6 +165,9 @@ nix eval --json .#darwinConfigurations.work_mac-ultra.config.myconfig.tools
 
 `nix/catalog/darwin/work-policy.nix` は `work_mac` の許可境界です。
 helper は選択 profile と host positive override の後に適用され、許可されていない group/tool と editor sync/bootstrap toggle に `mkForce false` を出します。
+registry-owned な Homebrew / brew-nix payload は最終 owner toggle で
+filter されるため、policy-deny された cask/formula は直接 store path や
+Homebrew install target として残りません。
 
 - personal / high-surface group として `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, `terminalVisual.*` を deny します。
 - `downloadArchive` と `passwordSecrets` は group としては許可し、`ffmpeg`, `p7zip`, `pigz`, `zstd`, `op`, YubiKey age plugin, ssh-to-age などの extras を個別 deny します。

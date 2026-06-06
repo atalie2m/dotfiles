@@ -1,12 +1,63 @@
-{ dotmod, config, lib, ... }:
+{ dotmod, config, lib, repoPaths, ... }:
 
 # Native Homebrew integration for macOS applications and tools.
 # Preferred for fast-moving apps/tools that should stay up to date.
 
 let
+  homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
+
   caskName = raw:
     if builtins.isAttrs raw then raw.name or ""
     else raw;
+
+  enabledAt = optionPath:
+    lib.attrByPath optionPath false config;
+
+  hostHasFullXcode =
+    let
+      value = lib.attrByPath [ "myconfig" "hostContext" "machine" "extra" "fullXcode" ] false config;
+    in
+    builtins.isBool value && value;
+
+  specAvailableForHost = spec:
+    !(spec.requiresFullXcode or false) || hostHasFullXcode;
+
+  specEnabled = spec:
+    enabledAt spec.optionPath && specAvailableForHost spec;
+
+  specs = builtins.attrValues homebrewOwnership;
+
+  namesFor = field: selectedSpecs:
+    lib.unique (lib.concatMap (spec: spec.${field} or [ ]) selectedSpecs);
+
+  masIdsFor = selectedSpecs:
+    lib.unique (lib.concatMap (spec: builtins.attrNames (spec.masApps or { })) selectedSpecs);
+
+  knownBrews = namesFor "brews" specs;
+  enabledBrews = namesFor "brews" (lib.filter specEnabled specs);
+  knownCasks = namesFor "casks" specs;
+  enabledCasks = namesFor "casks" (lib.filter specEnabled specs);
+  knownTaps = namesFor "taps" specs;
+  enabledTaps = namesFor "taps" (lib.filter specEnabled specs);
+  knownMasIds = masIdsFor specs;
+  enabledMasIds = masIdsFor (lib.filter specEnabled specs);
+
+  keepRegistryOwnedName = knownNames: enabledNames: name:
+    name == "" || !(builtins.elem name knownNames) || builtins.elem name enabledNames;
+
+  filterRegistryOwnedList = knownNames: enabledNames: nameOf: values:
+    lib.filter
+      (raw:
+        let
+          name = nameOf raw;
+        in
+        keepRegistryOwnedName knownNames enabledNames name)
+      values;
+
+  filterRegistryOwnedAttrs = knownNames: enabledNames: values:
+    lib.filterAttrs
+      (name: _: keepRegistryOwnedName knownNames enabledNames name)
+      values;
 
   dedupeCasks = casks:
     let
@@ -62,7 +113,12 @@ in
 
   darwinOnEnable = { cfg, myconfig, ... }:
     let
-      casks = dedupeCasks cfg.casks;
+      brews = filterRegistryOwnedList knownBrews enabledBrews (raw: raw) cfg.brews;
+      casks = dedupeCasks (
+        filterRegistryOwnedList knownCasks enabledCasks caskName cfg.casks
+      );
+      taps = filterRegistryOwnedList knownTaps enabledTaps (raw: raw) cfg.taps;
+      masApps = filterRegistryOwnedAttrs knownMasIds enabledMasIds cfg.masApps;
       hasCask = name:
         builtins.any (raw: caskName raw == name) casks;
     in
@@ -72,8 +128,7 @@ in
         enable = true;
 
         # Homebrew formulae, casks, Mac App Store apps, and taps
-        inherit (cfg) brews masApps taps;
-        inherit casks;
+        inherit brews casks masApps taps;
 
         # Cleanup and maintenance
         onActivation = {

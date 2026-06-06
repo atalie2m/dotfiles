@@ -1,7 +1,38 @@
-{ dotmod, config, lib, inputs, pkgs, ... }:
+{ dotmod, config, lib, inputs, pkgs, repoPaths, ... }:
 
 # Brew-nix integration for managing macOS applications via Nix.
 # Kept as a secondary path for pinned/verified casks (empty by default).
+
+let
+  homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
+
+  enabledAt = optionPath:
+    lib.attrByPath optionPath false config;
+
+  hostHasFullXcode =
+    let
+      value = lib.attrByPath [ "myconfig" "hostContext" "machine" "extra" "fullXcode" ] false config;
+    in
+    builtins.isBool value && value;
+
+  specAvailableForHost = spec:
+    !(spec.requiresFullXcode or false) || hostHasFullXcode;
+
+  specEnabled = spec:
+    enabledAt spec.optionPath && specAvailableForHost spec;
+
+  specs = builtins.attrValues homebrewOwnership;
+  caskNamesFor = selectedSpecs:
+    lib.unique (lib.concatMap (spec: spec.casks or [ ]) selectedSpecs);
+  knownCasks = caskNamesFor specs;
+  enabledCasks = caskNamesFor (lib.filter specEnabled specs);
+
+  keepRegistryOwnedCask = name:
+    !(builtins.elem name knownCasks) || builtins.elem name enabledCasks;
+
+  filterRegistryOwnedCasks =
+    lib.filterAttrs (name: _: keepRegistryOwnedCask name);
+in
 
 (dotmod.mkModule { inherit config; }) {
   path = "tools.system.brewNix";
@@ -26,7 +57,7 @@
 
   darwinOnEnable = { cfg, myconfig, ... }:
     let
-      caskApps = cfg.casks // cfg.extraCasks;
+      caskApps = filterRegistryOwnedCasks (cfg.casks // cfg.extraCasks);
       caskNames = lib.attrNames caskApps;
       appLinkSpecs = map (cask: "${cask}|${caskApps.${cask}}") caskNames;
     in
@@ -94,7 +125,7 @@
 
   homeOnEnable = { cfg, pkgs, ... }:
     let
-      caskApps = cfg.casks // cfg.extraCasks;
+      caskApps = filterRegistryOwnedCasks (cfg.casks // cfg.extraCasks);
       appLinkSpecs = map (cask: "${cask}|${caskApps.${cask}}") (lib.attrNames caskApps);
     in
     lib.mkIf pkgs.stdenv.isDarwin {
