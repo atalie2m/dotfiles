@@ -27,11 +27,12 @@ let
   knownCasks = caskNamesFor specs;
   enabledCasks = caskNamesFor (lib.filter specEnabled specs);
 
-  keepRegistryOwnedCask = name:
-    !(builtins.elem name knownCasks) || builtins.elem name enabledCasks;
+  keepCask = deniedCasks: name:
+    (!(builtins.elem name knownCasks) || builtins.elem name enabledCasks)
+    && !(builtins.elem name deniedCasks);
 
-  filterRegistryOwnedCasks =
-    lib.filterAttrs (name: _: keepRegistryOwnedCask name);
+  filterCasks = deniedCasks:
+    lib.filterAttrs (name: _: keepCask deniedCasks name);
 in
 
 (dotmod.mkModule { inherit config; }) {
@@ -47,6 +48,7 @@ in
     };
     casks = attrsOption { };
     extraCasks = attrsOption { };
+    deniedCasks = listOfOption str [ ];
   };
 
   darwinAlways = { ... }: {
@@ -57,7 +59,7 @@ in
 
   darwinOnEnable = { cfg, myconfig, ... }:
     let
-      caskApps = filterRegistryOwnedCasks (cfg.casks // cfg.extraCasks);
+      caskApps = filterCasks cfg.deniedCasks (cfg.casks // cfg.extraCasks);
       caskNames = lib.attrNames caskApps;
       appLinkSpecs = map (cask: "${cask}|${caskApps.${cask}}") caskNames;
     in
@@ -125,7 +127,7 @@ in
 
   homeOnEnable = { cfg, pkgs, ... }:
     let
-      caskApps = filterRegistryOwnedCasks (cfg.casks // cfg.extraCasks);
+      caskApps = filterCasks cfg.deniedCasks (cfg.casks // cfg.extraCasks);
       appLinkSpecs = map (cask: "${cask}|${caskApps.${cask}}") (lib.attrNames caskApps);
     in
     lib.mkIf pkgs.stdenv.isDarwin {

@@ -113,10 +113,19 @@ Broad groups need explicit review before widening:
 - `system` is allowed for core macOS integration, but app/dev extras such as
   `latestApp`, `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, and `carthage`
   are denied.
-- `terminalVisual` is denied; allowing it would pass GUI/visual terminal extras
-  from selected profiles unless each tool is denied.
+- `terminalVisual` and `securityPersonal` are denied. Remote access, scanner,
+  packet-inspection, and personal security tools are not work-host defaults.
+- GUI terminal/editor app installs such as `alacritty`, `ghostty`, `wezterm`,
+  `rio`, `emacs-plus-app`, and `goneovim` are denied even though the broader
+  `terminal` and `editor` groups remain available for CLI/editor support.
 - `downloadArchive` and `passwordSecrets` are allowed with selected extras
   denied, so their policy remains readable and intentional.
+
+Work policy also carries direct Homebrew/brew-nix payload denies for remote
+desktop, screen sharing, VPN/tunnel, packet-inspection, and security-sensitive
+app casks. This catches direct backend additions such as TeamViewer, AnyDesk,
+RustDesk, Parsec, Wireshark, Burp Suite, Tailscale, or ngrok even if a future
+toggle is accidentally placed in an allowed group.
 
 Deep toggles such as `editor.emacs.sync.enable` are intentionally outside the
 `list-tools` output; use direct `nix eval` checks for those policy assertions.

@@ -97,6 +97,29 @@ let
         builtins.map (value: { name = value; value = true; }) values
       )
     );
+
+  installPayloadOverridesFor = policy:
+    let
+      deniedHomebrew = policy.deniedHomebrew or { };
+      deniedBrewNix = policy.deniedBrewNix or { };
+    in
+    lib.mkMerge [
+      (lib.optionalAttrs ((deniedHomebrew.brews or [ ]) != [ ]) {
+        system.homebrewNative.deniedBrews = lib.mkAfter deniedHomebrew.brews;
+      })
+      (lib.optionalAttrs ((deniedHomebrew.casks or [ ]) != [ ]) {
+        system.homebrewNative.deniedCasks = lib.mkAfter deniedHomebrew.casks;
+      })
+      (lib.optionalAttrs ((deniedHomebrew.masApps or [ ]) != [ ]) {
+        system.homebrewNative.deniedMasApps = lib.mkAfter deniedHomebrew.masApps;
+      })
+      (lib.optionalAttrs ((deniedHomebrew.taps or [ ]) != [ ]) {
+        system.homebrewNative.deniedTaps = lib.mkAfter deniedHomebrew.taps;
+      })
+      (lib.optionalAttrs ((deniedBrewNix.casks or [ ]) != [ ]) {
+        system.brewNix.deniedCasks = lib.mkAfter deniedBrewNix.casks;
+      })
+    ];
 in
 {
   forcedOverridesFor = { profileMyconfig, hostExtraMyconfig ? { }, policy }:
@@ -112,6 +135,9 @@ in
       );
     in
     {
-      tools = merge (builtins.map forceOffAt forcedPaths);
+      tools = lib.mkMerge [
+        (merge (builtins.map forceOffAt forcedPaths))
+        (installPayloadOverridesFor policy)
+      ];
     };
 }

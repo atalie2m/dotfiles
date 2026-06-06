@@ -100,10 +100,20 @@ broad group を広げるときは明示的に review してください。
 - `system` は core macOS integration のため許可しますが、`latestApp`,
   `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, `carthage` などの app/dev
   extras は deny しています。
-- `terminalVisual` は deny しています。許可すると、選択 profile 側の
-  GUI/visual terminal extras が個別 deny なしに通ります。
+- `terminalVisual` と `securityPersonal` は deny しています。remote access、
+  scanner、packet-inspection、personal security tool は work-host default
+  ではありません。
+- `alacritty`, `ghostty`, `wezterm`, `rio`, `emacs-plus-app`, `goneovim`
+  のような GUI terminal/editor app install は、広い `terminal` / `editor`
+  group を CLI/editor support 用に残しつつ個別 deny しています。
 - `downloadArchive` と `passwordSecrets` は group として許可し、selected extras
   を deny することで policy を読みやすくしています。
+
+work policy は remote desktop、screen sharing、VPN/tunnel、packet-inspection、
+security-sensitive app cask に対する Homebrew/brew-nix payload deny も持ちます。
+これにより、TeamViewer, AnyDesk, RustDesk, Parsec, Wireshark, Burp Suite,
+Tailscale, ngrok などを direct backend payload として追加しても、`work_mac`
+には入りません。
 
 `editor.emacs.sync.enable` のような deep toggle は `list-tools` 出力の対象外です。
 policy assertion では direct `nix eval` を使って確認します。

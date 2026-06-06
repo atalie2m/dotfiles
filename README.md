@@ -175,10 +175,11 @@ Registry-owned Homebrew and brew-nix payloads are filtered against the final
 owner toggles, so a policy-denied cask/formula is not left in the install plan
 as a direct store or Homebrew target.
 
-- Denied personal or high-surface groups include `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, and `terminalVisual.*`.
+- Denied personal or high-surface groups include `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, `securityPersonal.*`, and `terminalVisual.*`.
 - `downloadArchive` and `passwordSecrets` are allowed groups with specific extras denied (`ffmpeg`, `p7zip`, `pigz`, `zstd`, `op`, YubiKey age plugin, and ssh-to-age).
 - `system` is allowed so core macOS integration can still run, but app/dev extras such as `latestApp`, `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, and `carthage` are denied. Treat group allow-lists as group boundaries, not a complete tool-level whitelist.
-- If `terminalVisual` is allowed in the future, GUI/visual terminal extras from selected profiles will pass through unless explicitly denied.
+- GUI terminal/editor app installs (`alacritty`, `ghostty`, `wezterm`, `rio`, `emacs-plus-app`, `goneovim`) are denied on work hosts; use company-approved apps or unmanaged local state instead.
+- Remote desktop, screen sharing, VPN/tunnel, packet-inspection, and security-sensitive app casks are denied by payload name as well, so direct Homebrew/brew-nix additions such as TeamViewer, AnyDesk, RustDesk, Parsec, Wireshark, Burp Suite, Tailscale, or ngrok do not land on `work_mac`.
 
 ## VS Code Profiles
 

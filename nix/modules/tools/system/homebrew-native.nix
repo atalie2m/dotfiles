@@ -59,6 +59,23 @@ let
       (name: _: keepRegistryOwnedName knownNames enabledNames name)
       values;
 
+  keepNotDenied = deniedNames: name:
+    name == "" || !(builtins.elem name deniedNames);
+
+  filterDeniedList = deniedNames: nameOf: values:
+    lib.filter
+      (raw:
+        let
+          name = nameOf raw;
+        in
+        keepNotDenied deniedNames name)
+      values;
+
+  filterDeniedAttrs = deniedNames: values:
+    lib.filterAttrs
+      (name: _: keepNotDenied deniedNames name)
+      values;
+
   dedupeCasks = casks:
     let
       folded = builtins.foldl'
@@ -95,16 +112,20 @@ in
 
     # Homebrew formulae (CLI tools, latest-first)
     brews = listOfOption str [ ];
+    deniedBrews = listOfOption str [ ];
 
     # Homebrew casks (GUI applications, latest-first). Items may be plain cask
     # names or nix-darwin cask attrsets with per-cask args.
     casks = listOfOption anything [ ];
+    deniedCasks = listOfOption str [ ];
 
     # Mac App Store applications (by ID)
     masApps = attrsOfOption int { };
+    deniedMasApps = listOfOption str [ ];
 
     # Additional Homebrew taps
     taps = listOfOption str [ ];
+    deniedTaps = listOfOption str [ ];
 
     # Cleanup settings
     enableCleanup = boolOption false;
@@ -113,12 +134,20 @@ in
 
   darwinOnEnable = { cfg, myconfig, ... }:
     let
-      brews = filterRegistryOwnedList knownBrews enabledBrews (raw: raw) cfg.brews;
-      casks = dedupeCasks (
-        filterRegistryOwnedList knownCasks enabledCasks caskName cfg.casks
+      brews = filterDeniedList cfg.deniedBrews (raw: raw) (
+        filterRegistryOwnedList knownBrews enabledBrews (raw: raw) cfg.brews
       );
-      taps = filterRegistryOwnedList knownTaps enabledTaps (raw: raw) cfg.taps;
-      masApps = filterRegistryOwnedAttrs knownMasIds enabledMasIds cfg.masApps;
+      casks = dedupeCasks (
+        filterDeniedList cfg.deniedCasks caskName (
+          filterRegistryOwnedList knownCasks enabledCasks caskName cfg.casks
+        )
+      );
+      taps = filterDeniedList cfg.deniedTaps (raw: raw) (
+        filterRegistryOwnedList knownTaps enabledTaps (raw: raw) cfg.taps
+      );
+      masApps = filterDeniedAttrs cfg.deniedMasApps (
+        filterRegistryOwnedAttrs knownMasIds enabledMasIds cfg.masApps
+      );
       hasCask = name:
         builtins.any (raw: caskName raw == name) casks;
     in

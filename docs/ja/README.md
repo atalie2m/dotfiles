@@ -169,10 +169,11 @@ registry-owned な Homebrew / brew-nix payload は最終 owner toggle で
 filter されるため、policy-deny された cask/formula は直接 store path や
 Homebrew install target として残りません。
 
-- personal / high-surface group として `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, `terminalVisual.*` を deny します。
+- personal / high-surface group として `aiLlm.*`, `aiCodingAgent.*`, `modelHfPersonal.*`, `backupRecovery.*`, `observability.*`, `securityPersonal.*`, `terminalVisual.*` を deny します。
 - `downloadArchive` と `passwordSecrets` は group としては許可し、`ffmpeg`, `p7zip`, `pigz`, `zstd`, `op`, YubiKey age plugin, ssh-to-age などの extras を個別 deny します。
 - `system` は macOS integration のため許可しますが、`latestApp`, `xcodesApp`, `swiftgen`, `sourcery`, `periphery`, `carthage` などの app/dev extras は deny します。group allow-list は group 境界であり、完全な tool-level whitelist ではありません。
-- 将来 `terminalVisual` を許可すると、選択 profile 側の GUI/visual terminal extras が個別 deny なしに通ります。
+- GUI terminal/editor app install（`alacritty`, `ghostty`, `wezterm`, `rio`, `emacs-plus-app`, `goneovim`）は work host では deny します。会社承認済み app または unmanaged local state を使います。
+- remote desktop、screen sharing、VPN/tunnel、packet inspection、security-sensitive app cask は payload 名でも deny するため、TeamViewer, AnyDesk, RustDesk, Parsec, Wireshark, Burp Suite, Tailscale, ngrok などを Homebrew/brew-nix に直接足しても `work_mac` には入りません。
 
 ## VS Code profile
 

@@ -147,6 +147,31 @@ let
     evalHomebrewNativeModule {
       casks = [ "keyclu" ];
     };
+  deniedPayloadHomebrewNativeModule =
+    evalHomebrewNativeModule {
+      casks = [
+        "anydesk"
+        "rustdesk"
+        "teamviewer"
+        "wireshark"
+      ];
+      extraMyconfig.tools.system.homebrewNative = {
+        brews = [
+          "mosh"
+          "ngrok"
+        ];
+        deniedBrews = [
+          "mosh"
+          "ngrok"
+        ];
+        deniedCasks = [
+          "anydesk"
+          "rustdesk"
+          "teamviewer"
+          "wireshark"
+        ];
+      };
+    };
   codexHomebrewNativeActivationText =
     codexHomebrewNativeModule.config.system.activationScripts.homebrew.text;
   nonCodexHomebrewNativeActivationText =
@@ -291,6 +316,8 @@ in
           assert (map homebrewCaskName codexFilteredHomebrewNativeModule.config.homebrew.casks) == [ ];
           assert (map homebrewCaskName keycluHomebrewNativeModule.config.homebrew.casks) == [ "keyclu" ];
           assert (map homebrewCaskName keycluFilteredHomebrewNativeModule.config.homebrew.casks) == [ ];
+          assert (map homebrewCaskName deniedPayloadHomebrewNativeModule.config.homebrew.casks) == [ ];
+          assert deniedPayloadHomebrewNativeModule.config.homebrew.brews == [ ];
           null;
       in
       builtins.seq _ (pkgs.runCommand "homebrew-native-codex-preflight-check" { } ''

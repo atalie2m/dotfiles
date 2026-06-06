@@ -32,8 +32,22 @@ work_state="$(
       "tools.aiLlm.aider.enable=${bool cfg.aiLlm.aider.enable}"
       "tools.modelHfPersonal.enable=${bool cfg.modelHfPersonal.enable}"
       "tools.backupRecovery.restic.enable=${bool cfg.backupRecovery.restic.enable}"
+      "tools.securityPersonal.enable=${bool cfg.securityPersonal.enable}"
+      "tools.editor.emacs.enable=${bool cfg.editor.emacs.enable}"
+      "tools.editor.goneovim.enable=${bool cfg.editor.goneovim.enable}"
+      "tools.terminal.alacritty.enable=${bool cfg.terminal.alacritty.enable}"
+      "tools.terminal.ghostty.enable=${bool cfg.terminal.ghostty.enable}"
+      "tools.terminal.rio.enable=${bool cfg.terminal.rio.enable}"
+      "tools.terminal.wezterm.enable=${bool cfg.terminal.wezterm.enable}"
       "tools.terminalVisual.enable=${bool cfg.terminalVisual.enable}"
       "tools.terminalVisual.kitty.enable=${bool cfg.terminalVisual.kitty.enable}"
+      "tools.network.bandwhich.enable=${bool cfg.network.bandwhich.enable}"
+      "tools.network.mosh.enable=${bool cfg.network.mosh.enable}"
+      "tools.network.rustscan.enable=${bool cfg.network.rustscan.enable}"
+      "tools.network.sniffnet.enable=${bool cfg.network.sniffnet.enable}"
+      "tools.network.teleport.enable=${bool cfg.network.teleport.enable}"
+      "tools.network.termshark.enable=${bool cfg.network.termshark.enable}"
+      "tools.network.tsh.enable=${bool cfg.network.tsh.enable}"
       "tools.system.latestApp.enable=${bool cfg.system.latestApp.enable}"
       "tools.downloadArchive.ffmpeg.enable=${bool cfg.downloadArchive.ffmpeg.enable}"
       "tools.passwordSecrets.op.enable=${bool cfg.passwordSecrets.op.enable}"
@@ -57,6 +71,19 @@ work_homebrew_casks="$(
       casks = flake.darwinConfigurations.work_mac-ultra.config.homebrew.casks or [];
     in
     builtins.concatStringsSep "\n" (builtins.map caskName casks)
+  '
+)"
+
+work_homebrew_brews="$(
+  nix eval --raw --impure --expr '
+    let
+      flake = builtins.getFlake "'"$flake_ref"'";
+      brewName = raw:
+        if builtins.isAttrs raw then raw.name or ""
+        else raw;
+      brews = flake.darwinConfigurations.work_mac-ultra.config.homebrew.brews or [];
+    in
+    builtins.concatStringsSep "\n" (builtins.map brewName brews)
   '
 )"
 
@@ -119,8 +146,22 @@ for path in \
   tools.aiLlm.aider.enable \
   tools.modelHfPersonal.enable \
   tools.backupRecovery.restic.enable \
+  tools.securityPersonal.enable \
+  tools.editor.emacs.enable \
+  tools.editor.goneovim.enable \
+  tools.terminal.alacritty.enable \
+  tools.terminal.ghostty.enable \
+  tools.terminal.rio.enable \
+  tools.terminal.wezterm.enable \
   tools.terminalVisual.enable \
   tools.terminalVisual.kitty.enable \
+  tools.network.bandwhich.enable \
+  tools.network.mosh.enable \
+  tools.network.rustscan.enable \
+  tools.network.sniffnet.enable \
+  tools.network.teleport.enable \
+  tools.network.termshark.enable \
+  tools.network.tsh.enable \
   tools.system.latestApp.enable \
   tools.downloadArchive.ffmpeg.enable \
   tools.passwordSecrets.op.enable; do
@@ -141,13 +182,30 @@ for cask in \
   codex \
   claude-code@latest \
   copilot-cli \
+  emacs-plus-app \
+  ghostty \
   keyclu \
+  alacritty \
   latest \
   nikitabobko/tap/aerospace \
+  rio \
+  rustdesk \
+  teamviewer \
+  vnc-viewer \
+  wezterm \
+  wireshark \
   xcodes-app \
   font-anka-coder \
   kitty; do
   assert_line_absent "work_mac-ultra.homebrew.casks" "$work_homebrew_casks" "$cask"
+done
+
+for brew in \
+  anomalyco/tap/opencode \
+  gemini-cli \
+  git-xet \
+  mosh; do
+  assert_line_absent "work_mac-ultra.homebrew.brews" "$work_homebrew_brews" "$brew"
 done
 
 if [[ $own_ultra_vscode_sync != "true" ]]; then
