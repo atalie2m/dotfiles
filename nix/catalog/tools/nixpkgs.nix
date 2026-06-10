@@ -171,8 +171,6 @@
   networkWget = { group = "network"; tool = "wget"; pkg = "wget"; };
   networkGping = { group = "network"; tool = "gping"; pkg = "gping"; };
   networkKeychain = { group = "network"; tool = "keychain"; pkg = "keychain"; };
-  networkTeleport = { group = "network"; tool = "teleport"; pkg = "teleport"; };
-  networkTsh = { group = "network"; tool = "tsh"; pkg = "teleport"; };
   networkTermshark = { group = "network"; tool = "termshark"; pkg = "termshark"; };
   networkRustscan = { group = "network"; tool = "rustscan"; pkg = "rustscan"; };
   networkNmap = { group = "network"; tool = "nmap"; pkg = "nmap"; };

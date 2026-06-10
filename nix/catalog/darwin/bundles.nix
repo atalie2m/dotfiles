@@ -264,8 +264,6 @@ let
     tools.network.gping.enable = true;
     tools.network.mosh.enable = true;
     tools.network.keychain.enable = true;
-    tools.network.teleport.enable = true;
-    tools.network.tsh.enable = true;
     tools.network.termshark.enable = true;
     tools.network.rustscan.enable = true;
     tools.network.nmap.enable = true;

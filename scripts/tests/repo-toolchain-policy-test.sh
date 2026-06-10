@@ -55,6 +55,10 @@ require_not_contains "$HOSTS_FILE" "dev.terraform.enable = true;"
 require_not_contains "$BUNDLES_FILE" "tools.downloadArchive.ytDlp.enable = true;"
 require_not_contains "$BUNDLES_FILE" "tools.passwordSecrets.bw.enable = true;"
 require_not_contains "$BUNDLES_FILE" "tools.passwordSecrets.rbw.enable = true;"
+require_not_contains "$BUNDLES_FILE" "tools.network.teleport.enable = true;"
+require_not_contains "$BUNDLES_FILE" "tools.network.tsh.enable = true;"
+require_not_contains "$HOSTS_FILE" "network.teleport.enable = true;"
+require_not_contains "$HOSTS_FILE" "network.tsh.enable = true;"
 
 require_not_contains "$CATALOG_FILE" 'go = { group = "dev"; pkg = "go"; };'
 require_not_contains "$CATALOG_FILE" 'nodejs = { group = "dev"; pkg = "nodejs"; };'
@@ -64,6 +68,9 @@ require_contains "$CATALOG_FILE" 'bun = { group = "dev"; pkg = "bun"; };'
 require_not_contains "$CATALOG_FILE" 'pkg = "yt-dlp";'
 require_not_contains "$CATALOG_FILE" 'pkg = "bitwarden-cli";'
 require_not_contains "$CATALOG_FILE" 'pkg = "rbw";'
+require_not_contains "$CATALOG_FILE" 'pkg = "teleport";'
+require_not_contains "$HOMEBREW_OWNERSHIP_FILE" 'brews = [ "teleport" ];'
+require_not_contains "$HOMEBREW_OWNERSHIP_FILE" 'casks = [ "teleport" ];'
 require_contains "$HOMEBREW_OWNERSHIP_FILE" "requiresFullXcode = true;"
 
 require_contains "$README_FILE" 'Stock Darwin profiles and host overrides do not expose global opt-in toggles for `go`, `nodejs`, `opentofu`, or `terraform`'

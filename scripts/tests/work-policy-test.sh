@@ -45,9 +45,7 @@ work_state="$(
       "tools.network.mosh.enable=${bool cfg.network.mosh.enable}"
       "tools.network.rustscan.enable=${bool cfg.network.rustscan.enable}"
       "tools.network.sniffnet.enable=${bool cfg.network.sniffnet.enable}"
-      "tools.network.teleport.enable=${bool cfg.network.teleport.enable}"
       "tools.network.termshark.enable=${bool cfg.network.termshark.enable}"
-      "tools.network.tsh.enable=${bool cfg.network.tsh.enable}"
       "tools.system.latestApp.enable=${bool cfg.system.latestApp.enable}"
       "tools.downloadArchive.ffmpeg.enable=${bool cfg.downloadArchive.ffmpeg.enable}"
       "tools.passwordSecrets.op.enable=${bool cfg.passwordSecrets.op.enable}"
@@ -159,9 +157,7 @@ for path in \
   tools.network.mosh.enable \
   tools.network.rustscan.enable \
   tools.network.sniffnet.enable \
-  tools.network.teleport.enable \
   tools.network.termshark.enable \
-  tools.network.tsh.enable \
   tools.system.latestApp.enable \
   tools.downloadArchive.ffmpeg.enable \
   tools.passwordSecrets.op.enable; do

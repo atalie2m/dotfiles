@@ -45,9 +45,7 @@ rec {
     "network.mosh"
     "network.rustscan"
     "network.sniffnet"
-    "network.teleport"
     "network.termshark"
-    "network.tsh"
 
     "downloadArchive.ffmpeg"
     "downloadArchive.p7zip"
