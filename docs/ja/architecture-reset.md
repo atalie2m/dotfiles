@@ -2,7 +2,7 @@
 
 # アーキテクチャリセット
 
-この文書は Darwin-only への reset を説明するものです。何を削除したのか、何をより厳密にしたのか、そしてこのリポジトリが現在どの構成を supported architecture と見なしているのかをまとめています。
+この文書は Darwin-first への reset を説明するものです。何を削除したのか、何をより厳密にしたのか、そしてこのリポジトリが現在どの構成を supported architecture と見なしているのかをまとめています。
 
 ## 目的
 
@@ -16,7 +16,7 @@
 
 ## 設計原則
 
-- `One product, one operational API`: サポート対象の operational root surface は Darwin-first。
+- `One product, one operational API`: サポート対象の operational root surface は Darwin-first。必要な場合だけ明示的に bounded な portable userland target を持つ。
 - `Canonical host truth is shared`: module は `myconfig.hostContext.*` を使う。
 - `Typed truth beats ad-hoc validation`: machine metadata と host-derived data は一度だけ正規化する。
 - `Mutable boundaries stay explicit`: shell entrypoint、Emacs config、VS Code profile、Homebrew/app state は reconciled surface であり、見せかけの declarative state ではない。
@@ -30,8 +30,9 @@ reset 後:
 
 - supported operational root surface は Darwin-first
 - `darwinConfigurations` を常に export する
+- `homeConfigurations.linux_workbench` は共有 development workbench の user environment 専用に export する
 - project `templates` は再利用可能な public artifact として残す
-- 未サポートの Home Manager / NixOS tree と Linux contributor output を削除した
+- 未サポートの Home Manager / NixOS tree と広範な Linux contributor output を削除した
 
 意図:
 
@@ -117,7 +118,8 @@ reset 後:
 
 ## 変わっていないこと
 
-- repo-owned Darwin catalog が composition layer である
+- repo-owned Darwin catalog が macOS composition layer である
+- repo-owned Linux catalog は Home Manager userland composition に限定される
 - 既存の Darwin host 名は維持されている
 - mutable surface は設計上 mutable のままである
 - Homebrew ownership registry は引き続き policy center である
@@ -129,4 +131,5 @@ reset 後:
 - Rust workspace に対する `cargo test`
 - 実際の local `facts` と `secrets` を使った `nix flake check`
 - 変更した host の Darwin build
+- `x86_64-linux` builder 上での `linux_workbench` Home Manager activation-package build
 - portable checks に含まれる shell / VS Code smoke test

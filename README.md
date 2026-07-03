@@ -42,11 +42,13 @@ source filters such as `lib.cleanSourceWith`, `builtins.path`, or
 
 - Nix(Lix or Determinate's vanilla)
 
-## Darwin profiles
+## Host Profiles
 
-This flake uses a self-contained Darwin catalog for host/profile target management:
+This flake uses self-contained catalogs for host/profile target management:
 
 - `nix/catalog/darwin/{hosts.nix,bundles.nix,default.nix}`
+- `nix/catalog/linux/{hosts.nix,profiles.nix,default.nix}`
+- `nix/catalog/shared/{bundles.nix}` for portable profile bundles reused across platforms
 
 Shared modules, tool catalogs, and operational scripts live alongside that catalog:
 
@@ -58,22 +60,31 @@ Shared modules, tool catalogs, and operational scripts live alongside that catal
 See [`docs/architecture.md`](docs/architecture.md) for the current responsibility split.
 See [`docs/architecture-reset.md`](docs/architecture-reset.md) for the reset rationale, before/after changes, and design intent.
 
-Operational note: the supported root flake API is Darwin-first and exposes `darwinConfigurations` plus project `templates`.
+Operational note: the supported root flake API is Darwin-first and now also exposes a bounded Linux Home Manager target for the shared development workbench. The Linux target owns only interactive userland inside the LXC; `domus-ops` remains responsible for the LXC substrate, storage, Tailscale, SSH, observability, and lifecycle.
 
-- Hosts: `own_mac` (default profile: `pro`), `work_mac` (default profile: `pro`).
-- Profiles: `minimal`, `lite`, `pro`, `ultra`.
+- Darwin hosts: `own_mac` (default profile: `pro`), `work_mac` (default profile: `pro`).
+- Darwin profiles: `minimal`, `lite`, `pro`, `ultra`.
   - `minimal`: absolute essentials, currently Nix settings plus Git.
   - `lite`: practical daily baseline with shells, core CLI tools, navigation/search, Git, secrets basics, and macOS integrations.
   - `pro`: full global tool catalog and editor installation, with editor setup/sync disabled.
   - `ultra`: `pro` plus VS Code, Neovim, and Emacs setup/sync, and Codex Slack notifications.
+- Linux Home Manager target: `linux_workbench` (default profile: `workbench`), plus `linux_workbench-minimal`.
 
 Canonical host names and CLI examples live in [`docs/commands.md`](docs/commands.md).
 
 Manual attribute examples:
-`own_mac`, `own_mac-minimal`, `own_mac-lite`, `own_mac-ultra`, `work_mac`, `work_mac-minimal`, `work_mac-lite`, `work_mac-ultra`.
+`own_mac`, `own_mac-minimal`, `own_mac-lite`, `own_mac-ultra`, `work_mac`, `work_mac-minimal`, `work_mac-lite`, `work_mac-ultra`, `linux_workbench`, `linux_workbench-minimal`.
 
 When `--profile` is provided, the CLI resolves only `host-profile` (no implicit fallback to `host`).
 For `work_mac`, the selected profile is capped by the work policy after profile and host overrides merge. For example, `work_mac --profile ultra` means "ultra with the work policy forced off," not a separate `works` profile.
+
+The Linux workbench target derives username, home directory, and machine values
+from local facts through `myconfig.hostContext`; the target key does not need to
+match the live LXC hostname. Build it with
+`nix build .#homeConfigurations.linux_workbench.activationPackage` and switch on
+the LXC with `home-manager switch --flake .#linux_workbench`. Codex CLI is not
+managed by this profile; use `codex --version` after switch to verify the
+standalone upstream installer remains first on the live host.
 
 ## Application Source Policy
 
@@ -129,7 +140,7 @@ Secret storage details live in [`docs/secrets-local.md`](docs/secrets-local.md#c
 ## Repository-Scoped Toolchain Policy
 
 1. `terraform`, `opentofu`, `nodejs`, and `go` must be pinned per repository via that repo's own `flake.nix` / devShell.
-2. Stock Darwin profiles and host overrides do not expose global opt-in toggles for `go`, `nodejs`, `opentofu`, or `terraform`; keep them in project templates/devShells so one machine-wide version does not leak across repos.
+2. Stock host profiles and overrides do not expose global opt-in toggles for `go`, `nodejs`, `opentofu`, or `terraform`; keep them in project templates/devShells so one machine-wide version does not leak across repos.
 3. `bun` is the only project-pinned toolchain exception that may be enabled explicitly with `myconfig.tools.dev.bun.enable = true`; do not add it back to stock profiles.
 4. The `work_mac` policy allows the `dev` group on the premise that project-pinned toolchains are not exposed through stock profiles or host opt-ins, except for the explicit `bun` exception.
 5. Terraform remains unfree. Repository flakes that need it must set their own unfree allow-list; `allowAll` remains disabled here.

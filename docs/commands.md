@@ -6,9 +6,10 @@ Canonical command examples and current host names live here. Keep README and AI 
 
 ## Current hosts and packages
 
-- Hosts: `own_mac` (default profile: `pro`), `work_mac` (default profile: `pro`)
-- Profiles: `minimal`, `lite`, `pro`, `ultra`
+- Darwin hosts: `own_mac` (default profile: `pro`), `work_mac` (default profile: `pro`)
+- Darwin profiles: `minimal`, `lite`, `pro`, `ultra`
 - Example darwin targets: `own_mac`, `own_mac-minimal`, `own_mac-lite`, `own_mac-ultra`, `work_mac`, `work_mac-minimal`, `work_mac-lite`, `work_mac-ultra`
+- Linux Home Manager target: `linux_workbench` (default profile: `workbench`), plus `linux_workbench-minimal`
 - Packages: `dotfiles`, `dotfiles-cli`, `dotfiles-sync-vscode`
 - Templates: `web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`
 
@@ -32,6 +33,49 @@ nix flake check
 
 Do not use unfiltered local path refs such as `path:$PWD#...`; they can copy
 `.git/`, `target/`, `node_modules/`, and `.direnv/` into `/nix/store`.
+
+## Linux workbench Home Manager
+
+The shared development workbench LXC is managed by `domus-ops`; this repository
+only owns the interactive user environment inside that LXC. The Home Manager
+target key is stable and does not need to match the live hostname.
+
+Clone the repository or create a worktree in a user-owned source directory on
+the LXC, for example `$HOME/src/github.com/atalie2m/dotfiles`; do not place LXC
+substrate state under this repository.
+
+Local identity still comes from `~/.config/dotfiles/facts.nix` through
+`myconfig.hostContext`. Provide `user.username` and, when the live home
+directory or hostname differs from the default, add
+`machines.linux_workbench.homeDirectory` and machine metadata there. Do not
+commit real user names, hostnames, or home directories.
+
+```bash
+# Build only
+nix build .#homeConfigurations.linux_workbench.activationPackage
+nix build .#homeConfigurations.linux_workbench-minimal.activationPackage
+
+# Switch on the LXC
+home-manager switch --flake .#linux_workbench
+```
+
+Post-switch smoke checks:
+
+```bash
+whoami
+hostname
+echo "$HOME"
+git --version
+zsh --version || true
+tmux -V || true
+nvim --version | head -1 || true
+direnv --version || true
+sops --version || true
+codex --version
+```
+
+`codex --version` is a live-host check for the official standalone installer.
+The Linux workbench profile does not install or pin Codex CLI through Nix.
 
 ## Operational CLI
 

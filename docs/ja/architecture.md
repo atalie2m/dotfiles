@@ -9,6 +9,8 @@ reset の理由と before/after の要約は [`docs/architecture-reset.md`](../a
 ## レイアウト
 
 - `nix/catalog/darwin`: Darwin host と profile catalog の宣言
+- `nix/catalog/linux`: bounded userland target 向け Linux Home Manager host/profile catalog
+- `nix/catalog/shared`: platform catalog 間で再利用する portable profile bundle
 - `nix/lib`: repo-local module helper と shared Nix helper
 - `nix/modules/shared`: raw facts schema、canonical host model wiring、system module、shared Nixpkgs policy
 - `nix/modules/tools`: capability ごとに grouped された user-facing tool module
@@ -30,7 +32,7 @@ reset の理由と before/after の要約は [`docs/architecture-reset.md`](../a
 
 ## 実務上の含意
 
-- サポートされる operational root flake API は Darwin-first
-- 再利用可能な feature を追加するなら `nix/modules/` に置き、`nix/catalog/darwin` は host/profile composition に集中させる
+- サポートされる operational root flake API は Darwin-first で、bounded な `homeConfigurations.linux_workbench` userland target を含む
+- 再利用可能な feature を追加するなら `nix/modules/` に置き、platform catalog は host/profile composition に集中させる
 - catalog 管理の tool を追加するなら、`nix/catalog/tools/` の対応する registry / catalog data を更新する
 - operational CLI behavior を追加するなら、まず Rust workspace に実装し、shell は薄いままに保つ

@@ -554,19 +554,6 @@ in
                     bgColor: "#1e1e2e"
           '';
         })
-        (lib.mkIf lazygitEnabled {
-          "lazygit/config.yml".text = ''
-            gui:
-              theme:
-                lightTheme: false
-              showFileTree: true
-              showRandomTip: false
-            keybinding:
-              universal:
-                quit: q
-                quit-alt1: <c-c>
-          '';
-        })
         (lib.mkIf ripgrepEnabled {
           "ripgrep/ripgreprc".text = ''
             --smart-case

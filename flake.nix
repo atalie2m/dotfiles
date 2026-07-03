@@ -1,5 +1,5 @@
 {
-  description = "Atalie's nix-darwin system flake";
+  description = "Atalie's Darwin-first Nix and Home Manager flake";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -111,9 +111,11 @@
       };
 
       darwinConfigurations = configurations.darwinConfigurations;
+      homeConfigurations = configurations.homeConfigurations;
 
       perSystemModule = import ./nix/flake/per-system.nix {
-        inherit inputs repoPaths dotlib toolOwnershipLib darwinConfigurations;
+        inherit inputs repoPaths dotlib toolOwnershipLib darwinConfigurations homeConfigurations;
+        inherit (configurations) linuxHomeManagerModulePaths;
         inherit (portable)
           mkDotfilesCliPackage
           mkDotfilesPackage
@@ -127,7 +129,7 @@
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ inputs.treefmt-nix.flakeModule ];
-      systems = [ "aarch64-darwin" "x86_64-darwin" ];
+      systems = [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" ];
 
       perSystem = perSystemModule;
 
@@ -203,7 +205,7 @@
             description = "Release/changelog/signing template with git-cliff, goreleaser, cargo-dist/release, cosign, SLSA, OCI tools, and common checks";
           };
         };
-        inherit darwinConfigurations;
+        inherit darwinConfigurations homeConfigurations;
       };
     };
 }

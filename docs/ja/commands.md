@@ -6,9 +6,10 @@
 
 ## 現在の host と package
 
-- Hosts: `own_mac`（default profile: `pro`）、`work_mac`（default profile: `pro`）
-- Profiles: `minimal`, `lite`, `pro`, `ultra`
+- Darwin hosts: `own_mac`（default profile: `pro`）、`work_mac`（default profile: `pro`）
+- Darwin profiles: `minimal`, `lite`, `pro`, `ultra`
 - darwin target の例: `own_mac`, `own_mac-minimal`, `own_mac-lite`, `own_mac-ultra`, `work_mac`, `work_mac-minimal`, `work_mac-lite`, `work_mac-ultra`
+- Linux Home Manager target: `linux_workbench`（default profile: `workbench`）、および `linux_workbench-minimal`
 - Packages: `dotfiles`, `dotfiles-cli`, `dotfiles-sync-vscode`
 - Templates: `web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`
 
@@ -32,6 +33,49 @@ nix flake check
 
 `path:$PWD#...` のような unfiltered local path ref は使わないでください。
 `.git/`、`target/`、`node_modules/`、`.direnv/` が `/nix/store` にコピーされ得ます。
+
+## Linux workbench Home Manager
+
+共有 development workbench LXC は `domus-ops` が管理します。この repository が
+所有するのは、その LXC 内の interactive user environment だけです。Home Manager
+target key は stable で、live hostname と一致する必要はありません。
+
+repository clone または worktree は LXC 上の user-owned source directory
+（例: `$HOME/src/github.com/atalie2m/dotfiles`）に置いてください。LXC substrate
+state はこの repository の下に置きません。
+
+local identity は引き続き `~/.config/dotfiles/facts.nix` から
+`myconfig.hostContext` 経由で来ます。`user.username` を設定し、live home
+directory や hostname が default と違う場合は
+`machines.linux_workbench.homeDirectory` と machine metadata を local facts に
+置いてください。実 user name、hostname、home directory は commit しないでください。
+
+```bash
+# build のみ
+nix build .#homeConfigurations.linux_workbench.activationPackage
+nix build .#homeConfigurations.linux_workbench-minimal.activationPackage
+
+# LXC 上で switch
+home-manager switch --flake .#linux_workbench
+```
+
+switch 後の smoke check:
+
+```bash
+whoami
+hostname
+echo "$HOME"
+git --version
+zsh --version || true
+tmux -V || true
+nvim --version | head -1 || true
+direnv --version || true
+sops --version || true
+codex --version
+```
+
+`codex --version` は official standalone installer の live-host check です。
+Linux workbench profile は Codex CLI を Nix で install/pin しません。
 
 ## 運用 CLI
 

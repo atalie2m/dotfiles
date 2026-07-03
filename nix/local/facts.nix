@@ -24,5 +24,9 @@
       hostName = "public-work-mac";
       domain = "local";
     };
+    linux_workbench = {
+      hostName = "public-linux-workbench";
+      domain = "local";
+    };
   };
 }

@@ -103,6 +103,7 @@ for pair in "${DOC_LINK_PAIRS[@]}"; do
 done
 
 require_contains_anywhere 'darwinConfigurations'
+require_contains_anywhere 'homeConfigurations.linux_workbench'
 require_contains_anywhere 'nix run .#sync'
 require_contains_anywhere 'nix run .#dotfiles -- sync shell'
 require_contains_anywhere 'nix run .#dotfiles -- sync emacs'
@@ -130,7 +131,6 @@ require_contains_file docs/ja/README.md 'template 由来の project は Git flak
 require_contains_file docs/ja/commands.md '`path:$PWD#...` のような unfiltered local path ref は使わないでください。'
 
 for file in "${EN_DOC_FILES[@]}"; do
-  require_not_contains_anywhere 'homeConfigurations'
   require_not_contains_anywhere 'nixosConfigurations'
   require_not_contains_anywhere 'scripts/sync-adapters/'
   require_not_contains_anywhere 'STUB'

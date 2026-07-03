@@ -1,6 +1,13 @@
-{ lib }:
+{ lib, mode ? "darwin" }:
 
 let
+  validModes = [ "darwin" "home" ];
+  _ =
+    if builtins.elem mode validModes then
+      null
+    else
+      throw "unsupported module-helper mode '${mode}'";
+
   callOrEmpty = fn: args:
     if fn == null then { } else fn args;
 
@@ -13,6 +20,7 @@ let
   optionalModule = body: args:
     lib.optional (body != null) ({ ... }: body args);
 in
+assert _ == null;
 rec {
   inherit (lib.types)
     anything
@@ -73,24 +81,34 @@ rec {
       };
       darwinAlwaysAttrs = callOrEmpty darwinAlways args;
     in
-    {
-      imports = darwinAlwaysAttrs.imports or [ ];
-      options = lib.setAttrByPath (optionPathFor path) options;
+    if mode == "home" then
+      {
+        options = lib.setAttrByPath (optionPathFor path) options;
 
-      config = lib.mkMerge [
-        (removeAttrs darwinAlwaysAttrs [ "imports" ])
-        (lib.optionalAttrs (homeAlways != null) {
-          home-manager.sharedModules = optionalModule homeAlways args;
-        })
-        (lib.mkIf (enabledAt config path) (lib.mkMerge [
-          (lib.optionalAttrs (myconfigOnEnable != null) {
-            myconfig = callOrEmpty myconfigOnEnable args;
+        config = lib.mkMerge [
+          (callOrEmpty homeAlways args)
+          (lib.mkIf (enabledAt config path) (callOrEmpty homeOnEnable args))
+        ];
+      }
+    else
+      {
+        imports = darwinAlwaysAttrs.imports or [ ];
+        options = lib.setAttrByPath (optionPathFor path) options;
+
+        config = lib.mkMerge [
+          (removeAttrs darwinAlwaysAttrs [ "imports" ])
+          (lib.optionalAttrs (homeAlways != null) {
+            home-manager.sharedModules = optionalModule homeAlways args;
           })
-          (callOrEmpty darwinOnEnable args)
-          (lib.optionalAttrs (homeOnEnable != null) {
-            home-manager.sharedModules = optionalModule homeOnEnable args;
-          })
-        ]))
-      ];
-    };
+          (lib.mkIf (enabledAt config path) (lib.mkMerge [
+            (lib.optionalAttrs (myconfigOnEnable != null) {
+              myconfig = callOrEmpty myconfigOnEnable args;
+            })
+            (callOrEmpty darwinOnEnable args)
+            (lib.optionalAttrs (homeOnEnable != null) {
+              home-manager.sharedModules = optionalModule homeOnEnable args;
+            })
+          ]))
+        ];
+      };
 }

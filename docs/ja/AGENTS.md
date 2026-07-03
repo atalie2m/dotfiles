@@ -2,12 +2,14 @@
 
 # リポジトリガイドライン
 
-このリポジトリは、macOS システム構成のための Darwin-first な Nix flake です。変更は、現在の bounded context である Darwin hosts/profiles、型付きの host truth、明示的な mutable surface、Rust control plane に沿わせてください。
+このリポジトリは、macOS システム構成のための Darwin-first な Nix flake と、bounded な Linux Home Manager userland target を持ちます。変更は、現在の bounded context である Darwin hosts/profiles、Linux user environment profiles、型付きの host truth、明示的な mutable surface、Rust control plane に沿わせてください。
 
 ## プロジェクト構成
 
-- `flake.nix` — flake の inputs/outputs。`darwinConfigurations` と project `templates`（`web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`）を公開します。
+- `flake.nix` — flake の inputs/outputs。`darwinConfigurations`、`linux_workbench` などの bounded な `homeConfigurations`、project `templates`（`web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`）を公開します。
 - `nix/catalog/darwin/` — Darwin host/profile プロファイル。
+- `nix/catalog/linux/` — userland-only target 向け Linux Home Manager host/profile catalog。
+- `nix/catalog/shared/` — platform catalog 間で再利用する portable profile bundle。
 - `nix/lib/module-helpers.nix` — repo-local module helper。
 - `nix/modules/` — 再利用可能な module。`shared/` と `tools/` に分割されています。
 - `nix/catalog/` — tool module と ownership check で使う catalog data。
@@ -33,6 +35,8 @@
 - 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `DOTFILES_PROFILE_DIRS`, `EMACSDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
 - `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles`
 - `nix run .#apply -- --host <host> --action build`
+- `nix build .#homeConfigurations.linux_workbench.activationPackage`
+- `home-manager switch --flake .#linux_workbench`
 - `nix flake init -t github:atalie2m/dotfiles#web-dev`
 - `nix flake init -t github:atalie2m/dotfiles#rust-dev`
 - `nix flake init -t github:atalie2m/dotfiles#infra-iac`
@@ -49,6 +53,7 @@
 
 - module は host truth を `myconfig.hostContext.*` から読むこと。
 - 承認済みの host-model/bootstrap 境界の外で、新しい直接 `config.host.*`、legacy facts option read、raw `inputs.local/facts.nix` read を追加しないこと。
+- Linux Home Manager target は userland-only に保ってください。LXC substrate、Tailscale、SSH、storage、observability、lifecycle の所有権を `domus-ops` から移さないこと。
 - shell sync は Rust の `dotfiles` CLI（`sync shell`）で実装されています。`scripts/sync.sh` は薄い shell wrapper のみです。
 - Emacs sync は Rust の `dotfiles` CLI（`sync emacs`）で writable vanilla Emacs config file 向けに実装されています。
 - VS Code sync は専用の `dotfiles-sync-vscode` binary で実装され、`dotfiles sync vscode` から dispatch されます。

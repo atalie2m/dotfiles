@@ -9,6 +9,8 @@ For the reset rationale and before/after summary, see [`docs/architecture-reset.
 ## Layout
 
 - `nix/catalog/darwin`: Darwin host/profile catalog and stock profile bundles
+- `nix/catalog/linux`: Linux Home Manager host/profile catalog for bounded userland targets
+- `nix/catalog/shared`: portable profile bundles reused by platform catalogs
 - `nix/lib`: host model, module helpers, and shared policy helpers
 - `nix/modules/shared`: canonical host model wiring, system modules, and shared Nixpkgs policy
 - `nix/modules/tools`: user-facing tool modules grouped by capability
@@ -30,7 +32,7 @@ For the reset rationale and before/after summary, see [`docs/architecture-reset.
 
 ## Practical implications
 
-- the supported operational root flake API is Darwin-first
-- if you add a reusable feature, put it in `nix/modules/` and keep `nix/catalog/darwin` focused on host/profile composition
+- the supported operational root flake API is Darwin-first, with a bounded `homeConfigurations.linux_workbench` userland target
+- if you add a reusable feature, put it in `nix/modules/` and keep platform catalogs focused on host/profile composition
 - if you add catalog-owned tools, update the relevant registry/catalog data under `nix/catalog/tools/`
 - if you add operational CLI behavior, implement it in the Rust workspace first and keep shell thin

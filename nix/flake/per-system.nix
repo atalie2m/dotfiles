@@ -3,6 +3,8 @@
 , dotlib
 , toolOwnershipLib
 , darwinConfigurations
+, homeConfigurations
+, linuxHomeManagerModulePaths
 , mkDotfilesCliPackage
 , mkDotfilesPackage
 , mkEditorSyncAppProgram
@@ -16,6 +18,15 @@
 let
   dotfilesRoot = repoPaths.root;
   darwinTargetNames = lib.sort (a: b: a < b) (builtins.attrNames darwinConfigurations);
+  homeManagerTargetNames = lib.sort (a: b: a < b) (builtins.attrNames homeConfigurations);
+  homeManagerTargetNamesText = lib.concatStringsSep ", " homeManagerTargetNames;
+  linuxWorkbenchTarget = homeConfigurations.linux_workbench or null;
+  linuxWorkbenchConfig =
+    if linuxWorkbenchTarget == null then
+      null
+    else
+      linuxWorkbenchTarget.config;
+  linuxWorkbenchMinimalTarget = homeConfigurations.linux_workbench-minimal or null;
   toolOwnershipReports =
     map
       (targetName: toolOwnershipLib.report targetName darwinConfigurations.${targetName}.config)
@@ -200,6 +211,160 @@ let
           (builtins.attrNames users))
       darwinTargetNames;
   homeManagerGlobalPkgsFailureText = lib.concatStringsSep "\n" homeManagerGlobalPkgsFailures;
+  linuxHomeManagerModulePathStrings = map builtins.toString linuxHomeManagerModulePaths;
+  forbiddenLinuxModuleInfixes = [
+    "/nix/modules/tools/system/brew-nix.nix"
+    "/nix/modules/tools/system/homebrew-native.nix"
+    "/nix/modules/tools/system/hostnames.nix"
+    "/nix/modules/tools/system/karabiner.nix"
+    "/nix/modules/tools/system/keyboard.nix"
+    "/nix/modules/tools/system/mac-app-util.nix"
+    "/nix/modules/tools/system/macos-ui.nix"
+    "/nix/modules/tools/system/nix-homebrew.nix"
+    "/nix/modules/tools/terminal/rio.nix"
+    "/nix/modules/tools/terminal/wezterm.nix"
+  ];
+  forbiddenLinuxModuleImports =
+    lib.filter
+      (path: lib.any (infix: lib.hasInfix infix path) forbiddenLinuxModuleInfixes)
+      linuxHomeManagerModulePathStrings;
+  linuxWorkbenchTools =
+    if linuxWorkbenchConfig == null then
+      { }
+    else
+      linuxWorkbenchConfig.myconfig.tools or { };
+  linuxToolEnabled = path:
+    (lib.attrByPath path { } linuxWorkbenchTools).enable or false;
+  formatToolPath = path: lib.concatStringsSep "." path;
+  requiredLinuxWorkbenchToolPaths = [
+    [ "filesNavigation" "duf" ]
+    [ "filesNavigation" "dust" ]
+    [ "filesNavigation" "ncdu" ]
+    [ "filesNavigation" "ouch" ]
+    [ "filesNavigation" "rclone" ]
+    [ "filesNavigation" "rsync" ]
+    [ "filesNavigation" "yazi" ]
+    [ "gitPersonal" "ghDash" ]
+    [ "gitPersonal" "ghq" ]
+    [ "gitPersonal" "gitAbsorb" ]
+    [ "gitPersonal" "gitFilterRepo" ]
+    [ "gitPersonal" "jujutsu" ]
+    [ "gitPersonal" "mergiraf" ]
+    [ "dataPersonal" "csvlens" ]
+    [ "dataPersonal" "duckdb" ]
+    [ "dataPersonal" "fq" ]
+    [ "dataPersonal" "fx" ]
+    [ "dataPersonal" "harlequin" ]
+    [ "dataPersonal" "jc" ]
+    [ "dataPersonal" "jless" ]
+    [ "dataPersonal" "miller" ]
+    [ "dataPersonal" "pgActivity" ]
+    [ "dataPersonal" "usql" ]
+    [ "httpApiPersonal" "httpie" ]
+    [ "httpApiPersonal" "xh" ]
+    [ "network" "grpcurl" ]
+    [ "network" "websocat" ]
+    [ "nixOperator" "nixIndex" ]
+    [ "nixOperator" "nixInspect" ]
+    [ "nixOperator" "nixInit" ]
+    [ "nixOperator" "nixSearchTv" ]
+    [ "nixOperator" "nixd" ]
+    [ "nixOperator" "nurl" ]
+    [ "shellUx" "entr" ]
+    [ "shellUx" "gum" ]
+    [ "shellUx" "mprocs" ]
+    [ "shellUx" "navi" ]
+    [ "shellUx" "vivid" ]
+    [ "viewersPreview" "hexyl" ]
+    [ "viewersPreview" "mdcat" ]
+    [ "viewersPreview" "tealdeer" ]
+    [ "containerK8sPersonal" "k9s" ]
+    [ "containerK8sPersonal" "kubecolor" ]
+    [ "containerK8sPersonal" "kubectl" ]
+    [ "containerK8sPersonal" "kubie" ]
+    [ "containerK8sPersonal" "stern" ]
+    [ "observability" "bottom" ]
+    [ "observability" "glances" ]
+    [ "observability" "goss" ]
+  ];
+  missingLinuxWorkbenchTools =
+    lib.filter (path: !(linuxToolEnabled path)) requiredLinuxWorkbenchToolPaths;
+  missingLinuxWorkbenchToolsText =
+    lib.concatStringsSep ", " (map formatToolPath missingLinuxWorkbenchTools);
+  forbiddenLinuxWorkbenchToolPaths = [
+    [ "aiCodingAgent" "codex" ]
+    [ "containerK8sPersonal" "docker" ]
+    [ "containerK8sPersonal" "lazydocker" ]
+    [ "containerK8sPersonal" "podman" ]
+    [ "dev" "bun" ]
+    [ "tuiWorkspace" "lazydocker" ]
+    [ "tuiWorkspace" "zellij" ]
+  ];
+  enabledForbiddenLinuxWorkbenchTools =
+    lib.filter linuxToolEnabled forbiddenLinuxWorkbenchToolPaths;
+  enabledForbiddenLinuxWorkbenchToolsText =
+    lib.concatStringsSep ", " (map formatToolPath enabledForbiddenLinuxWorkbenchTools);
+  forbiddenProjectToolchainCatalogEntries =
+    lib.filter (name: builtins.hasAttr name nixCatalog) [
+      "go"
+      "nodejs"
+      "opentofu"
+      "terraform"
+    ];
+  linuxHomeManagerAssertions =
+    let
+      cfg = linuxWorkbenchConfig;
+      minimalCfg =
+        if linuxWorkbenchMinimalTarget == null then
+          null
+        else
+          linuxWorkbenchMinimalTarget.config;
+    in
+    [
+      {
+        assertion = builtins.hasAttr "own_mac" darwinConfigurations && builtins.hasAttr "work_mac" darwinConfigurations;
+        message = "expected Darwin outputs own_mac and work_mac to evaluate";
+      }
+      {
+        assertion = linuxWorkbenchTarget != null && linuxWorkbenchMinimalTarget != null;
+        message = "expected homeConfigurations.linux_workbench and linux_workbench-minimal";
+      }
+      {
+        assertion = cfg != null && cfg.myconfig.hostContext.system == "x86_64-linux";
+        message = "linux_workbench must use x86_64-linux hostContext.system";
+      }
+      {
+        assertion = cfg != null && cfg.myconfig.hostContext.name == "linux_workbench";
+        message = "linux_workbench must preserve the stable dotfiles target key";
+      }
+      {
+        assertion = minimalCfg != null && minimalCfg.myconfig.profile.name == "minimal";
+        message = "linux_workbench-minimal must select the minimal profile";
+      }
+      {
+        assertion = cfg != null && cfg.myconfig.profile.name == "workbench";
+        message = "linux_workbench must select the workbench profile";
+      }
+      {
+        assertion = forbiddenLinuxModuleImports == [ ];
+        message = "Linux Home Manager imports Darwin/Homebrew/macOS-only modules: ${lib.concatStringsSep ", " forbiddenLinuxModuleImports}";
+      }
+      {
+        assertion = forbiddenProjectToolchainCatalogEntries == [ ];
+        message = "project-pinned toolchains must not have host-global catalog entries: ${lib.concatStringsSep ", " forbiddenProjectToolchainCatalogEntries}";
+      }
+      {
+        assertion = missingLinuxWorkbenchTools == [ ];
+        message = "linux_workbench is missing portable workbench tools: ${missingLinuxWorkbenchToolsText}";
+      }
+      {
+        assertion = enabledForbiddenLinuxWorkbenchTools == [ ];
+        message = "linux_workbench must not enable forbidden runtime/project tools: ${enabledForbiddenLinuxWorkbenchToolsText}";
+      }
+    ];
+  linuxHomeManagerFailures =
+    map (check: check.message) (lib.filter (check: !check.assertion) linuxHomeManagerAssertions);
+  linuxHomeManagerFailureText = lib.concatStringsSep "\n" linuxHomeManagerFailures;
 
   mkDotfilesApp = { name, subcommand ? null, description }:
     let
@@ -253,8 +418,31 @@ in
 
   formatter = config.treefmt.build.wrapper;
 
-  checks = portableChecks // {
+  checks = portableChecks // ({
     treefmt = lib.mkForce portableChecks.treefmt;
+    darwinConfigurationsEval =
+      let
+        _ =
+          assert builtins.hasAttr "own_mac" darwinConfigurations;
+          assert builtins.hasAttr "work_mac" darwinConfigurations;
+          assert builtins.length darwinTargetNames >= 2;
+          null;
+      in
+      builtins.seq _ (pkgs.runCommand "darwin-configurations-eval-check" { } ''
+        touch "$out"
+      '');
+
+    linuxHomeManagerEval = pkgs.runCommand "linux-home-manager-eval-check" { } ''
+      if [ ${toString (builtins.length linuxHomeManagerFailures)} -ne 0 ]; then
+        cat >&2 <<'EOF_LINUX_HOME_MANAGER'
+      ${linuxHomeManagerFailureText}
+      EOF_LINUX_HOME_MANAGER
+        printf 'homeConfigurations targets: %s\n' ${lib.escapeShellArg homeManagerTargetNamesText} >&2
+        exit 1
+      fi
+      touch "$out"
+    '';
+
     toolOwnership = pkgs.runCommand "tool-ownership-check" { } ''
                 if [ ${toString (builtins.length toolOwnershipFailures)} -ne 0 ]; then
                   cat >&2 <<'EOF_TOOL_OWNERSHIP'
@@ -323,7 +511,9 @@ in
       builtins.seq _ (pkgs.runCommand "homebrew-native-codex-preflight-check" { } ''
         touch "$out"
       '');
-  };
+  } // lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "x86_64-linux" && linuxWorkbenchTarget != null) {
+    linuxWorkbenchActivationPackage = linuxWorkbenchTarget.activationPackage;
+  });
 
   devShells.default = mkPortableDevShell {
     inherit pkgs;
@@ -331,12 +521,13 @@ in
   };
 
   packages = {
-    darwin-rebuild = inputs.nix-darwin.packages.${pkgs.stdenv.hostPlatform.system}.darwin-rebuild;
     dotfiles = dotfilesPackage;
     dotfiles-cli = dotfilesCli;
     dotfiles-sync-vscode = syncVscodeRust;
     dotfiles-vscode-zsh = vscodeZshLauncher;
     roots = pkgs.callPackage ../pkgs/roots { };
+  } // lib.optionalAttrs pkgs.stdenv.isDarwin {
+    darwin-rebuild = inputs.nix-darwin.packages.${pkgs.stdenv.hostPlatform.system}.darwin-rebuild;
   };
 
   apps = {
@@ -380,11 +571,13 @@ in
       subcommand = "apply";
       description = "Build or switch nix-darwin configurations.";
     };
+  } // lib.optionalAttrs pkgs.stdenv.isDarwin {
     darwin-rebuild = {
       type = "app";
       program = "${inputs.nix-darwin.packages.${pkgs.stdenv.hostPlatform.system}.darwin-rebuild}/bin/darwin-rebuild";
       meta.description = "Pinned nix-darwin rebuild wrapper from this flake lock.";
     };
+  } // {
     doctor = mkDotfilesApp {
       name = "doctor";
       subcommand = "doctor";

@@ -1,6 +1,8 @@
 { lib }:
 
 let
+  sharedBundles = import ../shared/bundles.nix;
+
   practicalBaseline = {
     system.nix.enable = true;
     tools.system.keyboard.enable = true;
@@ -452,6 +454,7 @@ rec {
 
   pro = merge [
     lite
+    sharedBundles.portableWorkbench
     fullToolset
     aiCodingFull
     editorInstall

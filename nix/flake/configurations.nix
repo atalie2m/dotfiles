@@ -3,7 +3,13 @@
 let
   lib = inputs.nixpkgs.lib;
   dotmod = import ../lib/module-helpers.nix { inherit lib; };
-  catalog = import ../catalog/darwin { inherit lib; };
+  homeDotmod = import ../lib/module-helpers.nix {
+    inherit lib;
+    mode = "home";
+  };
+  darwinCatalog = import ../catalog/darwin { inherit lib; };
+  linuxCatalog = import ../catalog/linux { inherit lib; };
+  nixCatalog = import ../catalog/tools/nixpkgs.nix;
   localPackagesOverlay = import ../pkgs/overlay.nix;
   baseRawFacts = import (inputs.local + "/facts.nix");
   runtimeFactsPath = inputs.local + "/runtime.nix";
@@ -15,6 +21,8 @@ let
   rawFacts = lib.recursiveUpdate baseRawFacts runtimeFacts;
   normalizedFacts = dotlib.normalizeRawFacts rawFacts;
   username = normalizedFacts.user.username;
+  catalogUnfreePackages = lib.unique (lib.concatMap (spec: spec.unfree or [ ]) (builtins.attrValues nixCatalog));
+  allowUnfreePackages = lib.unique (catalogUnfreePackages ++ [ "zsh-abbr" ]);
 
   codexHomebrewBinCopyCask = {
     name = "codex";
@@ -55,23 +63,23 @@ let
     };
   };
 
-  mkTarget =
+  mkDarwinTarget =
     hostName: profileName:
     let
-      hostSpec = catalog.hosts.${hostName};
+      hostSpec = darwinCatalog.hosts.${hostName};
       host = dotlib.buildHostModel {
         inherit rawFacts;
         inherit (hostSpec) name machineKey system;
       };
-      profileMyconfig = catalog.profiles.${profileName};
+      profileMyconfig = darwinCatalog.profiles.${profileName};
       hostExtraMyconfig = hostSpec.extraMyconfig or { };
       hostLocalMyconfig = hostLocalMyconfigFor host;
       hostPolicyMyconfig =
         if hostName == "work_mac" then
-          catalog.policyLib.forcedOverridesFor
+          darwinCatalog.policyLib.forcedOverridesFor
             {
               inherit profileMyconfig hostExtraMyconfig;
-              policy = catalog.workPolicy;
+              policy = darwinCatalog.workPolicy;
             }
         else
           { };
@@ -82,7 +90,8 @@ let
     inputs.nix-darwin.lib.darwinSystem {
       system = host.system;
       specialArgs = {
-        inherit inputs dotlib dotmod repoPaths catalog;
+        inherit inputs dotlib dotmod repoPaths;
+        catalog = darwinCatalog;
       };
       modules = [
         inputs.sops-nix.darwinModules.sops
@@ -112,7 +121,7 @@ let
               hostContext = host;
               profile = {
                 name = profileName;
-                available = catalog.profileNames;
+                available = darwinCatalog.profileNames;
               };
             }
             profileMyconfig
@@ -124,14 +133,115 @@ let
       ];
     };
 
-  mkHostTargets = hostName:
+  mkDarwinHostTargets = hostName:
     builtins.listToAttrs (
       map
         (profileName: {
-          name = catalog.targetNameFor hostName profileName;
-          value = mkTarget hostName profileName;
+          name = darwinCatalog.targetNameFor hostName profileName;
+          value = mkDarwinTarget hostName profileName;
         })
-        catalog.hosts.${hostName}.supportedProfiles
+        darwinCatalog.hosts.${hostName}.supportedProfiles
+    );
+
+  linuxHomeManagerModulePaths = [
+    ../modules/shared/host.nix
+    ../modules/shared/nixpkgs-unfree.nix
+    ../modules/shared/profile.nix
+    ../modules/shared/system-nix.nix
+    ../modules/tools/catalog.nix
+    ../modules/tools/core.nix
+    ../modules/tools/dev.nix
+    ../modules/tools/dev/git.nix
+    ../modules/tools/editor.nix
+    ../modules/tools/editor/neovim.nix
+    ../modules/tools/network/mosh.nix
+    ../modules/tools/profile-defaults.nix
+    ../modules/tools/profile-groups.nix
+    ../modules/tools/security.nix
+    ../modules/tools/security/gpg.nix
+    ../modules/tools/security/sops.nix
+    ../modules/tools/shell.nix
+    ../modules/tools/shell/atuin.nix
+    ../modules/tools/shell/bash.nix
+    ../modules/tools/shell/direnv.nix
+    ../modules/tools/shell/fzf-tab.nix
+    ../modules/tools/shell/fzf.nix
+    ../modules/tools/shell/pure.nix
+    ../modules/tools/shell/zoxide.nix
+    ../modules/tools/shell/zsh.nix
+    ../modules/tools/terminal.nix
+    ../modules/tools/terminal/tmux.nix
+  ];
+
+  mkLinuxPkgs = system:
+    import inputs.nixpkgs {
+      inherit system;
+      config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) allowUnfreePackages;
+      overlays = [ localPackagesOverlay ];
+    };
+
+  mkHomeManagerTarget =
+    hostName: profileName:
+    let
+      hostSpec = linuxCatalog.hosts.${hostName};
+      host = dotlib.buildHostModel {
+        inherit rawFacts;
+        inherit (hostSpec) name machineKey system;
+      };
+      pkgs = mkLinuxPkgs host.system;
+      profileMyconfig = linuxCatalog.profiles.${profileName};
+      hostExtraMyconfig = hostSpec.extraMyconfig or { };
+    in
+    inputs.home-manager.lib.homeManagerConfiguration {
+      inherit pkgs;
+      extraSpecialArgs = {
+        inherit inputs dotlib repoPaths;
+        catalog = linuxCatalog;
+        dotmod = homeDotmod;
+      };
+      modules = [
+        inputs.sops-nix.homeManagerModules.sops
+      ] ++ linuxHomeManagerModulePaths ++ [
+        ({ lib, ... }: {
+          assertions = [
+            {
+              assertion = host.os == "linux";
+              message = "homeConfigurations.${linuxCatalog.targetNameFor hostName profileName} must be a Linux target.";
+            }
+          ];
+
+          home = {
+            inherit (host.user) username homeDirectory;
+            stateVersion = host.user.stateVersion.home;
+          };
+
+          programs.home-manager.enable = true;
+
+          nix.package = lib.mkDefault pkgs.nix;
+
+          myconfig = lib.mkMerge [
+            {
+              hostContext = host;
+              profile = {
+                name = profileName;
+                available = linuxCatalog.profileNames;
+              };
+            }
+            profileMyconfig
+            hostExtraMyconfig
+          ];
+        })
+      ];
+    };
+
+  mkHomeManagerHostTargets = hostName:
+    builtins.listToAttrs (
+      map
+        (profileName: {
+          name = linuxCatalog.targetNameFor hostName profileName;
+          value = mkHomeManagerTarget hostName profileName;
+        })
+        linuxCatalog.hosts.${hostName}.supportedProfiles
     );
 
   darwinConfigurations =
@@ -139,10 +249,19 @@ let
       throw "facts.user.username is required (set in ~/.config/dotfiles/facts.nix or override inputs.local)"
     else
       lib.foldl'
-        (acc: hostName: acc // mkHostTargets hostName)
+        (acc: hostName: acc // mkDarwinHostTargets hostName)
         { }
-        (builtins.attrNames catalog.hosts);
+        (builtins.attrNames darwinCatalog.hosts);
+
+  homeConfigurations =
+    if username == null then
+      throw "facts.user.username is required (set in ~/.config/dotfiles/facts.nix or override inputs.local)"
+    else
+      lib.foldl'
+        (acc: hostName: acc // mkHomeManagerHostTargets hostName)
+        { }
+        (builtins.attrNames linuxCatalog.hosts);
 in
 {
-  inherit darwinConfigurations;
+  inherit darwinConfigurations homeConfigurations linuxHomeManagerModulePaths;
 }
