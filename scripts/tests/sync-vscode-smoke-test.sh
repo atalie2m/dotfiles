@@ -43,6 +43,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
+write_bash_script() {
+  local path="$1"
+  {
+    printf '#!%s\n' "${BASH:-bash}"
+    cat
+  } >"$path"
+}
+
 home_dir="$tmp_root/home"
 managed_dir="$tmp_root/managed"
 fake_bin_dir="$tmp_root/bin"
@@ -107,8 +115,7 @@ cat >"$managed_dir/web/default-disabled-extensions.txt" <<'EOF'
 ext.web
 EOF
 
-cat >"$fake_code" <<'EOF'
-#!/usr/bin/env bash
+write_bash_script "$fake_code" <<'EOF'
 set -euo pipefail
 
 state_dir="${FAKE_CODE_STATE_DIR:?}"
@@ -221,8 +228,7 @@ esac
 EOF
 chmod +x "$fake_code"
 
-cat >"$fake_sqlite" <<'EOF'
-#!/usr/bin/env bash
+write_bash_script "$fake_sqlite" <<'EOF'
 set -euo pipefail
 echo "FAIL: runtime unexpectedly invoked sqlite3" >&2
 exit 1
