@@ -26,95 +26,96 @@
 
         Use Git flake refs such as .#..., not path:$PWD#...
       ''
-    else flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-      imports = [ treefmt-nix.flakeModule git-hooks-nix.flakeModule ];
+    else
+      flake-parts.lib.mkFlake { inherit inputs; } {
+        systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
+        imports = [ treefmt-nix.flakeModule git-hooks-nix.flakeModule ];
 
-      perSystem = { pkgs, config, ... }: {
-        devShells.default = pkgs.mkShell {
-          name = "release-dev";
-          packages = with pkgs; [
-            zsh
-            devenv
-            process-compose
-            direnv
-            nix-direnv
-            just
-            pre-commit
-            lefthook
-            treefmt
-            editorconfig-checker
-            typos
-            lychee
-            reuse
-            taplo
-            yamlfmt
-            yamllint
-            check-jsonschema
-            shellcheck
-            shfmt
-            statix
-            deadnix
-            alejandra
-            nixfmt
-            nixpkgs-fmt
-            gitleaks
-            trufflehog
-            noseyparker
-            osv-scanner
-            semgrep
-            pip-audit
-            ssh-audit
-            minisign
-            actionlint
-            zizmor
-            git-cliff
-            goreleaser
-            cargo-dist
-            cargo-release
-            cosign
-            slsa-verifier
-            syft
-            grype
-            trivy
-            oras
-            crane
-            regctl
-            dive
-            gh
-          ];
-          shellHook = ''
-            ${config.pre-commit.installationScript}
-            if [[ -z "''${ZSH_VERSION:-}" && $- == *i* ]]; then
-              exec ${pkgs.zsh}/bin/zsh -i
-            fi
+        perSystem = { pkgs, config, ... }: {
+          devShells.default = pkgs.mkShell {
+            name = "release-dev";
+            packages = with pkgs; [
+              zsh
+              devenv
+              process-compose
+              direnv
+              nix-direnv
+              just
+              pre-commit
+              lefthook
+              treefmt
+              editorconfig-checker
+              typos
+              lychee
+              reuse
+              taplo
+              yamlfmt
+              yamllint
+              check-jsonschema
+              shellcheck
+              shfmt
+              statix
+              deadnix
+              alejandra
+              nixfmt
+              nixpkgs-fmt
+              gitleaks
+              trufflehog
+              noseyparker
+              osv-scanner
+              semgrep
+              pip-audit
+              ssh-audit
+              minisign
+              actionlint
+              zizmor
+              git-cliff
+              goreleaser
+              cargo-dist
+              cargo-release
+              cosign
+              slsa-verifier
+              syft
+              grype
+              trivy
+              oras
+              crane
+              regctl
+              dive
+              gh
+            ];
+            shellHook = ''
+              ${config.pre-commit.installationScript}
+              if [[ -z "''${ZSH_VERSION:-}" && $- == *i* ]]; then
+                exec ${pkgs.zsh}/bin/zsh -i
+              fi
+            '';
+          };
+          treefmt = { projectRootFile = "flake.nix"; programs = { nixpkgs-fmt.enable = true; shfmt.enable = true; taplo.enable = true; }; };
+          pre-commit.settings.hooks = {
+            actionlint.enable = true;
+            deadnix.enable = true;
+            editorconfig-checker.enable = true;
+            nixpkgs-fmt.enable = true;
+            shellcheck.enable = true;
+            shfmt.enable = true;
+            statix.enable = true;
+            taplo.enable = true;
+            typos.enable = true;
+          };
+          checks.flake-source-hygiene = pkgs.runCommand "flake-source-hygiene" { src = ./.; } ''
+            set -euo pipefail
+            for dir in target node_modules .git .direnv; do
+              if [ -e "$src/$dir" ]; then
+                echo "FAIL: $dir is present in the Nix flake source." >&2
+                echo "Use Git flake refs such as .#..., not path:\$PWD#..., and keep large generated directories ignored." >&2
+                exit 1
+              fi
+            done
+            touch "$out"
           '';
+          apps.format = { type = "app"; program = "${config.treefmt.build.wrapper}/bin/treefmt"; };
+          formatter = config.treefmt.build.wrapper;
         };
-        treefmt = { projectRootFile = "flake.nix"; programs = { nixpkgs-fmt.enable = true; shfmt.enable = true; taplo.enable = true; }; };
-        pre-commit.settings.hooks = {
-          actionlint.enable = true;
-          deadnix.enable = true;
-          editorconfig-checker.enable = true;
-          nixpkgs-fmt.enable = true;
-          shellcheck.enable = true;
-          shfmt.enable = true;
-          statix.enable = true;
-          taplo.enable = true;
-          typos.enable = true;
-        };
-        checks.flake-source-hygiene = pkgs.runCommand "flake-source-hygiene" { src = ./.; } ''
-          set -euo pipefail
-          for dir in target node_modules .git .direnv; do
-            if [ -e "$src/$dir" ]; then
-              echo "FAIL: $dir is present in the Nix flake source." >&2
-              echo "Use Git flake refs such as .#..., not path:\$PWD#..., and keep large generated directories ignored." >&2
-              exit 1
-            fi
-          done
-          touch "$out"
-        '';
-        apps.format = { type = "app"; program = "${config.treefmt.build.wrapper}/bin/treefmt"; };
-        formatter = config.treefmt.build.wrapper;
       };
-    };
 }
