@@ -59,6 +59,14 @@ run_shell_sync() {
   HOME="$shell_home" run_real bash "$SYNC_SCRIPT" shell "$@" --managed-dir "$shell_managed"
 }
 
+write_bash_script() {
+  local path="$1"
+  {
+    printf '#!%s\n' "${BASH:-bash}"
+    cat
+  } >"$path"
+}
+
 assert_wrapper_subcommand() {
   local script="$1"
   local expected="$2"
@@ -67,8 +75,7 @@ assert_wrapper_subcommand() {
   local fake_bin="$tmp_root/fake-dotfiles"
   local log_file
   log_file="$tmp_root/$(basename "$script").log"
-  cat >"$fake_bin" <<'EOF_FAKE_DOTFILES'
-#!/usr/bin/env bash
+  write_bash_script "$fake_bin" <<'EOF_FAKE_DOTFILES'
 set -euo pipefail
 printf '%s\n' "$*" >"${FAKE_DOTFILES_LOG_FILE:?}"
 EOF_FAKE_DOTFILES
@@ -202,8 +209,7 @@ fi
 
 empty_nix_bin="$tmp_root/empty-nix-bin"
 mkdir -p "$empty_nix_bin"
-cat >"$empty_nix_bin/nix" <<'EOF_EMPTY_NIX'
-#!/usr/bin/env bash
+write_bash_script "$empty_nix_bin/nix" <<'EOF_EMPTY_NIX'
 set -euo pipefail
 
 if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) && $4 == "--impure" && $5 == "--apply" ]]; then
@@ -261,8 +267,7 @@ fi
 
 failing_nix_bin="$tmp_root/failing-nix-bin"
 mkdir -p "$failing_nix_bin"
-cat >"$failing_nix_bin/nix" <<'EOF_FAILING_NIX'
-#!/usr/bin/env bash
+write_bash_script "$failing_nix_bin/nix" <<'EOF_FAILING_NIX'
 set -euo pipefail
 
 if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) && $4 == "--impure" && $5 == "--apply" ]]; then
@@ -325,8 +330,7 @@ fi
 fake_bin="$tmp_root/fake-bin"
 mkdir -p "$fake_bin"
 
-cat >"$fake_bin/nix" <<'EOF_NIX'
-#!/usr/bin/env bash
+write_bash_script "$fake_bin/nix" <<'EOF_NIX'
 set -euo pipefail
 
 if [[ $# -ge 4 && $1 == "eval" && $2 == "--raw" && $3 == "--impure" && $4 == "--expr" ]]; then
