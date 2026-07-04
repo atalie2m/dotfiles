@@ -80,7 +80,7 @@ if ! run_shell_sync_from_copy --check --item bash-rc >/dev/null; then
 fi
 
 tmp_mutated="$tmp_root/bashrc.mutated"
-/usr/bin/awk '
+awk '
   BEGIN { replaced = 0 }
   {
     if (replaced == 0) {
