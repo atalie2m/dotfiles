@@ -124,7 +124,7 @@ fi
 
 expected_order=$'cwd\tcurrent command\nworkspace\tworkspace command\nparent:..\tparent one command\nparent:../..\tparent two command\nglobal\tglobal command'
 actual_order="$(cut -f2,4 "$output_file")"
-if [[ "$actual_order" != "$expected_order" ]]; then
+if [[ $actual_order != "$expected_order" ]]; then
   echo "FAIL: unexpected context history order" >&2
   echo "expected:" >&2
   printf '%s\n' "$expected_order" >&2
