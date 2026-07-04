@@ -497,8 +497,9 @@ if (
   cat "$tmp_root/doctor-strict.err" >&2 || true
   exit 1
 fi
-if ! grep -Fq "warn  shell.sync: strict sync check skipped (pass --host to resolve target)" "$tmp_root/doctor-strict.out"; then
-  echo "FAIL: doctor --strict did not warn about skipped host-aware sync checks" >&2
+if ! grep -Fq "warn  shell.sync: strict sync check skipped (pass --host to resolve target)" "$tmp_root/doctor-strict.out" &&
+  ! grep -Fq "ok    shell.sync: skipped on non-Darwin host" "$tmp_root/doctor-strict.out"; then
+  echo "FAIL: doctor --strict did not record skipped host-aware sync checks" >&2
   cat "$tmp_root/doctor-strict.out" >&2 || true
   exit 1
 fi
