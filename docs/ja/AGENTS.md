@@ -61,6 +61,19 @@
 - Stock global bundle では project-pinned toolchain を有効化しません。`go`, `nodejs`, `terraform`, `opentofu` は host opt-in path を持たせず、project template / devShell 側に閉じます。`bun` だけを明示的な host opt-in 例外にします。
 - Template project は Git flake として document / guard してください。unfiltered `path:$PWD` ref を使う template instruction は追加しないでください。`target/`、`node_modules/`、`.git/`、`.direnv/` は ignore し、local source をコピーする箇所では source filter を使ってください。
 
+## Git 運用モデル
+
+- `main` は通常の protected integration line です。`maint/<series>` は protected maintenance line、`stabilize/<train>` は期限付き hardening train にだけ使います。
+- 変更単位は Pull Request です。branch 名は authority ではありません。
+- 人間の work branch には命名規則を置きません。予約 namespace 以外は human work branch です。
+- 予約 namespace は `main`, `maint/**`, `stabilize/**`, `svc/<principal-id>/**`, Dependabot refs（`dependabot/**`, `dependabot-*`, `dependabot_*`）, `gh-readonly-queue/**` です。
+- `svc/<principal-id>/**` は service principal の confinement であり、policy の根拠ではありません。suffix は writer の実装詳細です。
+- dotfiles には汎用 unattended task-agent credential を install しないでください。service branch には明示的な principal owner と inventory entry が必要です。
+- branch 名に date、run ID、owner、environment、provenance、producer、policy lane、release target、issue type を埋め込んだり、そこから読み取ったりしないでください。
+- 通常作業は短命の human work branch で PR を開き、squash merge 後に branch を削除します。
+- `develop`, `master`, `production`, `staging`, `env/**`, `release/**`, `bot/**`, `chg/**` は作らないでください。
+- merge は apply ではありません。`home-manager switch`、`darwin-rebuild switch`、`apply` はユーザーが明示的に求めた場合だけ実行します。
+
 ## テスト方針
 
 - `README.md`、`docs/`、`AGENTS.md`、`CLAUDE.md` は実際の runtime model と一致させてください。

@@ -44,20 +44,27 @@ source filters such as `lib.cleanSourceWith`, `builtins.path`, or
 
 ## Git Operating Model
 
-This repository uses trunk-based development with credential-class branch
-namespaces:
+This repository uses trunk-based development with PR-centered change
+governance:
 
-- `main`: protected trunk.
-- `supervised/**`: human or supervised-agent work.
-- `deps/**`: dependency automation.
+- `main`: normal protected integration line.
+- `maint/<series>`: protected maintenance lines, only when needed.
+- `stabilize/<train>`: short-lived hardening lines with an expiry.
+- `svc/<principal-id>/**`: confinement namespace for an approved service
+  principal.
+- `dependabot/**`, `dependabot-*`, `dependabot_*`: vendor-controlled
+  Dependabot refs.
+- `gh-readonly-queue/**`: GitHub merge queue internals.
+- everything else: human work branch with no naming convention.
 
-Only the first branch path segment is policy. Branch suffixes are writer-owned
-detail and are not provenance, ownership, run IDs, dates, environments, issue
-types, or release targets. See [`docs/git-branch-strategy.md`](docs/git-branch-strategy.md).
+Pull Requests are the change objects. Branch names are not authority; they are
+not provenance, ownership, run IDs, dates, environments, producers, policy
+lanes, issue types, or release targets. See
+[`docs/git-branch-strategy.md`](docs/git-branch-strategy.md).
 
-`unattended/**` is not a normal dotfiles namespace; do not install unattended
-task-agent credentials for this repository. Merge records desired userland
-configuration, but local activation remains a deliberate operator action.
+Do not install a general unattended task-agent credential for this repository.
+Merge records desired userland configuration, but local activation remains a
+deliberate operator action.
 
 ## Host Profiles
 

@@ -1,77 +1,110 @@
 # Git Branch Strategy
 
-This repository uses trunk-based development with credential-class branch
-namespaces.
+This repository uses trunk-based development with PR-centered change
+governance.
 
 ## Core Rule
 
-Branch names expose only the credential class in the first path segment.
-Everything after that segment is writer-owned detail.
+Pull requests are the system's change objects. Branch names are disposable ref
+handles, not authority.
 
-For this dotfiles repository, allowed branches are:
+```text
+Branch names are not authority.
+The pull request is the change object.
+The policy verdict is the control point.
+The merge gate is the enforcement point.
+Service namespaces are only confinement.
+```
+
+For this dotfiles repository, the ref classes are:
 
 ```text
 main
-supervised/**
-deps/**
+maint/<series>
+stabilize/<train>
+svc/<principal-id>/**
+dependabot/** | dependabot-* | dependabot_*
+gh-readonly-queue/**
+everything else = human work branch
 ```
 
 Meanings:
 
-- `main`: protected trunk.
-- `supervised/**`: pushed with a human or supervised-agent credential.
-- `deps/**`: pushed with a dependency automation credential.
+- `main`: the normal protected integration line.
+- `maint/<series>`: protected maintenance lines if this repository needs them.
+- `stabilize/<train>`: short-lived hardening lines with an expiry.
+- `svc/<principal-id>/**`: confinement namespace for an approved service
+  principal. The suffix is writer-owned detail and has no policy meaning.
+- `dependabot/**`, `dependabot-*`, and `dependabot_*`: vendor-controlled
+  Dependabot refs.
+- `gh-readonly-queue/**`: GitHub merge queue internals. Do not create, edit, or
+  garbage-collect these refs.
+- Everything else: human work branch. No human branch naming convention is
+  enforced.
 
-Policy reads only `supervised` or `deps`. A writer may choose any suffix shape
-that avoids collisions.
+There is no `chg/**` namespace.
 
-## No Unattended Agent Namespace
+## Dotfiles Service Principal Boundary
 
-Do not install unattended task-agent credentials for this repository.
-`unattended/**` is not a normal dotfiles namespace because this repo can affect
-the operator workstation, Home Manager state, and local tool behavior.
+This repository can affect the operator workstation, Home Manager state, and
+local tool behavior. Install service principals only when they have an explicit
+owner, inventory entry, and scoped write path.
 
-If an unattended change must be proposed, it should happen through an external
-reviewed handoff. A human or supervised agent then takes accountability by
-creating a `supervised/**` branch.
+Do not install a general unattended task-agent credential for dotfiles. If a
+machine-generated change is needed, prefer a reviewed handoff or an approved
+service principal under `svc/<principal-id>/**`.
 
-## Branch Suffixes Are Not Policy
+## Branch Names Are Not Policy Inputs
 
-Do not parse or enforce the branch suffix. Do not use branch names as:
+Policy lanes are derived from observed facts such as base branch, latest pusher
+principal, sponsor, reviews, diff paths and hunks, CODEOWNERS impact,
+principal inventory, and check results.
+
+Do not derive policy from:
+
+- branch suffix
+- human branch name
+- `feat`, `fix`, `chore`, or similar prefixes
+- producer self-reporting
+- PR label alone
+- PR body alone
+
+Do not encode or parse these values in branch names:
 
 - provenance
 - ownership
 - run IDs
 - dates
 - environment names
-- issue types
-- release targets
+- producer type
+- policy lane
+- issue type
+- release target
 
-Put those details in PR bodies, evidence files, workflow metadata, or release
-ledgers instead.
+Put those details in PR bodies, policy verdicts, evidence files, workflow
+metadata, release ledgers, or runtime state instead.
 
 ## Claim Flow
 
-Humans do not push to `unattended/**`. If an unattended branch exists elsewhere
-and a human takes responsibility for the diff, create a new supervised branch:
+Claim service-principal work by opening a new human PR. Do not keep pushing to
+the service namespace.
 
 ```sh
 git fetch origin
-git switch -c supervised/claim-dotfiles-fix origin/unattended/some-opaque-branch
-git push origin supervised/claim-dotfiles-fix
+git switch -c alice/dotfiles-manual-fix origin/svc/task-runner/some-opaque-branch
+git push origin alice/dotfiles-manual-fix
 ```
 
 The new PR records:
 
 ```text
 Claimed-from: #123
-Source-branch: unattended/some-opaque-branch
-Source-head: abcdef1234567890
+Original-principal: task-runner[bot]
 Claimed-by: @alice
-Claim-reason: human owner taking accountability for the diff
+Reason: human owner taking accountability for the diff
 ```
 
-Close the original unattended PR as claimed/superseded/do-not-merge.
+Close the original service-principal PR as claimed/superseded.
 
 ## Merge And Apply
 
@@ -80,17 +113,27 @@ configuration. `home-manager switch`, `darwin-rebuild switch`, or
 `nix run .#apply` remains a deliberate operator action unless the active task
 explicitly authorizes it.
 
-## Denylist Is Advisory
+## Reserved Names
 
-The policy is an allowlist:
+Human work branches are allowed by default, except for reserved namespaces and
+the migration blocklist:
 
 ```text
-main
-supervised/**
-deps/**
+master
+develop
+production
+staging
+env/**
+release/**
+bot/**
+svc/**
+maint/**
+stabilize/**
+gh-readonly-queue/**
+dependabot/**
+dependabot-*
+dependabot_*
 ```
 
-Names such as `develop`, `master`, `staging`, `production`, `prod`,
-`release/*`, `env/*`, `app-handoff/*`, `agent/*`, `feat/*`, `fix/*`,
-`chore/*`, and `unattended/*` are migration or error-message examples, not the
-policy mechanism.
+Use `maint/**` for long-lived maintenance and `stabilize/**` for short-lived
+hardening. Do not use environment branches.
