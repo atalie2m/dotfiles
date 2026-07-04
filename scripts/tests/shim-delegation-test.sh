@@ -33,9 +33,9 @@ chmod +x "$PROFILE_DOTFILES"
 run_wrapper() {
   local script="$1"
   shift
-  FAKE_DOTFILES_LOG_FILE="$LOG_FILE" \
+    FAKE_DOTFILES_LOG_FILE="$LOG_FILE" \
     DOTFILES_BIN="$FAKE_DOTFILES" \
-    bash "$script" "$@" >/dev/null
+    "$BASH" "$script" "$@" >/dev/null
 }
 
 assert_logged() {
@@ -75,7 +75,7 @@ run_wrapper "$ROOT/scripts/codex-slack-notification" --dry-run
 run_wrapper "$ROOT/scripts/agent-notifications-update" --no-install
 run_wrapper "$ROOT/scripts/codex-slack-update" --no-install
 FAKE_DOTFILES_LOG_FILE="$LOG_FILE" HOME="$PROFILE_HOME" PATH="/usr/bin:/bin" \
-  bash "$ROOT/scripts/codex-slack-notification" --dry-run >/dev/null
+  "$BASH" "$ROOT/scripts/codex-slack-notification" --dry-run >/dev/null
 
 assert_logged "apply --host own_mac --action build"
 assert_logged "update --host own_mac"
