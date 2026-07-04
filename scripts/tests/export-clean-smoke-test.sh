@@ -81,15 +81,15 @@ fi
 fake_git_dir="$tmp_root/fake-git"
 mkdir -p "$fake_git_dir"
 
-cat >"$fake_git_dir/git-missing" <<'EOF'
-#!/usr/bin/env bash
+cat >"$fake_git_dir/git-missing" <<EOF
+#!${BASH:-bash}
 echo "git: command not found" >&2
 exit 127
 EOF
 chmod +x "$fake_git_dir/git-missing"
 
 cat >"$fake_git_dir/git-refused" <<EOF
-#!/usr/bin/env bash
+#!${BASH:-bash}
 if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
   echo "fatal: detected dubious ownership in repository at '$ROOT'" >&2
   exit 128
