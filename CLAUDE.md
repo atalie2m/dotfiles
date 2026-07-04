@@ -31,6 +31,17 @@ This file provides repository guidance for coding agents working in this repo.
 - Keep shell limited to thin entrypoints or OS-leaf behavior.
 - Keep host truth centralized under `myconfig.hostContext.*`.
 - Keep docs accurate when public behavior changes.
+- Follow the Git branch strategy in `docs/git-branch-strategy.md`: `main` is
+  the only long-lived branch, `supervised/**` is for human or supervised-agent
+  work, and `deps/**` is for dependency automation.
+- Do not create or copy `unattended/**` branches in this repository. The
+  unattended task-agent credential should not be installed for dotfiles.
+- Read only the first branch segment as policy. Do not encode or parse dates,
+  run IDs, owners, environments, provenance, release targets, or issue types in
+  the branch suffix.
+- Merge does not mean apply. Do not run `home-manager switch`,
+  `darwin-rebuild switch`, or `nix run .#apply` unless the active task
+  explicitly authorizes local activation.
 
 ## Verification
 

@@ -18,6 +18,23 @@ It provides:
 
 - Nix(Lix or Determinate's vanilla)
 
+## Git Operating Model
+
+This repository uses trunk-based development with credential-class branch
+namespaces:
+
+- `main`: protected trunk.
+- `supervised/**`: human or supervised-agent work.
+- `deps/**`: dependency automation.
+
+Only the first branch path segment is policy. Branch suffixes are writer-owned
+detail and are not provenance, ownership, run IDs, dates, environments, issue
+types, or release targets. See [`docs/git-branch-strategy.md`](docs/git-branch-strategy.md).
+
+`unattended/**` is not a normal dotfiles namespace; do not install unattended
+task-agent credentials for this repository. Merge records desired userland
+configuration, but local activation remains a deliberate operator action.
+
 ## Profiles (Denix hosts/rices)
 
 This flake uses [Denix](https://github.com/yunfachi/denix) with Darwin-only host/rice trees:

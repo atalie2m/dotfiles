@@ -50,6 +50,28 @@ Local inputs live outside Git at `~/.config/dotfiles/`:
 - VS Code sync is implemented by the dedicated `dotfiles-sync-vscode` binary and dispatched through `dotfiles sync vscode`.
 - Group toggles are taxonomy; rollout belongs in explicit capability bundles.
 
+## Git Operating Model
+
+- `main` is the only long-lived branch.
+- Use branch namespaces by credential class: `supervised/**` for human or
+  supervised-agent credentials, and `deps/**` for dependency automation.
+- Do not install unattended task-agent credentials for this repository.
+  `unattended/**` is not a normal dotfiles namespace; if it appears, treat it
+  as a credential-scope problem instead of copying it.
+- Read only the first branch path segment as policy. Do not encode or parse
+  dates, run IDs, owners, environments, provenance, release targets, or issue
+  types in the branch suffix.
+- Use short-lived `supervised/**` branches for supervised work, open PRs,
+  squash-merge, and delete the branch after merge.
+- Do not recreate `develop`, `master`, release, staging, production,
+  environment, `agent/*`, `feat/*`, `fix/*`, or `chore/*` branches. Treat those
+  names as migration-era or external examples, not active policy.
+- Default-branch migration must preserve existing source SHAs with branch
+  rename or fast-forward. Do not squash an existing trunk into a new history.
+- Merge does not mean apply. Repository changes describe desired userland
+  configuration; `home-manager switch`, `darwin-rebuild switch`, or `apply`
+  remains a deliberate operator action unless the user explicitly asks for it.
+
 ## Testing Guidance
 
 - Keep `README.md`, `docs/`, `AGENTS.md`, and `CLAUDE.md` aligned with the actual runtime model.

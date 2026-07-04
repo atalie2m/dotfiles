@@ -26,7 +26,7 @@
             packages = [
               pkgs.zsh
               node
-              pkgs.nodePackages.pnpm
+              pkgs.pnpm
               pkgs.bun
               # Optional: Cloudflare Workers tooling.
               # Uncomment when this project needs wrangler.
