@@ -14,9 +14,6 @@ FAKE_DOTFILES="$TMP_ROOT/fake-dotfiles"
 LOG_FILE="$TMP_ROOT/delegation.log"
 PROFILE_HOME="$TMP_ROOT/profile-home"
 PROFILE_DOTFILES="$PROFILE_HOME/.nix-profile/bin/dotfiles"
-BASH_BIN_DIR="${BASH%/*}"
-DIRNAME_BIN="$(command -v dirname)"
-COREUTILS_BIN_DIR="${DIRNAME_BIN%/*}"
 
 cat >"$FAKE_DOTFILES" <<EOF_FAKE
 #!$BASH
@@ -26,10 +23,10 @@ EOF_FAKE
 chmod +x "$FAKE_DOTFILES"
 
 mkdir -p "$(dirname "$PROFILE_DOTFILES")"
-cat >"$PROFILE_DOTFILES" <<EOF_PROFILE
-#!$BASH
+cat >"$PROFILE_DOTFILES" <<'EOF_PROFILE'
+#!/usr/bin/env bash
 set -euo pipefail
-printf 'profile %s\n' "\$*" >>"\${FAKE_DOTFILES_LOG_FILE:?}"
+printf 'profile %s\n' "$*" >>"${FAKE_DOTFILES_LOG_FILE:?}"
 EOF_PROFILE
 chmod +x "$PROFILE_DOTFILES"
 
@@ -77,8 +74,8 @@ run_wrapper "$ROOT/scripts/dotfiles.sh" sync vscode --check --profile native
 run_wrapper "$ROOT/scripts/codex-slack-notification" --dry-run
 run_wrapper "$ROOT/scripts/agent-notifications-update" --no-install
 run_wrapper "$ROOT/scripts/codex-slack-update" --no-install
-FAKE_DOTFILES_LOG_FILE="$LOG_FILE" HOME="$PROFILE_HOME" PATH="$BASH_BIN_DIR:$COREUTILS_BIN_DIR:/usr/bin:/bin" \
-  "$BASH" "$ROOT/scripts/codex-slack-notification" --dry-run >/dev/null
+FAKE_DOTFILES_LOG_FILE="$LOG_FILE" HOME="$PROFILE_HOME" PATH="/usr/bin:/bin" \
+  bash "$ROOT/scripts/codex-slack-notification" --dry-run >/dev/null
 
 assert_logged "apply --host own_mac --action build"
 assert_logged "update --host own_mac"

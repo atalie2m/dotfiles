@@ -286,6 +286,10 @@ The stock catalog also installs workflow helpers such as `ghq`, `roots`,
 `ast-grep`, `sad`, `git-sizer`, `git-town`, `kondo`, `typos`, `taplo`, `actionlint`,
 `shellcheck`, `shfmt`, `yamllint`, `deadnix`, `statix`, `nix-diff`, `lychee`,
 `jless`, `mprocs`, and X.Org utilities such as `luit`, `xauth`, and `xprop`.
+Git config sets `ghq.root` to `~/src`, so `ghq get` places repositories under
+paths such as `~/src/github.com/<owner>/<repo>`. The repo-capsule `.bare` plus
+linked-worktree layout is an operator workflow layered on top of that root, not
+something `ghq` enforces.
 
 ### Shell sync (writable entrypoints)
 

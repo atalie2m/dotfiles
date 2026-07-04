@@ -27,7 +27,7 @@ JSON
 
 shim_output=$(
   HOME="$TMP_HOME" DOTFILES_BIN="$DOTFILES_BIN" \
-    "${BASH:-bash}" "$ROOT/scripts/codex-slack-notification" --dry-run <<'JSON'
+    "$ROOT/scripts/codex-slack-notification" --dry-run <<'JSON'
 {
   "hook_event_name": "Stop",
   "cwd": "/tmp/shim-project",

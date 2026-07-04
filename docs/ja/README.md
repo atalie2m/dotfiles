@@ -277,6 +277,10 @@ stock catalog は `ghq`, `roots`, `ast-grep`, `sad`, `git-sizer`, `git-town`,
 `deadnix`, `statix`, `nix-diff`, `lychee`, `jless`, `mprocs` のような
 workflow helper と、`luit`, `xauth`, `xprop` などの X.Org utility も
 install します。
+Git config は `ghq.root` を `~/src` に設定するため、`ghq get` は
+`~/src/github.com/<owner>/<repo>` のような path に repository を配置します。
+repo-capsule の `.bare` + linked worktree layout はその root の上に重ねる
+operator workflow であり、`ghq` が強制するものではありません。
 
 ### shell sync（writable entrypoint）
 

@@ -15,24 +15,24 @@ LOG_FILE="$TMP_ROOT/fake-zsh.env"
 mkdir -p "$HOME_DIR/.nix"
 touch "$HOME_DIR/.nix/.zshrc"
 
-cat >"$FAKE_ZSH" <<EOF_FAKE_ZSH
-#!$BASH
+cat >"$FAKE_ZSH" <<'EOF_FAKE_ZSH'
+#!/usr/bin/env bash
 set -euo pipefail
 {
   printf 'args='
-  printf '<%s>' "\$@"
+  printf '<%s>' "$@"
   printf '\n'
-  printf 'ZDOTDIR=%s\n' "\${ZDOTDIR-}"
-  printf 'USER_ZDOTDIR=%s\n' "\${USER_ZDOTDIR-}"
-  printf 'DOTFILES_LAUNCHER_TEST_VAR=%s\n' "\${DOTFILES_LAUNCHER_TEST_VAR-}"
-  printf 'PATH=%s\n' "\${PATH-}"
-} >"\${DOTFILES_LAUNCHER_LOG:?}"
+  printf 'ZDOTDIR=%s\n' "${ZDOTDIR-}"
+  printf 'USER_ZDOTDIR=%s\n' "${USER_ZDOTDIR-}"
+  printf 'DOTFILES_LAUNCHER_TEST_VAR=%s\n' "${DOTFILES_LAUNCHER_TEST_VAR-}"
+  printf 'PATH=%s\n' "${PATH-}"
+} >"${DOTFILES_LAUNCHER_LOG:?}"
 EOF_FAKE_ZSH
 chmod +x "$FAKE_ZSH"
 
 fail() {
   echo "FAIL: $*" >&2
-  if [[ -f $LOG_FILE ]]; then
+  if [[ -f "$LOG_FILE" ]]; then
     cat "$LOG_FILE" >&2
   fi
   exit 1
@@ -61,7 +61,7 @@ assert_path_starts_with() {
 run_launcher() {
   local -a extra_env=()
 
-  while [[ $# -gt 0 && $1 == *=* ]]; do
+  while [[ "$#" -gt 0 && "$1" == *=* ]]; do
     extra_env+=("$1")
     shift
   done

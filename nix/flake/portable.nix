@@ -409,6 +409,16 @@ let
         touch "$out"
       '';
 
+      emacsPlusNativeCompEnvSmoke = pkgs.runCommand "emacs-plus-native-comp-env-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/emacs-plus-native-comp-env-smoke-test.sh
+        touch "$out"
+      '';
+
       matrixToolsSmoke = pkgs.runCommand "matrix-tools-smoke-test"
         {
           nativeBuildInputs = [ pkgs.bash dotfilesPackage ];
@@ -578,17 +588,6 @@ let
         export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
         export DOTFILES_ROOT="$src"
         bash scripts/tests/codex-slack-notification-test.sh
-        touch "$out"
-      '';
-    }
-    // nixLib.optionalAttrs pkgs.stdenv.isDarwin {
-      emacsPlusNativeCompEnvSmoke = pkgs.runCommand "emacs-plus-native-comp-env-smoke-test"
-        {
-          nativeBuildInputs = [ pkgs.bash ];
-          src = repoPaths.root;
-        } ''
-        cd "$src"
-        bash scripts/tests/emacs-plus-native-comp-env-smoke-test.sh
         touch "$out"
       '';
     }

@@ -7,4 +7,4 @@ if [[ -z ${DOTFILES_BIN:-} && -n ${HOME:-} && -x "$HOME/.nix-profile/bin/dotfile
   export DOTFILES_BIN="$HOME/.nix-profile/bin/dotfiles"
 fi
 
-exec "${BASH:-bash}" "$SCRIPT_DIR/lib/exec-dotfiles-subcommand.sh" agent-notify codex "$@"
+exec bash "$SCRIPT_DIR/lib/exec-dotfiles-subcommand.sh" agent-notify codex "$@"

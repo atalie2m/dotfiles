@@ -51,6 +51,7 @@
     let
       fullName = myconfig.hostContext.user.git.fullName;
       email = myconfig.hostContext.user.git.email;
+      homeDir = myconfig.hostContext.user.homeDirectory;
       signingKey =
         if cfg.signingKey != null then
           cfg.signingKey
@@ -96,6 +97,7 @@
             pull.rebase = true;
             push.autoSetupRemote = true;
             core.editor = cfg.editorCmd;
+            ghq.root = "${homeDir}/src";
             alias = cfg.aliases;
           }
           (lib.mkIf difftasticEnabled {

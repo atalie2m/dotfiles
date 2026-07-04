@@ -24,6 +24,7 @@
     sqlite
     mysql84
     mariadb
+    minio
     mailpit
     atlas
     goose
