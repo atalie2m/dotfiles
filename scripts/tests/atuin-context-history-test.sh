@@ -6,26 +6,26 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 HISTORY_ZSH="$ROOT/apps/shell/atuin-context-history.zsh"
 
 if [[ ! -f $HISTORY_ZSH ]]; then
-	echo "test: Atuin context history script not found: $HISTORY_ZSH" >&2
-	exit 1
+  echo "test: Atuin context history script not found: $HISTORY_ZSH" >&2
+  exit 1
 fi
 
 zsh_bin="${ZSH_BIN:-$(command -v zsh || true)}"
 bash_bin="${BASH_BIN:-$(command -v bash || true)}"
 
 if [[ -z $zsh_bin ]]; then
-	echo "test: zsh not found" >&2
-	exit 1
+  echo "test: zsh not found" >&2
+  exit 1
 fi
 if [[ -z $bash_bin ]]; then
-	echo "test: bash not found" >&2
-	exit 1
+  echo "test: bash not found" >&2
+  exit 1
 fi
 
 tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/atuin-context-history.XXXXXX")"
 tmp_root="$(cd "$tmp_root" && pwd)"
 cleanup() {
-	rm -rf "$tmp_root"
+  rm -rf "$tmp_root"
 }
 trap cleanup EXIT
 
@@ -111,37 +111,37 @@ printf 'test: running Atuin context history test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
 if ! env -i \
-	HOME="$home_dir" \
-	PATH="$fake_bin:/usr/bin:/bin" \
-	DOTFILES_TEST_CWD="$cwd" \
-	DOTFILES_TEST_HISTORY_ZSH="$HISTORY_ZSH" \
-	DOTFILES_TEST_STATE_DIR="$state_dir" \
-	DOTFILES_TEST_OUTPUT="$output_file" \
-	"$zsh_bin" "$runner"; then
-	echo "FAIL: zsh candidate builder failed" >&2
-	exit 1
+  HOME="$home_dir" \
+  PATH="$fake_bin:/usr/bin:/bin" \
+  DOTFILES_TEST_CWD="$cwd" \
+  DOTFILES_TEST_HISTORY_ZSH="$HISTORY_ZSH" \
+  DOTFILES_TEST_STATE_DIR="$state_dir" \
+  DOTFILES_TEST_OUTPUT="$output_file" \
+  "$zsh_bin" "$runner"; then
+  echo "FAIL: zsh candidate builder failed" >&2
+  exit 1
 fi
 
 expected_order=$'cwd\tcurrent command\nworkspace\tworkspace command\nparent:..\tparent one command\nparent:../..\tparent two command\nglobal\tglobal command'
 actual_order="$(cut -f2,4 "$output_file")"
 if [[ "$actual_order" != "$expected_order" ]]; then
-	echo "FAIL: unexpected context history order" >&2
-	echo "expected:" >&2
-	printf '%s\n' "$expected_order" >&2
-	echo "actual:" >&2
-	printf '%s\n' "$actual_order" >&2
-	exit 1
+  echo "FAIL: unexpected context history order" >&2
+  echo "expected:" >&2
+  printf '%s\n' "$expected_order" >&2
+  echo "actual:" >&2
+  printf '%s\n' "$actual_order" >&2
+  exit 1
 fi
 
 if grep -Fq "duplicate command" "$output_file"; then
-	echo "FAIL: duplicate lower-priority command leaked into candidates" >&2
-	cat "$output_file" >&2
-	exit 1
+  echo "FAIL: duplicate lower-priority command leaked into candidates" >&2
+  cat "$output_file" >&2
+  exit 1
 fi
 
 if [[ $(cat "$state_dir/command-000003") != "parent one command" ]]; then
-	echo "FAIL: raw command payload was not written by candidate id" >&2
-	exit 1
+  echo "FAIL: raw command payload was not written by candidate id" >&2
+  exit 1
 fi
 
 echo "PASS: Atuin context history"

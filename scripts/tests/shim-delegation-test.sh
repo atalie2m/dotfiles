@@ -6,7 +6,7 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/shim-delegation.XXXXXX")"
 
 cleanup() {
-	rm -rf "$TMP_ROOT"
+  rm -rf "$TMP_ROOT"
 }
 trap cleanup EXIT
 
@@ -34,32 +34,32 @@ EOF_PROFILE
 chmod +x "$PROFILE_DOTFILES"
 
 run_wrapper() {
-	local script="$1"
-	shift
-	FAKE_DOTFILES_LOG_FILE="$LOG_FILE" \
-		DOTFILES_BIN="$FAKE_DOTFILES" \
-		"$BASH" "$script" "$@" >/dev/null
+  local script="$1"
+  shift
+  FAKE_DOTFILES_LOG_FILE="$LOG_FILE" \
+    DOTFILES_BIN="$FAKE_DOTFILES" \
+    "$BASH" "$script" "$@" >/dev/null
 }
 
 assert_logged() {
-	local expected="$1"
-	if ! grep -Fqx -- "$expected" "$LOG_FILE"; then
-		echo "FAIL: wrapper delegation changed: $expected" >&2
-		cat "$LOG_FILE" >&2 || true
-		exit 1
-	fi
+  local expected="$1"
+  if ! grep -Fqx -- "$expected" "$LOG_FILE"; then
+    echo "FAIL: wrapper delegation changed: $expected" >&2
+    cat "$LOG_FILE" >&2 || true
+    exit 1
+  fi
 }
 
 assert_logged_count() {
-	local expected="$1"
-	local count="$2"
-	local actual
-	actual=$(grep -Fxc -- "$expected" "$LOG_FILE")
-	if [[ $actual != "$count" ]]; then
-		echo "FAIL: wrapper delegation count changed: $expected ($actual != $count)" >&2
-		cat "$LOG_FILE" >&2 || true
-		exit 1
-	fi
+  local expected="$1"
+  local count="$2"
+  local actual
+  actual=$(grep -Fxc -- "$expected" "$LOG_FILE")
+  if [[ $actual != "$count" ]]; then
+    echo "FAIL: wrapper delegation count changed: $expected ($actual != $count)" >&2
+    cat "$LOG_FILE" >&2 || true
+    exit 1
+  fi
 }
 
 run_wrapper "$ROOT/scripts/apply.sh" --host own_mac --action build
@@ -78,7 +78,7 @@ run_wrapper "$ROOT/scripts/codex-slack-notification" --dry-run
 run_wrapper "$ROOT/scripts/agent-notifications-update" --no-install
 run_wrapper "$ROOT/scripts/codex-slack-update" --no-install
 FAKE_DOTFILES_LOG_FILE="$LOG_FILE" HOME="$PROFILE_HOME" PATH="$BASH_BIN_DIR:$COREUTILS_BIN_DIR:/usr/bin:/bin" \
-	"$BASH" "$ROOT/scripts/codex-slack-notification" --dry-run >/dev/null
+  "$BASH" "$ROOT/scripts/codex-slack-notification" --dry-run >/dev/null
 
 assert_logged "apply --host own_mac --action build"
 assert_logged "update --host own_mac"
