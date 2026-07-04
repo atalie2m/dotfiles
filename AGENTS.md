@@ -63,22 +63,34 @@ Local inputs live outside Git at `~/.config/dotfiles/`:
 
 ## Git Operating Model
 
-- `main` is the only long-lived branch.
-- Use branch namespaces by credential class: `supervised/**` for human or
-  supervised-agent credentials, and `deps/**` for dependency automation.
-- Do not install unattended task-agent credentials for this repository.
-  `unattended/**` is not a normal dotfiles namespace; if it appears, treat it
-  as a credential-scope problem instead of copying it.
-- Read only the first branch path segment as policy. Do not encode or parse
-  dates, run IDs, owners, environments, provenance, release targets, or issue
-  types in the branch suffix.
-- Use short-lived `supervised/**` branches for supervised work, open PRs,
-  squash-merge, and delete the branch after merge.
-- Do not recreate `develop`, `master`, release, staging, production,
-  environment, `agent/*`, `feat/*`, `fix/*`, or `chore/*` branches. Treat those
-  names as migration-era or external examples, not active policy.
+- `main` is the normal protected integration line. `maint/<series>` is allowed
+  only for protected maintenance lines; `stabilize/<train>` is allowed only for
+  short-lived hardening trains with an expiry.
+- Pull Requests are the change objects. Branch names are not authority.
+- Human work branches have no naming convention. Everything outside reserved
+  namespaces is human work.
+- Reserved namespaces are `main`, `maint/**`, `stabilize/**`,
+  `svc/<principal-id>/**`, Dependabot refs (`dependabot/**`,
+  `dependabot-*`, `dependabot_*`), and `gh-readonly-queue/**`.
+- `svc/<principal-id>/**` is only a confinement namespace for an approved
+  service principal. The suffix is writer-owned detail and is not a policy
+  signal.
+- Do not install a general unattended task-agent credential for this
+  repository. If a service branch appears without an explicit owner and
+  inventory entry, treat it as a credential-scope problem instead of copying
+  it.
+- Do not encode or parse dates, run IDs, owners, environments, provenance,
+  producers, policy lanes, release targets, or issue types in branch names.
+- Use short-lived human work branches, open PRs, squash-merge, and delete the
+  branch after merge.
+- Do not recreate `develop`, `master`, `production`, `staging`, `env/**`,
+  `release/**`, `bot/**`, or `chg/**` branches. Treat those names as reserved
+  or migration-era examples, not active policy.
 - Default-branch migration must preserve existing source SHAs with branch
   rename or fast-forward. Do not squash an existing trunk into a new history.
+- The merge authority is the `main` / `maint/**` gate plus required CI and the
+  `policy/verdict` check when installed. Service namespaces are defense in
+  depth.
 - Merge does not mean apply. Repository changes describe desired userland
   configuration; `home-manager switch`, `darwin-rebuild switch`, or `apply`
   remains a deliberate operator action unless the user explicitly asks for it.

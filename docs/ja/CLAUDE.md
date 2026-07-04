@@ -39,6 +39,10 @@
 - public behavior が変わったら docs を正確に更新してください。
 - project-pinned toolchain は stock global bundle に入れません。`go`, `nodejs`, `terraform`, `opentofu` は host opt-in path を持たせず、project template / devShell 側で version を固定します。`bun` だけを明示的な host opt-in 例外にします。
 - template は Git-flake-first に保ってください。unfiltered `path:$PWD` instruction は追加せず、`target/`、`node_modules/`、`.git/`、`.direnv/` は ignore と source filter で flake source から外します。
+- Git branch 戦略は `docs/git-branch-strategy.md` に従ってください。変更単位は Pull Request であり、branch 名は authority ではありません。
+- 人間の work branch には命名規則を置きません。`main`, `maint/**`, `stabilize/**`, `svc/<principal-id>/**`, Dependabot refs, `gh-readonly-queue/**` は予約 namespace です。
+- dotfiles には汎用 unattended task-agent credential を install しないでください。service branch には明示的な principal owner と inventory entry が必要です。
+- branch 名に date、run ID、owner、environment、provenance、producer、policy lane、release target、issue type を埋め込んだり、そこから読み取ったりしないでください。
 
 ## 検証
 

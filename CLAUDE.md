@@ -39,14 +39,16 @@ This file provides repository guidance for coding agents working in this repo.
 - Keep docs accurate when public behavior changes.
 - Keep project-pinned toolchains out of stock global bundles. `go`, `nodejs`, `terraform`, and `opentofu` must stay in project templates/devShells with no host opt-in path; `bun` is the only explicit host opt-in exception.
 - Keep templates Git-flake-first: no unfiltered `path:$PWD` instructions, and keep `target/`, `node_modules/`, `.git/`, and `.direnv/` out of flake source through ignores and source filters.
-- Follow the Git branch strategy in `docs/git-branch-strategy.md`: `main` is
-  the only long-lived branch, `supervised/**` is for human or supervised-agent
-  work, and `deps/**` is for dependency automation.
-- Do not create or copy `unattended/**` branches in this repository. The
-  unattended task-agent credential should not be installed for dotfiles.
-- Read only the first branch segment as policy. Do not encode or parse dates,
-  run IDs, owners, environments, provenance, release targets, or issue types in
-  the branch suffix.
+- Follow the Git branch strategy in `docs/git-branch-strategy.md`: Pull
+  Requests are the change objects, branch names are not authority, and human
+  work branches have no naming convention.
+- Use reserved namespaces only for their intended purpose: `main`,
+  `maint/**`, `stabilize/**`, `svc/<principal-id>/**`, Dependabot refs, and
+  `gh-readonly-queue/**`.
+- Do not install a general unattended task-agent credential for dotfiles. A
+  service branch needs an explicit principal owner and inventory entry.
+- Do not encode or parse dates, run IDs, owners, environments, provenance,
+  producers, policy lanes, release targets, or issue types in branch names.
 - Merge does not mean apply. Do not run `home-manager switch`,
   `darwin-rebuild switch`, or `nix run .#apply` unless the active task
   explicitly authorizes local activation.

@@ -41,6 +41,28 @@ local project source を consume する場合は `lib.cleanSourceWith`、`builti
 
 - Nix（Lix または Determinate の vanilla）
 
+## Git 運用モデル
+
+この repository は trunk-based development と PR-centered change
+governance で運用します。
+
+- `main`: 通常の protected integration line
+- `maint/<series>`: 必要な場合だけ使う protected maintenance line
+- `stabilize/<train>`: 期限付きの short-lived hardening line
+- `svc/<principal-id>/**`: 承認済み service principal の confinement
+- `dependabot/**`, `dependabot-*`, `dependabot_*`: Dependabot の vendor refs
+- `gh-readonly-queue/**`: GitHub merge queue 内部 refs
+- その他すべて: 命名規則なしの human work branch
+
+変更単位は Pull Request です。branch 名は authority ではなく、provenance、
+owner、run ID、date、environment、producer、policy lane、issue type、
+release target ではありません。詳細は
+[`docs/git-branch-strategy.md`](../git-branch-strategy.md) を参照してください。
+
+dotfiles には汎用 unattended task-agent credential を install しません。merge
+は desired userland configuration の記録であり、local activation は明示的な
+operator action です。
+
 ## Host profile
 
 この flake は repo 内の catalog で host/profile target を管理します。
