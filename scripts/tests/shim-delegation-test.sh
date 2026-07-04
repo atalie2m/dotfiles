@@ -15,18 +15,18 @@ LOG_FILE="$TMP_ROOT/delegation.log"
 PROFILE_HOME="$TMP_ROOT/profile-home"
 PROFILE_DOTFILES="$PROFILE_HOME/.nix-profile/bin/dotfiles"
 
-cat >"$FAKE_DOTFILES" <<'EOF_FAKE'
-#!/usr/bin/env bash
+cat >"$FAKE_DOTFILES" <<EOF_FAKE
+#!$BASH
 set -euo pipefail
-printf '%s\n' "$*" >>"${FAKE_DOTFILES_LOG_FILE:?}"
+printf '%s\n' "\$*" >>"\${FAKE_DOTFILES_LOG_FILE:?}"
 EOF_FAKE
 chmod +x "$FAKE_DOTFILES"
 
 mkdir -p "$(dirname "$PROFILE_DOTFILES")"
-cat >"$PROFILE_DOTFILES" <<'EOF_PROFILE'
-#!/usr/bin/env bash
+cat >"$PROFILE_DOTFILES" <<EOF_PROFILE
+#!$BASH
 set -euo pipefail
-printf 'profile %s\n' "$*" >>"${FAKE_DOTFILES_LOG_FILE:?}"
+printf 'profile %s\n' "\$*" >>"\${FAKE_DOTFILES_LOG_FILE:?}"
 EOF_PROFILE
 chmod +x "$PROFILE_DOTFILES"
 
