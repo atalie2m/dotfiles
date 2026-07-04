@@ -2,7 +2,7 @@ local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 local config_lockfile = vim.fn.stdpath("config") .. "/lazy-lock.json"
 local state_lockfile = vim.fn.stdpath("state") .. "/lazy-lock.json"
 
-if not vim.uv.fs_stat(lazypath) then
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
   local url = "https://github.com/folke/lazy.nvim.git"
   local clone_result = vim.fn.system({
     "git",
@@ -50,7 +50,27 @@ end
 
 require("lazy").setup({
   spec = {
+    { "LazyVim/LazyVim", import = "lazyvim.plugins" },
+    { import = "lazyvim.plugins.extras.editor.snacks_picker" },
+    { import = "lazyvim.plugins.extras.editor.snacks_explorer" },
+    { import = "lazyvim.plugins.extras.editor.dial" },
+    { import = "lazyvim.plugins.extras.editor.inc-rename" },
+    { import = "lazyvim.plugins.extras.coding.yanky" },
+    { import = "lazyvim.plugins.extras.coding.mini-surround" },
+    { import = "lazyvim.plugins.extras.ui.edgy" },
+    { import = "lazyvim.plugins.extras.formatting.prettier" },
+    { import = "lazyvim.plugins.extras.lang.typescript" },
+    { import = "lazyvim.plugins.extras.lang.python" },
+    { import = "lazyvim.plugins.extras.lang.rust" },
+    { import = "lazyvim.plugins.extras.lang.json" },
+    { import = "lazyvim.plugins.extras.lang.markdown" },
+    { import = "lazyvim.plugins.extras.lang.yaml" },
+    { import = "lazyvim.plugins.extras.ai.avante" },
     { import = "plugins" },
+  },
+  defaults = {
+    lazy = false,
+    version = false,
   },
   lockfile = lockfile,
   checker = {
@@ -61,7 +81,10 @@ require("lazy").setup({
     notify = false,
   },
   install = {
-    colorscheme = { "habamax" },
+    colorscheme = { "catppuccin", "habamax" },
+  },
+  rocks = {
+    enabled = false,
   },
   performance = {
     rtp = {

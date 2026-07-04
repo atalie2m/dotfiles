@@ -1,11 +1,11 @@
-{ delib, ... }:
+{ dotmod, config, ... }:
 
 # Core CLI tool group
 
-delib.module {
-  name = "tools.core";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.core";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 }

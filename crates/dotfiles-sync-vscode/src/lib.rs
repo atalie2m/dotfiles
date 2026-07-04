@@ -28,6 +28,7 @@ pub fn main() {
 pub fn run() -> Result<(), String> {
     let cli_args = infra::cli::parse_args()?;
     let context = infra::context::build_context(cli_args)?;
+    let mut prepared_apply_run = false;
 
     let mut summary = Summary::default();
     let managed_profiles = app::apply::list_managed_profiles(&context.managed_dir)?;
@@ -41,11 +42,15 @@ pub fn run() -> Result<(), String> {
         summary.checked += 1;
 
         let profile_name = infra::paths::profile_display_name(&profile_dir_name);
-        let desired_settings = domain::settings::build_desired_settings(&context, &profile_dir_name)?;
+        let desired_settings =
+            domain::settings::build_desired_settings(&context, &profile_dir_name)?;
         let desired_extensions =
             infra::extensions::build_desired_extensions(&context, &profile_dir_name)?;
         let desired_default_disabled =
-            infra::extensions::build_desired_default_disabled_extensions(&context, &profile_dir_name)?;
+            infra::extensions::build_desired_default_disabled_extensions(
+                &context,
+                &profile_dir_name,
+            )?;
 
         let plan = domain::model::ProfilePlan {
             profile_dir_name: profile_dir_name.clone(),
@@ -83,21 +88,33 @@ pub fn run() -> Result<(), String> {
             match eval.status {
                 ProfileStatus::InSync => {}
                 ProfileStatus::Missing | ProfileStatus::NeedsApply => {
-                    if app::apply::apply_profile(&context, &plan).is_ok() {
-                        let post = app::planner::classify_profile(&context, &plan)?;
-                        if post.status == ProfileStatus::InSync {
-                            summary.applied += 1;
-                        } else {
+                    if !prepared_apply_run {
+                        app::apply::prepare_apply_run(&context)?;
+                        prepared_apply_run = true;
+                    }
+
+                    match app::apply::apply_profile(&context, &plan) {
+                        Ok(()) => {
+                            let post = app::planner::classify_profile(&context, &plan)?;
+                            if post.status == ProfileStatus::InSync {
+                                summary.applied += 1;
+                            } else {
+                                summary.errors += 1;
+                                log(&format!(
+                                    "apply failed to converge '{}': status={} reason={}",
+                                    plan.profile_dir_name,
+                                    post.status.as_str(),
+                                    post.reason
+                                ));
+                            }
+                        }
+                        Err(err) => {
                             summary.errors += 1;
                             log(&format!(
-                                "apply failed to converge '{}': status={}",
-                                plan.profile_dir_name,
-                                post.status.as_str()
+                                "apply failed for '{}': {}",
+                                plan.profile_dir_name, err
                             ));
                         }
-                    } else {
-                        summary.errors += 1;
-                        log(&format!("apply failed for '{}'", plan.profile_dir_name));
                     }
                 }
                 ProfileStatus::Invalid => {

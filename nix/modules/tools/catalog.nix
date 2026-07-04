@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, dotlib, pkgs, repoPaths, ... }:
 
 let
   toolCatalog = import (repoPaths.catalog + "/tools/nixpkgs.nix");
@@ -13,28 +13,29 @@ let
       inherit pkgs systemName spec;
     };
 
-  mkToolModule = toolName: spec:
+  mkToolModule = catalogName: spec:
     let
+      toolName = spec.tool or catalogName;
       toolKey = "${spec.group}.${toolName}";
       supportedSystems = spec.systems or [ "darwin" "linux" ];
       package = resolvePkg spec;
       isSupportedSystem = builtins.elem systemName supportedSystems;
     in
-    delib.module {
-      name = "tools.${spec.group}.${toolName}";
+    (dotmod.mkModule { inherit config; }) {
+      path = "tools.${spec.group}.${toolName}";
 
-      options = with delib; moduleOptions {
+      options = with dotmod; moduleOptions {
         enable = boolOption false;
       };
 
-      myconfig.ifEnabled = { ... }:
+      myconfigOnEnable = { ... }:
         lib.mkMerge [
           (lib.optionalAttrs (spec ? unfree && spec.unfree != [ ]) (
             dotlib.requireUnfree spec.unfree
           ))
         ];
 
-      home.ifEnabled = { ... }: {
+      homeOnEnable = { ... }: {
         assertions = lib.optional (isSupportedSystem && package == null) {
           assertion = false;
           message = dotlib.nixCatalogFailureMessage {

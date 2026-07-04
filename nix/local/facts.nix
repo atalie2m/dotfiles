@@ -1,8 +1,10 @@
 {
   user = {
     username = "public";
-    fullName = "Public Example";
-    email = "public@example.invalid";
+    git = {
+      fullName = "Public Example";
+      email = "public@example.invalid";
+    };
     stateVersion = {
       home = "25.11";
       darwin = 6;
@@ -10,22 +12,20 @@
   };
 
   machines = {
-    pro_mac = {
-      computerName = "Public Pro Mac";
-      localHostName = "public-pro-mac";
-      hostName = "public-pro-mac";
+    own_mac = {
+      computerName = "Public Own Mac";
+      localHostName = "public-own-mac";
+      hostName = "public-own-mac";
       domain = "local";
     };
-    ultra_mac = {
-      computerName = "Public Ultra Mac";
-      localHostName = "public-ultra-mac";
-      hostName = "public-ultra-mac";
+    work_mac = {
+      computerName = "Public Work Mac";
+      localHostName = "public-work-mac";
+      hostName = "public-work-mac";
       domain = "local";
     };
-    minimal_mac = {
-      computerName = "Public Minimal Mac";
-      localHostName = "public-minimal-mac";
-      hostName = "public-minimal-mac";
+    linux_workbench = {
+      hostName = "public-linux-workbench";
       domain = "local";
     };
   };

@@ -1,3 +1,5 @@
+[日本語版はこちら](ja/homebrew-policy.md)
+
 # Homebrew Policy
 
 This document defines package-source boundaries for this dotfiles flake.
@@ -34,3 +36,7 @@ This document defines package-source boundaries for this dotfiles flake.
 
 1. Cloudflare `wrangler`: prefer Nix (`home-manager` or project `flake.nix`) as the default source.
 2. Keep Homebrew `wrangler` only when Nix packaging is unusable for your workflow.
+3. `Claude Code`: use the latest-first Homebrew cask (`claude-code@latest`) through `tools.aiCodingAgent.claudeCode`.
+4. `Goneovim`: use the repo Nix package from the upstream Darwin release instead of the Homebrew cask because the cask depends on Homebrew `neovim` and is scheduled for disablement after its Gatekeeper deprecation.
+5. `Sourcery`: the stock profile may enable the tool toggle, but the Homebrew formula is emitted only when runtime facts report a full Xcode.app build environment.
+6. `Mosh`: on Darwin, use the Homebrew `mosh` formula so `mosh-server` has a stable macOS firewall-facing runtime surface; the repo still installs a `mosh-server` profile wrapper for non-interactive SSH bootstrap discovery.

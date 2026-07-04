@@ -1,12 +1,46 @@
 use crate::commands::{SyncArgs, SyncSurface};
+use dotfiles_core::emacs_sync;
+use dotfiles_core::neovim_sync;
 use dotfiles_core::shell_sync;
-use dotfiles_core::support::{exit_with_status, find_in_path, repo_root, run_command_status};
+use dotfiles_core::support::{
+    exit_with_status, find_in_path, is_executable_file, repo_root, run_command_status,
+};
 use std::env;
 use std::path::PathBuf;
 use std::process::{self, Command};
 
 pub(crate) fn command_sync(args: &SyncArgs) -> Result<(), String> {
     match args.surface {
+        SyncSurface::Emacs => {
+            let result = emacs_sync::run_cli(&args.args)?;
+            let effective = if args.args.iter().any(|arg| arg == "--apply") {
+                result.exit_code(emacs_sync::EmacsSyncMode::Apply)
+            } else if args.args.iter().any(|arg| arg == "--adopt") {
+                result.exit_code(emacs_sync::EmacsSyncMode::Adopt)
+            } else {
+                result.exit_code(emacs_sync::EmacsSyncMode::Check)
+            };
+            if effective == 0 {
+                Ok(())
+            } else {
+                process::exit(effective)
+            }
+        }
+        SyncSurface::Neovim => {
+            let result = neovim_sync::run_cli(&args.args)?;
+            let effective = if args.args.iter().any(|arg| arg == "--apply") {
+                result.exit_code(neovim_sync::NeovimSyncMode::Apply)
+            } else if args.args.iter().any(|arg| arg == "--adopt") {
+                result.exit_code(neovim_sync::NeovimSyncMode::Adopt)
+            } else {
+                result.exit_code(neovim_sync::NeovimSyncMode::Check)
+            };
+            if effective == 0 {
+                Ok(())
+            } else {
+                process::exit(effective)
+            }
+        }
         SyncSurface::Shell => {
             let result = shell_sync::run_cli(&args.args)?;
             let exit_code = result.exit_code(shell_sync::ShellSyncMode::Check);
@@ -39,7 +73,7 @@ pub(crate) fn resolve_sync_vscode_bin() -> Result<PathBuf, String> {
     if let Ok(bin) = env::var("DOTFILES_SYNC_VSCODE_BIN") {
         if !bin.is_empty() {
             let configured = PathBuf::from(&bin);
-            if configured.is_file() {
+            if is_executable_file(&configured) {
                 return Ok(configured);
             }
             return Err(format!(
@@ -55,9 +89,12 @@ pub(crate) fn resolve_sync_vscode_bin() -> Result<PathBuf, String> {
 
     let root = repo_root()?;
     let local = root.join("result/bin/dotfiles-sync-vscode");
-    if local.is_file() {
+    if is_executable_file(&local) {
         return Ok(local);
     }
 
-    Err("dotfiles-sync-vscode binary not found (set DOTFILES_SYNC_VSCODE_BIN or add it to PATH)".to_string())
+    Err(
+        "dotfiles-sync-vscode binary not found (set DOTFILES_SYNC_VSCODE_BIN or add it to PATH)"
+            .to_string(),
+    )
 }

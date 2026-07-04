@@ -30,12 +30,15 @@ require_contains "linux-hygiene:"
 require_contains "darwin-contract:"
 require_contains "targets-manifest.nix"
 require_contains "host.buildTarget"
+require_contains 'if host.defaultProfile == "minimal" then "ultra" else "minimal"'
+require_contains 'host.targetsByProfile.${extraProfile}'
 require_contains "Run target manifest test"
+require_contains "Run template source hygiene test"
 
 require_not_contains "homeConfigurations"
 require_not_contains "nixosConfigurations"
 require_not_contains "a2m_nixos"
-require_not_contains "ultra_mac-minimum"
+require_not_contains "own_mac-minimum"
 require_not_contains 'platform = "$PLATFORM"'
 require_not_contains "planner: linux"
 require_not_contains 'if [[ $target != *-* ]]; then'

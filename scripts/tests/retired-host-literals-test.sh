@@ -11,13 +11,15 @@ if ! command -v rg >/dev/null 2>&1; then
   exit 1
 fi
 
-if rg -n --fixed-strings "a2m_mac" . \
-  --glob '!result/**' \
-  --glob '!.direnv/**' \
-  --glob '!.git/**' \
-  --glob '!scripts/tests/retired-host-literals-test.sh'; then
-  echo "FAIL: retired host literal a2m_mac is still present" >&2
-  exit 1
-fi
+for retired_host in a2m_mac pro_mac ultra_mac minimal_mac; do
+  if rg -n --fixed-strings "$retired_host" . \
+    --glob '!result/**' \
+    --glob '!.direnv/**' \
+    --glob '!.git/**' \
+    --glob '!scripts/tests/retired-host-literals-test.sh'; then
+    echo "FAIL: retired host literal $retired_host is still present" >&2
+    exit 1
+  fi
+done
 
 echo "PASS: retired host literals"

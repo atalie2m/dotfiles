@@ -1,27 +1,30 @@
-{ delib, lib, dotlib, repoPaths, ... }:
+{ dotmod, config, lib, dotlib, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
   brewCatalog = lib.filterAttrs (_: spec: spec.mode == "catalog") homebrewOwnership;
 
   mkBrewToolModule = _: spec:
-    delib.module {
-      name = "tools.${spec.group}.${spec.tool}";
+    (dotmod.mkModule { inherit config; }) {
+      path = "tools.${spec.group}.${spec.tool}";
 
-      options = with delib; moduleOptions {
+      options = with dotmod; moduleOptions {
         enable = boolOption false;
       };
 
-      myconfig.ifEnabled = { myconfig, ... }:
-        dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec spec);
+      myconfigOnEnable = { myconfig, ... }:
+        dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpecForHost { inherit myconfig spec; });
 
-      darwin.ifEnabled = { ... }: {
+      darwinOnEnable = { myconfig, ... }: {
         assertions = lib.optional (!dotlib.hasHomebrewInstallPayload spec) {
           assertion = false;
           message = dotlib.homebrewCatalogFailureMessage {
             toolKey = "${spec.group}.${spec.tool}";
           };
         };
+        warnings = lib.optional
+          (dotlib.homebrewSpecRequiresUnavailableHostCapability { inherit myconfig spec; })
+          "${spec.group}.${spec.tool} is enabled but skipped because full Xcode.app is not available.";
       };
     };
 in

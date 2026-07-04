@@ -1,4 +1,4 @@
-{ delib, lib, dotlib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, dotlib, pkgs, repoPaths, ... }:
 
 let
   homebrewOwnership = import (repoPaths.catalog + "/tools/homebrew-ownership.nix");
@@ -7,20 +7,21 @@ in
 
 # Rio terminal configuration
 
-delib.module {
-  name = "tools.terminal.rio";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.terminal.rio";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  myconfig.ifEnabled = { myconfig, ... }:
+  myconfigOnEnable = { myconfig, ... }:
     dotlib.ifDarwin myconfig (dotlib.requireHomebrewSpec homebrewSpec);
 
-  home.ifEnabled = { myconfig, ... }:
+  homeOnEnable = { myconfig, ... }:
     let
       tmuxEnabled = (((myconfig.tools or { }).terminal or { }).tmux or { }).enable or false;
-      navigationMode = if tmuxEnabled then "Plain" else "Bookmark";
+      navigationMode = if tmuxEnabled then "Plain" else "Tab";
+      rendererBackend = if pkgs.stdenv.isDarwin then "Metal" else "Vulkan";
       optionAsAltLine = lib.optionalString pkgs.stdenv.isDarwin ''
         option-as-alt = "left"
       '';
@@ -40,12 +41,14 @@ delib.module {
           [
             "@@OPTION_AS_ALT@@"
             "@@NAVIGATION_MODE@@"
+            "@@RENDERER_BACKEND@@"
             "@@COLOR_AUTOMATION_BLOCK@@"
             "@@PLATFORM_BLOCK@@"
           ]
           [
             optionAsAltLine
             navigationMode
+            rendererBackend
             colorAutomationBlock
             platformBlock
           ]

@@ -43,6 +43,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
+write_bash_script() {
+  local path="$1"
+  {
+    printf '#!%s\n' "${BASH:-bash}"
+    cat
+  } >"$path"
+}
+
 home_dir="$tmp_root/home"
 managed_dir="$tmp_root/managed"
 fake_bin_dir="$tmp_root/bin"
@@ -107,8 +115,7 @@ cat >"$managed_dir/web/default-disabled-extensions.txt" <<'EOF'
 ext.web
 EOF
 
-cat >"$fake_code" <<'EOF'
-#!/usr/bin/env bash
+write_bash_script "$fake_code" <<'EOF'
 set -euo pipefail
 
 state_dir="${FAKE_CODE_STATE_DIR:?}"
@@ -221,8 +228,7 @@ esac
 EOF
 chmod +x "$fake_code"
 
-cat >"$fake_sqlite" <<'EOF'
-#!/usr/bin/env bash
+write_bash_script "$fake_sqlite" <<'EOF'
 set -euo pipefail
 echo "FAIL: runtime unexpectedly invoked sqlite3" >&2
 exit 1
@@ -471,6 +477,91 @@ fi
 
 if ! run_vscode_sync_from_copy --check >/dev/null; then
   echo "FAIL: VS Code check failed when sync script ran outside repo root with explicit managed dir" >&2
+  exit 1
+fi
+
+printf '{\n  "editor.fontLigatures": true,\n}\n' >"$web_settings"
+
+if run_vscode_sync --check --details --profile web >"$tmp_root/vscode-invalid-settings.out" 2>"$tmp_root/vscode-invalid-settings.err"; then
+  echo "FAIL: check unexpectedly accepted malformed managed settings JSON" >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: needs-apply" "$tmp_root/vscode-invalid-settings.err"; then
+  echo "FAIL: VS Code check did not mark malformed managed settings as needs-apply" >&2
+  cat "$tmp_root/vscode-invalid-settings.err" >&2 || true
+  exit 1
+fi
+
+if ! grep -Fq "will be replaced on apply" "$tmp_root/vscode-invalid-settings.err"; then
+  echo "FAIL: VS Code check did not explain that malformed managed settings will be repaired" >&2
+  cat "$tmp_root/vscode-invalid-settings.err" >&2 || true
+  exit 1
+fi
+
+if ! run_vscode_sync --apply >/dev/null; then
+  echo "FAIL: apply did not repair malformed managed settings JSON" >&2
+  exit 1
+fi
+
+if ! jq -e '.["editor.fontLigatures"] == true and .["workbench.colorTheme"] == "Abyss"' "$web_settings" >/dev/null; then
+  echo "FAIL: apply did not restore the managed web settings file after malformed JSON" >&2
+  exit 1
+fi
+
+cp "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json" "$tmp_root/web-extensions.backup.json"
+printf '{not-json\n' >"$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json"
+
+if run_vscode_sync --check --details --profile web >"$tmp_root/vscode-invalid-manifest.out" 2>"$tmp_root/vscode-invalid-manifest.err"; then
+  echo "FAIL: check unexpectedly accepted a malformed profile extensions manifest" >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: invalid" "$tmp_root/vscode-invalid-manifest.err"; then
+  echo "FAIL: VS Code check did not surface invalid profile state" >&2
+  cat "$tmp_root/vscode-invalid-manifest.err" >&2 || true
+  exit 1
+fi
+
+if ! grep -Fq "failed to parse JSON file" "$tmp_root/vscode-invalid-manifest.err"; then
+  echo "FAIL: VS Code check did not report the malformed manifest parse error" >&2
+  cat "$tmp_root/vscode-invalid-manifest.err" >&2 || true
+  exit 1
+fi
+
+if run_vscode_sync --apply --details --profile web >"$tmp_root/vscode-invalid-manifest-apply.out" 2>"$tmp_root/vscode-invalid-manifest-apply.err"; then
+  echo "FAIL: apply unexpectedly accepted a malformed profile extensions manifest" >&2
+  exit 1
+fi
+
+if ! grep -Fq "apply refused for 'web'" "$tmp_root/vscode-invalid-manifest-apply.err"; then
+  echo "FAIL: VS Code apply did not refuse the malformed profile manifest" >&2
+  cat "$tmp_root/vscode-invalid-manifest-apply.err" >&2 || true
+  exit 1
+fi
+
+cp "$tmp_root/web-extensions.backup.json" "$home_dir/Library/Application Support/Code/User/profiles/$web_id/extensions.json"
+"$sqlite3_bin" "$web_db" "INSERT INTO ItemTable(key, value) VALUES ('extensionsIdentifiers/disabled', '{not-json') ON CONFLICT(key) DO UPDATE SET value = excluded.value;"
+
+if run_vscode_sync --check --details --profile web >"$tmp_root/vscode-invalid-db.out" 2>"$tmp_root/vscode-invalid-db.err"; then
+  echo "FAIL: check unexpectedly accepted malformed enablement JSON" >&2
+  exit 1
+fi
+
+if ! grep -Fq "contains invalid JSON" "$tmp_root/vscode-invalid-db.err"; then
+  echo "FAIL: VS Code check did not report the malformed enablement JSON" >&2
+  cat "$tmp_root/vscode-invalid-db.err" >&2 || true
+  exit 1
+fi
+
+if run_vscode_sync --apply --details --profile web >"$tmp_root/vscode-invalid-db-apply.out" 2>"$tmp_root/vscode-invalid-db-apply.err"; then
+  echo "FAIL: apply unexpectedly accepted malformed enablement JSON" >&2
+  exit 1
+fi
+
+if ! grep -Fq "apply refused for 'web'" "$tmp_root/vscode-invalid-db-apply.err"; then
+  echo "FAIL: VS Code apply did not refuse malformed enablement JSON" >&2
+  cat "$tmp_root/vscode-invalid-db-apply.err" >&2 || true
   exit 1
 fi
 

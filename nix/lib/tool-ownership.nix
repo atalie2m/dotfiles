@@ -4,6 +4,15 @@ let
   enabledAt = optionPath: config:
     lib.attrByPath optionPath false config;
 
+  hostHasFullXcode = config:
+    let
+      value = lib.attrByPath [ "myconfig" "hostContext" "machine" "extra" "fullXcode" ] false config;
+    in
+    builtins.isBool value && value;
+
+  homebrewSpecAvailableForHost = config: spec:
+    !(spec.requiresFullXcode or false) || hostHasFullXcode config;
+
   homebrewClaimsFor =
     { key
     , claimSource
@@ -13,19 +22,30 @@ let
     ,
     }:
     let
+      homebrewItemName = raw:
+        if builtins.isAttrs raw then raw.name or ""
+        else raw;
       brewClaims = map
-        (itemName: {
-          inherit key itemName;
-          source = claimSource;
-          itemType = "brew";
-        })
+        (raw:
+          let
+            itemName = homebrewItemName raw;
+          in
+          {
+            inherit key itemName;
+            source = claimSource;
+            itemType = "brew";
+          })
         brews;
       caskClaims = map
-        (itemName: {
-          inherit key itemName;
-          source = claimSource;
-          itemType = "cask";
-        })
+        (raw:
+          let
+            itemName = homebrewItemName raw;
+          in
+          {
+            inherit key itemName;
+            source = claimSource;
+            itemType = "cask";
+          })
         casks;
       masClaims = map
         (itemName: {
@@ -39,9 +59,10 @@ let
 
   nixClaimsFromCatalog = config:
     lib.concatMap
-      (toolName:
+      (catalogName:
         let
-          spec = nixCatalog.${toolName};
+          spec = nixCatalog.${catalogName};
+          toolName = spec.tool or catalogName;
           key = "${spec.group}.${toolName}";
         in
         if enabledAt [ "myconfig" "tools" spec.group toolName "enable" ] config
@@ -55,7 +76,7 @@ let
         let
           spec = homebrewOwnership.${key};
         in
-        if enabledAt spec.optionPath config
+        if enabledAt spec.optionPath config && homebrewSpecAvailableForHost config spec
         then
           homebrewClaimsFor
             {
@@ -127,11 +148,12 @@ let
 
   homebrewItems = homebrew:
     let
+      homebrewItemName = raw:
+        if builtins.isAttrs raw then raw.name or ""
+        else raw;
       mkItem = itemType: raw:
         let
-          itemName =
-            if builtins.isAttrs raw then raw.name or ""
-            else raw;
+          itemName = homebrewItemName raw;
         in
         {
           inherit itemType itemName;

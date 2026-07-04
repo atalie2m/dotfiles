@@ -1,12 +1,12 @@
-{ delib, lib, inputs, pkgs, ... }:
+{ dotmod, config, lib, inputs, pkgs, ... }:
 
 # mac-app-util integration for Spotlight/Dock trampolines
 # https://github.com/hraban/mac-app-util
 
-delib.module {
-  name = "tools.system.macAppUtil";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.system.macAppUtil";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
     systemService = {
       enable = boolOption false;
@@ -21,11 +21,11 @@ delib.module {
     };
   };
 
-  darwin.always = { ... }: {
+  darwinAlways = { ... }: {
     imports = [ inputs.mac-app-util.darwinModules.default ];
   };
 
-  darwin.ifEnabled = { cfg, ... }:
+  darwinOnEnable = { cfg, ... }:
     let
       macAppUtil = inputs.mac-app-util.packages.${pkgs.stdenv.hostPlatform.system}.default;
       systemTimeoutCmd = "${pkgs.coreutils}/bin/timeout ${toString cfg.systemService.timeoutSeconds}s";

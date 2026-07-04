@@ -2,6 +2,12 @@
 result
 result-*
 
+# Flake source hygiene
+.direnv/
+.devenv/
+node_modules/
+.git/
+
 # macOS
 .DS_Store
 .AppleDouble

@@ -1,10 +1,15 @@
+[日本語版はこちら](ja/vscode.md)
+
 # VS Code Profiles
 
-This repository manages one VS Code installation and reconciles native VS Code profiles into writable runtime state.
+This repository targets one VS Code app and reconciles native VS Code profiles into writable runtime state.
 It no longer uses isolated per-instance runtime directories.
 
-The VS Code application itself is not installed by Nix in this setup.
-Install Visual Studio Code.app separately, or set `VSCODE_CODE_BIN` to the `code` CLI path.
+When `tools.editor.vscode.enable = true`, dotfiles installs the `dotfiles-sync-vscode` engine into Home Manager.
+It does not install Visual Studio Code.app; install the app manually or provide `VSCODE_CODE_BIN`.
+If activation-time sync is enabled but VS Code is not installed yet, dotfiles logs a skip instead of failing.
+If you keep the module disabled but still want to run sync manually, either install VS Code normally or provide `VSCODE_CODE_BIN` yourself.
+`sync vscode` also requires `HOME`; other supported runtime overrides are summarized in [`docs/commands.md`](commands.md#runtime-overrides).
 
 ## Managed layout
 
@@ -21,9 +26,9 @@ Profiles live under `apps/vscode/<name>/`:
 
 Note: VS Code's built-in `Default` profile is intentionally unmanaged. It is left as-is by `sync vscode`, so existing extensions/settings there are preserved.
 
-## Stock Darwin rices and VS Code
+## Stock Darwin profiles and VS Code
 
-Only the **`ultra`** rice turns on the VS Code Home Manager module (`tools.editor.vscode.enable`) and activation-time `sync vscode --apply` (`tools.editor.vscode.sync.enable`). The other stock rices (`base`, `darwin`, `dev`, `pro`, `partial`) do not; VS Code is still optional on the machine, but dotfiles will not install `dotfiles-sync-vscode` into the profile or reconcile profiles during activation unless you enable those options in your own config. You can always run `nix run .#dotfiles -- sync vscode --apply` by hand.
+The **`pro`** and **`ultra`** profiles install the VS Code sync surface, but Visual Studio Code.app itself is manual. `pro` leaves profile setup disabled; `ultra` enables `tools.editor.vscode.sync.enable` so managed profiles are reconciled during activation.
 
 ### Bulk extension install: source of truth
 
@@ -54,6 +59,7 @@ The CLI entrypoint dispatches to the Rust engine (`dotfiles-sync-vscode`) only.
   - `_default/settings.json` recursively merged with `<profile>/settings.json`
 - Effective extensions:
   - `_default/extensions.txt` plus `<profile>/extensions.txt`, unique by extension ID
+  - VS Code built-in extensions are not listed; they follow the app bundle version
 - Runtime ownership:
   - The repo owns the effective managed profile settings file
   - The repo owns the effective extension IDs
@@ -73,6 +79,15 @@ State schema notes:
 - current schema version is `4`
 - older or malformed state files are treated as `needs-apply`
 - apply rewrites state in the current schema
+
+## Integrated terminal
+
+Managed profiles do not rely on VS Code's automatic shell detection for zsh.
+The shared macOS terminal profile explicitly calls `dotfiles-vscode-zsh` first, with `/bin/zsh` as the bootstrap fallback before the launcher is installed.
+
+`dotfiles-vscode-zsh` is installed by Home Manager when `tools.editor.vscode.enable = true`.
+It prepares Home Manager session variables and profile `PATH`, keeps VS Code's shell-integration `ZDOTDIR` when VS Code injected one, defaults user zsh config lookup to `$HOME/.nix` when needed, and then execs the real zsh.
+On Darwin VS Code sessions it chooses `/bin/zsh` because Nix zsh currently conflicts with VS Code shell integration; other contexts can still use Nix zsh, and `DOTFILES_VSCODE_ZSH_BIN` is available as an explicit override.
 
 ## Runtime locations
 
@@ -119,10 +134,10 @@ Flags:
 - `--managed-dir <path>`
 - `--state-dir <path>`
 
-`sync vscode --apply` is also run during Home Manager activation when both
+`sync vscode --apply` can run during Home Manager activation when both
 `tools.editor.vscode.enable = true` and `tools.editor.vscode.sync.enable = true`.
-In the stock capability bundles, only **`ultra`** sets both; keep `tools.editor.vscode.sync.enable = false`
-(or leave the module disabled) if you want VS Code on disk but no automatic activation-time reconciliation.
+The stock `ultra` profile enables that automatic reconciliation; `pro` keeps it disabled.
+If `code` or Visual Studio Code.app cannot be found, activation prints a skip message and continues.
 
 ## Manual switching
 
@@ -171,6 +186,7 @@ That means:
 
 - adding an extension in the VS Code UI does not make sync remove it unless dotfiles later takes ownership of it
 - manual settings changes inside a managed profile are overwritten on the next apply
+- malformed JSON in a managed profile `settings.json` is treated as drift and overwritten on the next apply
 - disabling or enabling an extension in the VS Code UI does not change repo state
 - enabling an extension that was previously bootstrapped from `default-disabled-extensions.txt` is preserved on future applies
 - there is no launch helper and no launch-time disable flag in this model

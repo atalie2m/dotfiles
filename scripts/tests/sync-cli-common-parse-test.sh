@@ -9,6 +9,7 @@ UPDATE_SCRIPT="$ROOT/scripts/update.sh"
 LIST_TOOLS_SCRIPT="$ROOT/scripts/list-tools.sh"
 DOCTOR_SCRIPT="$ROOT/scripts/doctor.sh"
 BOOTSTRAP_SCRIPT="$ROOT/scripts/bootstrap.sh"
+GC_SCRIPT="$ROOT/scripts/gc.sh"
 DOTFILES_SCRIPT="$ROOT/scripts/dotfiles.sh"
 SOURCE_MANAGED_DIR="$ROOT/surfaces/shell/desired"
 REAL_DOTFILES_BIN="${DOTFILES_BIN:-$(command -v dotfiles 2>/dev/null || true)}"
@@ -20,6 +21,7 @@ for required in \
   "$LIST_TOOLS_SCRIPT" \
   "$DOCTOR_SCRIPT" \
   "$BOOTSTRAP_SCRIPT" \
+  "$GC_SCRIPT" \
   "$DOTFILES_SCRIPT"; do
   if [[ ! -f $required ]]; then
     echo "test: required script not found: $required" >&2
@@ -57,6 +59,14 @@ run_shell_sync() {
   HOME="$shell_home" run_real bash "$SYNC_SCRIPT" shell "$@" --managed-dir "$shell_managed"
 }
 
+write_bash_script() {
+  local path="$1"
+  {
+    printf '#!%s\n' "${BASH:-bash}"
+    cat
+  } >"$path"
+}
+
 assert_wrapper_subcommand() {
   local script="$1"
   local expected="$2"
@@ -65,8 +75,7 @@ assert_wrapper_subcommand() {
   local fake_bin="$tmp_root/fake-dotfiles"
   local log_file
   log_file="$tmp_root/$(basename "$script").log"
-  cat >"$fake_bin" <<'EOF_FAKE_DOTFILES'
-#!/usr/bin/env bash
+  write_bash_script "$fake_bin" <<'EOF_FAKE_DOTFILES'
 set -euo pipefail
 printf '%s\n' "$*" >"${FAKE_DOTFILES_LOG_FILE:?}"
 EOF_FAKE_DOTFILES
@@ -106,7 +115,8 @@ assert_missing_host() {
 printf 'test: running sync cli common parse test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
-assert_wrapper_subcommand "$APPLY_SCRIPT" "apply --host pro_mac --action build" --host pro_mac --action build
+assert_wrapper_subcommand "$APPLY_SCRIPT" "apply --host own_mac --action build" --host own_mac --action build
+assert_wrapper_subcommand "$GC_SCRIPT" "gc --store-only" --store-only
 assert_wrapper_subcommand "$DOTFILES_SCRIPT" "sync shell --check" sync shell --check
 
 if ! run_shell_sync --apply --item bash-rc >/dev/null; then
@@ -186,7 +196,7 @@ fi
 if (
   unset FACTS FACTS_DIR SECRETS SECRETS_DIR
   export SECRETS="github:example/secrets"
-  run_real bash "$BOOTSTRAP_SCRIPT" --host ultra_mac
+  run_real bash "$BOOTSTRAP_SCRIPT" --host work_mac
 ) >"$tmp_root/bootstrap.out" 2>"$tmp_root/bootstrap.err"; then
   echo "FAIL: bootstrap unexpectedly accepted SECRETS without SECRETS_DIR" >&2
   exit 1
@@ -199,18 +209,17 @@ fi
 
 empty_nix_bin="$tmp_root/empty-nix-bin"
 mkdir -p "$empty_nix_bin"
-cat >"$empty_nix_bin/nix" <<'EOF_EMPTY_NIX'
-#!/usr/bin/env bash
+write_bash_script "$empty_nix_bin/nix" <<'EOF_EMPTY_NIX'
 set -euo pipefail
 
-if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigurations && $4 == "--impure" && $5 == "--apply" ]]; then
+if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) && $4 == "--impure" && $5 == "--apply" ]]; then
   if [[ $6 == *"targets-manifest.nix"* ]]; then
     printf '{"hosts":{}}'
     exit 0
   fi
 fi
 
-if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
+if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) ]]; then
   exit 0
 fi
 
@@ -235,7 +244,7 @@ EOF_EMPTY_SECRETS
 if (
   HOME="$empty_home" \
     PATH="$empty_nix_bin:$PATH" \
-    run_real bash "$APPLY_SCRIPT" --host ultra_mac
+    run_real bash "$APPLY_SCRIPT" --host work_mac
 ) >"$tmp_root/apply-empty.out" 2>"$tmp_root/apply-empty.err"; then
   echo "FAIL: apply unexpectedly accepted an empty darwinConfigurations set" >&2
   exit 1
@@ -258,17 +267,16 @@ fi
 
 failing_nix_bin="$tmp_root/failing-nix-bin"
 mkdir -p "$failing_nix_bin"
-cat >"$failing_nix_bin/nix" <<'EOF_FAILING_NIX'
-#!/usr/bin/env bash
+write_bash_script "$failing_nix_bin/nix" <<'EOF_FAILING_NIX'
 set -euo pipefail
 
-if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigurations && $4 == "--impure" && $5 == "--apply" ]]; then
+if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) && $4 == "--impure" && $5 == "--apply" ]]; then
   if [[ $6 == *"targets-manifest.nix"* ]]; then
     exit 1
   fi
 fi
 
-if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
+if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) ]]; then
   exit 1
 fi
 
@@ -293,7 +301,7 @@ EOF_FAILING_SECRETS
 if (
   HOME="$failing_home" \
     PATH="$failing_nix_bin:$PATH" \
-    run_real bash "$APPLY_SCRIPT" --host ultra_mac
+    run_real bash "$APPLY_SCRIPT" --host work_mac
 ) >"$tmp_root/apply-failing-eval.out" 2>"$tmp_root/apply-failing-eval.err"; then
   echo "FAIL: apply unexpectedly accepted a failing darwinConfigurations eval" >&2
   exit 1
@@ -322,8 +330,7 @@ fi
 fake_bin="$tmp_root/fake-bin"
 mkdir -p "$fake_bin"
 
-cat >"$fake_bin/nix" <<'EOF_NIX'
-#!/usr/bin/env bash
+write_bash_script "$fake_bin/nix" <<'EOF_NIX'
 set -euo pipefail
 
 if [[ $# -ge 4 && $1 == "eval" && $2 == "--raw" && $3 == "--impure" && $4 == "--expr" ]]; then
@@ -352,9 +359,12 @@ EOF_SCHEMA
   user = {
     username = "tester";
 
-    # Optional for Git identity:
-    # fullName = "Your Name";
-    # email = "you@example.com";
+    # Optional Git identity and signing:
+    git = {
+      # fullName = "Your Name";
+      # email = "you@example.com";
+      # signingKey = "OPENPGP_KEY_ID_OR_FINGERPRINT";
+    };
 
     # Optional overrides:
     # homeDirectory = "/Users/tester";
@@ -366,11 +376,12 @@ EOF_SCHEMA
 
   # Optional machine metadata for tools.system.hostnames:
   # machines = {
-  #   ultra_mac = {
+  #   own_mac = {
   #     computerName = "Your Mac";
   #     localHostName = "your-mac";
   #     hostName = "your-mac";
   #     domain = "local";
+  #     keyboardType = "ansi";
   #   };
   # };
 }
@@ -379,7 +390,7 @@ EOF_FACTS
   fi
 fi
 
-if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigurations && $4 == "--impure" && $5 == "--apply" ]]; then
+if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) && $4 == "--impure" && $5 == "--apply" ]]; then
   if [[ $6 == *"targets-manifest.nix"* ]]; then
     if [[ $3 == *"empty-home"* ]]; then
       printf '{"hosts":{}}'
@@ -387,14 +398,14 @@ if [[ $# -ge 6 && $1 == "eval" && $2 == "--json" && $3 == path:*#darwinConfigura
     fi
 
     cat <<'EOF_MANIFEST'
-{"hosts":{"pro_mac":{"defaultRice":"pro","buildTarget":"pro_mac","supportedRices":["base","darwin","dev","partial","pro","ultra"],"machineKey":"pro_mac","system":"aarch64-darwin","targetsByRice":{"base":"pro_mac-base","darwin":"pro_mac-darwin","dev":"pro_mac-dev","partial":"pro_mac-partial","pro":"pro_mac","ultra":"pro_mac-ultra"}},"ultra_mac":{"defaultRice":"ultra","buildTarget":"ultra_mac","supportedRices":["base","darwin","dev","partial","pro","ultra"],"machineKey":"ultra_mac","system":"aarch64-darwin","targetsByRice":{"base":"ultra_mac-base","darwin":"ultra_mac-darwin","dev":"ultra_mac-dev","partial":"ultra_mac-partial","pro":"ultra_mac-pro","ultra":"ultra_mac"}},"minimal_mac":{"defaultRice":"base","buildTarget":"minimal_mac","supportedRices":["base","darwin","dev","partial","pro","ultra"],"machineKey":"minimal_mac","system":"aarch64-darwin","targetsByRice":{"base":"minimal_mac","darwin":"minimal_mac-darwin","dev":"minimal_mac-dev","partial":"minimal_mac-partial","pro":"minimal_mac-pro","ultra":"minimal_mac-ultra"}}}}
+{"hosts":{"own_mac":{"defaultProfile":"pro","buildTarget":"own_mac","supportedProfiles":["minimal","lite","pro","ultra"],"machineKey":"own_mac","system":"aarch64-darwin","targetsByProfile":{"minimal":"own_mac-minimal","lite":"own_mac-lite","pro":"own_mac","ultra":"own_mac-ultra"}},"work_mac":{"defaultProfile":"pro","buildTarget":"work_mac","supportedProfiles":["minimal","lite","pro","ultra"],"machineKey":"work_mac","system":"aarch64-darwin","targetsByProfile":{"minimal":"work_mac-minimal","lite":"work_mac-lite","pro":"work_mac","ultra":"work_mac-ultra"}}}}
 EOF_MANIFEST
     exit 0
   fi
 fi
 
-if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == path:*#darwinConfigurations ]]; then
-  printf 'pro_mac\nultra_mac\nminimal_mac\n'
+if [[ $# -ge 3 && $1 == "eval" && $2 == "--raw" && $3 == *#darwinConfigurations && ( $3 == path:* || $3 == git+file:* ) ]]; then
+  printf 'own_mac\nwork_mac\n'
   exit 0
 fi
 
@@ -440,6 +451,11 @@ if ! grep -Fq '#     domain = "local";' "$bootstrap_facts_file"; then
   cat "$bootstrap_facts_file" >&2 || true
   exit 1
 fi
+if ! grep -Fq '#     keyboardType = "ansi";' "$bootstrap_facts_file"; then
+  echo "FAIL: bootstrap machine schema example is missing keyboardType" >&2
+  cat "$bootstrap_facts_file" >&2 || true
+  exit 1
+fi
 if grep -Fq 'platform =' "$bootstrap_facts_file"; then
   echo "FAIL: bootstrap still emitted deprecated platform facts" >&2
   cat "$bootstrap_facts_file" >&2 || true
@@ -481,8 +497,9 @@ if (
   cat "$tmp_root/doctor-strict.err" >&2 || true
   exit 1
 fi
-if ! grep -Fq "warn  shell.sync: strict sync check skipped (pass --host to resolve target)" "$tmp_root/doctor-strict.out"; then
-  echo "FAIL: doctor --strict did not warn about skipped host-aware sync checks" >&2
+if ! grep -Fq "warn  shell.sync: strict sync check skipped (pass --host to resolve target)" "$tmp_root/doctor-strict.out" &&
+  ! grep -Fq "ok    shell.sync: skipped on non-Darwin host" "$tmp_root/doctor-strict.out"; then
+  echo "FAIL: doctor --strict did not record skipped host-aware sync checks" >&2
   cat "$tmp_root/doctor-strict.out" >&2 || true
   exit 1
 fi

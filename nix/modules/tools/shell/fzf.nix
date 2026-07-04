@@ -1,15 +1,15 @@
-{ delib, lib, pkgs, ... }:
+{ dotmod, config, lib, pkgs, ... }:
 
 # fzf keybinding setup without replacing Tab completion.
 
-delib.module {
-  name = "tools.shell.fzf";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell.fzf";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  home.ifEnabled = { myconfig, ... }:
+  homeOnEnable = { myconfig, ... }:
     let
       zshEnabled = (((myconfig.tools or { }).shell or { }).zsh or { }).enable or false;
     in

@@ -1,7 +1,7 @@
 use std::env;
 use std::path::PathBuf;
 
-use dotfiles_core::support::{find_in_path, repo_root};
+use dotfiles_core::support::{find_in_path, home_dir, is_executable_file, repo_root};
 
 use crate::app::runtime::{CliArgs, Context};
 
@@ -12,13 +12,13 @@ pub(crate) fn build_context(args: CliArgs) -> Result<Context, String> {
         repo_root()?.join("apps/vscode")
     };
 
-    let home = env::var("HOME").map_err(|_| "HOME is not set".to_string())?;
+    let home = home_dir()?;
     let state_dir = if let Some(path) = args.state_dir.clone() {
         path
     } else if let Ok(xdg_state_home) = env::var("XDG_STATE_HOME") {
         PathBuf::from(xdg_state_home).join("dotfiles/vscode")
     } else {
-        PathBuf::from(home.clone()).join(".local/state/dotfiles/vscode")
+        home.join(".local/state/dotfiles/vscode")
     };
 
     if !managed_dir.is_dir() {
@@ -36,7 +36,7 @@ pub(crate) fn build_context(args: CliArgs) -> Result<Context, String> {
 
     let vscode_data_home = env::var("VSCODE_DATA_HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(home.clone()).join("Library/Application Support/Code"));
+        .unwrap_or_else(|_| home.join("Library/Application Support/Code"));
     let user_data_home = vscode_data_home.join("User");
     let profiles_home = user_data_home.join("profiles");
     let global_storage_dir = user_data_home.join("globalStorage");
@@ -44,7 +44,7 @@ pub(crate) fn build_context(args: CliArgs) -> Result<Context, String> {
 
     let extensions_root = env::var("VSCODE_EXTENSIONS_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(home.clone()).join(".vscode/extensions"));
+        .unwrap_or_else(|_| home.join(".vscode/extensions"));
     let extensions_manifest_path = extensions_root.join("extensions.json");
 
     let code_cli_retries = env::var("VSCODE_CODE_RETRIES")
@@ -76,7 +76,7 @@ fn resolve_code_bin() -> Result<String, String> {
     if let Ok(bin) = env::var("VSCODE_CODE_BIN") {
         if !bin.is_empty() {
             let configured = PathBuf::from(&bin);
-            if configured.is_file() {
+            if is_executable_file(&configured) {
                 return Ok(bin);
             }
             return Err(format!(
@@ -91,18 +91,15 @@ fn resolve_code_bin() -> Result<String, String> {
     }
 
     let mut candidates: Vec<PathBuf> = Vec::new();
-    if let Ok(home) = env::var("HOME") {
-        candidates.push(
-            PathBuf::from(home)
-                .join("Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"),
-        );
-    }
+    candidates.push(
+        home_dir()?.join("Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"),
+    );
     candidates.push(PathBuf::from(
         "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
     ));
 
     for candidate in candidates {
-        if candidate.is_file() {
+        if is_executable_file(&candidate) {
             return Ok(candidate.to_string_lossy().to_string());
         }
     }

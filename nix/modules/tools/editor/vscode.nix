@@ -1,39 +1,39 @@
-{ delib, lib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, pkgs, repoPaths, ... }:
 
-# VS Code package wiring plus native profile reconciliation.
+# VS Code sync tooling plus native profile reconciliation.
 
 let
   dotfilesCli = pkgs.callPackage ../../../pkgs/dotfiles-cli { };
   syncVscodeBin = pkgs.callPackage ../../../pkgs/dotfiles-sync-vscode { };
+  vscodeZshLauncher = pkgs.callPackage ../../../pkgs/dotfiles-vscode-zsh { };
   types = lib.types;
 in
-delib.module {
-  name = "tools.editor.vscode";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.editor.vscode";
 
-  options = with delib; args:
-    (moduleOptions
-      {
-        enable = boolOption false;
-        sync = {
-          enable = boolOption false;
-          managedDir = lib.mkOption {
-            type = types.nullOr types.path;
-            default = null;
-          };
-          stateDir = lib.mkOption {
-            type = types.nullOr types.str;
-            default = null;
-          };
-        };
-      }
-      args)
-  ;
-
-  home.ifEnabled = { ... }: {
-    home.packages = [ syncVscodeBin ];
+  options = with dotmod; moduleOptions {
+    enable = boolOption false;
+    sync = {
+      enable = boolOption false;
+      managedDir = lib.mkOption {
+        type = types.nullOr types.path;
+        default = null;
+      };
+      stateDir = lib.mkOption {
+        type = types.nullOr types.str;
+        default = null;
+      };
+    };
   };
 
-  darwin.ifEnabled = { cfg, ... }:
+  homeOnEnable = { ... }: {
+    home.packages = [
+      syncVscodeBin
+      vscodeZshLauncher
+    ];
+  };
+
+  darwinOnEnable = { cfg, ... }:
     let
       runtimePath = lib.makeBinPath [
         pkgs.bash
@@ -66,15 +66,25 @@ delib.module {
         home.activation.syncVscodeProfiles = lib.mkOrder 900 ''
           export PATH="${runtimePath}:$PATH"
           export DOTFILES_SYNC_VSCODE_BIN="${syncVscodeBin}/bin/dotfiles-sync-vscode"
-          if [[ -z "''${VSCODE_CODE_BIN:-}" ]]; then
-            if [[ -x "$HOME/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
-              export VSCODE_CODE_BIN="$HOME/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
-            elif [[ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
-              export VSCODE_CODE_BIN="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+          if [[ -n "''${VSCODE_CODE_BIN:-}" && ! -x "''${VSCODE_CODE_BIN}" ]]; then
+            echo "vscode sync: configured VSCODE_CODE_BIN is not executable, skipping activation sync" >&2
+          else
+            if [[ -z "''${VSCODE_CODE_BIN:-}" ]]; then
+              if command -v code >/dev/null 2>&1; then
+                export VSCODE_CODE_BIN="$(command -v code)"
+              elif [[ -x "$HOME/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
+                export VSCODE_CODE_BIN="$HOME/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+              elif [[ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
+                export VSCODE_CODE_BIN="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+              fi
+            fi
+            if [[ -z "''${VSCODE_CODE_BIN:-}" ]]; then
+              echo "vscode sync: Visual Studio Code.app not found, skipping activation sync" >&2
+            else
+              state_dir=${stateDirExpr}
+              ${lib.escapeShellArgs applyArgs} --state-dir "$state_dir"
             fi
           fi
-          state_dir=${stateDirExpr}
-          ${lib.escapeShellArgs applyArgs} --state-dir "$state_dir"
         '';
       });
     };

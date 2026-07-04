@@ -1,15 +1,15 @@
-{ delib, lib, pkgs, ... }:
+{ dotmod, config, lib, pkgs, ... }:
 
 # zoxide directory jumping
 
-delib.module {
-  name = "tools.shell.zoxide";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell.zoxide";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  home.ifEnabled = { myconfig, ... }:
+  homeOnEnable = { myconfig, ... }:
     let
       zshEnabled = (((myconfig.tools or { }).shell or { }).zsh or { }).enable or false;
     in
@@ -23,6 +23,7 @@ delib.module {
       };
 
       programs.zsh.initContent = lib.mkOrder 1080 ''
+        export PATH="${lib.makeBinPath [ pkgs.zoxide ]}:$PATH"
         eval "$(${lib.getExe pkgs.zoxide} init zsh)"
       '';
     };

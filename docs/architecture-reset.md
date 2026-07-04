@@ -1,6 +1,8 @@
+[日本語版はこちら](ja/architecture-reset.md)
+
 # Architecture Reset
 
-This document explains the Darwin-only reset: what was removed, what became stricter, and what the repository now treats as its supported architecture.
+This document explains the Darwin-first reset: what was removed, what became stricter, and what the repository now treats as its supported architecture.
 
 ## Goal
 
@@ -14,10 +16,10 @@ The point was not to hide mutable state. The point was to make ownership, orches
 
 ## Design principles
 
-- `One product, one operational API`: the supported operational root surface is Darwin-first.
+- `One product, one operational API`: the supported operational root surface is Darwin-first, with explicitly bounded portable userland targets when needed.
 - `Canonical host truth is shared`: modules consume `myconfig.hostContext.*`.
 - `Typed truth beats ad-hoc validation`: machine metadata and host-derived data are normalized once.
-- `Mutable boundaries stay explicit`: shell entrypoints, VS Code profiles, and Homebrew/app state are reconciled surfaces, not fake-declarative state.
+- `Mutable boundaries stay explicit`: shell entrypoints, Emacs config, VS Code profiles, and Homebrew/app state are reconciled surfaces, not fake-declarative state.
 - `Shell is an adapter, not the control plane`: shell remains only as a thin entrypoint layer; orchestration lives in Rust.
 
 ## What changed
@@ -28,8 +30,9 @@ After the reset:
 
 - the supported operational root surface is Darwin-first
 - `darwinConfigurations` is always exported
-- `templates.web-dev` remains the reusable public artifact
-- unsupported Home Manager/NixOS trees and Linux contributor outputs were removed
+- `homeConfigurations.linux_workbench` is exported only for the shared development workbench user environment
+- project `templates` remain the reusable public artifacts
+- unsupported Home Manager/NixOS trees and broad Linux contributor outputs were removed
 
 Intent:
 
@@ -68,7 +71,7 @@ Intent:
 After the reset:
 
 - Rust is a real workspace with `dotfiles-core`, `dotfiles-cli`, and `dotfiles-sync-vscode`
-- `dotfiles-cli` owns `apply`, `update`, `doctor`, `bootstrap`, `export-clean`, `list-tools`, `matrix-tools`, and `sync`
+- `dotfiles-cli` owns `apply`, `agent-notify`, `update`, `doctor`, `bootstrap`, `export-clean`, `list-tools`, `matrix-tools`, and `sync`
 - `dotfiles-sync-vscode` is packaged separately and invoked through `dotfiles`
 - shell sync is implemented in Rust instead of Bash
 
@@ -82,6 +85,8 @@ Intent:
 After the reset:
 
 - `sync shell` reconciles writable shell entrypoints in Rust
+- `sync emacs` reconciles writable Emacs config files in Rust
+- `sync neovim` reconciles writable Neovim config drift and effective Lazy lock state in Rust
 - `scripts/sync.sh` is only a thin shell wrapper
 - `sync vscode` dispatches to the dedicated `dotfiles-sync-vscode` binary
 - Homebrew ownership remains declarative and validated, but runtime app state stays writable
@@ -102,18 +107,19 @@ After the reset:
 Intent:
 
 - separate classification from rollout policy
-- make host behavior changes explicit in rice composition
+- make host behavior changes explicit in profile composition
 
 ## Important repository facts
 
 - the canonical host model lives at `myconfig.hostContext.*`
-- `pro` now truly disables VS Code installation
-- `partial` keeps VS Code installed but disables activation sync, and only `codex` remains enabled among AI coding agents
+- `pro` now truly disables the VS Code module
+- `pro` installs editor surfaces without setup/sync, while `ultra` adds VS Code, Neovim, and Emacs setup/sync
 - `tools.system.brewNix` no longer auto-enables `tools.system.macAppUtil`
 
 ## What did not change
 
-- Denix remains the composition layer
+- the repo-owned Darwin catalog is the macOS composition layer
+- the repo-owned Linux catalog is limited to Home Manager userland composition
 - existing Darwin host names remain intact
 - mutable surfaces remain mutable by design
 - the Homebrew ownership registry remains the policy center
@@ -125,4 +131,5 @@ The intended verification path is:
 - `cargo test` for the Rust workspace
 - `nix flake check` with real local `facts` and `secrets`
 - Darwin builds for touched hosts
+- Linux Home Manager activation-package builds on an `x86_64-linux` builder for `linux_workbench`
 - shell and VS Code smoke tests under the portable checks

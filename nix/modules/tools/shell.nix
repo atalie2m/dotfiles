@@ -1,20 +1,25 @@
-{ delib, lib, pkgs, repoPaths, ... }:
+{ dotmod, config, lib, pkgs, repoPaths, ... }:
 
 # Shell tool group
 
-delib.module {
-  name = "tools.shell";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
     manageSystemShells = boolOption false;
     defaultShell = strOption "zsh";
     extraAliases = attrsOption { };
   };
 
-  home.ifEnabled = { cfg, ... }:
+  homeOnEnable = { cfg, myconfig, ... }:
     let
       commonShellPath = repoPaths.apps + "/shell/common.sh";
+      userName = myconfig.hostContext.user.username or "";
+      homeDir = myconfig.hostContext.user.homeDirectory or "";
+      profileBins =
+        lib.optional (userName != "") "/etc/profiles/per-user/${userName}/bin"
+        ++ lib.optional (homeDir != "") "${homeDir}/.nix-profile/bin";
     in
     {
       home = {
@@ -35,7 +40,10 @@ delib.module {
           gl = "git log --oneline";
         } // cfg.extraAliases;
 
-        sessionPath = lib.optional pkgs.stdenv.isDarwin "${pkgs.coreutils}/libexec/gnubin";
+        sessionPath =
+          [ "${repoPaths.scripts}" ]
+          ++ lib.optional pkgs.stdenv.isDarwin "${pkgs.coreutils}/libexec/gnubin"
+          ++ profileBins;
       };
 
       xdg.configFile."shell/common.sh" = {
@@ -44,7 +52,7 @@ delib.module {
       };
     };
 
-  darwin.ifEnabled = { cfg, myconfig, ... }:
+  darwinOnEnable = { cfg, myconfig, ... }:
     let
       userName = myconfig.hostContext.user.username;
       shellPackages = {

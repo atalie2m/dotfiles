@@ -1,3 +1,5 @@
+[日本語版はこちら](ja/architecture.md)
+
 # Architecture
 
 This repository keeps Darwin composition, reusable modules, catalog data, and runtime tooling in separate trees so each layer can evolve independently.
@@ -6,13 +8,15 @@ For the reset rationale and before/after summary, see [`docs/architecture-reset.
 
 ## Layout
 
-- `nix/denix/darwin`: Darwin host and rice declarations only
-- `nix/denix/lib`: Darwin host constructors and Denix-specific helpers
-- `nix/modules/shared`: raw facts schema, canonical host model wiring, system modules, and shared Nixpkgs policy
+- `nix/catalog/darwin`: Darwin host/profile catalog and stock profile bundles
+- `nix/catalog/linux`: Linux Home Manager host/profile catalog for bounded userland targets
+- `nix/catalog/shared`: portable profile bundles reused by platform catalogs
+- `nix/lib`: host model, module helpers, and shared policy helpers
+- `nix/modules/shared`: canonical host model wiring, system modules, and shared Nixpkgs policy
 - `nix/modules/tools`: user-facing tool modules grouped by capability
 - `nix/catalog/tools`: declarative tool ownership data for Nixpkgs and Homebrew-backed tools
-- `crates/dotfiles-core`: shared Rust support and shell sync implementation
-- `crates/dotfiles-cli`: operational CLI (`apply`, `update`, `doctor`, `bootstrap`, `export-clean`, `list-tools`, `matrix-tools`, `sync`)
+- `crates/dotfiles-core`: shared Rust support plus shell, Emacs, Neovim sync, and agent notification implementations
+- `crates/dotfiles-cli`: operational CLI (`apply`, `agent-notify`, `update`, `doctor`, `bootstrap`, `export-clean`, `list-tools`, `matrix-tools`, `sync`)
 - `crates/dotfiles-sync-vscode`: dedicated VS Code native profile reconciliation engine
 - `scripts/`: thin shell entrypoints and smoke/integration tests
 - `nix/scripts/`: Nix expressions used by CLI helpers (`list-tools.nix`, `matrix-tools.nix`, `doctor/facts-schema.nix`)
@@ -28,7 +32,7 @@ For the reset rationale and before/after summary, see [`docs/architecture-reset.
 
 ## Practical implications
 
-- the supported operational root flake API is Darwin-first
-- if you add a reusable feature, put it in `nix/modules/` and keep `nix/denix/darwin` focused on composition
+- the supported operational root flake API is Darwin-first, with a bounded `homeConfigurations.linux_workbench` userland target
+- if you add a reusable feature, put it in `nix/modules/` and keep platform catalogs focused on host/profile composition
 - if you add catalog-owned tools, update the relevant registry/catalog data under `nix/catalog/tools/`
 - if you add operational CLI behavior, implement it in the Rust workspace first and keep shell thin

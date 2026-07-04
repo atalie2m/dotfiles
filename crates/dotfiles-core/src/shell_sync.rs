@@ -1,6 +1,6 @@
+use crate::support::{home_dir, log, repo_root};
 use clap::error::ErrorKind;
 use clap::{Parser, ValueEnum};
-use crate::support::{log, repo_root};
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -104,7 +104,11 @@ impl ShellSyncResult {
                 }
             }
             ShellSyncMode::Check => {
-                if self.needs_apply == 0 && self.missing == 0 && self.invalid == 0 && self.errors == 0 {
+                if self.needs_apply == 0
+                    && self.missing == 0
+                    && self.invalid == 0
+                    && self.errors == 0
+                {
                     0
                 } else {
                     1
@@ -123,6 +127,35 @@ struct TargetDefinition {
     begin_marker: &'static str,
     end_marker: &'static str,
 }
+
+#[derive(Clone, Copy, Debug)]
+struct TargetSpec {
+    id: &'static str,
+    shell_name: ShellGroup,
+    actual_relative_path: &'static str,
+    desired_file_name: &'static str,
+    begin_marker: &'static str,
+    end_marker: &'static str,
+}
+
+const TARGET_SPECS: [TargetSpec; 2] = [
+    TargetSpec {
+        id: "zsh-zdotdir",
+        shell_name: ShellGroup::Zsh,
+        actual_relative_path: ".nix/.zshrc",
+        desired_file_name: "zdotdir.zshrc.block.sh",
+        begin_marker: "# >>> dotfiles-managed:zdotdir.zshrc >>>",
+        end_marker: "# <<< dotfiles-managed:zdotdir.zshrc <<<",
+    },
+    TargetSpec {
+        id: "bash-rc",
+        shell_name: ShellGroup::Bash,
+        actual_relative_path: ".bashrc",
+        desired_file_name: "bashrc.entrypoint.block.sh",
+        begin_marker: "# >>> dotfiles-managed:bashrc >>>",
+        end_marker: "# <<< dotfiles-managed:bashrc <<<",
+    },
+];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TargetStatus {
@@ -218,7 +251,7 @@ pub fn run(mut options: ShellSyncOptions) -> Result<ShellSyncResult, String> {
         return Err(format!("managed dir not found: {}", managed_dir.display()));
     }
 
-    let targets = list_targets(&managed_dir);
+    let targets = list_targets(&managed_dir)?;
     let mut result = ShellSyncResult::default();
 
     for target in targets {
@@ -229,7 +262,7 @@ pub fn run(mut options: ShellSyncOptions) -> Result<ShellSyncResult, String> {
         result.selected_count += 1;
         result.checked += 1;
 
-        let mut evaluation = classify_target(&target)?;
+        let evaluation = classify_target(&target)?;
         match evaluation.status {
             TargetStatus::InSync => result.in_sync += 1,
             TargetStatus::NeedsApply => result.needs_apply += 1,
@@ -246,29 +279,12 @@ pub fn run(mut options: ShellSyncOptions) -> Result<ShellSyncResult, String> {
         }
 
         if options.mode == ShellSyncMode::Apply {
-            match evaluation.status {
-                TargetStatus::InSync => {}
-                TargetStatus::Missing | TargetStatus::NeedsApply => {
-                    if apply_target(&target, &evaluation).is_ok() {
-                        evaluation = classify_target(&target)?;
-                        if evaluation.status == TargetStatus::InSync {
-                            result.applied += 1;
-                        } else {
-                            result.errors += 1;
-                            log(&format!(
-                                "apply failed to converge '{}': status={}",
-                                target.id,
-                                evaluation.status.as_str()
-                            ));
-                        }
-                    } else {
-                        result.errors += 1;
-                        log(&format!("apply failed for '{}': {}", target.id, evaluation.reason));
-                    }
-                }
-                TargetStatus::Invalid => {
+            match apply_target_with_recheck(&target, &evaluation)? {
+                ApplyStatus::Skipped => {}
+                ApplyStatus::Applied => result.applied += 1,
+                ApplyStatus::Error(message) => {
                     result.errors += 1;
-                    log(&format!("apply refused for '{}': {}", target.id, evaluation.reason));
+                    log(&message);
                 }
             }
         }
@@ -368,27 +384,19 @@ fn push_group_filter(filters: &mut Vec<ShellGroup>, group: ShellGroup) {
     }
 }
 
-fn list_targets(managed_dir: &Path) -> Vec<TargetDefinition> {
-    let home = std::env::var("HOME").unwrap_or_default();
-    let home_path = PathBuf::from(home);
-    vec![
-        TargetDefinition {
-            id: "zsh-zdotdir",
-            shell_name: ShellGroup::Zsh,
-            actual_path: home_path.join(".nix/.zshrc"),
-            desired_path: managed_dir.join("zdotdir.zshrc.block.sh"),
-            begin_marker: "# >>> dotfiles-managed:zdotdir.zshrc >>>",
-            end_marker: "# <<< dotfiles-managed:zdotdir.zshrc <<<",
-        },
-        TargetDefinition {
-            id: "bash-rc",
-            shell_name: ShellGroup::Bash,
-            actual_path: home_path.join(".bashrc"),
-            desired_path: managed_dir.join("bashrc.entrypoint.block.sh"),
-            begin_marker: "# >>> dotfiles-managed:bashrc >>>",
-            end_marker: "# <<< dotfiles-managed:bashrc <<<",
-        },
-    ]
+fn list_targets(managed_dir: &Path) -> Result<Vec<TargetDefinition>, String> {
+    let home_path = home_dir()?;
+    Ok(TARGET_SPECS
+        .iter()
+        .map(|spec| TargetDefinition {
+            id: spec.id,
+            shell_name: spec.shell_name,
+            actual_path: home_path.join(spec.actual_relative_path),
+            desired_path: managed_dir.join(spec.desired_file_name),
+            begin_marker: spec.begin_marker,
+            end_marker: spec.end_marker,
+        })
+        .collect())
 }
 
 fn target_selected(options: &ShellSyncOptions, target: &TargetDefinition) -> bool {
@@ -402,7 +410,10 @@ fn target_selected(options: &ShellSyncOptions, target: &TargetDefinition) -> boo
         return true;
     }
 
-    options.group_filters.iter().any(|group| group == &target.shell_name)
+    options
+        .group_filters
+        .iter()
+        .any(|group| group == &target.shell_name)
 }
 
 fn classify_target(target: &TargetDefinition) -> Result<TargetEvaluation, String> {
@@ -413,7 +424,10 @@ fn classify_target(target: &TargetDefinition) -> Result<TargetEvaluation, String
         status: TargetStatus::Invalid,
         reason: String::new(),
         actual_kind: actual_kind.clone(),
-        shape_needs_rewrite: matches!(actual_kind, PathKind::SymlinkStore(_) | PathKind::SymlinkRegular(_)),
+        shape_needs_rewrite: matches!(
+            actual_kind,
+            PathKind::SymlinkStore(_) | PathKind::SymlinkRegular(_)
+        ),
         desired_text,
         actual_text: String::new(),
     };
@@ -438,8 +452,13 @@ fn classify_target(target: &TargetDefinition) -> Result<TargetEvaluation, String
             Ok(evaluation)
         }
         PathKind::Regular | PathKind::SymlinkStore(_) | PathKind::SymlinkRegular(_) => {
-            let actual_source = read_existing_source(&target.actual_path, &actual_kind)
-                .map_err(|_| format!("failed to inspect target contents: {}", target.actual_path.display()))?;
+            let actual_source =
+                read_existing_source(&target.actual_path, &actual_kind).map_err(|_| {
+                    format!(
+                        "failed to inspect target contents: {}",
+                        target.actual_path.display()
+                    )
+                })?;
             match extract_managed_block(&actual_source, target.begin_marker, target.end_marker) {
                 Ok(actual_text) => {
                     evaluation.actual_text = actual_text;
@@ -467,7 +486,8 @@ fn classify_target(target: &TargetDefinition) -> Result<TargetEvaluation, String
                 }
                 Err(ExtractError::InvalidBlock) => {
                     evaluation.status = TargetStatus::Invalid;
-                    evaluation.reason = "managed block markers are duplicated or malformed".to_string();
+                    evaluation.reason =
+                        "managed block markers are duplicated or malformed".to_string();
                     Ok(evaluation)
                 }
             }
@@ -489,12 +509,18 @@ fn print_target_details(target: &TargetDefinition, evaluation: &TargetEvaluation
             detail
         ));
     } else {
-        log(&format!("  actual-type: {}", evaluation.actual_kind.label()));
+        log(&format!(
+            "  actual-type: {}",
+            evaluation.actual_kind.label()
+        ));
     }
     log(&format!("  reason: {}", evaluation.reason));
 }
 
-fn print_target_diff(target: &TargetDefinition, evaluation: &TargetEvaluation) -> Result<(), String> {
+fn print_target_diff(
+    target: &TargetDefinition,
+    evaluation: &TargetEvaluation,
+) -> Result<(), String> {
     log(&format!("diff: {}", target.id));
     if evaluation.shape_needs_rewrite && evaluation.actual_text == evaluation.desired_text {
         log("  note: content matches desired, but target must be rewritten as a writable regular file");
@@ -526,15 +552,57 @@ fn print_unified_diff(desired: &str, actual: &str) -> Result<(), String> {
 
 fn apply_target(target: &TargetDefinition, evaluation: &TargetEvaluation) -> Result<(), String> {
     match evaluation.actual_kind {
-        PathKind::Missing | PathKind::Regular | PathKind::SymlinkStore(_) | PathKind::SymlinkRegular(_) => {
-            write_entrypoint_file(
-                &target.actual_path,
-                &target.desired_path,
-                target.begin_marker,
-                target.end_marker,
-            )
-        }
+        PathKind::Missing
+        | PathKind::Regular
+        | PathKind::SymlinkStore(_)
+        | PathKind::SymlinkRegular(_) => write_entrypoint_file(
+            &target.actual_path,
+            &target.desired_path,
+            target.begin_marker,
+            target.end_marker,
+        ),
         _ => Err("target is not writable".to_string()),
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum ApplyStatus {
+    Skipped,
+    Applied,
+    Error(String),
+}
+
+fn apply_target_with_recheck(
+    target: &TargetDefinition,
+    evaluation: &TargetEvaluation,
+) -> Result<ApplyStatus, String> {
+    match evaluation.status {
+        TargetStatus::InSync => Ok(ApplyStatus::Skipped),
+        TargetStatus::Invalid => Ok(ApplyStatus::Error(format!(
+            "apply refused for '{}': {}",
+            target.id, evaluation.reason
+        ))),
+        TargetStatus::Missing | TargetStatus::NeedsApply => {
+            match apply_target(target, evaluation) {
+                Ok(()) => {
+                    let post = classify_target(target)?;
+                    if post.status == TargetStatus::InSync {
+                        Ok(ApplyStatus::Applied)
+                    } else {
+                        Ok(ApplyStatus::Error(format!(
+                            "apply failed to converge '{}': status={} reason={}",
+                            target.id,
+                            post.status.as_str(),
+                            post.reason
+                        )))
+                    }
+                }
+                Err(err) => Ok(ApplyStatus::Error(format!(
+                    "apply failed for '{}': {}",
+                    target.id, err
+                ))),
+            }
+        }
     }
 }
 
@@ -577,8 +645,8 @@ fn write_file_atomically(target_file: &Path, contents: &str) -> Result<(), Strin
         .ok_or_else(|| format!("path has no parent: {}", target_file.display()))?;
     fs::create_dir_all(parent)
         .map_err(|err| format!("failed to create {}: {}", parent.display(), err))?;
-    let mut temp =
-        NamedTempFile::new_in(parent).map_err(|err| format!("failed to create temp file: {}", err))?;
+    let mut temp = NamedTempFile::new_in(parent)
+        .map_err(|err| format!("failed to create temp file: {}", err))?;
     temp.write_all(contents.as_bytes())
         .map_err(|err| format!("failed to write temp file: {}", err))?;
     temp.persist(target_file)
@@ -627,7 +695,11 @@ fn canonicalize_text(source: &str) -> String {
     normalized
 }
 
-fn extract_managed_block(source: &str, begin_marker: &str, end_marker: &str) -> Result<String, ExtractError> {
+fn extract_managed_block(
+    source: &str,
+    begin_marker: &str,
+    end_marker: &str,
+) -> Result<String, ExtractError> {
     let mut begin_count = 0u32;
     let mut end_count = 0u32;
     let mut in_block = false;
@@ -771,7 +843,8 @@ fn write_output(bytes: &[u8], stderr: bool) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        classify_target, write_entrypoint_file, TargetDefinition, TargetStatus, PathKind, ShellGroup,
+        apply_target_with_recheck, classify_target, write_entrypoint_file, ApplyStatus, PathKind,
+        ShellGroup, TargetDefinition, TargetStatus,
     };
     use std::fs;
     use tempfile::tempdir;
@@ -882,5 +955,36 @@ mod tests {
         let bashrc = fs::read_to_string(&bashrc_path).expect("bashrc");
         assert!(bashrc.contains("# >>> dotfiles-managed:bashrc >>>"));
         assert!(bashrc.contains("source ~/.nix/hm-bash/.bashrc"));
+    }
+
+    #[test]
+    fn apply_reports_root_cause_when_parent_path_is_not_a_directory() {
+        let temp = tempdir().expect("tempdir");
+        let managed = setup_managed_dir(temp.path());
+        let home_dir = temp.path().join("home");
+        fs::create_dir_all(&home_dir).expect("home");
+        let blocked_parent = home_dir.join(".nix");
+        fs::write(&blocked_parent, "not a directory\n").expect("blocked");
+
+        let target = TargetDefinition {
+            id: "zsh-zdotdir",
+            shell_name: ShellGroup::Zsh,
+            actual_path: blocked_parent.join(".zshrc"),
+            desired_path: managed.join("zdotdir.zshrc.block.sh"),
+            begin_marker: "# >>> dotfiles-managed:zdotdir.zshrc >>>",
+            end_marker: "# <<< dotfiles-managed:zdotdir.zshrc <<<",
+        };
+
+        let evaluation = classify_target(&target).expect("classify");
+        assert_eq!(evaluation.status, TargetStatus::Missing);
+
+        let status = apply_target_with_recheck(&target, &evaluation).expect("apply");
+        match status {
+            ApplyStatus::Error(message) => {
+                assert!(message.contains("apply failed for 'zsh-zdotdir':"));
+                assert!(message.contains("failed to create"));
+            }
+            other => panic!("expected root-cause apply error, got {:?}", other),
+        }
     }
 }

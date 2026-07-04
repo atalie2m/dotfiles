@@ -34,8 +34,13 @@ pub(crate) fn write_json_atomically(value: &Value, target_json: &Path) -> Result
     fs::create_dir_all(parent)
         .map_err(|err| format!("failed to create parent dir {}: {}", parent.display(), err))?;
 
-    let mut temp_file = NamedTempFile::new_in(parent)
-        .map_err(|err| format!("failed to create temp file in {}: {}", parent.display(), err))?;
+    let mut temp_file = NamedTempFile::new_in(parent).map_err(|err| {
+        format!(
+            "failed to create temp file in {}: {}",
+            parent.display(),
+            err
+        )
+    })?;
 
     let sorted = sort_json(value);
     let bytes = json_bytes(&sorted)?;

@@ -1,6 +1,6 @@
-{ delib, lib, ... }:
+{ dotmod, config, lib, ... }:
 
-# Allow select unfree packages on both Home Manager and Darwin
+# Allow select unfree packages on the Darwin package set shared with Home Manager.
 
 let
   mkAllowUnfreePredicate = cfg:
@@ -9,20 +9,16 @@ let
     else (pkg: lib.elem (lib.getName pkg) cfg.packages);
 in
 
-delib.module {
-  name = "nixpkgs.unfree";
+(dotmod.mkModule { inherit config; }) {
+  path = "nixpkgs.unfree";
 
-  options.nixpkgs.unfree = with delib.options; {
+  options = with dotmod; {
     enable = boolOption false;
     allowAll = boolOption false;
     packages = listOfOption str [ ];
   };
 
-  home.ifEnabled = { cfg, ... }: {
-    nixpkgs.config.allowUnfreePredicate = mkAllowUnfreePredicate cfg;
-  };
-
-  darwin.ifEnabled = { cfg, ... }: {
+  darwinOnEnable = { cfg, ... }: {
     nixpkgs.config.allowUnfreePredicate = mkAllowUnfreePredicate cfg;
   };
 }

@@ -80,7 +80,7 @@ if ! run_shell_sync_from_copy --check --item bash-rc >/dev/null; then
 fi
 
 tmp_mutated="$tmp_root/bashrc.mutated"
-/usr/bin/awk '
+awk '
   BEGIN { replaced = 0 }
   {
     if (replaced == 0) {
@@ -166,6 +166,54 @@ fi
 
 if ! run_shell_sync --check --group zsh >/dev/null; then
   echo "FAIL: zsh check failed after apply" >&2
+  exit 1
+fi
+
+rm -rf "$home_dir/.nix"
+printf 'not a directory\n' >"$home_dir/.nix"
+if run_shell_sync --apply --item zsh-zdotdir >"$tmp_root/zsh-apply-failure.out" 2>"$tmp_root/zsh-apply-failure.err"; then
+  echo "FAIL: apply unexpectedly succeeded when the zsh wrapper parent path was a file" >&2
+  exit 1
+fi
+
+if ! grep -Fq "apply failed for 'zsh-zdotdir': failed to create $home_dir/.nix" "$tmp_root/zsh-apply-failure.err"; then
+  echo "FAIL: shell sync did not report the root-cause apply error" >&2
+  cat "$tmp_root/zsh-apply-failure.err" >&2 || true
+  exit 1
+fi
+
+mkdir -p "$home_dir/.nix-profile/bin" "$home_dir/.nix-profile/etc/profile.d"
+cat >"$home_dir/.nix-profile/bin/fallback-profile-tool" <<'EOF_FALLBACK_PROFILE_TOOL'
+#!/usr/bin/env bash
+printf 'fallback profile tool\n'
+EOF_FALLBACK_PROFILE_TOOL
+chmod +x "$home_dir/.nix-profile/bin/fallback-profile-tool"
+
+cat >"$home_dir/.nix-profile/etc/profile.d/hm-session-vars.sh" <<'EOF_HM_SESSION_VARS'
+# test fixture
+export PATH="$HOME/.local/bin${PATH:+:}$PATH"
+EOF_HM_SESSION_VARS
+
+common_path_output="$tmp_root/common.path"
+if ! env -i \
+  HOME="$home_dir" \
+  USER=shellsmoke \
+  LOGNAME=shellsmoke \
+  PATH="$PATH" \
+  bash -lc "source \"$ROOT/apps/shell/common.sh\" && command -v fallback-profile-tool && printf 'PATH=%s\n' \"\$PATH\"" >"$common_path_output"; then
+  echo "FAIL: sourcing common.sh failed" >&2
+  exit 1
+fi
+
+if ! grep -Fqx "$home_dir/.nix-profile/bin/fallback-profile-tool" "$common_path_output"; then
+  echo "FAIL: common.sh did not expose fallback profile bins" >&2
+  cat "$common_path_output" >&2 || true
+  exit 1
+fi
+
+if ! grep -Fq "$home_dir/.local/bin" "$common_path_output"; then
+  echo "FAIL: common.sh did not source hm-session-vars.sh" >&2
+  cat "$common_path_output" >&2 || true
   exit 1
 fi
 

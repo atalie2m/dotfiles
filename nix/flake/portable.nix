@@ -6,7 +6,7 @@ let
     settings = {
       global.excludes = [ ".direnv/**" "result/**" "flake.lock" ];
       formatter.prettier-json = {
-        command = "${pkgs.nodePackages.prettier}/bin/prettier";
+        command = "${pkgs.prettier}/bin/prettier";
         includes = [ "*.json" "**/*.json" ];
         options = [ "--write" ];
       };
@@ -31,7 +31,53 @@ let
       exec "${dotfilesCli}/bin/dotfiles" "$@"
     '';
 
-  mkPortableChecks = { pkgs, formatterWrapper, dotfilesPackage, syncVscodeRust }:
+  mkEditorSyncAppProgram = { pkgs, dotfilesPackage }:
+    pkgs.writeShellScript "dotfiles-sync" ''
+      set -uo pipefail
+
+      if [[ -z "''${DOTFILES_ROOT:-}" ]]; then
+        pwd_root="$(pwd)"
+        if [[ -f "$pwd_root/flake.nix" && -d "$pwd_root/scripts" ]]; then
+          export DOTFILES_ROOT="$pwd_root"
+        fi
+      fi
+      if [[ -z "''${DOTFILES_ROOT:-}" ]] && command -v git >/dev/null 2>&1; then
+        candidate_root="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
+        if [[ -n "$candidate_root" && -f "$candidate_root/flake.nix" && -d "$candidate_root/scripts" ]]; then
+          export DOTFILES_ROOT="$candidate_root"
+        fi
+      fi
+      export DOTFILES_ROOT="''${DOTFILES_ROOT:-${repoPaths.root}}"
+
+      status=0
+      run_surface() {
+        local surface="$1"
+        shift
+        printf 'dotfiles: running sync %s\n' "$surface" >&2
+        "${dotfilesPackage}/bin/dotfiles" sync "$surface" "$@"
+      }
+
+      run_and_remember_status() {
+        local surface="$1"
+        shift
+        run_surface "$surface" "$@" || {
+          local command_status=$?
+          if [[ "$status" -eq 0 ]]; then status=$command_status; fi
+        }
+      }
+
+      if [[ "$#" -eq 0 ]]; then
+        run_and_remember_status emacs --apply
+        run_and_remember_status neovim --apply
+      else
+        run_and_remember_status emacs "$@"
+        run_and_remember_status neovim "$@"
+      fi
+
+      exit "$status"
+    '';
+
+  mkPortableChecks = { pkgs, formatterWrapper, dotfilesPackage, syncVscodeRust, editorSyncAppProgram, vscodeZshLauncher }:
     {
       treefmt = pkgs.runCommand "treefmt-check"
         {
@@ -174,6 +220,171 @@ let
         touch "$out"
       '';
 
+      shellCommonProfile = pkgs.runCommand "shell-common-profile-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gawk pkgs.gnugrep pkgs.zsh ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/shell-common-profile-test.sh
+        touch "$out"
+      '';
+
+      atuinContextHistory = pkgs.runCommand "atuin-context-history-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gnugrep pkgs.zsh ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/atuin-context-history-test.sh
+        touch "$out"
+      '';
+
+      terminalUx = pkgs.runCommand "terminal-ux-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gnugrep pkgs.zsh ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/terminal-ux-test.sh
+        touch "$out"
+      '';
+
+      purePromptDefaults = pkgs.runCommand "pure-prompt-defaults-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        module=nix/modules/tools/shell/pure.nix
+
+        if ! grep -Fq 'PURE_CMD_MAX_EXEC_TIME:=2' "$module"; then
+          echo "FAIL: Pure should default long-command visibility to 2 seconds" >&2
+          exit 1
+        fi
+
+        if ! grep -Fq 'export PURE_CMD_MAX_EXEC_TIME' "$module"; then
+          echo "FAIL: Pure long-command threshold should be exported before prompt setup" >&2
+          exit 1
+        fi
+
+        touch "$out"
+      '';
+
+      rioConfig = pkgs.runCommand "rio-config-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        template=apps/rio/config.toml.template
+        module=nix/modules/tools/terminal/rio.nix
+
+        require_contains() {
+          needle=$1
+          file=$2
+          if ! grep -Fq "$needle" "$file"; then
+            echo "FAIL: expected $file to contain: $needle" >&2
+            exit 1
+          fi
+        }
+
+        reject_contains() {
+          needle=$1
+          file=$2
+          if grep -Fq "$needle" "$file"; then
+            echo "FAIL: expected $file to omit: $needle" >&2
+            exit 1
+          fi
+        }
+
+        require_contains 'backend = "@@RENDERER_BACKEND@@"' "$template"
+        require_contains 'padding = [8]' "$template"
+        require_contains 'scrollback-history-limit = 30000' "$template"
+        require_contains 'enable-scroll-bar = true' "$template"
+        require_contains 'current-working-directory = true' "$template"
+        require_contains 'opacity = 0.92' "$template"
+        require_contains 'blur = true' "$template"
+
+        reject_contains 'backend = "Automatic"' "$template"
+        reject_contains 'padding-x' "$template"
+        reject_contains 'padding-y' "$template"
+
+        require_contains 'navigationMode = if tmuxEnabled then "Plain" else "Tab";' "$module"
+        require_contains 'rendererBackend = if pkgs.stdenv.isDarwin then "Metal" else "Vulkan";' "$module"
+        require_contains '@@COLOR_AUTOMATION_BLOCK@@' "$module"
+        reject_contains '"Bookmark"' "$module"
+
+        touch "$out"
+      '';
+
+      weztermConfig = pkgs.runCommand "wezterm-config-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        config=apps/wezterm/wezterm.lua
+
+        require_contains() {
+          needle=$1
+          if ! grep -Fq "$needle" "$config"; then
+            echo "FAIL: expected $config to contain: $needle" >&2
+            exit 1
+          fi
+        }
+
+        require_contains "config.color_scheme = 'Catppuccin Mocha'"
+        require_contains 'config.check_for_updates = false'
+        require_contains 'config.macos_window_background_blur = 20'
+        require_contains 'config.native_macos_fullscreen_mode = true'
+        require_contains 'config.adjust_window_size_when_changing_font_size = false'
+        require_contains 'config.enable_scroll_bar = true'
+        require_contains "config.default_cursor_style = 'SteadyBar'"
+        require_contains 'config.cursor_blink_rate = 0'
+        require_contains "config.audible_bell = 'Disabled'"
+        require_contains 'config.scrollback_lines = 30000'
+
+        touch "$out"
+      '';
+
+      ghosttyConfig = pkgs.runCommand "ghostty-config-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        module=nix/modules/tools/profile-defaults.nix
+
+        if ! grep -Fq 'theme = "Catppuccin Mocha";' "$module"; then
+          echo "FAIL: Ghostty theme must use the bundled theme name: Catppuccin Mocha" >&2
+          exit 1
+        fi
+
+        if grep -Fq 'theme = "catppuccin-mocha";' "$module"; then
+          echo "FAIL: Ghostty no longer accepts the old lower-case catppuccin-mocha theme name" >&2
+          exit 1
+        fi
+
+        touch "$out"
+      '';
+
+      kittyConfig = pkgs.runCommand "kitty-config-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        module=nix/modules/tools/profile-defaults.nix
+
+        if ! grep -Fq 'name = "JetBrainsMono Nerd Font Mono";' "$module"; then
+          echo "FAIL: Kitty should use the CoreText-visible JetBrainsMono Nerd Font Mono family" >&2
+          exit 1
+        fi
+
+        touch "$out"
+      '';
+
       syncCliCommonParse = pkgs.runCommand "sync-cli-common-parse-test"
         {
           nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gawk pkgs.gnugrep dotfilesPackage ];
@@ -183,6 +394,18 @@ let
         export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
         export DOTFILES_ROOT="$src"
         bash scripts/tests/sync-cli-common-parse-test.sh
+        touch "$out"
+      '';
+
+      syncEmacsSmoke = pkgs.runCommand "sync-emacs-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gnugrep dotfilesPackage ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
+        bash scripts/tests/sync-emacs-smoke-test.sh
         touch "$out"
       '';
 
@@ -266,6 +489,46 @@ let
         touch "$out"
       '';
 
+      vscodeZshLauncherSmoke = pkgs.runCommand "vscode-zsh-launcher-smoke-test"
+        {
+          nativeBuildInputs = [
+            pkgs.bash
+            pkgs.gnugrep
+            vscodeZshLauncher
+          ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        export DOTFILES_VSCODE_ZSH_LAUNCHER="${vscodeZshLauncher}/bin/dotfiles-vscode-zsh"
+        bash scripts/tests/vscode-zsh-launcher-test.sh
+        touch "$out"
+      '';
+
+      syncNeovimSmoke = pkgs.runCommand "sync-neovim-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.diffutils pkgs.gnugrep dotfilesPackage ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
+        bash scripts/tests/sync-neovim-smoke-test.sh
+        touch "$out"
+      '';
+
+      syncEditorAppSmoke = pkgs.runCommand "sync-editor-app-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.diffutils pkgs.gnugrep dotfilesPackage ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
+        export DOTFILES_SYNC_APP="${editorSyncAppProgram}"
+        bash scripts/tests/sync-editor-app-smoke-test.sh
+        touch "$out"
+      '';
+
       retiredHostLiterals = pkgs.runCommand "retired-host-literals-test"
         {
           nativeBuildInputs = [ pkgs.bash pkgs.ripgrep ];
@@ -303,6 +566,29 @@ let
         } ''
         cd "$src"
         bash scripts/tests/shim-delegation-test.sh
+        touch "$out"
+      '';
+
+      agentNotifications = pkgs.runCommand "agent-notifications-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash pkgs.python3 dotfilesPackage ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        export DOTFILES_BIN="${dotfilesPackage}/bin/dotfiles"
+        export DOTFILES_ROOT="$src"
+        bash scripts/tests/codex-slack-notification-test.sh
+        touch "$out"
+      '';
+    }
+    // nixLib.optionalAttrs pkgs.stdenv.isDarwin {
+      emacsPlusNativeCompEnvSmoke = pkgs.runCommand "emacs-plus-native-comp-env-smoke-test"
+        {
+          nativeBuildInputs = [ pkgs.bash ];
+          src = repoPaths.root;
+        } ''
+        cd "$src"
+        bash scripts/tests/emacs-plus-native-comp-env-smoke-test.sh
         touch "$out"
       '';
     }
@@ -357,6 +643,7 @@ in
     treefmtConfigFor
     mkDotfilesCliPackage
     mkDotfilesPackage
+    mkEditorSyncAppProgram
     mkSyncVscodeRustPackage
     mkPortableChecks
     mkPortableDevShell

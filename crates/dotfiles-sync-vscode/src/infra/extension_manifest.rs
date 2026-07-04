@@ -4,12 +4,12 @@ use std::fs;
 use std::path::Path;
 
 use crate::app::runtime::Context;
+use crate::infra::enablement_db::ensure_enablement_db;
+use crate::infra::extensions::canonical_extension_id;
 use crate::infra::json::{read_json, read_json_array, write_json_atomically};
 use crate::infra::paths::{
     profile_extensions_manifest_path, profile_id, profile_runtime_dir, profile_settings_path,
 };
-use crate::infra::enablement_db::ensure_enablement_db;
-use crate::infra::extensions::canonical_extension_id;
 use crate::infra::profile_registry::ensure_custom_profile_registry;
 use crate::log;
 
@@ -34,8 +34,13 @@ pub(crate) fn ensure_custom_profile_runtime(
 
     if !settings_path.is_file() {
         write_json_atomically(&Value::Object(Map::new()), &settings_path)?;
-    } else {
-        read_json(&settings_path)?;
+    } else if let Err(err) = read_json(&settings_path) {
+        log(&format!(
+            "Repairing malformed managed settings file: {} ({})",
+            settings_path.display(),
+            err
+        ));
+        write_json_atomically(&Value::Object(Map::new()), &settings_path)?;
     }
 
     if !extensions_manifest.is_file() {
@@ -71,7 +76,8 @@ pub(crate) fn prune_orphaned_extension_dirs(context: &Context) -> Result<(), Str
             err
         )
     })? {
-        let dir_entry = dir_entry.map_err(|err| format!("failed to read extension dir entry: {}", err))?;
+        let dir_entry =
+            dir_entry.map_err(|err| format!("failed to read extension dir entry: {}", err))?;
         let path = dir_entry.path();
         if !path.is_dir() {
             continue;
@@ -94,6 +100,16 @@ pub(crate) fn prune_orphaned_extension_dirs(context: &Context) -> Result<(), Str
     }
 
     Ok(())
+}
+
+pub(crate) fn validate_global_extension_manifest(context: &Context) -> Result<(), String> {
+    if !context.extensions_manifest_path.is_file() {
+        return Ok(());
+    }
+
+    read_json_array(&context.extensions_manifest_path)
+        .map(|_| ())
+        .map_err(|err| format!("global extensions manifest is invalid: {}", err))
 }
 
 pub(crate) fn normalize_custom_profile_extension_manifest(
@@ -133,7 +149,8 @@ pub(crate) fn normalize_custom_profile_extension_manifest(
             continue;
         }
 
-        if let Some(existing_entry) = find_last_extension_manifest_entry(&manifest_entries, &extension_id)
+        if let Some(existing_entry) =
+            find_last_extension_manifest_entry(&manifest_entries, &extension_id)
         {
             if extension_manifest_entry_has_existing_payload(context, &existing_entry) {
                 rebuilt.push(existing_entry);
@@ -240,10 +257,8 @@ fn global_extension_manifest_entry(
         return Ok(None);
     }
 
-    let manifest_entries = match read_json_array(&context.extensions_manifest_path) {
-        Ok(entries) => entries,
-        Err(_) => return Ok(None),
-    };
+    let manifest_entries = read_json_array(&context.extensions_manifest_path)
+        .map_err(|err| format!("global extensions manifest is invalid: {}", err))?;
 
     let Some(entry) = find_last_extension_manifest_entry(&manifest_entries, extension_id) else {
         return Ok(None);
@@ -286,10 +301,12 @@ fn extension_manifest_entry_has_existing_payload(context: &Context, entry: &Valu
         return true;
     }
 
-    entry.get("relativeLocation")
+    entry
+        .get("relativeLocation")
         .and_then(Value::as_str)
         .map(|relative_location| {
-            !relative_location.is_empty() && context.extensions_root.join(relative_location).exists()
+            !relative_location.is_empty()
+                && context.extensions_root.join(relative_location).exists()
         })
         .unwrap_or(false)
 }
@@ -297,8 +314,8 @@ fn extension_manifest_entry_has_existing_payload(context: &Context, entry: &Valu
 #[cfg(test)]
 mod tests {
     use super::{
-        add_custom_profile_extension_membership, list_profile_extensions, prune_orphaned_extension_dirs,
-        remove_custom_profile_extension_membership,
+        add_custom_profile_extension_membership, list_profile_extensions,
+        prune_orphaned_extension_dirs, remove_custom_profile_extension_membership,
     };
     use crate::app::runtime::{Context, Mode};
     use serde_json::json;
@@ -352,8 +369,9 @@ mod tests {
         )
         .expect("write");
 
-        let added = add_custom_profile_extension_membership(&context, "focus", "Focus", "zed.alpha")
-            .expect("add");
+        let added =
+            add_custom_profile_extension_membership(&context, "focus", "Focus", "zed.alpha")
+                .expect("add");
         assert!(added);
 
         let listed = list_profile_extensions(&context, "focus").expect("list");

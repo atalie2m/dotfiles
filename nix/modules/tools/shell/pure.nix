@@ -1,15 +1,15 @@
-{ delib, lib, pkgs, ... }:
+{ dotmod, config, lib, pkgs, ... }:
 
 # Pure prompt configuration
 
-delib.module {
-  name = "tools.shell.pure";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell.pure";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  home.ifEnabled = { myconfig, ... }:
+  homeOnEnable = { myconfig, ... }:
     let
       zshEnabled = (((myconfig.tools or { }).shell or { }).zsh or { }).enable or false;
     in
@@ -19,6 +19,8 @@ delib.module {
       programs.zsh.initContent = lib.mkOrder 1000 ''
         fpath+=(${pkgs.pure-prompt}/share/zsh/site-functions)
         autoload -Uz promptinit
+        : ''${PURE_CMD_MAX_EXEC_TIME:=2}
+        export PURE_CMD_MAX_EXEC_TIME
         if [[ -n "$IN_NIX_SHELL" || -n "$NIX_SHELL" || -n "$NIX_SHELL_NAME" ]]; then
           typeset pure_prompt_symbol="❯"
           if [[ -n "$PURE_PROMPT_SYMBOL" ]]; then
@@ -30,6 +32,9 @@ delib.module {
         fi
         promptinit
         prompt pure
+        if [[ -n ''${DOTFILES_MOSH_SESSION:-} ]] && (( ''${+prompt_pure_state} )); then
+          prompt_pure_state[username]=""
+        fi
       '';
     };
 }

@@ -1,51 +1,39 @@
 return {
-  "nvim-treesitter/nvim-treesitter",
-  lazy = false,
-  build = ":TSUpdate",
-  config = function()
-    local ts = require("nvim-treesitter")
+  {
+    "nvim-treesitter/nvim-treesitter",
+    opts = function(_, opts)
+      if type(opts.ensure_installed) ~= "table" then
+        return
+      end
 
-    local parsers = {
-      "bash",
-      "javascript",
-      "json",
-      "lua",
-      "markdown",
-      "markdown_inline",
-      "nix",
-      "python",
-      "query",
-      "regex",
-      "tsx",
-      "typescript",
-      "vim",
-      "vimdoc",
-      "yaml",
-    }
-
-    ts.setup({})
-
-    local installed = ts.get_installed()
-    local missing = vim.tbl_filter(function(parser)
-      return not vim.list_contains(installed, parser)
-    end, parsers)
-
-    if #missing > 0 then
-      ts.install(missing)
-    end
-
-    local augroup = vim.api.nvim_create_augroup("dotfiles.treesitter", { clear = true })
-    vim.api.nvim_create_autocmd("FileType", {
-      group = augroup,
-      pattern = "*",
-      callback = function(args)
-        if vim.bo[args.buf].buftype ~= "" then
-          return
+      for _, parser in ipairs({
+        "bash",
+        "css",
+        "javascript",
+        "json",
+        "latex",
+        "lua",
+        "markdown",
+        "markdown_inline",
+        "nix",
+        "python",
+        "query",
+        "regex",
+        "rust",
+        "scss",
+        "svelte",
+        "typst",
+        "tsx",
+        "typescript",
+        "vim",
+        "vimdoc",
+        "vue",
+        "yaml",
+      }) do
+        if not vim.tbl_contains(opts.ensure_installed, parser) then
+          table.insert(opts.ensure_installed, parser)
         end
-
-        pcall(vim.treesitter.start, args.buf)
-        vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
-      end,
-    })
-  end,
+      end
+    end,
+  },
 }

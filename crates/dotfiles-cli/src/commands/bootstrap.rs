@@ -1,6 +1,8 @@
-use crate::commands::{atty_stdin, ApplyAction, ApplyArgs, BootstrapArgs, DoctorArgs, TargetSelector};
+use crate::commands::{
+    atty_stdin, ApplyAction, ApplyArgs, BootstrapArgs, DoctorArgs, TargetSelector,
+};
 use dotfiles_core::support::{
-    ensure_dir_mode, ensure_file_mode, ensure_inputs_dirs, find_in_path, log,
+    ensure_dir_mode, ensure_file_mode, ensure_inputs_dirs, find_in_path, home_dir, log,
     render_bootstrap_facts, repo_root, require_host_argument, require_input_directories,
     resolve_inputs, run_command_output, run_command_status,
 };
@@ -19,11 +21,11 @@ pub(crate) fn command_bootstrap(args: &BootstrapArgs) -> Result<(), String> {
         .host_value()
         .map(ToOwned::to_owned)
         .or_else(|| env::var("HOST").ok());
-    let rice = args
+    let profile = args
         .target
-        .rice_value()
+        .profile_value()
         .map(ToOwned::to_owned)
-        .or_else(|| env::var("RICE").ok());
+        .or_else(|| env::var("PROFILE").ok());
     if apply_after {
         require_host_argument(host.as_deref(), "bootstrap")?;
     }
@@ -65,7 +67,9 @@ pub(crate) fn command_bootstrap(args: &BootstrapArgs) -> Result<(), String> {
     let age_key = env::var("SOPS_AGE_KEY_FILE")
         .ok()
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env::var("HOME").unwrap_or_default()).join(".config/sops/age/keys.txt"));
+        .filter(|path| !path.as_os_str().is_empty())
+        .map(Ok)
+        .unwrap_or_else(|| home_dir().map(|home| home.join(".config/sops/age/keys.txt")))?;
     if !age_key.is_file() {
         if find_in_path("age-keygen").is_some() {
             let parent = age_key
@@ -92,7 +96,7 @@ pub(crate) fn command_bootstrap(args: &BootstrapArgs) -> Result<(), String> {
         super::doctor::command_doctor(&DoctorArgs {
             target: TargetSelector {
                 host: host.clone(),
-                rice: rice.clone(),
+                profile: profile.clone(),
                 host_positional: None,
             },
             strict: args.strict,
@@ -119,7 +123,7 @@ pub(crate) fn command_bootstrap(args: &BootstrapArgs) -> Result<(), String> {
             super::apply::command_apply(&ApplyArgs {
                 target: TargetSelector {
                     host,
-                    rice,
+                    profile,
                     host_positional: None,
                 },
                 action: ApplyAction::Switch,

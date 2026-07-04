@@ -1,11 +1,11 @@
-{ delib, ... }:
+{ dotmod, config, ... }:
 
 # AI coding agent tool group
 
-delib.module {
-  name = "tools.aiCodingAgent";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.aiCodingAgent";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 }

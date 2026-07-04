@@ -1,18 +1,20 @@
-{ delib, lib, pkgs, ... }:
+{ dotmod, config, lib, pkgs, repoPaths, ... }:
 
 # Atuin history integration
 
-delib.module {
-  name = "tools.shell.atuin";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.shell.atuin";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 
-  home.ifEnabled = { myconfig, ... }:
+  homeOnEnable = { myconfig, ... }:
     let
       zshEnabled = (((myconfig.tools or { }).shell or { }).zsh or { }).enable or false;
-      atuinFlags = "--disable-up-arrow";
+      atuinFlags = [ ];
+      atuinInitArgs = lib.optionalString (atuinFlags != [ ]) (" " + lib.concatStringsSep " " atuinFlags);
+      contextHistoryPath = repoPaths.apps + "/shell/atuin-context-history.zsh";
     in
     lib.mkIf zshEnabled {
       programs.atuin = {
@@ -21,12 +23,32 @@ delib.module {
         enableFishIntegration = false;
         enableNushellIntegration = false;
         enableZshIntegration = false;
-        flags = [ atuinFlags ];
+        flags = atuinFlags;
+        # Atuin rewrites config.toml after commands; HM must own the file or activation conflicts.
+        forceOverwriteSettings = true;
+        # Let Atuin own history navigation and autosuggestions. Bias searches
+        # toward the current workspace, with directory/global fallbacks.
+        settings = {
+          workspaces = true;
+          filter_mode = "workspace";
+          filter_mode_shell_up_key_binding = "workspace";
+          search_mode_shell_up_key_binding = "prefix";
+          search.filters = [
+            "workspace"
+            "directory"
+            "global"
+            "host"
+            "session"
+            "session-preload"
+          ];
+        };
       };
 
       programs.zsh.initContent = lib.mkOrder 1090 ''
         if [[ $options[zle] = on ]]; then
-          eval "$(${lib.getExe pkgs.atuin} init zsh ${atuinFlags})"
+          export PATH="${lib.makeBinPath [ pkgs.atuin ]}:$PATH"
+          eval "$(${lib.getExe pkgs.atuin} init zsh${atuinInitArgs})"
+          source "${contextHistoryPath}"
         fi
       '';
     };

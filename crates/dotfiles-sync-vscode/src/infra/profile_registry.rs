@@ -75,7 +75,9 @@ pub(crate) fn validate_storage_json_shape(storage_json: &Value) -> Result<(), St
 
     match storage_object.get("userDataProfiles") {
         None | Some(Value::Array(_)) => Ok(()),
-        Some(_) => Err("unsupported storage.json shape: userDataProfiles must be an array".to_string()),
+        Some(_) => {
+            Err("unsupported storage.json shape: userDataProfiles must be an array".to_string())
+        }
     }
 }
 
@@ -116,7 +118,9 @@ fn read_user_data_profiles(storage_object: &mut Map<String, Value>) -> Result<Ve
     match storage_object.remove("userDataProfiles") {
         None => Ok(Vec::new()),
         Some(Value::Array(items)) => Ok(items),
-        Some(_) => Err("unsupported storage.json shape: userDataProfiles must be an array".to_string()),
+        Some(_) => {
+            Err("unsupported storage.json shape: userDataProfiles must be an array".to_string())
+        }
     }
 }
 
@@ -186,8 +190,7 @@ mod tests {
 
         assert!(profiles.iter().any(|item| {
             item.get("name").and_then(serde_json::Value::as_str) == Some("Focus")
-                && item.get("location").and_then(serde_json::Value::as_str)
-                    == Some("focus-profile")
+                && item.get("location").and_then(serde_json::Value::as_str) == Some("focus-profile")
         }));
         assert!(profiles.iter().any(|item| {
             item.get("name").and_then(serde_json::Value::as_str) == Some("Other")
@@ -198,7 +201,8 @@ mod tests {
 
     #[test]
     fn registry_rejects_unsupported_user_data_profiles_shape() {
-        let error = validate_storage_json_shape(&json!({ "userDataProfiles": {} })).expect_err("shape");
+        let error =
+            validate_storage_json_shape(&json!({ "userDataProfiles": {} })).expect_err("shape");
         assert!(error.contains("userDataProfiles"));
     }
 }

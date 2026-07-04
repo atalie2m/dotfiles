@@ -1,0 +1,4 @@
+{
+  "nixEnvSelector.suggestion": false,
+  "nixEnvSelector.useFlakes": true
+}

@@ -1,1 +1,39 @@
-{}
+{
+  "debug.toolBarLocation": "docked",
+  "diffEditor.ignoreTrimWhitespace": false,
+  "diffEditor.wordWrap": "off",
+  "editor.cursorBlinking": "phase",
+  "editor.guides.bracketPairs": false,
+  "editor.guides.indentation": false,
+  "editor.inlayHints.enabled": "off",
+  "editor.wordWrap": "off",
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "files.autoSave": "onFocusChange",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "nix.serverPath": "nixd",
+  "nix.serverSettings": {
+    "nixd": {
+      "formatting": {
+        "command": ["alejandra"]
+      },
+      "options": {
+        "darwin": {
+          "expr": "(builtins.getFlake (toString ./.)).darwinConfigurations.own_mac.options"
+        }
+      }
+    }
+  },
+  "nixEnvSelector.useFlakes": true,
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.profiles.osx": {
+    "zsh": {
+      "args": ["-l"],
+      "path": ["dotfiles-vscode-zsh", "/bin/zsh"]
+    }
+  }
+}

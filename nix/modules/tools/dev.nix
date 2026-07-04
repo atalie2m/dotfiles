@@ -1,11 +1,11 @@
-{ delib, ... }:
+{ dotmod, config, ... }:
 
 # Development tool group
 
-delib.module {
-  name = "tools.dev";
+(dotmod.mkModule { inherit config; }) {
+  path = "tools.dev";
 
-  options = with delib; moduleOptions {
+  options = with dotmod; moduleOptions {
     enable = boolOption false;
   };
 }

@@ -1,4 +1,4 @@
-{ delib, lib, ... }:
+{ lib, ... }:
 
 let
   types = lib.types;
@@ -24,6 +24,10 @@ let
         type = types.nullOr types.str;
         readOnly = true;
       };
+      keyboardType = lib.mkOption {
+        type = types.nullOr (types.enum [ "ansi" "jis" ]);
+        readOnly = true;
+      };
       extra = lib.mkOption {
         type = types.attrsOf types.anything;
         readOnly = true;
@@ -42,18 +46,30 @@ let
       };
     };
   };
-  userType = types.submodule {
+  gitType = types.submodule {
     options = {
-      username = lib.mkOption {
-        type = types.str;
-        readOnly = true;
-      };
       fullName = lib.mkOption {
         type = types.nullOr types.str;
         readOnly = true;
       };
       email = lib.mkOption {
         type = types.nullOr types.str;
+        readOnly = true;
+      };
+      signingKey = lib.mkOption {
+        type = types.nullOr types.str;
+        readOnly = true;
+      };
+    };
+  };
+  userType = types.submodule {
+    options = {
+      username = lib.mkOption {
+        type = types.str;
+        readOnly = true;
+      };
+      git = lib.mkOption {
+        type = gitType;
         readOnly = true;
       };
       homeDirectory = lib.mkOption {
@@ -71,10 +87,8 @@ let
     };
   };
 in
-delib.module {
-  name = "hostContext";
-
-  options.hostContext = {
+{
+  options.myconfig.hostContext = {
     name = lib.mkOption {
       type = types.str;
       readOnly = true;

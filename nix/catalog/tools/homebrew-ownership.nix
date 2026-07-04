@@ -32,6 +32,39 @@
     backend = "homebrewNative";
     casks = [ "xcodes-app" ];
   };
+  "system.swiftgen" = {
+    group = "system";
+    tool = "swiftgen";
+    optionPath = [ "myconfig" "tools" "system" "swiftgen" "enable" ];
+    mode = "catalog";
+    backend = "homebrewNative";
+    brews = [ "swiftgen" ];
+  };
+  "system.sourcery" = {
+    group = "system";
+    tool = "sourcery";
+    optionPath = [ "myconfig" "tools" "system" "sourcery" "enable" ];
+    mode = "catalog";
+    backend = "homebrewNative";
+    requiresFullXcode = true;
+    brews = [ "sourcery" ];
+  };
+  "system.periphery" = {
+    group = "system";
+    tool = "periphery";
+    optionPath = [ "myconfig" "tools" "system" "periphery" "enable" ];
+    mode = "catalog";
+    backend = "homebrewNative";
+    brews = [ "periphery" ];
+  };
+  "system.carthage" = {
+    group = "system";
+    tool = "carthage";
+    optionPath = [ "myconfig" "tools" "system" "carthage" "enable" ];
+    mode = "catalog";
+    backend = "homebrewNative";
+    brews = [ "carthage" ];
+  };
 
   "terminal.alacritty" = {
     group = "terminal";
@@ -48,6 +81,22 @@
     mode = "catalog";
     backend = "homebrewNative";
     casks = [ "ghostty" ];
+  };
+  "terminalVisual.kitty" = {
+    group = "terminalVisual";
+    tool = "kitty";
+    optionPath = [ "myconfig" "tools" "terminalVisual" "kitty" "enable" ];
+    mode = "catalog";
+    backend = "homebrewNative";
+    casks = [ "kitty" ];
+  };
+  "terminalVisual.ankaCoder" = {
+    group = "terminalVisual";
+    tool = "ankaCoder";
+    optionPath = [ "myconfig" "tools" "terminalVisual" "ankaCoder" "enable" ];
+    mode = "catalog";
+    backend = "homebrewNative";
+    casks = [ "font-anka-coder" ];
   };
   "terminal.rio" = {
     group = "terminal";
@@ -66,14 +115,15 @@
     casks = [ "wezterm" ];
   };
 
-  "aiCodingAgent.claudeCode" = {
-    group = "aiCodingAgent";
-    tool = "claudeCode";
-    optionPath = [ "myconfig" "tools" "aiCodingAgent" "claudeCode" "enable" ];
-    mode = "catalog";
+  "network.mosh" = {
+    group = "network";
+    tool = "mosh";
+    optionPath = [ "myconfig" "tools" "network" "mosh" "enable" ];
+    mode = "dedicated";
     backend = "homebrewNative";
-    casks = [ "claude-code" ];
+    brews = [ "mosh" ];
   };
+
   "aiCodingAgent.codex" = {
     group = "aiCodingAgent";
     tool = "codex";
@@ -81,6 +131,14 @@
     mode = "catalog";
     backend = "homebrewNative";
     casks = [ "codex" ];
+  };
+  "aiCodingAgent.claudeCode" = {
+    group = "aiCodingAgent";
+    tool = "claudeCode";
+    optionPath = [ "myconfig" "tools" "aiCodingAgent" "claudeCode" "enable" ];
+    mode = "dedicated";
+    backend = "homebrewNative";
+    casks = [ "claude-code@latest" ];
   };
   "aiCodingAgent.geminiCli" = {
     group = "aiCodingAgent";
@@ -106,6 +164,15 @@
     backend = "homebrewNative";
     taps = [ "anomalyco/tap" ];
     brews = [ "anomalyco/tap/opencode" ];
+  };
+
+  "modelHfPersonal.gitXet" = {
+    group = "modelHfPersonal";
+    tool = "gitXet";
+    optionPath = [ "myconfig" "tools" "modelHfPersonal" "gitXet" "enable" ];
+    mode = "catalog";
+    backend = "homebrewNative";
+    brews = [ "git-xet" ];
   };
 
   "editor.emacs" = {

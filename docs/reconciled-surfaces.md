@@ -1,16 +1,21 @@
+[日本語版はこちら](ja/reconciled-surfaces.md)
+
 # Runtime Sync Surfaces
 
-This repository has two runtime sync surfaces and one activation-managed system-app boundary:
+This repository has four runtime sync surfaces and one activation-managed system-app boundary:
 
 - shell entrypoints
+- Emacs config
+- Neovim config
 - VS Code native profiles
+- Home Manager-owned XDG config files
 - Homebrew/macOS app ownership
 
 ## Shell entrypoints
 
 `nix run .#dotfiles -- sync shell` is the public writable entrypoint manager.
 The control plane is implemented in Rust. `scripts/sync.sh` is only a thin shell wrapper.
-Shared shell helpers still come from Home Manager at `~/.config/shell/common.sh`; that file is not part of runtime sync state.
+Shared shell helpers still come from Home Manager at `~/.config/shell/common.sh`, and the repo's `scripts/` directory is added to `PATH` when shell tooling is enabled; neither surface is part of runtime sync state.
 
 - Desired:
   - `surfaces/shell/desired/zdotdir.zshrc.block.sh`
@@ -27,6 +32,57 @@ Behavior:
 - `sync shell --apply` repairs missing files, writable regular files, `/nix/store/...` symlinks, and readable non-store symlinks
 - `sync shell --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`
 - shell sync does not adopt local changes back into the repo
+
+## Emacs config
+
+`nix run .#dotfiles -- sync emacs` is the public writable Emacs config manager.
+The control plane is implemented in Rust in `dotfiles-core`; `scripts/sync.sh` is only a thin shell wrapper.
+
+- Desired:
+  - `apps/emacs/config/early-init.el`
+  - `apps/emacs/config/init.el`
+- Actual:
+  - `${EMACSDIR:-~/.emacs.d}/early-init.el`
+  - `${EMACSDIR:-~/.emacs.d}/init.el`
+- State: none
+- Model: compare fully repo-owned vanilla Emacs config files against writable runtime files
+- Contract: Emacs config files converge fully to repo state on apply; package state under `${EMACSDIR:-~/.emacs.d}` remains mutable and is managed by Elpaca at Emacs startup
+
+Behavior:
+
+- `sync emacs --check` reports `in-sync`, `needs-apply`, `missing`, or `invalid`
+- `sync emacs --apply` creates or rewrites the writable runtime Emacs config files from the repo
+- `sync emacs --adopt` copies runtime Emacs config edits back into `apps/emacs/config/`
+- `--item early-init` or `--item init` restricts reconciliation to one file
+- `--emacs-dir` overrides `${EMACSDIR:-~/.emacs.d}` for one command
+- `tools.editor.emacs.enable` owns the Emacs app, sync tooling, language/runtime helpers, and Tree-sitter grammar path
+- `tools.editor.emacs.bootstrap.enable` is retained as a legacy profile toggle and now only participates in activation-time config sync
+- `ultra` enables activation-time Emacs sync; `pro` installs Emacs without setup
+
+## Neovim config
+
+`nix run .#dotfiles -- sync neovim` is the public Neovim config drift manager.
+The control plane is implemented in Rust in `dotfiles-core`; the `nvim` sync surface alias is also accepted.
+
+- Desired:
+  - `apps/neovim/**`
+  - `apps/neovim/lazy-lock.json`
+- Actual:
+  - `${XDG_CONFIG_HOME:-$HOME/.config}/nvim/**`
+  - `${XDG_STATE_HOME:-$HOME/.local/state}/nvim/lazy-lock.json` when present, otherwise `${XDG_CONFIG_HOME:-$HOME/.config}/nvim/lazy-lock.json`
+- State:
+  - Neovim/LazyVim runtime state under `${XDG_STATE_HOME:-$HOME/.local/state}/nvim`
+- Model:
+  - compare the repo-owned Neovim config tree against the runtime config tree
+  - treat state-local `lazy-lock.json` as the effective Lazy lock because the repo config can be Nix-managed and read-only
+
+Behavior:
+
+- `sync neovim --check` reports `in-sync`, `needs-apply`, `missing`, `runtime-only`, or `invalid`
+- `sync neovim --apply` materializes repo files into a writable runtime config dir and writes the effective lock into the state dir when no lock exists yet
+- `sync neovim --adopt` imports changed/runtime-only runtime config files and the effective Lazy lock back into `apps/neovim/`
+- adopt is non-destructive: if a repo-managed file is missing from runtime, it refuses that item instead of deleting it from the repo
+- when the runtime config dir is a symlink, `--apply` refuses non-lock rewrites; use Home Manager activation for the linked tree or pass an explicit writable `--runtime-dir`
 
 ## VS Code native profiles
 
@@ -54,7 +110,25 @@ Behavior:
 - `sync vscode --apply` creates missing profiles, updates the profile registry, rewrites managed settings files, and reconciles repo-owned extensions
 - settings removed from `apps/vscode/` disappear on the next apply because the managed file is fully repo-owned
 - user-added extensions not owned by the repo are preserved
-- activation runs `sync vscode --apply` when both `tools.editor.vscode.enable` and `tools.editor.vscode.sync.enable` are true (stock bundles: **`ultra` rice only**)
+- `tools.editor.vscode.enable` owns the VS Code sync tooling and managed profile surface; Visual Studio Code.app itself is installed manually
+- `ultra` runs `sync vscode --apply` during activation; `pro` installs the sync surface with setup sync disabled, and activation still skips cleanly if VS Code is not installed yet
+
+## Home Manager-owned XDG config files
+
+Some CLI/TUI defaults are normal Home Manager files rather than Rust `sync`
+surfaces. Examples include `~/.config/television/config.toml`,
+`~/.config/zellij/config.kdl`, `~/.config/k9s/*`, and gh configuration
+generated by `programs.gh`.
+
+Behavior:
+
+- activation links repo-owned config files into place when the matching
+  `myconfig.tools.*` toggle is enabled
+- if a pre-existing unmanaged file blocks the first activation, nix-darwin
+  moves it aside in the same directory with the `.hm-backup` suffix before
+  creating the managed link
+- after the managed link exists, later activation converges the file to the
+  repo state
 
 ## Homebrew and macOS app ownership
 
@@ -71,6 +145,7 @@ The model is declarative ownership with writable runtime data left to upstream t
 - Model:
   - repo declares ownership and source policy
   - activation ensures declared installs; runtime app/user data remains mutable
+  - dedicated feature modules such as `tools.system.karabiner` own settings policy, while `tools.editor.emacs` and `tools.editor.vscode` own repo-managed editor state plus sync tooling
 
 ## Removed surfaces
 

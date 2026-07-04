@@ -1,4 +1,4 @@
-{ delib, lib, config, ... }:
+{ dotmod, config, lib, ... }:
 
 let
   mkBinaryCaches = cfg:
@@ -20,6 +20,8 @@ let
         ++ (lib.optionals cfg.enableFlakes [ "flakes" ])
         ++ cfg.extraExperimentalFeatures;
 
+      # This keeps day-to-day flake usage convenient, but only because the
+      # trusted-users set is narrowed to the current host owner.
       accept-flake-config = cfg.acceptFlakeConfig;
     }
     // lib.optionalAttrs (caches.extraSubstituters != [ ]) {
@@ -31,10 +33,10 @@ let
 in
 
 # System-level Nix configuration
-delib.module {
-  name = "system.nix";
+(dotmod.mkModule { inherit config; }) {
+  path = "system.nix";
 
-  options.system.nix = with delib.options; {
+  options = with dotmod; {
     enable = boolOption false;
     enableFlakes = boolOption true;
     enableNixCommand = boolOption true;
@@ -46,11 +48,14 @@ delib.module {
     };
   };
 
-  darwin.ifEnabled = { cfg, ... }:
+  darwinOnEnable = { cfg, myconfig, ... }:
+    let
+      primaryUser = myconfig.hostContext.user.username or "";
+    in
     {
       nix = {
         settings = (mkCommonSettings cfg) // {
-          trusted-users = [ "@admin" ];
+          trusted-users = lib.optional (primaryUser != "") primaryUser;
         };
 
         # Enable garbage collection and optimization
@@ -65,7 +70,7 @@ delib.module {
       };
     };
 
-  home.ifEnabled = { cfg, ... }: {
+  homeOnEnable = { cfg, ... }: {
     # Home Manager Nix settings
     nix.settings = mkCommonSettings cfg;
   };

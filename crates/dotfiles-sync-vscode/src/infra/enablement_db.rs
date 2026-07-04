@@ -8,7 +8,10 @@ use crate::app::runtime::Context;
 use crate::infra::collections::{file_intersection, file_minus_file, unique_lines};
 use crate::infra::paths::{profile_enablement_db_path, profile_global_storage_dir};
 
-pub(crate) fn ensure_enablement_db(context: &Context, profile_dir_name: &str) -> Result<(), String> {
+pub(crate) fn ensure_enablement_db(
+    context: &Context,
+    profile_dir_name: &str,
+) -> Result<(), String> {
     let storage_dir = profile_global_storage_dir(context, profile_dir_name);
     let db_path = profile_enablement_db_path(context, profile_dir_name);
     ensure_enablement_db_path(&storage_dir, &db_path)
@@ -29,7 +32,10 @@ pub(crate) fn ensure_enablement_db_path(storage_dir: &Path, db_path: &Path) -> R
     Ok(())
 }
 
-pub(crate) fn read_enablement_ids_from_db(db_path: &Path, key: &str) -> Result<Vec<String>, String> {
+pub(crate) fn read_enablement_ids_from_db(
+    db_path: &Path,
+    key: &str,
+) -> Result<Vec<String>, String> {
     if !db_path.is_file() {
         return Ok(Vec::new());
     }
@@ -42,7 +48,13 @@ pub(crate) fn read_enablement_ids_from_db(db_path: &Path, key: &str) -> Result<V
             |row| row.get::<_, String>(0),
         )
         .optional()
-        .map_err(|err| format!("failed to read enablement DB {}: {}", db_path.display(), err))?;
+        .map_err(|err| {
+            format!(
+                "failed to read enablement DB {}: {}",
+                db_path.display(),
+                err
+            )
+        })?;
     let raw_json = raw_json.unwrap_or_default();
     let raw_json = raw_json.trim();
 
@@ -50,20 +62,35 @@ pub(crate) fn read_enablement_ids_from_db(db_path: &Path, key: &str) -> Result<V
         return Ok(Vec::new());
     }
 
-    let parsed: Value = match serde_json::from_str(raw_json) {
-        Ok(value) => value,
-        Err(_) => return Ok(Vec::new()),
-    };
+    let parsed: Value = serde_json::from_str(raw_json).map_err(|err| {
+        format!(
+            "enablement DB {} contains invalid JSON for key '{}': {}",
+            db_path.display(),
+            key,
+            err
+        )
+    })?;
 
-    let mut ids: Vec<String> = parsed
-        .as_array()
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|item| item.get("id").and_then(Value::as_str).map(ToOwned::to_owned))
-                .collect()
-        })
-        .unwrap_or_default();
+    let items = parsed.as_array().ok_or_else(|| {
+        format!(
+            "enablement DB {} key '{}' must contain a JSON array",
+            db_path.display(),
+            key
+        )
+    })?;
+
+    let mut ids = Vec::new();
+    for (index, item) in items.iter().enumerate() {
+        let id = item.get("id").and_then(Value::as_str).ok_or_else(|| {
+            format!(
+                "enablement DB {} key '{}' contains an invalid entry at index {}",
+                db_path.display(),
+                key,
+                index
+            )
+        })?;
+        ids.push(id.to_string());
+    }
 
     ids.sort();
     ids.dedup();
@@ -131,7 +158,11 @@ pub(crate) fn bootstrap_default_disabled_extensions(
     let updated_enabled = file_minus_file(&current_enabled, &pending_seed);
     output_seeded = unique_lines(&[output_seeded, pending_seed].concat());
 
-    write_enablement_ids_to_db(&db_path, "extensionsIdentifiers/disabled", &updated_disabled)?;
+    write_enablement_ids_to_db(
+        &db_path,
+        "extensionsIdentifiers/disabled",
+        &updated_disabled,
+    )?;
     write_enablement_ids_to_db(&db_path, "extensionsIdentifiers/enabled", &updated_enabled)?;
 
     Ok(output_seeded)
@@ -167,15 +198,21 @@ pub(crate) fn pending_default_disabled_extensions(
 }
 
 fn open_connection(db_path: &Path) -> Result<Connection, String> {
-    Connection::open(db_path)
-        .map_err(|err| format!("failed to open enablement DB {}: {}", db_path.display(), err))
+    Connection::open(db_path).map_err(|err| {
+        format!(
+            "failed to open enablement DB {}: {}",
+            db_path.display(),
+            err
+        )
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
         bootstrap_default_disabled_extensions, ensure_enablement_db_path,
-        pending_default_disabled_extensions, read_enablement_ids_from_db, write_enablement_ids_to_db,
+        pending_default_disabled_extensions, read_enablement_ids_from_db,
+        write_enablement_ids_to_db,
     };
     use crate::app::runtime::{Context, Mode};
     use crate::infra::paths::profile_enablement_db_path;
@@ -266,5 +303,25 @@ mod tests {
         )
         .expect("pending");
         assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn invalid_enablement_json_fails_closed() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let storage_dir = temp.path().join("globalStorage");
+        let db_path = storage_dir.join("state.vscdb");
+
+        ensure_enablement_db_path(&storage_dir, &db_path).expect("db");
+        let connection = rusqlite::Connection::open(&db_path).expect("open");
+        connection
+            .execute(
+                "INSERT INTO ItemTable(key, value) VALUES (?1, ?2)",
+                rusqlite::params!["extensionsIdentifiers/disabled", "{not-json"],
+            )
+            .expect("insert");
+
+        let error = read_enablement_ids_from_db(&db_path, "extensionsIdentifiers/disabled")
+            .expect_err("err");
+        assert!(error.contains("contains invalid JSON"));
     }
 }

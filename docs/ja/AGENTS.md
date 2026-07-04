@@ -1,0 +1,73 @@
+[English version](../../AGENTS.md)
+
+# リポジトリガイドライン
+
+このリポジトリは、macOS システム構成のための Darwin-first な Nix flake と、bounded な Linux Home Manager userland target を持ちます。変更は、現在の bounded context である Darwin hosts/profiles、Linux user environment profiles、型付きの host truth、明示的な mutable surface、Rust control plane に沿わせてください。
+
+## プロジェクト構成
+
+- `flake.nix` — flake の inputs/outputs。`darwinConfigurations`、`linux_workbench` などの bounded な `homeConfigurations`、project `templates`（`web-dev`, `rust-dev`, `go-dev`, `python-research`, `data-pipeline`, `native-dev`, `embedded-dev`, `apple-dev`, `infra-nixos`, `infra-iac`, `kubernetes-dev`, `container-oci`, `model-hf`, `docs-dev`, `api-db`, `ai-coding`, `release-dev`）を公開します。
+- `nix/catalog/darwin/` — Darwin host/profile プロファイル。
+- `nix/catalog/linux/` — userland-only target 向け Linux Home Manager host/profile catalog。
+- `nix/catalog/shared/` — platform catalog 間で再利用する portable profile bundle。
+- `nix/lib/module-helpers.nix` — repo-local module helper。
+- `nix/modules/` — 再利用可能な module。`shared/` と `tools/` に分割されています。
+- `nix/catalog/` — tool module と ownership check で使う catalog data。
+- `nix/local/` — public evaluation 用の placeholder facts input。
+- `crates/dotfiles-core` — 共有 Rust support と shell / Emacs sync 実装。
+- `crates/dotfiles-cli` — 運用 CLI。
+- `crates/dotfiles-sync-vscode` — VS Code native profile sync engine。
+- `scripts/` — 薄い shell entrypoint（`apply`, `update`, `doctor`, `bootstrap`, `gc`, `sync`）と smoke test。
+- `nix/scripts/` — CLI が使う Nix expression（`list-tools.nix`, `matrix-tools.nix`, `doctor/facts-schema.nix`）。
+- `apps/` — app 設定（例: `apps/shell/common.sh`, `apps/vscode/...`）。
+- `surfaces/` — writable shell entrypoint の desired state。
+- `keyboards/` — Karabiner complex modifications JSON。
+
+ローカル input は Git 管理外の `~/.config/dotfiles/` に置きます。
+
+- `facts.nix`
+- `secrets.nix`
+- `files/`
+
+## ビルド・テスト・開発コマンド
+
+- 正式なコマンド例と最新の host 名は `docs/commands.md` を参照してください。
+- 正式な runtime override も `docs/commands.md` にあります（`HOME`, `DOTFILES_ROOT`, `DOTFILES_PROFILE_DIRS`, `EMACSDIR`, `FACTS*`, `SECRETS*`, `DARWIN_REBUILD_BIN`, `DOTFILES_SYNC_VSCODE_BIN`, `VSCODE_*`, `SOPS_AGE_KEY_FILE`）。
+- `nix flake check --override-input local path:$HOME/.config/dotfiles --override-input secrets path:$HOME/.config/dotfiles`
+- `nix run .#apply -- --host <host> --action build`
+- `nix build .#homeConfigurations.linux_workbench.activationPackage`
+- `home-manager switch --flake .#linux_workbench`
+- `nix flake init -t github:atalie2m/dotfiles#web-dev`
+- `nix flake init -t github:atalie2m/dotfiles#rust-dev`
+- `nix flake init -t github:atalie2m/dotfiles#infra-iac`
+
+## コーディングスタイル
+
+- Nix: 2 スペースインデント、末尾改行、可能な範囲で安定した attribute 順序。
+- ファイル名/ディレクトリ名: kebab-case。Nix attribute: lowerCamelCase。
+- Shell: `#!/usr/bin/env bash` と `set -euo pipefail` を使うこと。
+- Rust: workspace boundary を明確に保つこと。共有 CLI/runtime support は `dotfiles-core` に置きます。
+- host 固有の literal は commit せず、local facts か secrets input に置いてください。
+
+## アーキテクチャルール
+
+- module は host truth を `myconfig.hostContext.*` から読むこと。
+- 承認済みの host-model/bootstrap 境界の外で、新しい直接 `config.host.*`、legacy facts option read、raw `inputs.local/facts.nix` read を追加しないこと。
+- Linux Home Manager target は userland-only に保ってください。LXC substrate、Tailscale、SSH、storage、observability、lifecycle の所有権を `domus-ops` から移さないこと。
+- shell sync は Rust の `dotfiles` CLI（`sync shell`）で実装されています。`scripts/sync.sh` は薄い shell wrapper のみです。
+- Emacs sync は Rust の `dotfiles` CLI（`sync emacs`）で writable vanilla Emacs config file 向けに実装されています。
+- VS Code sync は専用の `dotfiles-sync-vscode` binary で実装され、`dotfiles sync vscode` から dispatch されます。
+- group toggle は taxonomy であり、rollout は明示的な capability bundle に属します。
+- Stock global bundle では project-pinned toolchain を有効化しません。`go`, `nodejs`, `terraform`, `opentofu` は host opt-in path を持たせず、project template / devShell 側に閉じます。`bun` だけを明示的な host opt-in 例外にします。
+- Template project は Git flake として document / guard してください。unfiltered `path:$PWD` ref を使う template instruction は追加しないでください。`target/`、`node_modules/`、`.git/`、`.direnv/` は ignore し、local source をコピーする箇所では source filter を使ってください。
+
+## テスト方針
+
+- `README.md`、`docs/`、`AGENTS.md`、`CLAUDE.md` は実際の runtime model と一致させてください。
+- runtime sync、CLI 挙動、public docs の記述を変更したら、`scripts/tests/` の smoke test も更新してください。
+- `keyboards/` または `nix/modules/tools/system/karabiner.nix` を触る場合は、Karabiner JSON が引き続き読み込めることを確認してください。
+
+## セキュリティ
+
+- secret や machine identifier は絶対に commit しないでください。
+- ローカル machine data は repo 内ではなく `~/.config/dotfiles/` に置いてください。

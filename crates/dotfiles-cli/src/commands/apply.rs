@@ -1,26 +1,32 @@
 use crate::commands::{is_effective_root, ApplyAction, ApplyArgs};
 use dotfiles_core::support::{
-    explain_darwin_targets_error, exit_with_status, flake_ref_for_root, nix_args_with_inputs,
+    exit_with_status, explain_darwin_targets_error, flake_ref_for_root, log, nix_args_with_inputs,
     repo_root, require_host_argument, resolve_inputs, resolve_pinned_darwin_rebuild_bin,
-    resolve_target, run_command_status, sudo_preserve_env_vars,
+    resolve_target, run_command_status, sudo_preserve_env_vars, write_runtime_facts,
 };
 use std::env;
 use std::process::Command;
 
 pub(crate) fn command_apply(args: &ApplyArgs) -> Result<(), String> {
     let host_env = env::var("HOST").ok();
-    let host = require_host_argument(
-        args.target.host_value().or(host_env.as_deref()),
-        "apply",
-    )?;
-    let rice = args
+    let host = require_host_argument(args.target.host_value().or(host_env.as_deref()), "apply")?;
+    let profile = args
         .target
-        .rice_value()
+        .profile_value()
         .map(ToOwned::to_owned)
-        .or_else(|| env::var("RICE").ok());
+        .or_else(|| env::var("PROFILE").ok());
     let root = repo_root()?;
     let inputs = resolve_inputs()?;
-    let target = resolve_target(&root, &inputs, &host, rice.as_deref())
+    if let Some(facts_dir) = inputs.facts_dir.as_deref() {
+        let full_xcode = write_runtime_facts(facts_dir, &host)?;
+        log(&format!(
+            "runtime facts: full Xcode available for {} = {}",
+            host, full_xcode
+        ));
+    } else {
+        log("runtime facts: skipped full Xcode detection because FACTS is not a path input");
+    }
+    let target = resolve_target(&root, &inputs, &host, profile.as_deref())
         .map_err(|err| explain_darwin_targets_error(&inputs, &err))?;
     let flake_ref = flake_ref_for_root(&root);
     let darwin_rebuild_bin = resolve_pinned_darwin_rebuild_bin(&flake_ref)?;

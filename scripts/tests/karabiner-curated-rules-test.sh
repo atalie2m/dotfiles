@@ -37,4 +37,9 @@ if rg -n "specificRulesFrom|rule\.description|descriptions" "$ROOT/nix/modules/t
   exit 1
 fi
 
+if ! rg -n 'hostContext\.machine\.keyboardType|keyboard_type_v2 = keyboardType' "$ROOT/nix/modules/tools/system/karabiner.nix" >/dev/null; then
+  echo "FAIL: karabiner module no longer derives keyboard type from host facts" >&2
+  exit 1
+fi
+
 echo "PASS: karabiner curated rules"

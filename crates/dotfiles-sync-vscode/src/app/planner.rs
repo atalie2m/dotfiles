@@ -4,9 +4,11 @@ use crate::app::runtime::Context;
 use crate::domain::model::{ProfileEvaluation, ProfilePlan, ProfileStatus, StateLists, StateLoad};
 use crate::domain::settings::{settings_match, settings_value};
 use crate::domain::state::load_state_lists;
-use crate::infra::enablement_db::pending_default_disabled_extensions;
-use crate::infra::extension_manifest::list_profile_extensions;
 use crate::infra::collections::{file_intersection, file_minus_file};
+use crate::infra::enablement_db::pending_default_disabled_extensions;
+use crate::infra::extension_manifest::{
+    list_profile_extensions, validate_global_extension_manifest,
+};
 use crate::infra::json::{read_json, read_json_object};
 use crate::infra::paths::profile_id;
 use crate::infra::profile_registry::{
@@ -37,7 +39,8 @@ pub(crate) fn classify_profile(
         ));
     }
 
-    let state_load = load_state_lists(&plan.state_file, &plan.profile_dir_name, &plan.profile_name)?;
+    let state_load =
+        load_state_lists(&plan.state_file, &plan.profile_dir_name, &plan.profile_name)?;
     let (state_missing, state_lists) = match state_load {
         StateLoad::Invalid => {
             return Ok(needs_apply("state file schema changed or is malformed"));
@@ -82,14 +85,23 @@ pub(crate) fn classify_profile(
         return Ok(missing("managed profile extensions manifest is missing"));
     }
 
+    if let Err(reason) = validate_global_extension_manifest(context) {
+        return Ok(invalid(reason));
+    }
+
     let actual_settings = match read_json_object(&plan.settings_path) {
         Ok(object) => object,
-        Err(_) => return Ok(invalid("settings file is not valid JSON")),
+        Err(reason) => {
+            return Ok(needs_apply(format!(
+                "managed profile settings file is invalid JSON and will be replaced on apply: {}",
+                reason
+            )))
+        }
     };
 
     let actual_extensions = match list_profile_extensions(context, &plan.profile_dir_name) {
         Ok(items) => items,
-        Err(_) => return Ok(invalid("failed to inspect installed extensions")),
+        Err(reason) => return Ok(invalid(reason)),
     };
 
     let stale_installed = file_intersection(&stale_extensions, &actual_extensions);
@@ -97,12 +109,15 @@ pub(crate) fn classify_profile(
     let settings_diff_expected = settings_value(&plan.desired_settings);
     let settings_diff_actual = settings_value(&actual_settings);
 
-    let pending_default_disabled = pending_default_disabled_extensions(
+    let pending_default_disabled = match pending_default_disabled_extensions(
         context,
         &plan.profile_dir_name,
         &plan.desired_default_disabled,
         &state_lists.bootstrapped_default_disabled_extensions,
-    )?;
+    ) {
+        Ok(items) => items,
+        Err(reason) => return Ok(invalid(reason)),
+    };
 
     if state_missing {
         return Ok(needs_apply_with_diff(
@@ -223,8 +238,8 @@ mod tests {
     use crate::infra::paths::{
         profile_extensions_manifest_path, profile_id, profile_runtime_dir, profile_settings_path,
     };
-    use serde_json::Map;
     use serde_json::json;
+    use serde_json::Map;
     use std::path::Path;
 
     fn test_context(root: &Path) -> Context {
@@ -258,14 +273,19 @@ mod tests {
         }
     }
 
-    fn write_minimal_runtime(context: &Context, profile_dir_name: &str, profile_name: &str) -> ProfilePlan {
+    fn write_minimal_runtime(
+        context: &Context,
+        profile_dir_name: &str,
+        profile_name: &str,
+    ) -> ProfilePlan {
         let runtime_dir = profile_runtime_dir(context, profile_dir_name);
         let settings_path = profile_settings_path(context, profile_dir_name);
         let extensions_manifest = profile_extensions_manifest_path(context, profile_dir_name);
         let state_file = context.state_dir.join(format!("{}.json", profile_dir_name));
 
         std::fs::create_dir_all(&runtime_dir).expect("runtime");
-        std::fs::create_dir_all(settings_path.parent().expect("settings parent")).expect("settings parent");
+        std::fs::create_dir_all(settings_path.parent().expect("settings parent"))
+            .expect("settings parent");
         std::fs::create_dir_all(context.storage_json_path.parent().expect("storage parent"))
             .expect("storage parent");
         std::fs::write(&settings_path, "{}\n").expect("settings");
@@ -310,5 +330,73 @@ mod tests {
         let eval = classify_profile(&context, &plan).expect("classify");
         assert_eq!(eval.status, ProfileStatus::Invalid);
         assert!(eval.reason.contains("userDataProfiles"));
+    }
+
+    #[test]
+    fn classify_profile_marks_invalid_global_manifest() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let context = test_context(temp.path());
+        let plan = write_minimal_runtime(&context, "focus", "Focus");
+        std::fs::write(&context.extensions_manifest_path, "{not-json\n").expect("manifest");
+
+        let eval = classify_profile(&context, &plan).expect("classify");
+        assert_eq!(eval.status, ProfileStatus::Invalid);
+        assert!(eval
+            .reason
+            .contains("global extensions manifest is invalid"));
+    }
+
+    #[test]
+    fn classify_profile_marks_invalid_profile_manifest() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let context = test_context(temp.path());
+        let plan = write_minimal_runtime(&context, "focus", "Focus");
+        std::fs::write(&plan.extensions_manifest, "{not-json\n").expect("manifest");
+
+        let eval = classify_profile(&context, &plan).expect("classify");
+        assert_eq!(eval.status, ProfileStatus::Invalid);
+        assert!(eval.reason.contains("failed to parse JSON file"));
+    }
+
+    #[test]
+    fn classify_profile_marks_invalid_settings_as_needs_apply() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let context = test_context(temp.path());
+        let plan = write_minimal_runtime(&context, "focus", "Focus");
+        std::fs::write(&plan.settings_path, "{\n  \"broken\": true,\n}\n").expect("settings");
+
+        let eval = classify_profile(&context, &plan).expect("classify");
+        assert_eq!(eval.status, ProfileStatus::NeedsApply);
+        assert!(eval.reason.contains("will be replaced on apply"));
+        assert!(eval.reason.contains("failed to parse JSON file"));
+    }
+
+    #[test]
+    fn classify_profile_marks_invalid_enablement_db() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let context = test_context(temp.path());
+        let mut plan = write_minimal_runtime(&context, "focus", "Focus");
+        plan.desired_default_disabled = vec!["zed.alpha".to_string()];
+
+        let profile_storage = plan.runtime_dir.join("globalStorage");
+        std::fs::create_dir_all(&profile_storage).expect("storage");
+        let db_path = profile_storage.join("state.vscdb");
+        let connection = rusqlite::Connection::open(&db_path).expect("open");
+        connection
+            .execute(
+                "CREATE TABLE IF NOT EXISTS ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB);",
+                [],
+            )
+            .expect("table");
+        connection
+            .execute(
+                "INSERT INTO ItemTable(key, value) VALUES (?1, ?2)",
+                rusqlite::params!["extensionsIdentifiers/disabled", "{not-json"],
+            )
+            .expect("insert");
+
+        let eval = classify_profile(&context, &plan).expect("classify");
+        assert_eq!(eval.status, ProfileStatus::Invalid);
+        assert!(eval.reason.contains("contains invalid JSON"));
     }
 }
