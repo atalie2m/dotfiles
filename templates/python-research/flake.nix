@@ -26,117 +26,118 @@
 
         Use Git flake refs such as .#..., not path:$PWD#...
       ''
-    else flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-      imports = [ treefmt-nix.flakeModule git-hooks-nix.flakeModule ];
-      perSystem = { pkgs, config, ... }: {
-        devShells.default = pkgs.mkShell {
-          name = "python-research";
-          packages = with pkgs; [
-            zsh
-            devenv
-            process-compose
-            direnv
-            nix-direnv
-            just
-            pre-commit
-            lefthook
-            treefmt
-            editorconfig-checker
-            typos
-            lychee
-            reuse
-            taplo
-            yamlfmt
-            yamllint
-            check-jsonschema
-            shellcheck
-            shfmt
-            statix
-            deadnix
-            alejandra
-            nixfmt
-            nixpkgs-fmt
-            gitleaks
-            trufflehog
-            noseyparker
-            osv-scanner
-            semgrep
-            pip-audit
-            ssh-audit
-            minisign
-            actionlint
-            zizmor
-            uv
-            pixi
-            ruff
-            pyright
-            mypy
-            nox
-            hatch
-            jupyter
-            nbstripout
-            nbqa
-            quarto
-            pandoc
-            typst
-            tectonic
-            dvc
-            datalad
-            git-annex
-            duckdb
-            qsv
-            xan
-            miller
-            jq
-            yq
-            dasel
-            visidata
-            py-spy
-            scalene
-            memray
-            maturin
-            python3Packages.pytest
-            python3Packages.pytest-xdist
-            python3Packages.pytest-cov
-            python3Packages.tox
-            python3Packages.jupyterlab
-            python3Packages.jupytext
-            python3Packages.papermill
-          ];
-          shellHook = ''
-            ${config.pre-commit.installationScript}
-            if [[ -z "''${ZSH_VERSION:-}" && $- == *i* ]]; then exec ${pkgs.zsh}/bin/zsh -i; fi
+    else
+      flake-parts.lib.mkFlake { inherit inputs; } {
+        systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
+        imports = [ treefmt-nix.flakeModule git-hooks-nix.flakeModule ];
+        perSystem = { pkgs, config, ... }: {
+          devShells.default = pkgs.mkShell {
+            name = "python-research";
+            packages = with pkgs; [
+              zsh
+              devenv
+              process-compose
+              direnv
+              nix-direnv
+              just
+              pre-commit
+              lefthook
+              treefmt
+              editorconfig-checker
+              typos
+              lychee
+              reuse
+              taplo
+              yamlfmt
+              yamllint
+              check-jsonschema
+              shellcheck
+              shfmt
+              statix
+              deadnix
+              alejandra
+              nixfmt
+              nixpkgs-fmt
+              gitleaks
+              trufflehog
+              noseyparker
+              osv-scanner
+              semgrep
+              pip-audit
+              ssh-audit
+              minisign
+              actionlint
+              zizmor
+              uv
+              pixi
+              ruff
+              pyright
+              mypy
+              nox
+              hatch
+              jupyter
+              nbstripout
+              nbqa
+              quarto
+              pandoc
+              typst
+              tectonic
+              dvc
+              datalad
+              git-annex
+              duckdb
+              qsv
+              xan
+              miller
+              jq
+              yq
+              dasel
+              visidata
+              py-spy
+              scalene
+              memray
+              maturin
+              python3Packages.pytest
+              python3Packages.pytest-xdist
+              python3Packages.pytest-cov
+              python3Packages.tox
+              python3Packages.jupyterlab
+              python3Packages.jupytext
+              python3Packages.papermill
+            ];
+            shellHook = ''
+              ${config.pre-commit.installationScript}
+              if [[ -z "''${ZSH_VERSION:-}" && $- == *i* ]]; then exec ${pkgs.zsh}/bin/zsh -i; fi
+            '';
+          };
+          treefmt = {
+            projectRootFile = "flake.nix";
+            programs = { nixpkgs-fmt.enable = true; ruff-format.enable = true; shfmt.enable = true; taplo.enable = true; };
+          };
+          pre-commit.settings.hooks = {
+            deadnix.enable = true;
+            editorconfig-checker.enable = true;
+            nixpkgs-fmt.enable = true;
+            ruff.enable = true;
+            shellcheck.enable = true;
+            shfmt.enable = true;
+            statix.enable = true;
+            taplo.enable = true;
+            typos.enable = true;
+          };
+          checks.flake-source-hygiene = pkgs.runCommand "flake-source-hygiene" { src = ./.; } ''
+            set -euo pipefail
+            for dir in target node_modules .git .direnv; do
+              if [ -e "$src/$dir" ]; then
+                echo "FAIL: $dir is present in the Nix flake source." >&2
+                echo "Use Git flake refs such as .#..., not path:\$PWD#..., and keep large generated directories ignored." >&2
+                exit 1
+              fi
+            done
+            touch "$out"
           '';
+          apps.format = { type = "app"; program = "${config.treefmt.build.wrapper}/bin/treefmt"; };
+          formatter = config.treefmt.build.wrapper;
         };
-        treefmt = {
-          projectRootFile = "flake.nix";
-          programs = { nixpkgs-fmt.enable = true; ruff-format.enable = true; shfmt.enable = true; taplo.enable = true; };
-        };
-        pre-commit.settings.hooks = {
-          deadnix.enable = true;
-          editorconfig-checker.enable = true;
-          nixpkgs-fmt.enable = true;
-          ruff.enable = true;
-          shellcheck.enable = true;
-          shfmt.enable = true;
-          statix.enable = true;
-          taplo.enable = true;
-          typos.enable = true;
-        };
-        checks.flake-source-hygiene = pkgs.runCommand "flake-source-hygiene" { src = ./.; } ''
-          set -euo pipefail
-          for dir in target node_modules .git .direnv; do
-            if [ -e "$src/$dir" ]; then
-              echo "FAIL: $dir is present in the Nix flake source." >&2
-              echo "Use Git flake refs such as .#..., not path:\$PWD#..., and keep large generated directories ignored." >&2
-              exit 1
-            fi
-          done
-          touch "$out"
-        '';
-        apps.format = { type = "app"; program = "${config.treefmt.build.wrapper}/bin/treefmt"; };
-        formatter = config.treefmt.build.wrapper;
       };
-    };
 }

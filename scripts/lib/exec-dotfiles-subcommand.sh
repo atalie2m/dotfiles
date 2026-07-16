@@ -15,7 +15,7 @@ if [[ -n ${DOTFILES_BIN:-} && -x ${DOTFILES_BIN} ]]; then
 fi
 
 PROFILE_DOTFILES="${HOME:-}/.nix-profile/bin/dotfiles"
-if [[ -x "$PROFILE_DOTFILES" ]]; then
+if [[ -x $PROFILE_DOTFILES ]]; then
   export DOTFILES_ROOT="$ROOT"
   exec "$PROFILE_DOTFILES" "$@"
 fi

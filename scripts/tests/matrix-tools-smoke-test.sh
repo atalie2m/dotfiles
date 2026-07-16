@@ -26,17 +26,17 @@ set -euo pipefail
 log_file="\${FAKE_NIX_LOG_FILE:?}"
 printf '%s\n' "\$*" >>"\$log_file"
 
-if [[ "$*" == *"--apply x: builtins.concatStringsSep"* ]]; then
+if [[ "\$*" == *"--apply x: builtins.concatStringsSep"* ]]; then
   printf 'own_mac\nwork_mac\n'
   exit 0
 fi
 
-if [[ "$*" == *"matrix-tools.nix"*".text targets"* && "$*" == *"full = false"* ]]; then
+if [[ "\$*" == *"matrix-tools.nix"*".text targets"* && "\$*" == *"full = false"* ]]; then
   printf 'target\tcore.enable\tdev.enable\nown_mac\ttrue\ttrue\nwork_mac\ttrue\ttrue\n'
   exit 0
 fi
 
-if [[ "$*" == *"matrix-tools.nix"*".json targets"* && "$*" == *"full = true"* ]]; then
+if [[ "\$*" == *"matrix-tools.nix"*".json targets"* && "\$*" == *"full = true"* ]]; then
   printf '{"mode":"full","columns":["core.enable","dev.enable","dev.git.enable"],"rows":[{"target":"own_mac","values":{"core.enable":true,"dev.enable":true,"dev.git.enable":true}}]}'
   exit 0
 fi

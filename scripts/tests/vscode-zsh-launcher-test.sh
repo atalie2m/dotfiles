@@ -32,7 +32,7 @@ chmod +x "$FAKE_ZSH"
 
 fail() {
   echo "FAIL: $*" >&2
-  if [[ -f "$LOG_FILE" ]]; then
+  if [[ -f $LOG_FILE ]]; then
     cat "$LOG_FILE" >&2
   fi
   exit 1
@@ -61,7 +61,7 @@ assert_path_starts_with() {
 run_launcher() {
   local -a extra_env=()
 
-  while [[ "$#" -gt 0 && "$1" == *=* ]]; do
+  while [[ $# -gt 0 && $1 == *=* ]]; do
     extra_env+=("$1")
     shift
   done
