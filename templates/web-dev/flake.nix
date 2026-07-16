@@ -145,7 +145,6 @@
               redis
               postgresql
               mailpit
-              minio
             ];
           in
           {
