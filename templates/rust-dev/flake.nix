@@ -169,22 +169,6 @@
                   exec ${pkgs.zsh}/bin/zsh -i
                 fi
               '';
-
-              apps = {
-                format = {
-                  type = "app";
-                  program = "${config.treefmt.build.wrapper}/bin/treefmt";
-                };
-                test = {
-                  type = "app";
-                  program = "${pkgs.writeShellScript "rust-test" ''
-                set -euo pipefail
-                cargo nextest run "$@"
-              ''}";
-                };
-              };
-
-              formatter = config.treefmt.build.wrapper;
             };
 
             treefmt = {
