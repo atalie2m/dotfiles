@@ -22,6 +22,7 @@ let
     "modelHfPersonal"
     "backupRecovery"
     "terminalVisual"
+    "presentation"
   ];
 
   mkGroupModule = group:

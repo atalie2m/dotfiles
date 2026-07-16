@@ -120,6 +120,8 @@ Linux workbench target は username、home directory、machine values を local 
 `Claude Code` は catalog-backed な `tools.aiCodingAgent.claudeCode` toggle
 から latest-first の Homebrew cask として管理します。有効にすると
 nix-darwin の Homebrew activation に `claude-code@latest` cask が追加されます。
+`Herdr` は catalog-backed な `tools.aiCodingAgent.herdr` toggle から管理し、
+この repo で pin した upstream Nix flake package を install します。
 `ultra` では `tools.aiCodingAgent.headroom` も有効化し、Headroom の PyPI runtime
 を使う telemetry-off の `uv` wrapper として `headroom`, `headroom-codex`,
 `headroom-claude` を install します。
@@ -267,7 +269,7 @@ Mosh session では SSH bootstrap metadata が残りますが、Pure prompt の 
 - `zoxide` を `z` と `zi` で利用
 - `direnv` + `nix-direnv`
 - Git pager として `delta`
-- `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `xorg`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, `backupRecovery` などの profile group
+- `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `xorg`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, `backupRecovery`, `presentation` などの profile group
 
 `tools.profileDefaults` は、catalog toggle が有効な場合に `fzf`, `direnv`,
 `gh-dash`, `yazi`, `zellij`, `k9s`, `television`, terminal app,

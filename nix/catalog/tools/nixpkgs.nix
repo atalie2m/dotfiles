@@ -309,6 +309,9 @@
   backupRecoveryRclone = { group = "backupRecovery"; tool = "rclone"; pkg = "rclone"; };
   backupRecoveryRsync = { group = "backupRecovery"; tool = "rsync"; pkg = "rsync"; };
 
+  # Presentation tools
+  presentationPympress = { group = "presentation"; tool = "pympress"; pkg = "pympress"; };
+
   terminalVisualVivid = { group = "terminalVisual"; tool = "vivid"; pkg = "vivid"; };
   terminalVisualChafa = { group = "terminalVisual"; tool = "chafa"; pkg = "chafa"; };
   terminalVisualVhs = { group = "terminalVisual"; tool = "vhs"; pkg = "vhs"; };

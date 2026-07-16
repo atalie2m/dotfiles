@@ -12,6 +12,8 @@ catalog-owned tools in that group.
 `tools.aiCodingAgent.claudeCode.enable` is catalog-backed through the
 Homebrew-native backend and installs the latest-first `claude-code@latest`
 cask during nix-darwin activation.
+`tools.aiCodingAgent.herdr.enable` is a dedicated Home Manager integration
+that installs Herdr from the upstream Nix flake pinned in this repository.
 `tools.aiCodingAgent.headroom.enable` is a dedicated Home Manager integration
 that installs `headroom`, `headroom-codex`, and `headroom-claude` wrappers.
 Those wrappers resolve the latest `headroom-ai[proxy,code,mcp]` PyPI runtime
@@ -26,7 +28,7 @@ cockpit: `shellUx`, `filesNavigation`, `viewersPreview`, `searchText`,
 `gitPersonal`, `nixOperator`, `observability`, `network`, `xorg`,
 `httpApiPersonal`, `downloadArchive`, `tuiWorkspace`, `dataPersonal`,
 `containerK8sPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`,
-`modelHfPersonal`, `backupRecovery`, and `terminalVisual`.
+`modelHfPersonal`, `backupRecovery`, `terminalVisual`, and `presentation`.
 
 The companion `tools.profileDefaults` module has no public toggle. It watches
 those explicit tool toggles and writes matching default user configs for shell

@@ -124,6 +124,9 @@ Application/tool sourcing priority is:
 `Claude Code` is managed as a latest-first Homebrew cask through the
 catalog-backed `tools.aiCodingAgent.claudeCode` toggle. Enabling it adds the
 `claude-code@latest` cask to the nix-darwin Homebrew activation.
+`Herdr` is managed through the catalog-backed
+`tools.aiCodingAgent.herdr` toggle and installs the upstream Nix flake package
+pinned by this repository.
 `ultra` also enables `tools.aiCodingAgent.headroom`, which installs
 telemetry-off `uv` wrappers for Headroom's PyPI runtime:
 `headroom`, `headroom-codex`, and `headroom-claude`.
@@ -276,7 +279,7 @@ Mosh sessions keep SSH bootstrap metadata, but the Pure prompt hides the remote 
 - `zoxide` via `z` and `zi`
 - `direnv` + `nix-direnv`
 - `delta` for Git paging
-- profile groups such as `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `xorg`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, and `backupRecovery`
+- profile groups such as `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `xorg`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, `backupRecovery`, and `presentation`
 
 `tools.profileDefaults` writes repo-owned defaults for `fzf`, `direnv`,
 `gh-dash`, `yazi`, `zellij`, `k9s`, `television`, terminal apps,

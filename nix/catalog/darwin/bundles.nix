@@ -380,6 +380,10 @@ let
     tools.backupRecovery.rclone.enable = true;
     tools.backupRecovery.rsync.enable = true;
 
+    tools.presentation.enable = true;
+    tools.presentation.pympress.enable = true;
+    tools.presentation.slidePilot.enable = true;
+
     tools.terminalVisual.enable = true;
     tools.terminalVisual.ankaCoder.enable = true;
     tools.terminalVisual.kitty.enable = true;
@@ -409,6 +413,7 @@ let
     tools.aiCodingAgent.codex.enable = true;
     tools.aiCodingAgent.geminiCli.enable = true;
     tools.aiCodingAgent.githubCopilotCli.enable = true;
+    tools.aiCodingAgent.herdr.enable = true;
     tools.aiCodingAgent.opencode.enable = true;
   };
 
