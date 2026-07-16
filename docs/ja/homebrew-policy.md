@@ -24,6 +24,9 @@
 1. 再現性のため、`PATH` 上では Nix 提供の CLI を優先します。
 2. Homebrew CLI を残す必要がある場合は、それを有効化する module または catalog entry に理由を記述してください。
 3. apply/build の変更後は `command -v <tool>` で実効 binary を確認してください。
+4. Homebrew を有効にする全 Darwin profile の Homebrew shell environment は `tools.system.nixHomebrew` が所有します。評価済みの native prefix から `PATH`、`HOMEBREW_*`、zsh completion、manual/Info path を生成し、Homebrew を持たない profile には追加しません。
+5. repository 管理の shell 起動処理では `brew shellenv` や追加の macOS `path_helper` を実行してはいけません。Homebrew 側の停止で prompt 表示まで止まらない構成にします。macOS 標準の `/etc/zprofile` は OS の所有境界として維持します。
+6. 通常の Darwin activation は宣言済み依存の不足分だけを導入し、Homebrew の auto-update や導入済み依存の upgrade は行いません。network-bound な Homebrew maintenance を意図するときだけ `brew bundle upgrade` を明示的に実行します。このコマンドは生成済みの宣言的 Brewfile を使用します。
 
 ## review checklist
 

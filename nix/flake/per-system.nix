@@ -18,6 +18,104 @@
 let
   dotfilesRoot = repoPaths.root;
   darwinTargetNames = lib.sort (a: b: a < b) (builtins.attrNames darwinConfigurations);
+  listIndexOf = needle: values:
+    let
+      go = index: remaining:
+        if remaining == [ ] then
+          null
+        else if builtins.head remaining == needle then
+          index
+        else
+          go (index + 1) (builtins.tail remaining);
+    in
+    go 0 values;
+  homebrewShellEnvironmentFailures =
+    lib.concatMap
+      (targetName:
+        let
+          targetConfig = darwinConfigurations.${targetName}.config;
+          hostSystem = targetConfig.myconfig.hostContext.system;
+          userName = targetConfig.myconfig.hostContext.user.username;
+          homeDirectory = targetConfig.myconfig.hostContext.user.homeDirectory;
+          homeConfig = targetConfig.home-manager.users.${userName}.home;
+          nixHomebrewEnabled = targetConfig.nix-homebrew.enable or false;
+          nativePrefixKey =
+            if hostSystem == "aarch64-darwin" then
+              targetConfig.nix-homebrew.defaultArm64Prefix
+            else
+              targetConfig.nix-homebrew.defaultIntelPrefix;
+          nativePrefix = targetConfig.nix-homebrew.prefixes.${nativePrefixKey};
+          expectedPrefix = nativePrefix.prefix;
+          expectedRepository = "${nativePrefix.library}/.homebrew-is-managed-by-nix";
+          homebrewBin = "${expectedPrefix}/bin";
+          homebrewSbin = "${expectedPrefix}/sbin";
+          sessionPath = homeConfig.sessionPath or [ ];
+          sessionVariables = homeConfig.sessionVariables or { };
+          homebrewBinIndex = listIndexOf homebrewBin sessionPath;
+          homebrewSbinIndex = listIndexOf homebrewSbin sessionPath;
+          nixProfileBins = [
+            "/etc/profiles/per-user/${userName}/bin"
+            "${homeDirectory}/.nix-profile/bin"
+          ];
+          nixPathOrderFailures =
+            lib.concatMap
+              (nixProfileBin:
+                let
+                  nixProfileBinIndex = listIndexOf nixProfileBin sessionPath;
+                in
+                lib.optional
+                  (nixProfileBinIndex != null && homebrewBinIndex != null && nixProfileBinIndex >= homebrewBinIndex)
+                  "${targetName}: ${nixProfileBin} must precede ${homebrewBin} in home.sessionPath")
+              nixProfileBins;
+        in
+        [
+          (lib.optional (targetConfig.nix-homebrew.enableBashIntegration or true)
+            "${targetName}: nix-homebrew bash integration must be disabled")
+          (lib.optional (targetConfig.nix-homebrew.enableFishIntegration or true)
+            "${targetName}: nix-homebrew fish integration must be disabled")
+          (lib.optional (targetConfig.nix-homebrew.enableZshIntegration or true)
+            "${targetName}: nix-homebrew zsh integration must be disabled")
+        ]
+        ++ lib.optionals nixHomebrewEnabled [
+          (lib.optional (!(nativePrefix.enable or false))
+            "${targetName}: native Homebrew prefix ${expectedPrefix} must be enabled")
+          (lib.optional ((sessionVariables.HOMEBREW_PREFIX or null) != expectedPrefix)
+            "${targetName}: HOMEBREW_PREFIX must match the evaluated native prefix")
+          (lib.optional ((sessionVariables.HOMEBREW_CELLAR or null) != "${expectedPrefix}/Cellar")
+            "${targetName}: HOMEBREW_CELLAR must match the evaluated native prefix")
+          (lib.optional ((sessionVariables.HOMEBREW_REPOSITORY or null) != expectedRepository)
+            "${targetName}: HOMEBREW_REPOSITORY must match the nix-homebrew library")
+          (lib.optional (homebrewBinIndex == null)
+            "${targetName}: home.sessionPath is missing ${homebrewBin}")
+          (lib.optional (homebrewSbinIndex == null)
+            "${targetName}: home.sessionPath is missing ${homebrewSbin}")
+          (lib.optional
+            (homebrewBinIndex != null && homebrewSbinIndex != null && homebrewSbinIndex != homebrewBinIndex + 1)
+            "${targetName}: Homebrew bin and sbin entries must remain adjacent")
+          nixPathOrderFailures
+        ])
+      darwinTargetNames;
+  homebrewShellEnvironmentFailureText =
+    lib.concatStringsSep "\n" (lib.flatten homebrewShellEnvironmentFailures);
+  homebrewActivationFailures =
+    lib.concatMap
+      (targetName:
+        let
+          targetConfig = darwinConfigurations.${targetName}.config;
+          homebrewConfig = targetConfig.homebrew;
+          homebrewEnabled = homebrewConfig.enable or false;
+        in
+        lib.optionals homebrewEnabled [
+          (lib.optional (homebrewConfig.onActivation.autoUpdate or true)
+            "${targetName}: routine activation must not auto-update Homebrew")
+          (lib.optional (homebrewConfig.onActivation.upgrade or true)
+            "${targetName}: routine activation must not upgrade Homebrew packages")
+          (lib.optional (!(homebrewConfig.global.brewfile or false))
+            "${targetName}: manual brew bundle commands must use the generated Brewfile")
+        ])
+      darwinTargetNames;
+  homebrewActivationFailureText =
+    lib.concatStringsSep "\n" (lib.flatten homebrewActivationFailures);
   homeManagerTargetNames = lib.sort (a: b: a < b) (builtins.attrNames homeConfigurations);
   homeManagerTargetNamesText = lib.concatStringsSep ", " homeManagerTargetNames;
   linuxWorkbenchTarget = homeConfigurations.linux_workbench or null;
@@ -431,6 +529,26 @@ in
       builtins.seq _ (pkgs.runCommand "darwin-configurations-eval-check" { } ''
         touch "$out"
       '');
+
+    homebrewShellEnvironment = pkgs.runCommand "homebrew-shell-environment-check" { } ''
+      if [ ${toString (builtins.length (lib.flatten homebrewShellEnvironmentFailures))} -ne 0 ]; then
+        cat >&2 <<'EOF_HOMEBREW_SHELL_ENVIRONMENT'
+      ${homebrewShellEnvironmentFailureText}
+      EOF_HOMEBREW_SHELL_ENVIRONMENT
+        exit 1
+      fi
+      touch "$out"
+    '';
+
+    homebrewActivation = pkgs.runCommand "homebrew-activation-check" { } ''
+      if [ ${toString (builtins.length (lib.flatten homebrewActivationFailures))} -ne 0 ]; then
+        cat >&2 <<'EOF_HOMEBREW_ACTIVATION'
+      ${homebrewActivationFailureText}
+      EOF_HOMEBREW_ACTIVATION
+        exit 1
+      fi
+      touch "$out"
+    '';
 
     linuxHomeManagerEval = pkgs.runCommand "linux-home-manager-eval-check" { } ''
       if [ ${toString (builtins.length linuxHomeManagerFailures)} -ne 0 ]; then
