@@ -24,6 +24,9 @@ This document defines package-source boundaries for this dotfiles flake.
 1. Prefer Nix-provided CLIs in `PATH` for reproducibility.
 2. If a Homebrew CLI must remain, document why in the module or catalog entry that enables it.
 3. Validate the effective binary with `command -v <tool>` after apply/build changes.
+4. `tools.system.nixHomebrew` owns the Homebrew shell environment for every Darwin profile that enables it. It derives `PATH`, `HOMEBREW_*`, zsh completion, and manual/Info paths from the evaluated native prefix; profiles without Homebrew remain free of those additions.
+5. Repository-managed shell startup must not execute `brew shellenv` or invoke an additional macOS `path_helper`; a Homebrew-level stall must not prevent the prompt from appearing. The stock `/etc/zprofile` remains owned by macOS.
+6. Routine Darwin activation installs missing declared dependencies but does not auto-update Homebrew or upgrade installed dependencies. Run `brew bundle upgrade` explicitly when network-bound Homebrew maintenance is intended; it uses the generated declarative Brewfile.
 
 ## Review Checklist
 

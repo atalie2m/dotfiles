@@ -124,6 +124,9 @@ Application/tool sourcing priority is:
 `Claude Code` is managed as a latest-first Homebrew cask through the
 catalog-backed `tools.aiCodingAgent.claudeCode` toggle. Enabling it adds the
 `claude-code@latest` cask to the nix-darwin Homebrew activation.
+`Herdr` is managed through the catalog-backed
+`tools.aiCodingAgent.herdr` toggle and installs the upstream Nix flake package
+pinned by this repository.
 `ultra` also enables `tools.aiCodingAgent.headroom`, which installs
 telemetry-off `uv` wrappers for Headroom's PyPI runtime:
 `headroom`, `headroom-codex`, and `headroom-claude`.
@@ -276,7 +279,7 @@ Mosh sessions keep SSH bootstrap metadata, but the Pure prompt hides the remote 
 - `zoxide` via `z` and `zi`
 - `direnv` + `nix-direnv`
 - `delta` for Git paging
-- profile groups such as `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `xorg`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, and `backupRecovery`
+- profile groups such as `shellUx`, `filesNavigation`, `gitPersonal`, `nixOperator`, `observability`, `network`, `xorg`, `dataPersonal`, `securityPersonal`, `passwordSecrets`, `aiLlm`, `backupRecovery`, and `presentation`
 
 `tools.profileDefaults` writes repo-owned defaults for `fzf`, `direnv`,
 `gh-dash`, `yazi`, `zellij`, `k9s`, `television`, terminal apps,
@@ -286,6 +289,10 @@ The stock catalog also installs workflow helpers such as `ghq`, `roots`,
 `ast-grep`, `sad`, `git-sizer`, `git-town`, `kondo`, `typos`, `taplo`, `actionlint`,
 `shellcheck`, `shfmt`, `yamllint`, `deadnix`, `statix`, `nix-diff`, `lychee`,
 `jless`, `mprocs`, and X.Org utilities such as `luit`, `xauth`, and `xprop`.
+Git config sets `ghq.root` to `~/src`, so `ghq get` places repositories under
+paths such as `~/src/github.com/<owner>/<repo>`. The repo-capsule `.bare` plus
+linked-worktree layout is an operator workflow layered on top of that root, not
+something `ghq` enforces.
 
 ### Shell sync (writable entrypoints)
 

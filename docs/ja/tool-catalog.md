@@ -5,6 +5,8 @@
 このリポジトリは `myconfig.tools` 配下の `*.enable` toggle を使って tool / group の enablement を管理します。repo module は単純な規則に従います。`enable = true` なら、その tool は install / configure されます。external 管理の tool では、`enable = true` が upstream binary の install ではなく integration surface の設定を意味することがあります。`tools.dev.enable` のような group toggle は、その group に属する catalog-owned tool の bundle switch として機能します。
 
 `tools.aiCodingAgent.claudeCode.enable` は Homebrew-native backend の catalog-backed toggle です。nix-darwin activation 時に latest-first の `claude-code@latest` cask を install します。
+`tools.aiCodingAgent.herdr.enable` は専用の Home Manager integration で、
+この repo で pin した upstream Nix flake から Herdr を install します。
 `tools.aiCodingAgent.headroom.enable` は専用の Home Manager integration で、
 `headroom`, `headroom-codex`, `headroom-claude` wrapper を install します。
 これらの wrapper は Nix が提供する `uv` と Python 3.13 で latest の
@@ -17,7 +19,7 @@ shell upgrade では Home Manager cockpit 向けの profile group として
 `nixOperator`, `observability`, `network`, `xorg`, `httpApiPersonal`,
 `downloadArchive`, `tuiWorkspace`, `dataPersonal`, `containerK8sPersonal`,
 `securityPersonal`, `passwordSecrets`, `aiLlm`, `modelHfPersonal`,
-`backupRecovery`, `terminalVisual` を追加しています。
+`backupRecovery`, `terminalVisual`, `presentation` を追加しています。
 
 補助の `tools.profileDefaults` module には public toggle を置きません。明示的な
 tool toggle を見て、shell UX、preview/search tool、Git/GitHub、observability

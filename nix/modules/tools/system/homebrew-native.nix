@@ -129,7 +129,9 @@ in
 
     # Cleanup settings
     enableCleanup = boolOption false;
-    enableAutoUpdate = boolOption true;
+    # Keep routine darwin activation idempotent. Explicit maintenance can run
+    # `brew bundle upgrade` against the generated Brewfile.
+    enableAutoUpdate = boolOption false;
   };
 
   darwinOnEnable = { cfg, myconfig, ... }:
@@ -158,6 +160,9 @@ in
 
         # Homebrew formulae, casks, Mac App Store apps, and taps
         inherit brews casks masApps taps;
+
+        # Make an explicit `brew bundle upgrade` use the declarative Brewfile.
+        global.brewfile = true;
 
         # Cleanup and maintenance
         onActivation = {

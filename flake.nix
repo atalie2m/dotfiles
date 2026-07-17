@@ -51,6 +51,11 @@
       # Its package stack is not compatible with root nixpkgs-unstable's SBCL on Darwin.
     };
 
+    herdr = {
+      url = "github:ogulcancelik/herdr/v0.7.1";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Secrets management
     sops-nix = {
       url = "github:Mic92/sops-nix";

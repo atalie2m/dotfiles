@@ -26,6 +26,11 @@ if [[ ! -f $COMMON_SH ]]; then
   exit 1
 fi
 
+if grep -Eq '(brew.*shellenv|path_helper)' "$COMMON_SH"; then
+  echo "FAIL: common.sh must not execute Homebrew or path_helper during shell startup" >&2
+  exit 1
+fi
+
 bash_bin="${BASH_BIN:-$(command -v bash || true)}"
 zsh_bin="${ZSH_BIN:-$(command -v zsh || true)}"
 awk_bin="$(command -v awk || true)"

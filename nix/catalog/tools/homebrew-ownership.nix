@@ -175,6 +175,15 @@
     brews = [ "git-xet" ];
   };
 
+  "presentation.slidePilot" = {
+    group = "presentation";
+    tool = "slidePilot";
+    optionPath = [ "myconfig" "tools" "presentation" "slidePilot" "enable" ];
+    mode = "catalog";
+    backend = "homebrewNative";
+    casks = [ "slidepilot" ];
+  };
+
   "editor.emacs" = {
     group = "editor";
     tool = "emacs";
