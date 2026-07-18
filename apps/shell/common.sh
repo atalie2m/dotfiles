@@ -113,6 +113,16 @@ dotfilesIsMoshSession() {
   return 1
 }
 
+dotfilesIsVsCodeFamilyTerminal() {
+  case "${TERM_PROGRAM:-}" in
+  vscode | cursor | kiro) return 0 ;;
+  esac
+
+  [[ -n ${VSCODE_INJECTION:-} ]] ||
+    [[ -n ${VSCODE_SHELL_INTEGRATION:-} ]] ||
+    [[ -n ${VSCODE_NONCE:-} ]]
+}
+
 dotfilesSetControlCharEcho() {
   if ! command -v stty >/dev/null 2>&1; then
     return 0

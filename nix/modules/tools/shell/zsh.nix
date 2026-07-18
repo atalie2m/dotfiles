@@ -2,6 +2,13 @@
 
 # Zsh configuration
 
+let
+  zshPackage =
+    if pkgs.stdenv.isDarwin then
+      pkgs.callPackage ../../../pkgs/darwin-system-zsh { }
+    else
+      pkgs.zsh;
+in
 (dotmod.mkModule { inherit config; }) {
   path = "tools.shell.zsh";
 
@@ -56,6 +63,7 @@
       programs.zsh = {
         enable = true;
         dotDir = "${homeDir}/.nix/hm-zsh";
+        package = zshPackage;
 
         envExtra = ''
           export ZDOTDIR="$HOME/.nix"
@@ -91,6 +99,10 @@
           (lib.mkIf useStablePlugins (lib.mkOrder 905 ''
             source ${pkgs.zsh-defer}/share/zsh-defer/zsh-defer.plugin.zsh
             source ${pkgs.zsh-autopair}/share/zsh/zsh-autopair/autopair.zsh
+            if (( $+functions[dotfilesIsVsCodeFamilyTerminal] )) && dotfilesIsVsCodeFamilyTerminal; then
+              # Agent sendText fallbacks must always land in an insert-capable ZLE mode.
+              ZVM_LINE_INIT_MODE=i
+            fi
             source ${pkgs.zsh-vi-mode}/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh
             source ${pkgs.zsh-history-substring-search}/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
             source ${pkgs.zsh-fzf-history-search}/share/zsh-fzf-history-search/zsh-fzf-history-search.plugin.zsh

@@ -214,10 +214,53 @@ run_shell_case() {
   fi
 }
 
+run_ide_detection_case() {
+  local shell_name="$1"
+  local shell_bin="$2"
+  local expected="$3"
+  shift 3
+
+  local actual
+  actual="$(
+    env -i \
+      HOME="$home_dir" \
+      USER=profiletest \
+      DOTFILES_PROFILE_DIRS="$primary_profile" \
+      DOTFILES_TEST_COMMON_SH="$COMMON_SH" \
+      PATH="$fake_bin:$base_path" \
+      "$@" \
+      "$shell_bin" -c '
+        source "$DOTFILES_TEST_COMMON_SH"
+        if dotfilesIsVsCodeFamilyTerminal; then
+          printf "yes\n"
+        else
+          printf "no\n"
+        fi
+      '
+  )"
+
+  if [[ $actual != "$expected" ]]; then
+    echo "FAIL: $shell_name VS Code-family detection expected $expected, got $actual ($*)" >&2
+    exit 1
+  fi
+}
+
 printf 'test: running shell common profile test\n'
 printf 'test: temp root = %s\n' "$tmp_root"
 
 run_shell_case bash "$bash_bin"
 run_shell_case zsh "$zsh_bin"
+
+for shell_case in "bash:$bash_bin" "zsh:$zsh_bin"; do
+  shell_name="${shell_case%%:*}"
+  shell_bin="${shell_case#*:}"
+  run_ide_detection_case "$shell_name" "$shell_bin" no
+  run_ide_detection_case "$shell_name" "$shell_bin" yes TERM_PROGRAM=vscode
+  run_ide_detection_case "$shell_name" "$shell_bin" yes TERM_PROGRAM=cursor
+  run_ide_detection_case "$shell_name" "$shell_bin" yes TERM_PROGRAM=kiro
+  run_ide_detection_case "$shell_name" "$shell_bin" yes VSCODE_INJECTION=1
+  run_ide_detection_case "$shell_name" "$shell_bin" yes VSCODE_SHELL_INTEGRATION=1
+  run_ide_detection_case "$shell_name" "$shell_bin" yes VSCODE_NONCE=test-nonce
+done
 
 echo "PASS: shell common profile"

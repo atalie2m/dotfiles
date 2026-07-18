@@ -18,6 +18,25 @@
 let
   dotfilesRoot = repoPaths.root;
   darwinTargetNames = lib.sort (a: b: a < b) (builtins.attrNames darwinConfigurations);
+  darwinZshRuntimeFailures =
+    lib.concatMap
+      (targetName:
+        let
+          targetConfig = darwinConfigurations.${targetName}.config;
+          userName = targetConfig.myconfig.hostContext.user.username;
+          homeZsh = targetConfig.home-manager.users.${userName}.programs.zsh;
+          shellConfig = (targetConfig.myconfig.tools or { }).shell or { };
+          systemShell = targetConfig.users.users.${userName}.shell or null;
+        in
+        lib.optional
+          (homeZsh.enable && !lib.hasInfix "darwin-system-zsh" (toString homeZsh.package))
+          "${targetName}: Home Manager zsh must use darwin-system-zsh"
+        ++ lib.optional
+          ((shellConfig.manageSystemShells or false)
+          && (systemShell == null || !lib.hasInfix "darwin-system-zsh" (toString systemShell)))
+          "${targetName}: managed login zsh must use darwin-system-zsh")
+      darwinTargetNames;
+  darwinZshRuntimeFailureText = lib.concatStringsSep "\n" darwinZshRuntimeFailures;
   listIndexOf = needle: values:
     let
       go = index: remaining:
@@ -495,6 +514,7 @@ let
   dotfilesCli = mkDotfilesCliPackage pkgs;
   syncVscodeRust = mkSyncVscodeRustPackage pkgs;
   vscodeZshLauncher = pkgs.callPackage ../pkgs/dotfiles-vscode-zsh { };
+  darwinSystemZsh = pkgs.callPackage ../pkgs/darwin-system-zsh { };
   dotfilesPackage = mkDotfilesPackage {
     inherit pkgs dotfilesCli syncVscodeRust;
   };
@@ -529,6 +549,16 @@ in
       builtins.seq _ (pkgs.runCommand "darwin-configurations-eval-check" { } ''
         touch "$out"
       '');
+
+    darwinZshRuntime = pkgs.runCommand "darwin-zsh-runtime-check" { } ''
+      if [ ${toString (builtins.length darwinZshRuntimeFailures)} -ne 0 ]; then
+        cat >&2 <<'EOF_DARWIN_ZSH_RUNTIME'
+      ${darwinZshRuntimeFailureText}
+      EOF_DARWIN_ZSH_RUNTIME
+        exit 1
+      fi
+      touch "$out"
+    '';
 
     homebrewShellEnvironment = pkgs.runCommand "homebrew-shell-environment-check" { } ''
       if [ ${toString (builtins.length (lib.flatten homebrewShellEnvironmentFailures))} -ne 0 ]; then
@@ -629,6 +659,17 @@ in
       builtins.seq _ (pkgs.runCommand "homebrew-native-codex-preflight-check" { } ''
         touch "$out"
       '');
+  } // lib.optionalAttrs pkgs.stdenv.isDarwin {
+    darwinSystemZshSmoke = pkgs.runCommand "darwin-system-zsh-smoke-test"
+      {
+        nativeBuildInputs = [ pkgs.bash pkgs.coreutils ];
+        src = repoPaths.root;
+      } ''
+      cd "$src"
+      export DARWIN_SYSTEM_ZSH="${darwinSystemZsh}/bin/zsh"
+      bash scripts/tests/darwin-system-zsh-test.sh
+      touch "$out"
+    '';
   } // lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "x86_64-linux" && linuxWorkbenchTarget != null) {
     linuxWorkbenchActivationPackage = linuxWorkbenchTarget.activationPackage;
   });
@@ -645,6 +686,7 @@ in
     dotfiles-vscode-zsh = vscodeZshLauncher;
     roots = pkgs.callPackage ../pkgs/roots { };
   } // lib.optionalAttrs pkgs.stdenv.isDarwin {
+    darwin-system-zsh = darwinSystemZsh;
     darwin-rebuild = inputs.nix-darwin.packages.${pkgs.stdenv.hostPlatform.system}.darwin-rebuild;
   };
 

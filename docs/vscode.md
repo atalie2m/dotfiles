@@ -82,12 +82,19 @@ State schema notes:
 
 ## Integrated terminal
 
-Managed profiles do not rely on VS Code's automatic shell detection for zsh.
+Every Darwin profile that enables managed zsh publishes a `zsh` executable from Home Manager that resolves directly to macOS `/bin/zsh` while retaining Nix-provided zsh support files. Minimal profiles leave the system `/bin/zsh` selection untouched.
+This makes automatic shell detection in VS Code, Cursor, Kiro, and compatible forks safe without per-application settings: a detected `/etc/profiles/per-user/<user>/bin/zsh` or `~/.nix-profile/bin/zsh` still executes the system zsh.
+The system runtime is intentional because the Nix-built zsh can stall while waiting for fast command substitutions such as the `/usr/libexec/path_helper` call in `/etc/zprofile` on affected macOS releases.
+
+Managed VS Code profiles additionally avoid automatic shell detection.
 The shared macOS terminal profile explicitly calls `dotfiles-vscode-zsh` first, with `/bin/zsh` as the bootstrap fallback before the launcher is installed.
 
 `dotfiles-vscode-zsh` is installed by Home Manager when `tools.editor.vscode.enable = true`.
 It prepares Home Manager session variables and profile `PATH`, keeps VS Code's shell-integration `ZDOTDIR` when VS Code injected one, defaults user zsh config lookup to `$HOME/.nix` when needed, and then execs the real zsh.
-On Darwin VS Code sessions it chooses `/bin/zsh` because Nix zsh currently conflicts with VS Code shell integration; other contexts can still use Nix zsh, and `DOTFILES_VSCODE_ZSH_BIN` is available as an explicit override.
+On Darwin it recognizes VS Code, Cursor, Kiro, and the common `VSCODE_*` shell-integration markers and chooses `/bin/zsh`; `DOTFILES_VSCODE_ZSH_BIN` remains available as an explicit diagnostic override.
+
+For the same terminal family, zsh-vi-mode starts each new command line in insert mode. This keeps terminal automation's raw-text fallback executable even when a persistent terminal previously ended in normal or search mode.
+After applying a shell-runtime change, terminate existing integrated terminals and restart the application so a restored persistent process does not retain the old executable or ZLE mode.
 
 ## Runtime locations
 
