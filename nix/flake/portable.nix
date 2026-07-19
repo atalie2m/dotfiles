@@ -78,6 +78,13 @@ let
     '';
 
   mkPortableChecks = { pkgs, formatterWrapper, dotfilesPackage, syncVscodeRust, editorSyncAppProgram, vscodeZshLauncher }:
+    let
+      runtimeZsh =
+        if pkgs.stdenv.isDarwin then
+          pkgs.callPackage ../pkgs/darwin-system-zsh { }
+        else
+          pkgs.zsh;
+    in
     {
       treefmt = pkgs.runCommand "treefmt-check"
         {
@@ -222,7 +229,7 @@ let
 
       shellCommonProfile = pkgs.runCommand "shell-common-profile-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gawk pkgs.gnugrep pkgs.zsh ];
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gawk pkgs.gnugrep runtimeZsh ];
           src = repoPaths.root;
         } ''
         cd "$src"
@@ -232,7 +239,7 @@ let
 
       atuinContextHistory = pkgs.runCommand "atuin-context-history-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gnugrep pkgs.zsh ];
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gnugrep runtimeZsh ];
           src = repoPaths.root;
         } ''
         cd "$src"
@@ -242,7 +249,7 @@ let
 
       terminalUx = pkgs.runCommand "terminal-ux-test"
         {
-          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gnugrep pkgs.zsh ];
+          nativeBuildInputs = [ pkgs.bash pkgs.coreutils pkgs.gnugrep runtimeZsh ];
           src = repoPaths.root;
         } ''
         cd "$src"
@@ -615,10 +622,17 @@ let
     };
 
   mkPortableDevShell = { pkgs, formatterWrapper }:
+    let
+      runtimeZsh =
+        if pkgs.stdenv.isDarwin then
+          pkgs.callPackage ../pkgs/darwin-system-zsh { }
+        else
+          pkgs.zsh;
+    in
     pkgs.mkShell {
       name = "dotfiles-dev";
       packages = [
-        pkgs.zsh
+        runtimeZsh
         pkgs.age
         pkgs.deadnix
         pkgs.nvfetcher
@@ -632,7 +646,7 @@ let
           if [[ -f "$HOME/.nix/.zshrc" ]]; then
             export ZDOTDIR="$HOME/.nix"
           fi
-          exec ${pkgs.zsh}/bin/zsh -i
+          exec ${runtimeZsh}/bin/zsh -i
         fi
       '';
     };

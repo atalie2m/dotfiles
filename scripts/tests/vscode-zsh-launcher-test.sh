@@ -117,4 +117,32 @@ run_launcher DOTFILES_PROFILE_DIRS="$PROFILE_DIR" -l
 assert_line "DOTFILES_LAUNCHER_TEST_VAR=from_hm_session_vars"
 assert_path_starts_with "$PROFILE_DIR/bin:"
 
+if [[ $(uname -s) == Darwin ]]; then
+  assert_darwin_system_zsh() {
+    local label="$1"
+    shift
+    local selected
+
+    selected="$(
+      env -i \
+        HOME="$HOME_DIR" \
+        USER=tester \
+        LOGNAME=tester \
+        PATH="/usr/bin:/bin" \
+        "$@" \
+        "$LAUNCHER" -dfc 'print -r -- "$ZSH_ARGZERO"'
+    )"
+
+    if [[ $selected != /bin/zsh ]]; then
+      fail "$label selected $selected instead of /bin/zsh"
+    fi
+  }
+
+  assert_darwin_system_zsh "VS Code" TERM_PROGRAM=vscode
+  assert_darwin_system_zsh "Cursor" TERM_PROGRAM=cursor
+  assert_darwin_system_zsh "Kiro" TERM_PROGRAM=kiro
+  assert_darwin_system_zsh "injected VS Code family" VSCODE_INJECTION=1
+  assert_darwin_system_zsh "active shell integration" VSCODE_SHELL_INTEGRATION=1
+fi
+
 echo "PASS: vscode zsh launcher"

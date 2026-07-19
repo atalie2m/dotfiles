@@ -103,7 +103,7 @@ writeShellApplication {
         return 127
       fi
 
-      if [[ "$system_name" == "Darwin" && "$is_vscode" -eq 1 ]]; then
+      if [[ "$system_name" == "Darwin" && "$is_vscode_family" -eq 1 ]]; then
         choose_candidate "/bin/zsh" && return 0
       fi
 
@@ -166,9 +166,12 @@ writeShellApplication {
     fi
 
     system_name="$(uname -s 2>/dev/null || true)"
-    is_vscode=0
-    if [[ "''${TERM_PROGRAM:-}" == "vscode" || -n "''${VSCODE_INJECTION:-}" || -n "''${VSCODE_NONCE:-}" ]]; then
-      is_vscode=1
+    is_vscode_family=0
+    case "''${TERM_PROGRAM:-}" in
+      vscode | cursor | kiro) is_vscode_family=1 ;;
+    esac
+    if [[ -n "''${VSCODE_INJECTION:-}" || -n "''${VSCODE_SHELL_INTEGRATION:-}" || -n "''${VSCODE_NONCE:-}" ]]; then
+      is_vscode_family=1
     fi
 
     if ! zsh_bin="$(choose_zsh)"; then

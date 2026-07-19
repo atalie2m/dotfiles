@@ -82,12 +82,19 @@ state schema に関する補足:
 
 ## integrated terminal
 
-managed profile は zsh の選択を VS Code の automatic shell detection に任せません。
+managed zsh を有効にするすべての Darwin profile は、Nix の zsh support file を維持しつつ、実体が macOS の `/bin/zsh` を直接指す `zsh` executable を Home Manager から公開します。minimal profile は system `/bin/zsh` の選択をそのまま維持します。
+このため VS Code、Cursor、Kiro、および互換 fork の automatic shell detection に application ごとの設定は不要です。検出結果が `/etc/profiles/per-user/<user>/bin/zsh` や `~/.nix-profile/bin/zsh` でも、実行されるのは system zsh です。
+この runtime 選択は、影響を受ける macOS release で Nix build の zsh が `/etc/zprofile` 内の `/usr/libexec/path_helper` のような高速な command substitution の終了待ちで停止する場合があるためです。
+
+managed VS Code profile では、さらに automatic shell detection 自体にも依存しません。
 shared macOS terminal profile はまず `dotfiles-vscode-zsh` を明示的に呼び、launcher がまだ install されていない bootstrap 中だけ `/bin/zsh` に fallback します。
 
 `dotfiles-vscode-zsh` は `tools.editor.vscode.enable = true` のとき Home Manager から install されます。
 launcher は Home Manager session variables と profile `PATH` を整え、VS Code が shell integration 用の `ZDOTDIR` を注入している場合はそれを保持し、必要な場面では user zsh config lookup を `$HOME/.nix` に寄せてから実際の zsh を exec します。
-Darwin の VS Code session では、現状 Nix zsh が VS Code shell integration と衝突するため `/bin/zsh` を選びます。それ以外の context では Nix zsh も使え、明示 override として `DOTFILES_VSCODE_ZSH_BIN` を用意しています。
+Darwin では VS Code、Cursor、Kiro、および共通の `VSCODE_*` shell-integration marker を認識して `/bin/zsh` を選びます。`DOTFILES_VSCODE_ZSH_BIN` は明示的な diagnostic override として残します。
+
+同じ terminal family では、zsh-vi-mode が新しい command line を毎回 insert mode で開始します。persistent terminal が直前に normal mode や search mode で終わっていても、terminal automation の raw-text fallback を実行可能に保つためです。
+shell runtime の変更を apply した後は、復元された persistent process が古い executable や ZLE mode を保持しないよう、既存の integrated terminal を終了して application を再起動してください。
 
 ## runtime location
 

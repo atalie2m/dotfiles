@@ -2,6 +2,13 @@
 
 # Shell tool group
 
+let
+  zshPackage =
+    if pkgs.stdenv.isDarwin then
+      pkgs.callPackage ../../pkgs/darwin-system-zsh { }
+    else
+      pkgs.zsh;
+in
 (dotmod.mkModule { inherit config; }) {
   path = "tools.shell";
 
@@ -56,7 +63,7 @@
     let
       userName = myconfig.hostContext.user.username;
       shellPackages = {
-        zsh = pkgs.zsh;
+        zsh = zshPackage;
         bash = pkgs.bashInteractive;
       };
       selectedShell = shellPackages.${cfg.defaultShell} or null;
@@ -78,7 +85,7 @@
           [ ];
 
       environment.shells =
-        lib.optional cfg.manageSystemShells pkgs.zsh
+        lib.optional cfg.manageSystemShells zshPackage
         ++ lib.optional cfg.manageSystemShells pkgs.bashInteractive;
 
       users.users = lib.mkIf (cfg.manageSystemShells && userName != "" && selectedShell != null) {
